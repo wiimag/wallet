@@ -1030,6 +1030,8 @@ extern int main_initialize()
 
     if (environment_command_line_arg("debug") || environment_command_line_arg("verbose"))
         log_set_suppress(0, ERRORLEVEL_NONE);
+    else
+        log_set_suppress(0, ERRORLEVEL_DEBUG);
 
     GLFWwindow* window = setup_main_window();
     if (!window)

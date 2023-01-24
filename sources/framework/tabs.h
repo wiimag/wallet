@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
+ * Copyright 2022-2023 Infineis Inc. All rights reserved.
  * License: https://infineis.com/LICENSE
  */
 

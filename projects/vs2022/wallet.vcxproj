@@ -81,7 +81,6 @@
     <ClCompile Include="..\..\sources\butils.cpp" />
     <ClCompile Include="..\..\sources\console.cpp" />
     <ClCompile Include="..\..\sources\eod.cpp" />
-    <ClCompile Include="..\..\sources\eval.cpp" />
     <ClCompile Include="..\..\sources\expr.cpp" />
     <ClCompile Include="..\..\sources\expr_math.cpp" />
     <ClCompile Include="..\..\sources\framework\boot.cpp" />
@@ -140,7 +139,6 @@
     <ClInclude Include="..\..\sources\butils.h" />
     <ClInclude Include="..\..\sources\console.h" />
     <ClInclude Include="..\..\sources\eod.h" />
-    <ClInclude Include="..\..\sources\eval.h" />
     <ClInclude Include="..\..\sources\events.h" />
     <ClInclude Include="..\..\sources\expr.h" />
     <ClInclude Include="..\..\sources\framework\common.h" />

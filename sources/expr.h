@@ -185,6 +185,13 @@ struct expr_result_t
     {
     }
 
+    expr_result_t(expr_result_type_t type, int symbol, size_t length)
+        : type(type)
+        , value(symbol)
+        , index(length)
+    {
+    }
+
     expr_result_t(double value)
         : type(EXPR_RESULT_NUMBER)
         , value(value)
@@ -762,3 +769,8 @@ void eval_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t clea
 bool eval_unregister_function(const char* name, exprfn_t fn = nullptr);
 
 void eval_register_vec_mat_functions(expr_func_t*& funcs);
+
+expr_result_t expr_eval_symbol(string_table_symbol_t symbol);
+expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& value);
+string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message);
+string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message);

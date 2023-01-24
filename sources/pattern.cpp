@@ -2,7 +2,6 @@
  
 #include "settings.h"
 #include "eod.h"
-#include "eval.h"
 
 #include "framework/jobs.h"
 #include "framework/session.h"
@@ -50,7 +49,6 @@ enum PatternType : int {
 	PATTERN_SIMULATION_END,
 
 	PATTERN_ALL_END = PATTERN_SIMULATION_END
-
 };
 
 static const char* GRAPH_TYPES[PATTERN_ALL_END] = { 

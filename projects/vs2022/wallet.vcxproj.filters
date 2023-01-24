@@ -130,9 +130,6 @@
     <ClInclude Include="..\..\sources\bulk.h">
       <Filter>app</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sources\eval.h">
-      <Filter>app</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sources\framework\service.h">
       <Filter>framework</Filter>
     </ClInclude>
@@ -241,9 +238,6 @@
       <Filter>app</Filter>
     </ClCompile>
     <ClCompile Include="..\..\sources\bulk.cpp">
-      <Filter>app</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\sources\eval.cpp">
       <Filter>app</Filter>
     </ClCompile>
     <ClCompile Include="..\..\sources\reportgraph.cpp">

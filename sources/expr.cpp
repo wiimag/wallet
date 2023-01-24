@@ -143,9 +143,12 @@ string_const_t expr_result_t::as_string(const char* fmt /*= nullptr*/) const
         return string_table_decode_const(math_trunc(value));
 
     if (type == EXPR_RESULT_ARRAY)
-        return string_join<const expr_result_t>(list, 
-            [fmt](const expr_result_t& e){ return e.as_string(fmt); }, 
-            CTEXT(", "), CTEXT("["), CTEXT("]"));
+    {
+        string_const_t list_sep = array_size(list) > 8 ? CTEXT(",\n\t ") : CTEXT(", ");
+        return string_join<const expr_result_t>(list,
+            [fmt](const expr_result_t& e) { return e.as_string(fmt); },
+            list_sep, CTEXT("["), CTEXT("]"));
+    }
 
     if (type == EXPR_RESULT_POINTER)
     {
@@ -182,7 +185,7 @@ string_const_t expr_result_t::as_string(const char* fmt /*= nullptr*/) const
     return string_null();
 }
 
-static const expr_result_t expr_eval_symbol(string_table_symbol_t symbol)
+expr_result_t expr_eval_symbol(string_table_symbol_t symbol)
 {
     expr_result_t r(EXPR_RESULT_SYMBOL);
     r.value = (double)symbol;
@@ -209,7 +212,7 @@ static expr_result_t expr_eval_set(expr_t* e)
     return expr_eval_list(resolved_values);
 }
 
-static expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& value)
+expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& value)
 {
     expr_result_t* kvp = nullptr;
     array_push(kvp, key);
@@ -219,7 +222,7 @@ static expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_
     return expr_result_t(kvp, 1ULL);
 }
 
-static string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message)
+string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message)
 {
     if (idx >= args->len)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Missing arguments: %s", message);
@@ -231,7 +234,7 @@ static string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t id
     return arg.token;
 }
 
-static string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message)
+string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message)
 {
     const auto& arg_string = expr_eval_get_string_arg(args, idx, message);
 

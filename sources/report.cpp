@@ -5,6 +5,7 @@
 #include "title.h"
 #include "symbols.h"
 #include "eod.h"
+#include "expr.h"
 
 #include "framework/session.h"
 #include "framework/imgui_utils.h"
@@ -21,15 +22,13 @@
 #include <time.h>
 #include <algorithm>
 
-static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
-
-const FetchLevel REPORT_FETCH_LEVELS = FetchLevel::REALTIME | FetchLevel::FUNDAMENTALS | FetchLevel::TECHNICAL_INDEXED_PRICE | FetchLevel::TECHNICAL_EOD;
-
-static report_t* _reports = nullptr;
-static bool* _last_show_ui_ptr = nullptr;
-
-static void report_table_setup(report_handle_t report_handle, table_t* table);
-static void report_table_add_default_columns(report_handle_t report_handle, table_t* table);
+struct report_details_view_order_t
+{
+    report_t* report;
+    title_t* title;
+    config_handle_t data;
+    bool deleted{ false };
+};
 
 typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_NONE = 0,
@@ -54,7 +53,21 @@ typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_ASK,
 } report_column_formula_t;
 
-static title_t* report_title_find(report_t* report, string_const_t code)
+const FetchLevel REPORT_FETCH_LEVELS =
+FetchLevel::REALTIME |
+FetchLevel::FUNDAMENTALS |
+FetchLevel::TECHNICAL_INDEXED_PRICE |
+FetchLevel::TECHNICAL_EOD;
+
+static report_t* _reports = nullptr;
+static bool* _last_show_ui_ptr = nullptr;
+static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
+
+// 
+// # PRIVATE
+//
+
+FOUNDATION_STATIC title_t* report_title_find(report_t* report, string_const_t code)
 {
     for (auto& title : generics::fixed_array(report->titles))
     {
@@ -65,7 +78,7 @@ static title_t* report_title_find(report_t* report, string_const_t code)
     return nullptr;
 }
 
-static report_handle_t report_get_handle(const report_t* report_ptr)
+FOUNDATION_STATIC report_handle_t report_get_handle(const report_t* report_ptr)
 {
     int i = 0;
     for (auto& p : generics::fixed_array(_reports))
@@ -78,7 +91,7 @@ static report_handle_t report_get_handle(const report_t* report_ptr)
     return report_handle_t{0};
 }
 
-static title_t* report_title_add(report_t* report, string_const_t code)
+FOUNDATION_STATIC title_t* report_title_add(report_t* report, string_const_t code)
 {
     title_t* title = report_title_find(report, code);
     if (title)
@@ -97,7 +110,7 @@ static title_t* report_title_add(report_t* report, string_const_t code)
     return title;
 }
 
-static void report_title_remove(report_handle_t report_handle, const title_t* title)
+FOUNDATION_STATIC void report_title_remove(report_handle_t report_handle, const title_t* title)
 {
     report_t* report = report_get(report_handle);
     auto ctitles = report->data["titles"];
@@ -120,7 +133,7 @@ static void report_title_remove(report_handle_t report_handle, const title_t* ti
     }
 }
 
-static void report_filter_out_titles(report_t* report)
+FOUNDATION_STATIC void report_filter_out_titles(report_t* report)
 {
     report->active_titles = array_size(report->titles);
 
@@ -140,361 +153,264 @@ static void report_filter_out_titles(report_t* report)
     }
 }
 
-static report_handle_t report_allocate(const char* name, size_t name_length, const config_handle_t& data)
+FOUNDATION_STATIC bool report_table_update(table_element_ptr_t element)
 {
-    if (_reports == nullptr)
-        array_reserve(_reports, 1);
+    title_t* title = *(title_t**)element;
+    return title_update(title, 10.0);
+}
 
-    string_table_symbol_t name_symbol = string_table_encode(name, name_length);
+FOUNDATION_STATIC bool report_table_search(table_element_ptr_const_t element, const char* search_filter, size_t search_filter_length)
+{
+    if (search_filter_length == 0)
+        return true;
 
-    for (int i = 0, end = array_size(_reports); i < end; ++i)
+    title_t* title = *(title_t**)element;
+    if (string_contains_nocase(title->code, title->code_length, SETTINGS.search_filter, search_filter_length))
+        return true;
+
+    const stock_t* s = title->stock;
+    if (s)
     {
-        const report_t& r = _reports[i];
-        if (r.name == name_symbol)
-            return r.id;
+        string_const_t name = string_table_decode_const(s->name);
+        if (string_contains_nocase(STRING_ARGS(name), SETTINGS.search_filter, search_filter_length))
+            return true;
+
+        string_const_t type = string_table_decode_const(s->type);
+        if (string_contains_nocase(STRING_ARGS(type), SETTINGS.search_filter, search_filter_length))
+            return true;
     }
 
-    _reports = array_push(_reports, report_t{ name_symbol });
-    unsigned int report_index = array_size(_reports) - 1;
-    report_t* report = &_reports[report_index];
+    return false;
+}
 
-    // Ensure default structure
-    report->data = data ? data : config_allocate(CONFIG_VALUE_OBJECT);
-    report->wallet = wallet_allocate(report->data["wallet"]);
-    
-    auto cid = report->data["id"];
-    auto cname = config_set(report->data, STRING_CONST("name"), name, name_length);
-    auto ctitles = config_set_object(report->data, STRING_CONST("titles"));
+FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_element_ptr_t element)
+{
+    title_t* title = *(title_t**)element;
+    double real_time_elapsed_seconds = 0;
 
-    if (cid)
+    const float decrease_timelapse = 60.0f * 25.0f;
+    const float increase_timelapse = 60.0f * 25.0f;
+
+    row->background_color = 0;
+
+    if (row && title_is_index(title))
     {
-        report->id = string_to_uuid(STRING_ARGS(cid.as_string()));
+        return (row->background_color = BACKGROUND_INDX_COLOR);
     }
-    else
+    else if (title->average_quantity == 0 && title->sell_total_quantity > 0)
     {
-        report->id = uuid_generate_time();
-
-        string_const_t id_str = string_from_uuid_static(report->id);
-        cid = config_set(report->data, STRING_CONST("id"), STRING_ARGS(id_str));
-    }	
-    
-    report->save_index = data["order"].as_integer();
-    report->show_summary = data["show_summary"].as_boolean();
-    report->show_sold_title = data["show_sold_title"].as_boolean();
-    report->opened = data["opened"].as_boolean(true);
-
-    // Load titles
-    title_t** titles = nullptr;
-    array_reserve(titles, config_size(ctitles));
-    for (auto title_data : ctitles)
-    {
-        string_const_t code = config_name(title_data);
-        title_t* title = new title_t();
-        title_init(report->wallet, title, title_data);
-        titles = array_push(titles, title);        
+        return (row->background_color = BACKGROUND_SOLD_COLOR);
     }
-    report->titles = titles;	
-
-    report_filter_out_titles(report);
-    report_summary_update(report);
-
-    // Create table
-    table_t* table = table_allocate(name);
-    report_table_setup(report->id, table);
-    report_table_add_default_columns(report->id, table);
-    report->table = table;	
-
-    return report->id;
-}
-
-report_handle_t report_allocate(const char* name, size_t name_length)
-{
-    return report_allocate(name, name_length, config_null());
-}
-
-static report_handle_t report_create(const char* name, size_t name_length)
-{
-    report_handle_t report_handle = report_find(name, name_length);
-    if (uuid_is_null(report_handle))
-        report_handle = report_allocate(name, name_length);
-
-    report_t* report = report_get(report_handle);
-    report->save = true;
-    report->show_summary = true;
-    report->show_add_title_ui = true;
-    return report_handle;
-}
-
-string_const_t report_get_save_file_path(report_t* report)
-{
-    string_const_t report_file_name = string_table_decode_const(report->name);
-
-    if (!uuid_is_null(report->id))
+    else if (title_has_increased(title, nullptr, increase_timelapse, &real_time_elapsed_seconds))
     {
-        report_file_name = string_from_uuid_static(report->id);
-        config_set(report->data, STRING_CONST("id"), STRING_ARGS(report_file_name));
-    }
-    report_file_name = fs_clean_file_name(STRING_ARGS(report_file_name));
-    return session_get_user_file_path(STRING_ARGS(report_file_name), STRING_ARGS(REPORTS_DIR_NAME), STRING_CONST("json"));
-}
-
-static void report_rename(report_t* report, string_const_t name)
-{
-    report->name = string_table_encode(name);
-    report->dirty = true;
-}
-
-static void report_delete(report_t* report)
-{
-    report->save = false;
-    string_const_t report_save_file = report_get_save_file_path(report);
-    if (fs_is_file(STRING_ARGS(report_save_file)))
-        fs_remove_file(STRING_ARGS(report_save_file));
-}
-
-report_handle_t report_load(string_const_t report_file_path)
-{
-    const auto report_json_flags = 
-        CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS | 
-        CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
-        CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES |
-        CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS |
-        CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS;
-
-    config_handle_t data;
-    if (fs_is_file(STRING_ARGS(report_file_path)))
-        data = config_parse_file(STRING_ARGS(report_file_path), report_json_flags);
- 
-    string_const_t report_name = data["name"].as_string();
-    if (string_is_null(report_name))
-        report_name = path_base_file_name(STRING_ARGS(report_file_path));
-    report_handle_t report_handle = report_allocate(STRING_ARGS(report_name), data);
-    report_t* report = report_get(report_handle);
-    report->save = true;	    
-    return report_handle;
-}
-
-report_handle_t report_load(const char* name, size_t name_length)
-{
-    string_const_t report_file_path = session_get_user_file_path(name, name_length, STRING_ARGS(REPORTS_DIR_NAME), STRING_CONST("json"));
-    return report_load(report_file_path);
-}
-
-void report_save(report_t* report)
-{    
-    // Replicate some memory fields
-    config_set(report->data, "name", string_table_decode_const(report->name));
-    config_set(report->data, "order", (double)report->save_index);
-    config_set(report->data, "show_summary", report->show_summary);
-    config_set(report->data, "show_sold_title", report->show_sold_title);
-    config_set(report->data, "opened", report->opened);
-
-    wallet_save(report->wallet, config_set_object(report->data, STRING_CONST("wallet")));
-
-    string_const_t report_file_path = report_get_save_file_path(report);
-    if (config_write_file(report_file_path, report->data, 
-        CONFIG_OPTION_WRITE_SKIP_NULL | CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL)) {
-        report->dirty = false;
-    }
-}
-
-report_t* report_get(report_handle_t report_handle)
-{
-    for (auto& r : generics::fixed_array(_reports))
-    {
-        if (uuid_equal(r.id, report_handle))
-            return &r;
-    }
-    return nullptr;
-}
-
-report_t* report_get_at(unsigned int index)
-{
-    if (index >= array_size(_reports))
-        return nullptr;
-    return &_reports[index];
-}
-
-size_t report_count()
-{
-    return array_size(_reports);
-}
-
-report_handle_t report_find(const char* name, size_t name_length)
-{
-    string_table_symbol_t report_name_symbol = string_table_encode(name, name_length);
-    for (int i = 0, end = array_size(_reports); i != end; ++i)
-    {
-        report_t* report = &_reports[i];
-
-        if (report->name == report_name_symbol)
-            return report->id;
-    }
-
-    return uuid_null();
-}
-
-report_handle_t report_find_no_case(const char* name, size_t name_length)
-{
-    report_handle_t handle = report_find(name, name_length);
-    if (report_handle_is_valid(handle))
-        return handle;
-
-    // Do long search by name with no casing
-    for (int i = 0, end = array_size(_reports); i != end; ++i)
-    {
-        report_t* report = &_reports[i];
-        string_const_t report_name = string_table_decode_const(report->name);
-
-        if (string_equal_nocase(STRING_ARGS(report_name), name, name_length))
-            return report->id;
-    }
-
-    return uuid_null();
-}
-
-bool report_handle_is_valid(report_handle_t handle)
-{
-    return !uuid_is_null(handle);
-}
-
-bool report_sync_titles(report_t* report)
-{
-    const size_t title_count = array_size(report->titles);
-    for (size_t i = 0; i < title_count; ++i)
-    {
-        title_t* t = report->titles[i];
-        if (title_is_index(t))
-            continue;
-        if (!t->stock->is_resolving(REPORT_FETCH_LEVELS))
+        ImVec4 hsv = ImGui::ColorConvertU32ToFloat4(BACKGROUND_GOOD_COLOR);
+        hsv.w = (increase_timelapse - (float)real_time_elapsed_seconds) / increase_timelapse;
+        if (hsv.w > 0)
         {
-            if (!title_update(t, 3.5) && !thread_try_wait(100))
-                break;
+            row->background_color = ImGui::ColorConvertFloat4ToU32(hsv);
+            return true;
+        }
+    }
+    else if (title_has_decreased(title, nullptr, decrease_timelapse, &real_time_elapsed_seconds))
+    {
+        ImVec4 hsv = ImGui::ColorConvertU32ToFloat4(BACKGROUND_BAD_COLOR);
+        hsv.w = (decrease_timelapse - (float)real_time_elapsed_seconds) / decrease_timelapse;
+        if (hsv.w > 0)
+        {
+            row->background_color = ImGui::ColorConvertFloat4ToU32(hsv);
+            return true;
         }
     }
 
-    report_summary_update(report);
-    if (report_is_loading(report))
+    return false;
+}
+
+FOUNDATION_STATIC bool report_table_row_end(table_t* table, row_t* row, table_element_ptr_t element)
+{
+    if (element == nullptr)
         return false;
 
-    for (size_t i = 0; i < title_count; ++i)
-        title_refresh(report->titles[i]);
-    report_summary_update(report);
-    if (report->table)
-        report->table->needs_sorting = true;
-    return true;
+    title_t* title = *(title_t**)element;
+    return false;
 }
 
-void report_summary_update(report_t* report)
+FOUNDATION_STATIC void report_table_setup(report_handle_t report_handle, table_t* table)
 {
-    // Update report average days
-    double total_days = 0;
-    double total_value = 0;
-    double total_investment = 0;
-    double total_sell_gain_if_kept = 0;
-    double total_sell_gain_if_kept_p = 0;
-    double total_title_sell_count = 0;
-    double total_sell_rated = 0;
-    double total_sell_gain_rated = 0;
-    double total_buy_rated = 0;
-    double average_nq = 0;
-    double average_nq_count = 0;
-    double total_day_gain = 0;
-    double total_daily_average_p = 0;
-    double title_resolved_count = 0;
-    double total_dividends = 0;
-    double total_active_titles = 0;
-    const size_t title_count = array_size(report->titles);
-    for (size_t i = 0; i < title_count; ++i)
+    table->flags = ImGuiTableFlags_ScrollX
+        | TABLE_SUMMARY
+        | TABLE_HIGHLIGHT_HOVERED_ROW;
+
+    table->update = report_table_update;
+    table->search = report_table_search;
+    table->context_menu = L3(report_table_context_menu(report_handle, _1, _2, _3));
+    table->row_begin = report_table_row_begin;
+    table->row_end = report_table_row_end;
+}
+
+FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element, const column_t* column)
+{
+    title_t* title = *(title_t**)element;
+
+    // If all titles are sold, return the sold average price.
+    if (title->sell_total_quantity > 0 && title->average_quantity == 0)
+        return title->sell_total_price / title->sell_total_quantity;
+
+    if (title->average_ask_price > 0)
     {
-        title_t& t = *report->titles[i];
+        cell_t ask_price_cell(title->average_ask_price);
+        ask_price_cell.style.types |= COLUMN_COLOR_TEXT;
+        ask_price_cell.style.text_color = TEXT_WARN_COLOR;
+        return ask_price_cell;
+    }
 
-        if (t.average_quantity > 0)
+    if (title_is_index(title))
+        return NAN;
+
+    return title->ask_price.fetch();
+}
+
+FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, const column_t* column, report_column_formula_t formula)
+{
+    title_t* title = *(title_t**)element;
+
+    if ((column->flags & COLUMN_COMPUTE_SUMMARY) && title_is_index(title))
+        return nullptr;
+
+    switch (formula)
+    {
+    case REPORT_FORMULA_TITLE:
+        return title->code;
+
+    case REPORT_FORMULA_TITLE_DATE:
+        return title->date_average;
+
+    case REPORT_FORMULA_BUY_QUANTITY:
+        return title->average_quantity;
+
+    case REPORT_FORMULA_BUY_PRICE:
+    {
+        double adjusted_price = !ImGui::IsKeyDown(ImGuiKey_LeftCtrl) ?
+            (math_ifzero(title->buy_adjusted_price, math_ifzero(title->average_price, title->buy_total_price / title->buy_total_quantity))) :
+            title->average_price_rated;
+        cell_t buy_price_cell(adjusted_price);
+        if (title->average_quantity == 0 || (title->average_price * max(title->exchange_rate.fetch(), title->today_exchange_rate.fetch())) < title->average_price_rated)
         {
-            total_days += t.elapsed_days;
-            total_active_titles++;
+            buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
+            buy_price_cell.style.text_color = TEXT_WARN_COLOR;
         }
+        return buy_price_cell;
+    }
 
-        total_investment += math_ifnan(title_get_total_investment(&t), 0);
+    case REPORT_FORMULA_ELAPSED_DAYS:
+        return title->elapsed_days;
 
-        const stock_t* s = t.stock;
-        const bool stock_valid = s && !math_real_is_nan(s->current.change_p);
-        // Make sure the stock is still valid today, it might have been delisted.
-        if (stock_valid)
+    case REPORT_FORMULA_TOTAL_INVESTMENT:
+        return title_get_total_investment(title);
+
+    case REPORT_FORMULA_PS:
+        return title->ps.fetch();
+
+    case REPORT_FORMULA_EXCHANGE_RATE:
+        return title->exchange_rate.fetch();
+    }
+
+    // Stock accessors
+    const stock_t* stock_data = title->stock;
+    if (stock_data)
+    {
+        switch (formula)
         {
-            total_value += title_get_total_value(&t, s);
-            average_nq += s->current.change_p / 100.0;
-            average_nq_count++;
+        case REPORT_FORMULA_CURRENCY:	return stock_data->currency;
+        case REPORT_FORMULA_TYPE:		return stock_data->type;
+        case REPORT_FORMULA_PRICE:
+            if (title_is_index(title) && title->average_quantity == 0)
+                return NAN;
+            return stock_data->current.close;
+        case REPORT_FORMULA_DAY_CHANGE:	return stock_data->current.change_p;
 
-            average_nq += title_get_yesterday_change(&t, s) / 100.0;
-            average_nq_count++;
+        case REPORT_FORMULA_DAY_GAIN:			return title_get_day_change(title, stock_data);
+        case REPORT_FORMULA_TOTAL_VALUE:		return title_get_total_value(title, stock_data);
+        case REPORT_FORMULA_TOTAL_GAIN:			return title_get_total_gain(title, stock_data);
+        case REPORT_FORMULA_TOTAL_GAIN_P:		return title_get_total_gain_p(title, stock_data);
+        case REPORT_FORMULA_YESTERDAY_CHANGE:	return title_get_yesterday_change(title, stock_data);
 
-            if (!math_real_is_nan(s->current.change))
-                total_day_gain += math_ifnan(title_get_day_change(&t, s), 0);
-
-            total_daily_average_p += s->current.change_p;
-
-            title_resolved_count++;
-        }
-        else
-        {
-            total_value += t.average_quantity * t.average_price;
-        }
-
-        total_buy_rated += t.buy_total_price_rated;
-        total_sell_rated += t.sell_total_price_rated;
-        total_dividends += t.total_dividends;
-
-        if (stock_valid && t.sell_total_quantity > 0)
-        {
-            const double sell_gain_if_kept = (s->current.close - t.sell_adjusted_price) * t.sell_adjusted_quantity;
-            const double sell_p = (s->current.close - t.sell_adjusted_price) / t.sell_adjusted_price;
-            if (!math_real_is_nan(sell_p))
-            {
-                total_sell_gain_if_kept_p += sell_p;
-                total_sell_gain_if_kept += sell_gain_if_kept;
-                total_title_sell_count++;
-                total_sell_gain_rated += t.sell_total_price_rated - ((t.buy_total_price_rated / t.buy_total_quantity) * t.sell_total_quantity);
-            }
+        default:
+            FOUNDATION_ASSERT_FAILFORMAT("Cannot get %.*s value for %.*s (%u)", STRING_FORMAT(column->get_name()), title->code_length, title->code, formula);
+            break;
         }
     }
 
-    if (total_active_titles > 0)
-        report->wallet->average_days = total_days / total_active_titles;
-
-    if (average_nq_count > 0)
-        average_nq /= average_nq_count;
-
-    report->wallet->total_title_sell_count = total_title_sell_count;
-    report->wallet->total_sell_gain_if_kept = total_sell_gain_if_kept;
-    if (total_title_sell_count > 0)
-        total_sell_gain_if_kept_p /= total_title_sell_count;
-    else
-        total_sell_gain_if_kept_p = 0;
-
-    report->total_daily_average_p = total_daily_average_p / title_resolved_count;
-    report->total_value = total_value;
-    report->total_investment = total_investment;
-    report->total_gain = total_value - total_investment;
-    if (total_investment != 0)
-        report->total_gain_p = report->total_gain / total_investment;
-    else
-        report->total_gain_p = 0;
-    report->total_day_gain = total_day_gain;
-    report->summary_last_update = time_current();
-
-    // Update historical values
-    report->wallet->sell_average = total_sell_rated / total_title_sell_count;
-    report->wallet->sell_total_gain = total_sell_gain_rated;
-    report->wallet->sell_gain_average = total_sell_gain_rated / total_title_sell_count;
-    report->wallet->total_sell_gain_if_kept_p = total_sell_gain_if_kept_p;
-    report->wallet->target_ask = report->wallet->main_target + report->total_gain_p;
-    report->wallet->profit_ask = max(report->wallet->target_ask + total_sell_gain_if_kept_p + math_abs(average_nq), 0.03);
-    report->wallet->enhanced_earnings = math_abs(report->wallet->sell_gain_average) * (1.0 + report->wallet->main_target);
-    report->wallet->total_dividends = total_dividends;
+    return cell_t();
 }
 
-static cell_t report_column_get_change_value(table_element_ptr_t element, const column_t* column, int rel_days)
+FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    const title_t* title = *(const title_t**)element;
+
+    ImGui::MoveCursor(8.0f, 4.0f);
+    if (ImGui::MenuItem("Buy"))
+        ((title_t*)title)->show_buy_ui = true;
+
+    ImGui::MoveCursor(8.0f, 2.0f);
+    if (ImGui::MenuItem("Sell"))
+        ((title_t*)title)->show_sell_ui = true;
+
+    ImGui::MoveCursor(8.0f, 2.0f);
+    if (ImGui::MenuItem("Details"))
+        ((title_t*)title)->show_details_ui = true;
+
+    ImGui::Separator();
+
+    ImGui::MoveCursor(8.0f, 2.0f);
+    if (ImGui::MenuItem("Remove"))
+        report_title_remove(report_handle, title);
+
+    ImGui::Separator();
+
+    ImGui::MoveCursor(8.0f, 2.0f);
+    if (ImGui::MenuItem("Load Pattern"))
+        pattern_open(title->code, title->code_length);
+
+    ImGui::MoveCursor(0.0f, 2.0f);
+}
+
+FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, const column_t* column)
+{
+    title_t* title = *(title_t**)element;
+
+    if (column->flags & COLUMN_RENDER_ELEMENT)
+    {
+        ImGui::BeginGroup();
+        const char* formatted_code = title->code;
+
+        if (title_has_increased(title, nullptr, 30.0 * 60.0))
+            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_UP);
+        else if (title_has_decreased(title, nullptr, 30.0 * 60.0))
+            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_DOWN);
+
+        float width = ImGui::GetContentRegionAvail().x;
+        float code_width = ImGui::CalcTextSize(formatted_code).x;
+
+        ImGui::TextUnformatted(formatted_code);
+
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+            pattern_open(title->code, title->code_length);
+
+        if ((code_width + 40.0f) < width && (title->buy_total_quantity > 0 || title->sell_total_quantity > 0))
+        {
+            ImGui::MoveCursor(width - code_width - imgui_get_font_ui_scale(48.0f), 0, true);
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
+            if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
+                title->show_details_ui = true;
+            ImGui::PopStyleColor(1);
+        }
+        ImGui::EndGroup();
+    }
+
+    return title->code;
+}
+
+FOUNDATION_STATIC cell_t report_column_get_change_value(table_element_ptr_t element, const column_t* column, int rel_days)
 {
     title_t* title = *(title_t**)element;
     if ((column->flags & COLUMN_COMPUTE_SUMMARY) && title_is_index(title))
@@ -507,12 +423,12 @@ static cell_t report_column_get_change_value(table_element_ptr_t element, const 
     return title_get_range_change_p(title, stock_data, rel_days, rel_days < -365);
 }
 
-static bool report_column_is_numeric(column_format_t format)
+FOUNDATION_STATIC bool report_column_is_numeric(column_format_t format)
 {
     return format == COLUMN_FORMAT_CURRENCY || format == COLUMN_FORMAT_NUMBER || format == COLUMN_FORMAT_PERCENTAGE;
 }
 
-static cell_t report_column_get_fundamental_value(table_element_ptr_t element, const column_t* column, const char* filter_name, size_t filter_name_length)
+FOUNDATION_STATIC cell_t report_column_get_fundamental_value(table_element_ptr_t element, const column_t* column, const char* filter_name, size_t filter_name_length)
 {
     title_t* title = *(title_t**)element;
     const config_handle_t& filter_value = title_get_fundamental_config_value(title, filter_name, filter_name_length);
@@ -535,11 +451,63 @@ static cell_t report_column_get_fundamental_value(table_element_ptr_t element, c
     return config_value_as_string(filter_value);
 }
 
-static cell_t report_column_get_name(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t report_column_get_name(table_element_ptr_t element, const column_t* column)
 {
     title_t* title = *(title_t**)element;
     return title->stock->name;
 }
+
+FOUNDATION_STATIC void report_title_open_details_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    title_t* title = *(title_t**)element;
+    title->show_details_ui = true;
+}
+
+FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    title_t* title = *(title_t**)element;
+    eod_fetch("real-time", title->code, FORMAT_JSON_CACHE, [title](const json_object_t& json)
+        {
+            string_const_t time_str = string_from_time_static((tick_t)(json["timestamp"].as_number() * 1000.0), true);
+
+            if (time_str.length == 0)
+            {
+                return ImGui::Text(" %s (%s) \n Data not available \n",
+                    title->code, string_table_decode(title->stock->name));
+            }
+
+            const double old_price = title->stock->current.close;
+            const double open = json["open"].as_number();
+            const double change = json["change"].as_number();
+            const double volume = json["volume"].as_number();
+            const double current_price = json["close"].as_number();
+            const double previous_close = json["previousClose"].as_number();
+            const double low = json["low"].as_number();
+            const double high = json["high"].as_number();
+            ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), " %s (%s) \n %.*s \n"
+                "\tPrice %.2lf $\n"
+                "\tOpen: %.2lf $\n"
+                "\tChange: %.2lf $ (%.3g %%)\n"
+                "\tYesterday: %.2lf $ (%.3g %%)\n"
+                "\tLow %.2lf $\n"
+                "\tHigh %.2lf $ (%.3g %%)\n"
+                "\tDMA (50d) %.2lf $ (%.3g %%)\n"
+                "\tDMA (200d) %.2lf $ (%.3g %%)\n"
+                "\tVolume %.6g (%.*s)", title->code, string_table_decode(title->stock->name), STRING_FORMAT(time_str),
+                current_price,
+                open,
+                current_price - open, (current_price - open) / open * 100.0,
+                previous_close, (current_price - previous_close) / previous_close * 100.0,
+                low,
+                high, (high - low) / current_price * 100.0,
+                title->stock->dma_50, title->stock->dma_50 / current_price * 100.0,
+                title->stock->dma_200, title->stock->dma_200 / title->stock->high_52 * 100.0,
+                volume, STRING_FORMAT(string_from_currency(volume * change, "9 999 999 999 $")));
+            if (current_price != old_price)
+                title_refresh(title);
+        }, 60ULL);
+}
+
 
 FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
 {
@@ -640,13 +608,13 @@ FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_con
 {
     title_t* title = *(title_t**)element;
     const double avg = math_ifzero(title->average_price, title->stock->current.close);
-    ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), 
+    ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
         " (%s $) Bought Price: %.2lf $ \n"
         " (%.*s $) Average Cost: %.3lf $ \n"
-        " (Split) Adjusted Price: %.2lf $ ", 
-            string_table_decode(title->stock->currency), math_ifzero(title->buy_total_price / title->buy_total_quantity, title->average_price),
-            STRING_FORMAT(title->wallet->preferred_currency), math_ifzero(title->average_price_rated, 0),
-            math_ifzero(title->buy_adjusted_price, 0));
+        " (Split) Adjusted Price: %.2lf $ ",
+        string_table_decode(title->stock->currency), math_ifzero(title->buy_total_price / title->buy_total_quantity, title->average_price),
+        STRING_FORMAT(title->wallet->preferred_currency), math_ifzero(title->average_price_rated, 0),
+        math_ifzero(title->buy_adjusted_price, 0));
 }
 
 FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
@@ -676,176 +644,13 @@ FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_con
     }
 }
 
-FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element, const column_t* column)
-{
-    title_t* title = *(title_t**)element;
-
-    // If all titles are sold, return the sold average price.
-    if (title->sell_total_quantity > 0 && title->average_quantity == 0)
-        return title->sell_total_price / title->sell_total_quantity;
-
-    if (title->average_ask_price > 0)
-    {
-        cell_t ask_price_cell(title->average_ask_price);
-        ask_price_cell.style.types |= COLUMN_COLOR_TEXT;
-        ask_price_cell.style.text_color = TEXT_WARN_COLOR;
-        return ask_price_cell;
-    }
-    
-    if (title_is_index(title))
-        return NAN;
-
-    return title->ask_price.fetch();
-}
-
-FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, const column_t* column, report_column_formula_t formula)
-{
-    title_t* title = *(title_t**)element;
-
-    if ((column->flags & COLUMN_COMPUTE_SUMMARY) && title_is_index(title))
-        return nullptr;
-
-    switch (formula)
-    {
-        case REPORT_FORMULA_TITLE:				
-            return title->code;
-
-        case REPORT_FORMULA_TITLE_DATE:			
-            return title->date_average;
-
-        case REPORT_FORMULA_BUY_QUANTITY:		
-            return title->average_quantity;
-
-        case REPORT_FORMULA_BUY_PRICE:
-        {
-            double adjusted_price = !ImGui::IsKeyDown(ImGuiKey_LeftCtrl) ?
-                (math_ifzero(title->buy_adjusted_price, math_ifzero(title->average_price, title->buy_total_price / title->buy_total_quantity))) :
-                title->average_price_rated;
-            cell_t buy_price_cell(adjusted_price);
-            if (title->average_quantity == 0 || (title->average_price * max(title->exchange_rate.fetch(), title->today_exchange_rate.fetch())) < title->average_price_rated)
-            {
-                buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
-                buy_price_cell.style.text_color = TEXT_WARN_COLOR;
-            }
-            return buy_price_cell;
-        }
-
-        case REPORT_FORMULA_ELAPSED_DAYS:		
-            return title->elapsed_days;
-
-        case REPORT_FORMULA_TOTAL_INVESTMENT:   
-            return title_get_total_investment(title);
-        
-        case REPORT_FORMULA_PS:				
-            return title->ps.fetch();
-            
-        case REPORT_FORMULA_EXCHANGE_RATE:	
-            return title->exchange_rate.fetch();
-    }
-
-    // Stock accessors
-    const stock_t* stock_data = title->stock;
-    if (stock_data)
-    {
-        switch (formula)
-        {
-            case REPORT_FORMULA_CURRENCY:	return stock_data->currency;
-            case REPORT_FORMULA_TYPE:		return stock_data->type;
-            case REPORT_FORMULA_PRICE:		
-                if (title_is_index(title) && title->average_quantity == 0)
-                    return NAN;
-                return stock_data->current.close;
-            case REPORT_FORMULA_DAY_CHANGE:	return stock_data->current.change_p;
-
-            case REPORT_FORMULA_DAY_GAIN:			return title_get_day_change(title, stock_data);
-            case REPORT_FORMULA_TOTAL_VALUE:		return title_get_total_value(title, stock_data);
-            case REPORT_FORMULA_TOTAL_GAIN:			return title_get_total_gain(title, stock_data);
-            case REPORT_FORMULA_TOTAL_GAIN_P:		return title_get_total_gain_p(title, stock_data);
-            case REPORT_FORMULA_YESTERDAY_CHANGE:	return title_get_yesterday_change(title, stock_data);
-            
-            default:
-                FOUNDATION_ASSERT_FAILFORMAT("Cannot get %.*s value for %.*s (%u)", STRING_FORMAT(column->get_name()), title->code_length, title->code, formula);
-                break;
-        }
-    }
-
-    return cell_t();
-}
-
-static void report_column_title_context_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
-{
-    const title_t* title = *(const title_t**)element;
-    
-    ImGui::MoveCursor(8.0f, 4.0f);
-    if (ImGui::MenuItem("Buy"))
-        ((title_t*)title)->show_buy_ui = true;
-
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Sell"))
-        ((title_t*)title)->show_sell_ui = true;
-
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Details"))
-        ((title_t*)title)->show_details_ui = true;
-
-    ImGui::Separator();
-
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Remove"))
-        report_title_remove(report_handle, title);
-
-    ImGui::Separator();
-
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Load Pattern"))
-        pattern_open(title->code, title->code_length);
-
-    ImGui::MoveCursor(0.0f, 2.0f);
-}
-
-cell_t report_column_draw_title(table_element_ptr_t element, const column_t* column)
-{
-    title_t* title = *(title_t**)element;
-
-    if (column->flags & COLUMN_RENDER_ELEMENT)
-    {
-        ImGui::BeginGroup();
-        const char* formatted_code = title->code;
-
-        if (title_has_increased(title, nullptr, 30.0 * 60.0))
-            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_UP);
-        else if (title_has_decreased(title, nullptr, 30.0 * 60.0))
-            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_DOWN);
-
-        float width = ImGui::GetContentRegionAvail().x;
-        float code_width = ImGui::CalcTextSize(formatted_code).x;
-
-        ImGui::TextUnformatted(formatted_code);
-
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-            pattern_open(title->code, title->code_length);
-
-        if ((code_width + 40.0f) < width && (title->buy_total_quantity > 0 || title->sell_total_quantity > 0))
-        {
-            ImGui::MoveCursor(width - code_width - imgui_get_font_ui_scale(48.0f), 0, true);
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
-            if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
-                title->show_details_ui = true;
-            ImGui::PopStyleColor(1);
-        }
-        ImGui::EndGroup();
-    }
-
-    return title->code;
-}
-
-static void report_title_open_buy_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_open_buy_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
     title->show_buy_ui = true;
 }
 
-static void report_title_open_sell_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_open_sell_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
     if (title->average_quantity == 0)
@@ -854,147 +659,7 @@ static void report_title_open_sell_view(table_element_ptr_const_t element, const
         title->show_sell_ui = true;
 }
 
-static void report_title_open_details_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
-{
-    title_t* title = *(title_t**)element;
-    title->show_details_ui = true;
-}
-
-FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
-{
-    title_t* title = *(title_t**)element;
-    eod_fetch("real-time", title->code, FORMAT_JSON_CACHE, [title](const json_object_t& json)
-    {
-        string_const_t time_str = string_from_time_static((tick_t)(json["timestamp"].as_number() * 1000.0), true);
-
-        if (time_str.length == 0)
-        {
-            return ImGui::Text(" %s (%s) \n Data not available \n", 
-                title->code, string_table_decode(title->stock->name));
-        }
-
-        const double old_price = title->stock->current.close;
-        const double open = json["open"].as_number();
-        const double change = json["change"].as_number();
-        const double volume = json["volume"].as_number();
-        const double current_price = json["close"].as_number();
-        const double previous_close = json["previousClose"].as_number();
-        const double low = json["low"].as_number();
-        const double high = json["high"].as_number();
-        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), " %s (%s) \n %.*s \n"
-            "\tPrice %.2lf $\n"
-            "\tOpen: %.2lf $\n"
-            "\tChange: %.2lf $ (%.3g %%)\n"
-            "\tYesterday: %.2lf $ (%.3g %%)\n"
-            "\tLow %.2lf $\n"
-            "\tHigh %.2lf $ (%.3g %%)\n"
-            "\tDMA (50d) %.2lf $ (%.3g %%)\n"
-            "\tDMA (200d) %.2lf $ (%.3g %%)\n"
-            "\tVolume %.6g (%.*s)", title->code, string_table_decode(title->stock->name), STRING_FORMAT(time_str),
-                current_price,
-                open,
-                current_price - open, (current_price - open) / open * 100.0,
-                previous_close, (current_price - previous_close) / previous_close * 100.0,
-                low,
-                high, (high - low) / current_price * 100.0,
-                title->stock->dma_50, title->stock->dma_50 / current_price * 100.0,
-                title->stock->dma_200, title->stock->dma_200 / title->stock->high_52 * 100.0,
-                volume, STRING_FORMAT(string_from_currency(volume * change, "9 999 999 999 $")));
-        if (current_price != old_price)
-            title_refresh(title);
-    }, 60ULL);
-}
-
-static void report_table_add_default_columns(report_handle_t report_handle, table_t* table)
-{
-    auto& ctitle = table_add_column(table, STRING_CONST("Title"), report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
-        .set_context_menu_callback(L3(report_column_title_context_menu(report_handle, _1, _2, _3)));
-
-    table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"), report_column_get_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-    
-    table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), L2(report_column_get_value( _1, _2, REPORT_FORMULA_TITLE_DATE)), COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
-        .set_selected_callback(report_title_open_details_view);
-
-    table_add_column(table, STRING_CONST("  " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE)
-        .set_selected_callback(report_title_open_details_view);
-
-    table_add_column(table, STRING_CONST("   Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE)
-        .set_selected_callback(report_title_open_buy_view)
-        .set_tooltip_callback(report_title_adjusted_price_tooltip);
-
-    table_add_column(table, STRING_CONST(" Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
-        .set_selected_callback(report_title_open_details_view)
-        .set_tooltip_callback(report_title_live_price_tooltip)
-        .set_style_formatter(report_title_price_alerts_formatter);
-
-    table_add_column(table, STRING_CONST("   Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"), report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
-        .set_selected_callback(report_title_open_sell_view)
-        .set_tooltip_callback(report_title_ask_price_gain_tooltip);
-
-    table_add_column(table, STRING_CONST("   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-
-    table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE);	 
-    table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-
-    table_add_column(table, STRING_CONST("  Y. " ICON_MD_CALENDAR_VIEW_DAY "||" ICON_MD_CALENDAR_VIEW_DAY " Yesterday % "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_YESTERDAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week"), E32(report_column_get_change_value, _1, _2, -7), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"), E32(report_column_get_change_value, _1, _2, -31), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("  3M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 3 months"), E32(report_column_get_change_value, _1, _2, -90), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"), E32(report_column_get_change_value, _1, _2, -365), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
-    table_add_column(table, STRING_CONST("10Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 10 years"), E32(report_column_get_change_value, _1, _2, -365 * 10), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
-
-    table_add_column(table, STRING_CONST(ICON_MD_FLAG "||" ICON_MD_FLAG " Currency"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_CURRENCY), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CENTER_ALIGN);
-    table_add_column(table, STRING_CONST("   " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_EXCHANGE_RATE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE);
-    
-    table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"), E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("Highlights.DividendYield")), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ZERO_USE_DASH)
-        .set_tooltip_callback(report_title_dividends_total_tooltip);
-
-    table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_INVESTMENT), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-    table_add_column(table, STRING_CONST("      V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_VALUE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-    
-    table_add_column(table, STRING_CONST("   Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE)
-        .set_style_formatter(report_title_total_gain_alerts_formatter);
-    table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
-        .set_style_formatter(report_title_total_gain_p_alerts_formatter);
-
-    table_add_column(table, STRING_CONST(ICON_MD_INVENTORY " Type    "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TYPE), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST(ICON_MD_STORE " Sector"), E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_TEXT_WRAPPING | COLUMN_SEARCHABLE)
-        .width = 200.0f;
-
-    table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER);
-}
-
-static bool report_table_update(table_element_ptr_t element)
-{
-    title_t* title = *(title_t**)element;
-    return title_update(title, 10.0);
-}
-
-static bool report_table_search(table_element_ptr_const_t element, const char* search_filter, size_t search_filter_length)
-{
-    if (search_filter_length == 0)
-        return true;
-
-    title_t* title = *(title_t**)element;
-    if (string_contains_nocase(title->code, title->code_length, SETTINGS.search_filter, search_filter_length))
-        return true;
-
-    const stock_t* s = title->stock;
-    if (s)
-    {
-        string_const_t name = string_table_decode_const(s->name);
-        if (string_contains_nocase(STRING_ARGS(name), SETTINGS.search_filter, search_filter_length))
-            return true;
-
-        string_const_t type = string_table_decode_const(s->type);
-        if (string_contains_nocase(STRING_ARGS(type), SETTINGS.search_filter, search_filter_length))
-            return true;
-    }
-
-    return false;
-}
-
-static void report_table_context_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_table_context_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     if (element == nullptr)
     {
@@ -1009,159 +674,50 @@ static void report_table_context_menu(report_handle_t report_handle, table_eleme
     }
 }
 
-FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_element_ptr_t element)
+FOUNDATION_STATIC report_handle_t report_create(const char* name, size_t name_length)
 {
-    title_t* title = *(title_t**)element;
-    double real_time_elapsed_seconds = 0;
+    report_handle_t report_handle = report_find(name, name_length);
+    if (uuid_is_null(report_handle))
+        report_handle = report_allocate(name, name_length);
 
-    const float decrease_timelapse = 60.0f * 25.0f;
-    const float increase_timelapse = 60.0f * 25.0f;
-
-    row->background_color = 0;
-
-    if (row && title_is_index(title))
-    {
-        return (row->background_color = BACKGROUND_INDX_COLOR);
-    }
-    else if (title->average_quantity == 0 && title->sell_total_quantity > 0)
-    {
-        return (row->background_color = BACKGROUND_SOLD_COLOR);
-    }
-    else if (title_has_increased(title, nullptr, increase_timelapse, &real_time_elapsed_seconds))
-    {
-        ImVec4 hsv = ImGui::ColorConvertU32ToFloat4(BACKGROUND_GOOD_COLOR);
-        hsv.w = (increase_timelapse - (float)real_time_elapsed_seconds) / increase_timelapse;
-        if (hsv.w > 0)
-        {
-            row->background_color = ImGui::ColorConvertFloat4ToU32(hsv);
-            return true;
-        }
-    }
-    else if (title_has_decreased(title, nullptr, decrease_timelapse, &real_time_elapsed_seconds))
-    {
-        ImVec4 hsv = ImGui::ColorConvertU32ToFloat4(BACKGROUND_BAD_COLOR);
-        hsv.w = (decrease_timelapse - (float)real_time_elapsed_seconds) / decrease_timelapse;
-        if (hsv.w > 0)
-        {
-            row->background_color = ImGui::ColorConvertFloat4ToU32(hsv);
-            return true;
-        }
-    }
-
-    return false;
+    report_t* report = report_get(report_handle);
+    report->save = true;
+    report->show_summary = true;
+    report->show_add_title_ui = true;
+    return report_handle;
 }
 
-static bool report_table_row_end(table_t* table, row_t* row, table_element_ptr_t element)
+FOUNDATION_STATIC string_const_t report_get_save_file_path(report_t* report)
 {
-    if (element == nullptr)
-        return false;
+    string_const_t report_file_name = string_table_decode_const(report->name);
 
-    title_t* title = *(title_t**)element;
-    return false;
+    if (!uuid_is_null(report->id))
+    {
+        report_file_name = string_from_uuid_static(report->id);
+        config_set(report->data, STRING_CONST("id"), STRING_ARGS(report_file_name));
+    }
+    report_file_name = fs_clean_file_name(STRING_ARGS(report_file_name));
+    return session_get_user_file_path(STRING_ARGS(report_file_name), STRING_ARGS(REPORTS_DIR_NAME), STRING_CONST("json"));
 }
 
-static void report_table_setup(report_handle_t report_handle, table_t* table)
+FOUNDATION_STATIC void report_rename(report_t* report, string_const_t name)
 {
-    table->flags = ImGuiTableFlags_ScrollX
-        | TABLE_SUMMARY
-        | TABLE_HIGHLIGHT_HOVERED_ROW;
-
-    table->update = report_table_update;
-    table->search = report_table_search;
-    table->context_menu = L3(report_table_context_menu(report_handle, _1, _2, _3));
-    table->row_begin = report_table_row_begin;
-    table->row_end = report_table_row_end;
+    report->name = string_table_encode(name);
+    report->dirty = true;
 }
 
-static void report_toggle_show_summary(report_t* report)
+FOUNDATION_STATIC void report_delete(report_t* report)
+{
+    report->save = false;
+    string_const_t report_save_file = report_get_save_file_path(report);
+    if (fs_is_file(STRING_ARGS(report_save_file)))
+        fs_remove_file(STRING_ARGS(report_save_file));
+}
+
+FOUNDATION_STATIC void report_toggle_show_summary(report_t* report)
 {
     report->show_summary = !report->show_summary;
     report_summary_update(report);
-}
-
-bool report_is_loading(report_t* report)
-{
-    const size_t title_count = array_size(report->titles);
-    for (size_t i = 0; i < title_count; ++i)
-    {
-        const title_t* t = report->titles[i];
-        if (title_is_index(t))
-            continue;
-        if (!t->stock->has_resolve(REPORT_FETCH_LEVELS))
-            return true;
-    }
-
-    return false;
-}
-
-bool report_refresh(report_t* report)
-{
-    const size_t title_count = array_size(report->titles);
-    for (size_t i = 0; i < title_count; ++i)
-    {
-        title_t* t = report->titles[i];
-        t->stock->fetch_errors = 0;
-        t->stock->resolved_level &= ~FetchLevel::REALTIME;
-        if (!stock_resolve(t->stock, FetchLevel::REALTIME))
-            thread_try_wait(32);
-    }
-
-    if (report_sync_titles(report))
-        return true;
-
-    report->fully_resolved = false;
-    return false;
-}
-
-void report_menu(report_t* report)
-{
-    if (shortcut_executed(293/*GLFW_KEY_F4*/))
-        report_toggle_show_summary(report);
-
-    if (ImGui::BeginPopupContextItem())
-    {
-        if (report->dirty && ImGui::MenuItem("Save"))
-            report_save(report);
-
-        if (ImGui::MenuItem("Rename"))
-            report->show_rename_ui = true;
-
-        if (ImGui::MenuItem("Delete"))
-            report_delete(report);
-
-        ImGui::EndPopup();
-    }
-
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("Report"))
-        {
-            if (ImGui::MenuItem("Add title"))
-                report->show_add_title_ui = true;
-
-            ImGui::Separator();
-
-            if (ImGui::MenuItem(ICON_MD_SELL " Show Sold", nullptr, &report->show_sold_title))
-                report_filter_out_titles(report);
-            if (ImGui::MenuItem(ICON_MD_SUMMARIZE " Show Summary", "F4", &report->show_summary))
-                report_summary_update(report);
-            ImGui::MenuItem(ICON_MD_AUTO_GRAPH " Show transactions", nullptr, &report->show_order_graph);
-
-            if (ImGui::MenuItem(ICON_MD_REFRESH " Refresh", "F5"))
-                report_refresh(report);
-
-            if (report->save)
-            {
-                ImGui::Separator();
-                if (ImGui::MenuItem("Save"))
-                    report_save(report);
-            }
-
-            ImGui::EndMenu();
-        }
-
-        ImGui::EndMenuBar();
-    }
 }
 
 FOUNDATION_STATIC void report_render_summary_info(report_t* report, const char* field_name, double value, const char* fmt, bool negative_parens = false)
@@ -1317,40 +873,6 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     ImGui::EndTable();
 }
 
-bool report_render_dialog_begin(string_const_t name, bool* show_ui, unsigned int flags /*= ImGuiWindowFlags_NoSavedSettings*/)
-{
-    if (show_ui == nullptr || *show_ui == false)
-        return false;
-    _last_show_ui_ptr = show_ui;
-
-    if (*show_ui && shortcut_executed(256/*GLFW_KEY_ESCAPE*/))
-    {
-        *show_ui = false;
-    }
-
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-    if (!ImGui::Begin(name.str, show_ui, ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoCollapse | flags))
-    {
-        ImGui::End();
-        return false;
-    }
-
-    return true;
-}
-
-bool report_render_dialog_end(bool* show_ui /*= nullptr*/)
-{
-    if (show_ui == nullptr)
-        show_ui = _last_show_ui_ptr;
-    if (show_ui != nullptr && !ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
-        *show_ui = false;
-
-    ImGui::End();
-
-    return show_ui && *show_ui == false;
-}
-
 FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_const_t code)
 {
     title_t* new_title = report_title_add(report, code);
@@ -1381,14 +903,6 @@ FOUNDATION_STATIC void report_trigger_update(report_t* report)
 
 FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* title)
 {
-    struct order_t
-    {
-        report_t* report;
-        title_t* title;
-        config_handle_t data;
-        bool deleted{ false };
-    };
-
     const bool show_ask_price = title->average_ask_price > 0 || title->average_quantity == 0;
 
     ImGui::SetNextWindowSize(ImVec2(show_ask_price ? 1600.0f : 1400.0f, 600.0f), ImGuiCond_Once);
@@ -1398,7 +912,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
     if (!report_render_dialog_begin(id, &title->show_details_ui))
         return;
 
-    static order_t* orders = nullptr;
+    static report_details_view_order_t* orders = nullptr;
     static table_t* table = nullptr;
     if (ImGui::IsWindowAppearing())
     {
@@ -1413,13 +927,13 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
         auto ctype = table_add_column(table, STRING_CONST("||Order Type"), [](table_element_ptr_t element, const column_t* column) 
         { 
-            order_t* order = (order_t*)element;
+            report_details_view_order_t* order = (report_details_view_order_t*)element;
             return order->data["buy"].as_boolean() ? CTEXT("") : CTEXT(ICON_MD_SELL);
         }, COLUMN_FORMAT_TEXT, COLUMN_MIDDLE_ALIGN | COLUMN_HIDE_HEADER_TEXT | COLUMN_SORTABLE);
         ctype.width = 50.0f;
         ctype.tooltip = [](table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
         {
-            order_t* order = (order_t*)element;
+            report_details_view_order_t* order = (report_details_view_order_t*)element;
             string_const_t tooltip = order->data["buy"].as_boolean() ? CTEXT("Buy") : CTEXT("Sell");
             ImGui::Text("%.*s", STRING_FORMAT(tooltip));
         };
@@ -1427,7 +941,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
         table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), [](table_element_ptr_t element, const column_t* column)
         {
             tm tm_date;
-            order_t* order = (order_t*)element;
+            report_details_view_order_t* order = (report_details_view_order_t*)element;
             string_const_t date_str = order->data["date"].as_string();
             time_t odate = string_to_date(STRING_ARGS(date_str), &tm_date);
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
@@ -1443,7 +957,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
         table_add_column(table, STRING_CONST("Quantity " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Order Quantity"), [](table_element_ptr_t element, const column_t* column)
         {
-            order_t* order = (order_t*)element;
+            report_details_view_order_t* order = (report_details_view_order_t*)element;
 
             double quantity = order->data["qty"].as_number();
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
@@ -1459,7 +973,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
         table_add_column(table, STRING_CONST("Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Order Price"), [](table_element_ptr_t element, const column_t* column)
         {
-            order_t* order = (order_t*)element;
+            report_details_view_order_t* order = (report_details_view_order_t*)element;
 
             double price = order->data["price"].as_number();
             double price_scale = price / 10.0f;
@@ -1477,7 +991,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
         table_add_column(table, STRING_CONST("Ask " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Ask Price"), [](table_element_ptr_t element, const column_t* column)
         {
-            order_t* order = (order_t*)element;
+            report_details_view_order_t* order = (report_details_view_order_t*)element;
 
             double price = order->data["ask"].as_number();
             double price_scale = price / 10.0f;
@@ -1494,7 +1008,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
         table_add_column(table, STRING_CONST("           Gain " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain"), [](table_element_ptr_t element, const column_t* column)
         {
-            order_t* order = (order_t*)element;
+            report_details_view_order_t* order = (report_details_view_order_t*)element;
             bool buy_order = order->data["buy"].as_boolean();
             double price = order->data["price"].as_number();
             double quantity = order->data["qty"].as_number();
@@ -1514,7 +1028,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
         table_add_column(table, STRING_CONST("   Value " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"), [](table_element_ptr_t element, const column_t* column)
         {
-            order_t* order = (order_t*)element;
+            report_details_view_order_t* order = (report_details_view_order_t*)element;
             bool buy_order = order->data["buy"].as_boolean();
             double quantity = order->data["qty"].as_number();
             if (buy_order)
@@ -1529,7 +1043,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
         table_add_column(table, STRING_CONST("||Actions"), [](table_element_ptr_t element, const column_t* column)
         {
-            order_t* order = (order_t*)element;
+            report_details_view_order_t* order = (report_details_view_order_t*)element;
             if (ImGui::SmallButton(ICON_MD_DELETE_FOREVER))
             {
                 auto corders = order->title->data["orders"];
@@ -1545,13 +1059,13 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
         for (auto corder : title->data["orders"])
         {
-            order_t o{ report, title, corder };
+            report_details_view_order_t o{ report, title, corder };
             orders = array_push(orders, o);
         }
     }
 
     ImGui::PushStyleCompact();
-    table_render(table, orders, array_size(orders), sizeof(order_t));
+    table_render(table, orders, array_size(orders), sizeof(report_details_view_order_t));
     for (auto& order : generics::fixed_array(orders))
     {
         if (order.deleted)
@@ -1572,7 +1086,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
     }
 }
 
-static void report_render_buy_lot_dialog(report_t* report, title_t* title)
+FOUNDATION_STATIC void report_render_buy_lot_dialog(report_t* report, title_t* title)
 {
     string_const_t title_buy_popup_id = string_format_static(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##9"), title->code_length, title->code);
     if (!report_render_dialog_begin(title_buy_popup_id, &title->show_buy_ui, ImGuiWindowFlags_NoResize))
@@ -1672,7 +1186,7 @@ static void report_render_buy_lot_dialog(report_t* report, title_t* title)
     report_render_dialog_end(&title->show_buy_ui);
 }
 
-static void report_render_sell_lot_dialog(report_t* report, title_t* title)
+FOUNDATION_STATIC void report_render_sell_lot_dialog(report_t* report, title_t* title)
 {
     string_const_t title_popup_id = string_format_static(STRING_CONST(ICON_MD_SELL " Sell %.*s##6"), title->code_length, title->code);
     if (!report_render_dialog_begin(title_popup_id, &title->show_sell_ui, ImGuiWindowFlags_NoResize))
@@ -1757,7 +1271,7 @@ static void report_render_sell_lot_dialog(report_t* report, title_t* title)
     report_render_dialog_end();
 }
 
-string_const_t report_render_input_dialog(string_const_t title, string_const_t apply_label, string_const_t initial_value, string_const_t hint, bool* show_ui)
+FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title, string_const_t apply_label, string_const_t initial_value, string_const_t hint, bool* show_ui)
 {
     if (!report_render_dialog_begin(title, show_ui, ImGuiWindowFlags_NoResize))
         return string_null();
@@ -1813,16 +1327,7 @@ string_const_t report_render_input_dialog(string_const_t title, string_const_t a
     return string_null();
 }
 
-void report_render_create_dialog(bool* show_ui)
-{
-    FOUNDATION_ASSERT(show_ui);
-
-    string_const_t name = report_render_input_dialog(CTEXT("Create Report##1"), CTEXT("Create"), CTEXT(""), CTEXT("Name"), show_ui);
-    if (!string_is_null(name))
-        report_create(STRING_ARGS(name));
-}
-
-void report_render_rename_dialog(report_t* report)
+FOUNDATION_STATIC void report_render_rename_dialog(report_t* report)
 {
     string_const_t current_name = string_table_decode_const(report->name);
     string_const_t name = report_render_input_dialog(CTEXT("Rename##1"), CTEXT("Apply"), current_name, 
@@ -1831,7 +1336,7 @@ void report_render_rename_dialog(report_t* report)
         report_rename(report, name);
 }
 
-static void report_render_dialogs(report_t* report)
+FOUNDATION_STATIC void report_render_dialogs(report_t* report)
 {
     if (report->show_add_title_ui)
     {
@@ -1856,7 +1361,7 @@ static void report_render_dialogs(report_t* report)
     }
 }
 
-static bool report_initial_sync(report_t* report)
+FOUNDATION_STATIC bool report_initial_sync(report_t* report)
 {
     if (report->fully_resolved)
         return true;
@@ -1897,6 +1402,648 @@ static bool report_initial_sync(report_t* report)
 
     report->fully_resolved = fully_resolved;
     return fully_resolved;
+}
+
+FOUNDATION_STATIC expr_result_t report_eval_stock_realtime(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: S(GLF.TO, open)
+    //           S(GFL.TO, close) - S(GFL.TO, open)
+
+    const auto& code = expr_eval_get_string_copy_arg(args, 0, "Invalid symbol code");
+    const auto& field = expr_eval_get_string_arg(args, 1, "Invalid field name");
+
+    double value = NAN;
+    eod_fetch("real-time", code.str, FORMAT_JSON, [field, &value](const json_object_t& json)
+    {
+        value = json[field].as_number();
+    }, 10ULL * 60ULL);
+
+    return value;
+}
+
+FOUNDATION_STATIC expr_result_t report_eval_stock_fundamental(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: F(PFE.NEO, "General.ISIN")
+    //           F("CSH-UN.TO", "Highlights.WallStreetTargetPrice")
+    //           F("U.US", "Technicals")
+
+    const auto& code = expr_eval_get_string_arg(args, 0, "Invalid symbol code");
+    const auto& field = expr_eval_get_string_arg(args, 1, "Invalid field name");
+
+    expr_result_t value;
+    eod_fetch("fundamentals", code.str, FORMAT_JSON_CACHE, [field, &value](const json_object_t& json)
+    {
+        const bool allow_nulls = false;
+        const json_object_t& ref = json.find(STRING_ARGS(field), allow_nulls);
+        if (ref.is_null())
+            return;
+
+        if (ref.root->type == JSON_STRING)
+        {
+            value.type = EXPR_RESULT_SYMBOL;
+            value.value = string_table_encode(ref.as_string());
+        }
+        else if (ref.root->type == JSON_OBJECT)
+        {
+            expr_result_t* child_fields = nullptr;
+
+            for (const auto& e : ref)
+            {
+                string_const_t id = e.id();
+                string_const_t value = e.as_string();
+
+                char value_preview_buffer[64];
+                string_t value_preview = string_format(STRING_CONST_CAPACITY(value_preview_buffer), STRING_CONST("%.*s = %.*s"), 
+                    min(48, (int)id.length), id.str, STRING_FORMAT(value));
+                string_table_symbol_t store_value_symbol = string_table_encode(value_preview);
+                
+                expr_result_t r { EXPR_RESULT_SYMBOL, store_value_symbol, value_preview.length };
+                array_push(child_fields, r);
+            }
+
+            value = expr_eval_list(child_fields);
+        }
+        else
+            value = ref.as_number();
+    }, 12 * 60ULL * 60ULL);
+
+    return value;
+}
+
+FOUNDATION_STATIC bool report_eval_report_field_test(
+    const char* property_name, report_t* report, 
+    string_const_t title_filter, string_const_t field_name, 
+    const function<expr_result_t(title_t* t, const stock_t* s)> property_evalutor,
+    const function<bool(const expr_result_t& v)> property_filter_out,
+    expr_result_t** results)
+{
+    if (!string_equal_nocase(property_name, string_length(property_name), STRING_ARGS(field_name)))
+        return false;
+
+    for (auto t : generics::fixed_array(report->titles))
+    {
+        const stock_t* s = t->stock;
+        if (!s || s->has_resolve(FetchLevel::EOD | FetchLevel::REALTIME))
+            continue;
+
+        if (title_filter.length && !string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
+            continue;
+
+        expr_result_t value = property_evalutor(t, s);
+        if (title_filter.length || !property_filter_out || !property_filter_out(value))
+        {
+            const expr_result_t& kvp = expr_eval_pair(expr_eval_symbol(s->code), value);
+            array_push(*results, kvp);
+        }
+
+        if (title_filter.length && string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
+            return true;
+    }
+
+    return true;
+}
+
+FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: R('FLEX', 'ps')
+    //           R('_300K', BB.TO, 'ps')
+    //           R('_300K', 'buy')
+
+    const auto& report_name = expr_eval_get_string_arg(args, 0, "Invalid report name");
+    if (report_name.length < 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid report name %.*s", STRING_FORMAT(report_name));
+
+    const bool underscore_name = report_name.str[0] == '_';
+    report_handle_t report_handle = report_find_no_case(
+        underscore_name ? report_name.str+1 : report_name.str, 
+        underscore_name ? report_name.length - 1 : report_name.length);
+    if (!report_handle_is_valid(report_handle))
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Cannot find report %.*s", STRING_FORMAT(report_name));
+
+    size_t field_name_index = 1;
+    string_const_t title_filter{};
+    if (args->len >= 3)
+    {
+        title_filter = expr_eval_get_string_arg(args, 1, "Invalid title name");
+        field_name_index = 2;
+    }
+
+    report_t* report = report_get(report_handle);
+    const auto& field_name = expr_eval_get_string_arg(args, field_name_index, "Invalid field name");
+
+    tick_t s = time_current();
+    while (!report_sync_titles(report))
+    {
+        if (time_elapsed(s) > 30.0f)
+            throw ExprError(EXPR_ERROR_EVALUATION_TIMEOUT, "Sync timeout, retry later...", STRING_FORMAT(report_name));
+        thread_try_wait(100);
+    }
+
+    static struct {
+        const char* property_name;
+        function<expr_result_t(title_t* t, const stock_t* s)> handler;
+        function<bool(const expr_result_t& v)> filter_out;
+    } property_evalutors[] = {
+        { "sold",  L2(_1->average_quantity ? false : true), L1(_1.as_number() == 0) },
+        { "active",  L2(_1->average_quantity ? true : false), L1(_1.as_number() == 0) },
+        { "ps",  L2(_1->ps.fetch()), L1(math_real_is_nan(_1.as_number())) },
+        { "qty",  L2(_1->average_quantity), L1(_1.as_number() == 0 || math_real_is_nan(_1.as_number()))},
+        { "buy",  L2(_1->buy_adjusted_price), L1(math_real_is_nan(_1.as_number())) },
+        { "price",  L2(_2->current.close), nullptr },
+        { "ask",  L2(_1->ask_price.fetch()), nullptr },
+        { "day",  L2(title_get_day_change(_1, _2)), L1(math_real_is_nan(_1.as_number())) },
+        { "change",  L2(_2->current.change), L1(math_real_is_nan(_1.as_number())) },
+        { "change%",  L2(_2->current.change_p), L1(math_real_is_nan(_1.as_number())) },
+    };
+
+    expr_result_t* results = nullptr;
+    for (int i = 0; i < ARRAY_COUNT(property_evalutors); ++i)
+    {
+        const auto& pe = property_evalutors[i];
+        if (report_eval_report_field_test(pe.property_name, report, title_filter, field_name, pe.handler, pe.filter_out, &results))
+            break;
+    }
+
+    if (results == nullptr)
+        throw ExprError(EXPR_ERROR_EVALUATION_NOT_IMPLEMENTED, "Field %.*s not supported", STRING_FORMAT(field_name));
+
+    if (array_size(results) == 1)
+    {
+        expr_result_t single_value = results[0];
+        array_deallocate(results);
+        return single_value.list[1];
+    }
+
+    return expr_eval_list(results);
+}
+
+FOUNDATION_STATIC void report_eval_read_object_fields(const json_object_t& json, const json_token_t* obj, expr_result_t** field_names, const char* s = nullptr, size_t len = 0)
+{
+    unsigned int e = obj->child;
+    for (size_t i = 0; i < obj->value_length; ++i)
+    {
+        const json_token_t* t = &json.tokens[e];
+        e = t->sibling;
+        if (t->id_length == 0)
+            continue;
+
+        char path[256];
+        size_t path_length = 0;
+        if (s && len > 0)
+            path_length = string_format(STRING_CONST_CAPACITY(path), STRING_CONST("%.*s.%.*s"), len, s, t->id_length, &json.buffer[t->id]).length;
+        else
+            path_length = string_copy(STRING_CONST_CAPACITY(path), &json.buffer[t->id], t->id_length).length;
+
+        if (t->type == JSON_OBJECT)
+            report_eval_read_object_fields(json, t, field_names, path, path_length);
+        else
+        {
+            expr_result_t s;
+            s.type = EXPR_RESULT_SYMBOL;
+            s.value = string_table_encode(path, path_length);
+            array_push(*field_names, s);
+        }
+    }
+}
+
+FOUNDATION_STATIC expr_result_t report_eval_list_fields(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: FIELDS("U.US", 'real-time')
+    //           FIELDS("U.US", 'fundamentals')
+
+    const auto& code = expr_eval_get_string_arg(args, 0, "Invalid symbol code");
+    const auto& api = expr_eval_get_string_arg(args, 1, "Invalid API end-point");
+
+    expr_result_t* field_names = nullptr;
+    string_const_t url = eod_build_url(api.str, code.str, FORMAT_JSON_CACHE);
+    query_execute_json(url.str, FORMAT_JSON_CACHE, [&field_names](const json_object_t& json)
+    {
+        if (json.root == nullptr)
+            return;
+
+        if (json.root->type == JSON_OBJECT)
+            report_eval_read_object_fields(json, json.root, &field_names);
+
+        if (json.root->type == JSON_ARRAY)
+            report_eval_read_object_fields(json, &json.tokens[json.root->child], &field_names);
+
+    }, 15 * 60 * 60ULL);
+
+    return expr_eval_list(field_names);
+}
+
+FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_handle, table_t* table)
+{
+    auto& ctitle = table_add_column(table, STRING_CONST("Title"), report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
+        .set_context_menu_callback(L3(report_column_title_context_menu(report_handle, _1, _2, _3)));
+
+    table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"), report_column_get_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+
+    table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), L2(report_column_get_value(_1, _2, REPORT_FORMULA_TITLE_DATE)), COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
+        .set_selected_callback(report_title_open_details_view);
+
+    table_add_column(table, STRING_CONST("  " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE)
+        .set_selected_callback(report_title_open_details_view);
+
+    table_add_column(table, STRING_CONST("   Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE)
+        .set_selected_callback(report_title_open_buy_view)
+        .set_tooltip_callback(report_title_adjusted_price_tooltip);
+
+    table_add_column(table, STRING_CONST(" Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
+        .set_selected_callback(report_title_open_details_view)
+        .set_tooltip_callback(report_title_live_price_tooltip)
+        .set_style_formatter(report_title_price_alerts_formatter);
+
+    table_add_column(table, STRING_CONST("   Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"), report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
+        .set_selected_callback(report_title_open_sell_view)
+        .set_tooltip_callback(report_title_ask_price_gain_tooltip);
+
+    table_add_column(table, STRING_CONST("   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+
+    table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+
+    table_add_column(table, STRING_CONST("  Y. " ICON_MD_CALENDAR_VIEW_DAY "||" ICON_MD_CALENDAR_VIEW_DAY " Yesterday % "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_YESTERDAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week"), E32(report_column_get_change_value, _1, _2, -7), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"), E32(report_column_get_change_value, _1, _2, -31), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("  3M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 3 months"), E32(report_column_get_change_value, _1, _2, -90), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"), E32(report_column_get_change_value, _1, _2, -365), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
+    table_add_column(table, STRING_CONST("10Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 10 years"), E32(report_column_get_change_value, _1, _2, -365 * 10), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
+
+    table_add_column(table, STRING_CONST(ICON_MD_FLAG "||" ICON_MD_FLAG " Currency"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_CURRENCY), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CENTER_ALIGN);
+    table_add_column(table, STRING_CONST("   " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_EXCHANGE_RATE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE);
+
+    table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"), E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("Highlights.DividendYield")), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ZERO_USE_DASH)
+        .set_tooltip_callback(report_title_dividends_total_tooltip);
+
+    table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_INVESTMENT), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(table, STRING_CONST("      V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_VALUE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+
+    table_add_column(table, STRING_CONST("   Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE)
+        .set_style_formatter(report_title_total_gain_alerts_formatter);
+    table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
+        .set_style_formatter(report_title_total_gain_p_alerts_formatter);
+
+    table_add_column(table, STRING_CONST(ICON_MD_INVENTORY " Type    "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TYPE), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST(ICON_MD_STORE " Sector"), E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_TEXT_WRAPPING | COLUMN_SEARCHABLE)
+        .width = 200.0f;
+
+    table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER);
+}
+
+FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_length, const config_handle_t& data)
+{
+    if (_reports == nullptr)
+        array_reserve(_reports, 1);
+
+    string_table_symbol_t name_symbol = string_table_encode(name, name_length);
+
+    for (int i = 0, end = array_size(_reports); i < end; ++i)
+    {
+        const report_t& r = _reports[i];
+        if (r.name == name_symbol)
+            return r.id;
+    }
+
+    _reports = array_push(_reports, report_t{ name_symbol });
+    unsigned int report_index = array_size(_reports) - 1;
+    report_t* report = &_reports[report_index];
+
+    // Ensure default structure
+    report->data = data ? data : config_allocate(CONFIG_VALUE_OBJECT);
+    report->wallet = wallet_allocate(report->data["wallet"]);
+
+    auto cid = report->data["id"];
+    auto cname = config_set(report->data, STRING_CONST("name"), name, name_length);
+    auto ctitles = config_set_object(report->data, STRING_CONST("titles"));
+
+    if (cid)
+    {
+        report->id = string_to_uuid(STRING_ARGS(cid.as_string()));
+    }
+    else
+    {
+        report->id = uuid_generate_time();
+
+        string_const_t id_str = string_from_uuid_static(report->id);
+        cid = config_set(report->data, STRING_CONST("id"), STRING_ARGS(id_str));
+    }
+
+    report->save_index = data["order"].as_integer();
+    report->show_summary = data["show_summary"].as_boolean();
+    report->show_sold_title = data["show_sold_title"].as_boolean();
+    report->opened = data["opened"].as_boolean(true);
+
+    // Load titles
+    title_t** titles = nullptr;
+    array_reserve(titles, config_size(ctitles));
+    for (auto title_data : ctitles)
+    {
+        string_const_t code = config_name(title_data);
+        title_t* title = new title_t();
+        title_init(report->wallet, title, title_data);
+        titles = array_push(titles, title);
+    }
+    report->titles = titles;
+
+    report_filter_out_titles(report);
+    report_summary_update(report);
+
+    // Create table
+    table_t* table = table_allocate(name);
+    report_table_setup(report->id, table);
+    report_table_add_default_columns(report->id, table);
+    report->table = table;
+
+    return report->id;
+}
+
+// 
+// # PUBLIC API
+//
+
+void report_summary_update(report_t* report)
+{
+    // Update report average days
+    double total_days = 0;
+    double total_value = 0;
+    double total_investment = 0;
+    double total_sell_gain_if_kept = 0;
+    double total_sell_gain_if_kept_p = 0;
+    double total_title_sell_count = 0;
+    double total_sell_rated = 0;
+    double total_sell_gain_rated = 0;
+    double total_buy_rated = 0;
+    double average_nq = 0;
+    double average_nq_count = 0;
+    double total_day_gain = 0;
+    double total_daily_average_p = 0;
+    double title_resolved_count = 0;
+    double total_dividends = 0;
+    double total_active_titles = 0;
+    const size_t title_count = array_size(report->titles);
+    for (size_t i = 0; i < title_count; ++i)
+    {
+        title_t& t = *report->titles[i];
+
+        if (t.average_quantity > 0)
+        {
+            total_days += t.elapsed_days;
+            total_active_titles++;
+        }
+
+        total_investment += math_ifnan(title_get_total_investment(&t), 0);
+
+        const stock_t* s = t.stock;
+        const bool stock_valid = s && !math_real_is_nan(s->current.change_p);
+        // Make sure the stock is still valid today, it might have been delisted.
+        if (stock_valid)
+        {
+            total_value += title_get_total_value(&t, s);
+            average_nq += s->current.change_p / 100.0;
+            average_nq_count++;
+
+            average_nq += title_get_yesterday_change(&t, s) / 100.0;
+            average_nq_count++;
+
+            if (!math_real_is_nan(s->current.change))
+                total_day_gain += math_ifnan(title_get_day_change(&t, s), 0);
+
+            total_daily_average_p += s->current.change_p;
+
+            title_resolved_count++;
+        }
+        else
+        {
+            total_value += t.average_quantity * t.average_price;
+        }
+
+        total_buy_rated += t.buy_total_price_rated;
+        total_sell_rated += t.sell_total_price_rated;
+        total_dividends += t.total_dividends;
+
+        if (stock_valid && t.sell_total_quantity > 0)
+        {
+            const double sell_gain_if_kept = (s->current.close - t.sell_adjusted_price) * t.sell_adjusted_quantity;
+            const double sell_p = (s->current.close - t.sell_adjusted_price) / t.sell_adjusted_price;
+            if (!math_real_is_nan(sell_p))
+            {
+                total_sell_gain_if_kept_p += sell_p;
+                total_sell_gain_if_kept += sell_gain_if_kept;
+                total_title_sell_count++;
+                total_sell_gain_rated += t.sell_total_price_rated - ((t.buy_total_price_rated / t.buy_total_quantity) * t.sell_total_quantity);
+            }
+        }
+    }
+
+    if (total_active_titles > 0)
+        report->wallet->average_days = total_days / total_active_titles;
+
+    if (average_nq_count > 0)
+        average_nq /= average_nq_count;
+
+    report->wallet->total_title_sell_count = total_title_sell_count;
+    report->wallet->total_sell_gain_if_kept = total_sell_gain_if_kept;
+    if (total_title_sell_count > 0)
+        total_sell_gain_if_kept_p /= total_title_sell_count;
+    else
+        total_sell_gain_if_kept_p = 0;
+
+    report->total_daily_average_p = total_daily_average_p / title_resolved_count;
+    report->total_value = total_value;
+    report->total_investment = total_investment;
+    report->total_gain = total_value - total_investment;
+    if (total_investment != 0)
+        report->total_gain_p = report->total_gain / total_investment;
+    else
+        report->total_gain_p = 0;
+    report->total_day_gain = total_day_gain;
+    report->summary_last_update = time_current();
+
+    // Update historical values
+    report->wallet->sell_average = total_sell_rated / total_title_sell_count;
+    report->wallet->sell_total_gain = total_sell_gain_rated;
+    report->wallet->sell_gain_average = total_sell_gain_rated / total_title_sell_count;
+    report->wallet->total_sell_gain_if_kept_p = total_sell_gain_if_kept_p;
+    report->wallet->target_ask = report->wallet->main_target + report->total_gain_p;
+    report->wallet->profit_ask = max(report->wallet->target_ask + total_sell_gain_if_kept_p + math_abs(average_nq), 0.03);
+    report->wallet->enhanced_earnings = math_abs(report->wallet->sell_gain_average) * (1.0 + report->wallet->main_target);
+    report->wallet->total_dividends = total_dividends;
+}
+
+bool report_is_loading(report_t* report)
+{
+    const size_t title_count = array_size(report->titles);
+    for (size_t i = 0; i < title_count; ++i)
+    {
+        const title_t* t = report->titles[i];
+        if (title_is_index(t))
+            continue;
+        if (!t->stock->has_resolve(REPORT_FETCH_LEVELS))
+            return true;
+    }
+
+    return false;
+}
+
+bool report_refresh(report_t* report)
+{
+    const size_t title_count = array_size(report->titles);
+    for (size_t i = 0; i < title_count; ++i)
+    {
+        title_t* t = report->titles[i];
+        t->stock->fetch_errors = 0;
+        t->stock->resolved_level &= ~FetchLevel::REALTIME;
+        if (!stock_resolve(t->stock, FetchLevel::REALTIME))
+            thread_try_wait(32);
+    }
+
+    if (report_sync_titles(report))
+        return true;
+
+    report->fully_resolved = false;
+    return false;
+}
+
+void report_menu(report_t* report)
+{
+    if (shortcut_executed(293/*GLFW_KEY_F4*/))
+        report_toggle_show_summary(report);
+
+    if (ImGui::BeginPopupContextItem())
+    {
+        if (report->dirty && ImGui::MenuItem("Save"))
+            report_save(report);
+
+        if (ImGui::MenuItem("Rename"))
+            report->show_rename_ui = true;
+
+        if (ImGui::MenuItem("Delete"))
+            report_delete(report);
+
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginMenuBar())
+    {
+        if (ImGui::BeginMenu("Report"))
+        {
+            if (ImGui::MenuItem("Add title"))
+                report->show_add_title_ui = true;
+
+            ImGui::Separator();
+
+            if (ImGui::MenuItem(ICON_MD_SELL " Show Sold", nullptr, &report->show_sold_title))
+                report_filter_out_titles(report);
+            if (ImGui::MenuItem(ICON_MD_SUMMARIZE " Show Summary", "F4", &report->show_summary))
+                report_summary_update(report);
+            ImGui::MenuItem(ICON_MD_AUTO_GRAPH " Show transactions", nullptr, &report->show_order_graph);
+
+            if (ImGui::MenuItem(ICON_MD_REFRESH " Refresh", "F5"))
+                report_refresh(report);
+
+            if (report->save)
+            {
+                ImGui::Separator();
+                if (ImGui::MenuItem("Save"))
+                    report_save(report);
+            }
+
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndMenuBar();
+    }
+}
+
+// TODO: Use app API to spawn dialog
+bool report_render_dialog_begin(string_const_t name, bool* show_ui, unsigned int flags /*= ImGuiWindowFlags_NoSavedSettings*/)
+{
+    if (show_ui == nullptr || *show_ui == false)
+        return false;
+    _last_show_ui_ptr = show_ui;
+
+    if (*show_ui && shortcut_executed(256/*GLFW_KEY_ESCAPE*/))
+    {
+        *show_ui = false;
+    }
+
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
+    if (!ImGui::Begin(name.str, show_ui, ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoCollapse | flags))
+    {
+        ImGui::End();
+        return false;
+    }
+
+    return true;
+}
+
+bool report_render_dialog_end(bool* show_ui /*= nullptr*/)
+{
+    if (show_ui == nullptr)
+        show_ui = _last_show_ui_ptr;
+    if (show_ui != nullptr && !ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+        *show_ui = false;
+
+    ImGui::End();
+
+    return show_ui && *show_ui == false;
+}
+
+void report_render_create_dialog(bool* show_ui)
+{
+    FOUNDATION_ASSERT(show_ui);
+
+    string_const_t name = report_render_input_dialog(CTEXT("Create Report##1"), CTEXT("Create"), CTEXT(""), CTEXT("Name"), show_ui);
+    if (!string_is_null(name))
+        report_create(STRING_ARGS(name));
+}
+
+report_handle_t report_load(string_const_t report_file_path)
+{
+    const auto report_json_flags =
+        CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS |
+        CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
+        CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES |
+        CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS |
+        CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS;
+
+    config_handle_t data;
+    if (fs_is_file(STRING_ARGS(report_file_path)))
+        data = config_parse_file(STRING_ARGS(report_file_path), report_json_flags);
+
+    string_const_t report_name = data["name"].as_string();
+    if (string_is_null(report_name))
+        report_name = path_base_file_name(STRING_ARGS(report_file_path));
+    report_handle_t report_handle = report_allocate(STRING_ARGS(report_name), data);
+    report_t* report = report_get(report_handle);
+    report->save = true;
+    return report_handle;
+}
+
+report_handle_t report_load(const char* name, size_t name_length)
+{
+    string_const_t report_file_path = session_get_user_file_path(name, name_length, STRING_ARGS(REPORTS_DIR_NAME), STRING_CONST("json"));
+    return report_load(report_file_path);
+}
+
+void report_save(report_t* report)
+{
+    // Replicate some memory fields
+    config_set(report->data, "name", string_table_decode_const(report->name));
+    config_set(report->data, "order", (double)report->save_index);
+    config_set(report->data, "show_summary", report->show_summary);
+    config_set(report->data, "show_sold_title", report->show_sold_title);
+    config_set(report->data, "opened", report->opened);
+
+    wallet_save(report->wallet, config_set_object(report->data, STRING_CONST("wallet")));
+
+    string_const_t report_file_path = report_get_save_file_path(report);
+    if (config_write_file(report_file_path, report->data,
+        CONFIG_OPTION_WRITE_SKIP_NULL | CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL)) {
+        report->dirty = false;
+    }
 }
 
 void report_render(report_t* report)
@@ -1944,6 +2091,102 @@ void report_sort_order()
     });
 }
 
+report_handle_t report_allocate(const char* name, size_t name_length)
+{
+    return report_allocate(name, name_length, config_null());
+}
+
+report_t* report_get(report_handle_t report_handle)
+{
+    for (auto& r : generics::fixed_array(_reports))
+    {
+        if (uuid_equal(r.id, report_handle))
+            return &r;
+    }
+    return nullptr;
+}
+
+report_t* report_get_at(unsigned int index)
+{
+    if (index >= array_size(_reports))
+        return nullptr;
+    return &_reports[index];
+}
+
+size_t report_count()
+{
+    return array_size(_reports);
+}
+
+report_handle_t report_find(const char* name, size_t name_length)
+{
+    string_table_symbol_t report_name_symbol = string_table_encode(name, name_length);
+    for (int i = 0, end = array_size(_reports); i != end; ++i)
+    {
+        report_t* report = &_reports[i];
+
+        if (report->name == report_name_symbol)
+            return report->id;
+    }
+
+    return uuid_null();
+}
+
+report_handle_t report_find_no_case(const char* name, size_t name_length)
+{
+    report_handle_t handle = report_find(name, name_length);
+    if (report_handle_is_valid(handle))
+        return handle;
+
+    // Do long search by name with no casing
+    for (int i = 0, end = array_size(_reports); i != end; ++i)
+    {
+        report_t* report = &_reports[i];
+        string_const_t report_name = string_table_decode_const(report->name);
+
+        if (string_equal_nocase(STRING_ARGS(report_name), name, name_length))
+            return report->id;
+    }
+
+    return uuid_null();
+}
+
+bool report_handle_is_valid(report_handle_t handle)
+{
+    return !uuid_is_null(handle);
+}
+
+bool report_sync_titles(report_t* report)
+{
+    const size_t title_count = array_size(report->titles);
+    for (size_t i = 0; i < title_count; ++i)
+    {
+        title_t* t = report->titles[i];
+        if (title_is_index(t))
+            continue;
+        if (!t->stock->is_resolving(REPORT_FETCH_LEVELS))
+        {
+            if (!title_update(t, 3.5) && !thread_try_wait(100))
+                break;
+        }
+    }
+
+    report_summary_update(report);
+    if (report_is_loading(report))
+        return false;
+
+    for (size_t i = 0; i < title_count; ++i)
+        title_refresh(report->titles[i]);
+    report_summary_update(report);
+    if (report->table)
+        report->table->needs_sorting = true;
+    return true;
+}
+
+// 
+// # SYSTEM
+//
+
 void report_initialize()
 {
     string_const_t report_dir_path = session_get_user_file_path(STRING_ARGS(REPORTS_DIR_NAME));
@@ -1959,6 +2202,11 @@ void report_initialize()
 
     report_sort_order();
     string_array_deallocate(paths);
+
+    eval_register_function("S", report_eval_stock_realtime);
+    eval_register_function("F", report_eval_stock_fundamental);
+    eval_register_function("R", report_eval_report_field);
+    eval_register_function("FIELDS", report_eval_list_fields);
 }
 
 void report_shutdown()
