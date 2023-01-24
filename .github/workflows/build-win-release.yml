@@ -1,0 +1,52 @@
+name: Build Windows
+
+on:
+  push:
+#  pull_request:
+#    types: [review_requested, ready_for_review]
+  schedule:
+    # min hours day(month) month day(week)
+    - cron: '0 2 * * *'
+  
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release:
+    runs-on: [self-hosted, windows]
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Set up Visual C++
+        uses: microsoft/setup-msbuild@v1.1
+        with:
+          vs-version: latest
+          msbuild-architecture: x64
+
+      - name: Generate Git build info
+        run: Start-Process -FilePath "scripts\\generate_git_build_info.bat"
+
+      - name: Build Infineis (MSVC++)
+        run: msbuild projects/vs2022/infineis.sln /p:BUILD_MACHINE=TRUE /p:configuration=Release /nologo /verbosity:minimal /m
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: infineis-win64-release
+          path: |
+            build
+            tools/win64
+            resources
+            !**/*.pdb
+            !build/*.lib
+            !build/*.exp
+            !**/*.xcassets
+            !**/*.iconset
+            !**/*.icns
+            !**/*.plist
+          if-no-files-found: error # 'warn' or 'ignore' are also available, defaults to `warn`
+          retention-days: 0.1

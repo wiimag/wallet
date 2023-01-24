@@ -1,0 +1,88 @@
+* text=auto
+
+# .gitattributes file
+.gitignore diff eol=lf
+.gitattributes diff eol=lf
+
+# Text files
+
+*.md   text
+*.bsdoc text
+*.config text
+*.txt   text
+*.vsc   text
+*.fsc   text
+*.java  text diff=java
+*.xml   text diff=xml
+*.json text eol=lf
+
+# Make sure generated files uses LF
+**/generated/*.h text eol=lf
+*.sc    text eol=lf
+
+# Shell scripts require LF
+run     text eol=lf
+*.sh    text eol=lf
+
+# Batch scripts require CRLF
+*.bat   text eol=crlf
+
+# Windows text files
+*.csproj text eol=crlf
+*.filters text eol=crlf
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
+*.rc text eol=crlf
+
+# MacOS text files
+*.pbxproj text eol=lf
+
+# Binary files
+
+# Project binary files
+
+*.mb binary
+*.physx_metadata binary
+*.raw binary
+
+###############################
+# Git Large File System (LFS) #
+###############################
+
+# Archives
+*.7z binary filter=lfs diff=lfs merge=lfs -text
+*.br binary filter=lfs diff=lfs merge=lfs -text
+*.gz binary filter=lfs diff=lfs merge=lfs -text
+*.tar binary filter=lfs diff=lfs merge=lfs -text
+*.zip binary filter=lfs diff=lfs merge=lfs -text
+*.gzip binary filter=lfs diff=lfs merge=lfs -text
+
+# Documents
+*.pdf binary
+
+# Images
+*.gif binary
+*.ico binary
+*.jpg binary
+*.JPG binary
+*.png binary
+*.psd binary
+*.webp binary
+*.dds binary
+
+# Fonts
+*.woff2 binary
+
+# Other
+*.a binary
+*.o binary
+*.dll binary
+*.exe binary
+*.lib binary
+*.pdb binary
+
+tools/**/*.exe !filter !diff !merge -text 
+tools/**/*.dll !filter !diff !merge -text
+
+# DCM
+*.dcm filter=lfs diff=lfs merge=lfs -text

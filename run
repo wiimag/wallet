@@ -1,0 +1,131 @@
+#!/bin/bash
+
+#
+# Copyright 2022-2023 Infineis Inc. All rights reserved.
+# License: https://infineis.com/LICENSE
+#
+# Run script to execute most common operations used when working on the Infineis Framework.
+#
+
+unameOut="$(uname -s)"
+case "${unameOut}" in
+    Linux*)     machine=Linux;;
+    Darwin*)    machine=Mac;;
+    CYGWIN*)    machine=Cygwin;;
+    MINGW*)     machine=MinGw;;
+    *)          machine="UNKNOWN:${unameOut}"
+esac
+#echo ${machine}
+
+# Indicate if the default build should be run at the end
+RUN=1
+
+#
+# Build solution
+#
+if [ $# -ne 0 ] && [ $1 == "build" ]; then
+    shift
+    if [ $machine == "MinGw" ]; then
+        if [ $# -ne 0 ] && [ $1 == "debug" ]; then
+            shift
+            ./scripts/build_win_debug.bat
+        fi
+        
+        ./scripts/build_win_release.bat
+    elif [ ${machine} == "Mac" ]; then
+        if [ $# -ne 0 ] && [ $1 = "debug" ]; then
+            shift
+            ./scripts/build_osx_debug.sh $@
+        fi
+        
+        ./scripts/build_osx_release.sh $@
+    fi
+
+    retval=$?
+    if [ $retval -ne 0 ]; then
+        echo
+        echo "===BUILD FAILED ($retval)==="
+        echo
+        exit $retval
+    fi
+
+    RUN=0
+fi
+
+#
+# Open IDE
+#
+if [ $# -ne 0 ] && [ $1 == "open" ]; then
+    shift
+
+    if [ $# -ne 0 ] && [ $1 == "workspace" ]; then
+        shift
+        if [ $machine == "MinGw" ]; then
+            start projects/vs2022/wallet.sln
+        elif [ ${machine} == "Mac" ]; then
+            open projects/xcode/wallet.xcworkspace
+        fi
+
+        retval=$?
+        if [ $retval -ne 0 ]; then
+            echo
+            echo "===OPEN WORKSPACE FAILED ($retval)==="
+            echo
+            exit $retval
+        fi
+
+        RUN=0
+    fi
+fi
+
+#
+# Run tests
+#
+if [ $# -ne 0 ] && [ $1 == "tests" ]; then
+    shift
+    if [ ${machine} == "MinGw" ]; then
+        ./build/wallet.exe --run-tests $@
+    elif [ ${machine} == "Mac" ]; then
+        ./build/Wallet.app/Contents/MacOS/Wallet --run-tests $@
+    fi
+
+    retval=$?
+    if [ $retval -ne 0 ]; then
+        echo
+        echo "===TESTS FAILED ($retval)==="
+        echo
+        cat artifacts/tests.log
+        exit $retval
+    fi
+
+    echo
+    echo "===TESTS SUCCESSED==="
+    echo
+    cat artifacts/tests.log
+
+    RUN=0
+fi
+
+
+if [ $# -ne 0 ] && [ $1 == "start" ]; then
+    shift
+    RUN=1
+fi
+
+if [ $RUN -eq 1 ]; then
+    if [ ${machine} == "MinGw" ]; then
+        ./build/wallet.exe $@
+    elif [ ${machine} == "Mac" ]; then
+        ./build/Wallet.app/Contents/MacOS/Wallet $@
+    fi
+
+    retval=$?
+    if [ $retval -ne 0 ]; then
+        echo
+        echo "===RUN FAILED ($retval)==="
+        echo
+        exit $retval
+    fi
+fi
+
+exit $?

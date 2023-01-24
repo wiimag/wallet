@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <Group
+      location = "container:"
+      name = "libs">
+      <FileRef
+         location = "group:ics.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:jpeg.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:tiff.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:diplib.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:dicom.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:bgfx.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:bimg.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:bx.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:foundation.xcodeproj">
+      </FileRef>
+      <FileRef
+         location = "group:imgui.xcodeproj">
+      </FileRef>
+   </Group>
+   <Group
+      location = "group:"
+      name = "infineis">
+      <FileRef
+         location = "group:infineis.xcodeproj">
+      </FileRef>
+   </Group>
+</Workspace>

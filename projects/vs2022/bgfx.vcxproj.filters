@@ -1,0 +1,230 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="c99">
+      <UniqueIdentifier>{3d345c24-1f6c-4f66-8796-8582304fcd5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src">
+      <UniqueIdentifier>{f6d2c302-ebb3-47af-b7aa-b9280f368711}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="shaders">
+      <UniqueIdentifier>{cfda0c3f-bf10-4f03-a8c5-a12737596ced}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\gl">
+      <UniqueIdentifier>{e9203d72-5195-442b-8213-c245d89633de}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\d3d">
+      <UniqueIdentifier>{09b37039-0e24-40ab-b657-3c3791df9a7f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="src\vulkan">
+      <UniqueIdentifier>{07a03f67-3a3d-4b4b-9644-cff0f336092b}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\c99\bgfx.h">
+      <Filter>c99</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\bgfx.h" />
+    <ClInclude Include="..\..\external\bgfx\src\config.h" />
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\defines.h" />
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\embedded_shader.h" />
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\platform.h" />
+    <ClInclude Include="..\..\external\bgfx\src\bgfx_p.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\charset.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\debug_renderdoc.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\emscripten.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear0.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear1.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear2.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear3.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear4.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear5.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear6.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear7.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\fs_debugfont.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\nvapi.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\vs_clear.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\vertexlayout.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\renderer.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\renderer_mtl.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\renderer_webgpu.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\shader.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\shader_spirv.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\topology.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\vs_debugfont.bin.h">
+      <Filter>shaders</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_eagl.h">
+      <Filter>src\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_egl.h">
+      <Filter>src\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_glx.h">
+      <Filter>src\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_html5.h">
+      <Filter>src\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_nsgl.h">
+      <Filter>src\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_wgl.h">
+      <Filter>src\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\glimports.h">
+      <Filter>src\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\renderer_d3d.h">
+      <Filter>src\d3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\renderer_d3d9.h">
+      <Filter>src\d3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\renderer_d3d11.h">
+      <Filter>src\d3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\renderer_d3d12.h">
+      <Filter>src\d3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\renderer_gl.h">
+      <Filter>src\gl</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\renderer_vk.h">
+      <Filter>src\vulkan</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\dxgi.h">
+      <Filter>src\d3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\version.h" />
+    <ClInclude Include="..\..\external\bgfx\src\shader_dx9bc.h">
+      <Filter>src\d3d</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\bgfx\src\shader_dxbc.h">
+      <Filter>src\d3d</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\external\bgfx\src\bgfx.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\debug_renderdoc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_agc.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_gnm.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_noop.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\nvapi.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_nvn.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_webgpu.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\shader.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\shader_spirv.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\topology.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\vertexlayout.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\glcontext_egl.cpp">
+      <Filter>src\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\glcontext_glx.cpp">
+      <Filter>src\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\glcontext_html5.cpp">
+      <Filter>src\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\glcontext_wgl.cpp">
+      <Filter>src\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_d3d9.cpp">
+      <Filter>src\d3d</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_d3d11.cpp">
+      <Filter>src\d3d</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_d3d12.cpp">
+      <Filter>src\d3d</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_gl.cpp">
+      <Filter>src\gl</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\renderer_vk.cpp">
+      <Filter>src\vulkan</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\dxgi.cpp">
+      <Filter>src\d3d</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\shader_dx9bc.cpp">
+      <Filter>src\d3d</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\bgfx\src\shader_dxbc.cpp">
+      <Filter>src\d3d</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\external\bgfx\src\bgfx.idl.inl">
+      <Filter>src</Filter>
+    </None>
+  </ItemGroup>
+</Project>

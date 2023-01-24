@@ -1,0 +1,73 @@
+name: Test Windows
+
+on: [push]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: [self-hosted, windows]
+    environment: tests
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          lfs: true
+
+      - name: Set up Visual C++
+        uses: microsoft/setup-msbuild@v1.1
+        with:
+          vs-version: latest
+          msbuild-architecture: x64
+
+      - name: Generate Git build info
+        run: Start-Process -FilePath "scripts\\generate_git_build_info.bat"
+
+      - name: Build Infineis (MSVC++)
+        run: msbuild projects/vs2022/infineis.sln /p:BUILD_CONSOLE=TRUE /p:BUILD_MACHINE=TRUE /p:configuration=Debug /nologo /verbosity:minimal /m
+
+      - name: Run tests
+        shell: cmd
+        env:
+          API_KEY: ${{ secrets.INFINEIS_TESTS_APIKEY }}
+        run: |
+          "build\infineis.exe" --build-machine --run-tests --verbose --apikey "%API_KEY%"
+
+      - name: Print test logs
+        if: always()
+        run: type artifacts/tests.log
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
+        with:
+          name: infineis-win64-test-results
+          path: |
+            **/*.log
+          if-no-files-found: error
+          retention-days: 1
+      - name: Delete Previous deployments (WIN)
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const deployments = await github.rest.repos.listDeployments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              sha: context.sha
+            });
+            await Promise.all(
+              deployments.data.map(async (deployment) => {
+                await github.rest.repos.createDeploymentStatus({ 
+                  owner: context.repo.owner, 
+                  repo: context.repo.repo, 
+                  deployment_id: deployment.id, 
+                  state: 'inactive' 
+                });
+                return github.rest.repos.deleteDeployment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  deployment_id: deployment.id
+                });
+              })
+            );

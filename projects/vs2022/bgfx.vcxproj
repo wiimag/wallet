@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>16.0</VCProjectVersion>
+    <Keyword>Win32Proj</Keyword>
+    <ProjectGuid>{28a0e715-db4c-4978-838e-084d83fe9dba}</ProjectGuid>
+    <RootNamespace>bgfx</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\bgfx.h" />
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\c99\bgfx.h" />
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\defines.h" />
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\embedded_shader.h" />
+    <ClInclude Include="..\..\external\bgfx\include\bgfx\platform.h" />
+    <ClInclude Include="..\..\external\bgfx\src\bgfx_p.h" />
+    <ClInclude Include="..\..\external\bgfx\src\charset.h" />
+    <ClInclude Include="..\..\external\bgfx\src\config.h" />
+    <ClInclude Include="..\..\external\bgfx\src\debug_renderdoc.h" />
+    <ClInclude Include="..\..\external\bgfx\src\dxgi.h" />
+    <ClInclude Include="..\..\external\bgfx\src\emscripten.h" />
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear0.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear1.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear2.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear3.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear4.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear5.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear6.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\fs_clear7.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\fs_debugfont.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_eagl.h" />
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_egl.h" />
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_glx.h" />
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_html5.h" />
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_nsgl.h" />
+    <ClInclude Include="..\..\external\bgfx\src\glcontext_wgl.h" />
+    <ClInclude Include="..\..\external\bgfx\src\glimports.h" />
+    <ClInclude Include="..\..\external\bgfx\src\nvapi.h" />
+    <ClInclude Include="..\..\external\bgfx\src\renderer.h" />
+    <ClInclude Include="..\..\external\bgfx\src\renderer_d3d.h" />
+    <ClInclude Include="..\..\external\bgfx\src\renderer_d3d11.h" />
+    <ClInclude Include="..\..\external\bgfx\src\renderer_d3d12.h" />
+    <ClInclude Include="..\..\external\bgfx\src\renderer_d3d9.h" />
+    <ClInclude Include="..\..\external\bgfx\src\renderer_gl.h" />
+    <ClInclude Include="..\..\external\bgfx\src\renderer_mtl.h" />
+    <ClInclude Include="..\..\external\bgfx\src\renderer_vk.h" />
+    <ClInclude Include="..\..\external\bgfx\src\renderer_webgpu.h" />
+    <ClInclude Include="..\..\external\bgfx\src\shader.h" />
+    <ClInclude Include="..\..\external\bgfx\src\shader_dx9bc.h" />
+    <ClInclude Include="..\..\external\bgfx\src\shader_dxbc.h" />
+    <ClInclude Include="..\..\external\bgfx\src\shader_spirv.h" />
+    <ClInclude Include="..\..\external\bgfx\src\topology.h" />
+    <ClInclude Include="..\..\external\bgfx\src\version.h" />
+    <ClInclude Include="..\..\external\bgfx\src\vertexlayout.h" />
+    <ClInclude Include="..\..\external\bgfx\src\vs_clear.bin.h" />
+    <ClInclude Include="..\..\external\bgfx\src\vs_debugfont.bin.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\external\bgfx\src\bgfx.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\debug_renderdoc.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\dxgi.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\glcontext_egl.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\glcontext_glx.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\glcontext_html5.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\glcontext_wgl.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\nvapi.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_agc.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_d3d11.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_d3d12.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_d3d9.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_gl.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_gnm.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_noop.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_nvn.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_vk.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\renderer_webgpu.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\shader.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\shader_dx9bc.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\shader_dxbc.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\shader_spirv.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\topology.cpp" />
+    <ClCompile Include="..\..\external\bgfx\src\vertexlayout.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\external\bgfx\src\bgfx.idl.inl" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="astc-encoder.vcxproj">
+      <Project>{c26180a8-efa5-4734-992e-a12f84a0998f}</Project>
+    </ProjectReference>
+    <ProjectReference Include="bimg.vcxproj">
+      <Project>{d9806bc1-3f8e-4061-bc0d-c40dd448b6b7}</Project>
+    </ProjectReference>
+    <ProjectReference Include="bx.vcxproj">
+      <Project>{197ef11a-6c1a-4c55-84ff-9e5ce23226bb}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="app.props" />
+    <Import Project="debug.props" />
+    <Import Project="lib.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="app.props" />
+    <Import Project="release.props" />
+    <Import Project="lib.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile />
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile />
+    <Link>
+      <SubSystem>
+      </SubSystem>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

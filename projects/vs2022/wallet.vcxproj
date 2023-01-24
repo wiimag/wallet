@@ -1,0 +1,220 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{691D6488-17E6-4415-9086-F268DA799DD6}</ProjectGuid>
+    <Keyword>Win32Proj</Keyword>
+    <RootNamespace>wallet</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <PreferredToolArchitecture>x64</PreferredToolArchitecture>
+    <CharacterSet>Unicode</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v143</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="app.props" />
+    <Import Project="debug.props" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+    <Import Project="app.props" />
+    <Import Project="release.props" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)..\..\build\</OutDir>
+    <IntDir>$(SolutionDir)..\..\artifacts\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\sources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <IgnoreSpecificDefaultLibraries>msvcrt.lib;libcmt.lib</IgnoreSpecificDefaultLibraries>
+    </Link>
+    <Manifest>
+      <EnableDpiAwareness>PerMonitorHighDPIAware</EnableDpiAwareness>
+    </Manifest>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\..\sources;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Link>
+      <SubSystem>Windows</SubSystem>
+      <IgnoreSpecificDefaultLibraries>
+      </IgnoreSpecificDefaultLibraries>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\external\mnyfmt.c" />
+    <ClCompile Include="..\..\sources\app.cpp" />
+    <ClCompile Include="..\..\sources\bulk.cpp" />
+    <ClCompile Include="..\..\sources\butils.cpp" />
+    <ClCompile Include="..\..\sources\console.cpp" />
+    <ClCompile Include="..\..\sources\eod.cpp" />
+    <ClCompile Include="..\..\sources\eval.cpp" />
+    <ClCompile Include="..\..\sources\expr.cpp" />
+    <ClCompile Include="..\..\sources\expr_math.cpp" />
+    <ClCompile Include="..\..\sources\framework\boot.cpp" />
+    <ClCompile Include="..\..\sources\framework\common.cpp" />
+    <ClCompile Include="..\..\sources\framework\config.cpp" />
+    <ClCompile Include="..\..\sources\framework\dispatcher.cpp" />
+    <ClCompile Include="..\..\sources\framework\glfw_utils.cpp" />
+    <ClCompile Include="..\..\sources\framework\imgui_utils.cpp" />
+    <ClCompile Include="..\..\sources\framework\jobs.cpp" />
+    <ClCompile Include="..\..\sources\framework\option.cpp" />
+    <ClCompile Include="..\..\sources\framework\profiler.cpp" />
+    <ClCompile Include="..\..\sources\framework\progress.cpp" />
+    <ClCompile Include="..\..\sources\framework\query.cpp" />
+    <ClCompile Include="..\..\sources\framework\query_json.cpp" />
+    <ClCompile Include="..\..\sources\framework\query_mock.cpp" />
+    <ClCompile Include="..\..\sources\framework\service.cpp" />
+    <ClCompile Include="..\..\sources\framework\session.cpp" />
+    <ClCompile Include="..\..\sources\framework\shared_mutex.cpp" />
+    <ClCompile Include="..\..\sources\framework\string_table.cpp" />
+    <ClCompile Include="..\..\sources\framework\table.cpp" />
+    <ClCompile Include="..\..\sources\framework\tabs.cpp" />
+    <ClCompile Include="..\..\sources\pattern.cpp" />
+    <ClCompile Include="..\..\sources\render_pad.cpp" />
+    <ClCompile Include="..\..\sources\report.cpp" />
+    <ClCompile Include="..\..\sources\reportgraph.cpp" />
+    <ClCompile Include="..\..\sources\settings.cpp" />
+    <ClCompile Include="..\..\sources\stock.cpp" />
+    <ClCompile Include="..\..\sources\symbols.cpp" />
+    <ClCompile Include="..\..\sources\tests\boot_tests.cpp" />
+    <ClCompile Include="..\..\sources\tests\config_tests.cpp" />
+    <ClCompile Include="..\..\sources\tests\imgui_tests.cpp" />
+    <ClCompile Include="..\..\sources\tests\test_runner.cpp" />
+    <ClCompile Include="..\..\sources\tests\test_utils.cpp" />
+    <ClCompile Include="..\..\sources\title.cpp" />
+    <ClCompile Include="..\..\sources\wallet.cpp" />
+    <ClInclude Include="..\..\external\glfw\include\GLFW\glfw3.h" />
+    <ClInclude Include="..\..\external\glfw\include\GLFW\glfw3native.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\curl.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\curlver.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\easy.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\header.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\mprintf.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\multi.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\options.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\stdcheaders.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\system.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\typecheck-gcc.h" />
+    <ClInclude Include="..\..\external\libcurl\include\curl\urlapi.h" />
+    <ClInclude Include="..\..\external\mnyfmt.h" />
+    <ClInclude Include="..\..\external\stb\stb_image.h" />
+    <ClInclude Include="..\..\external\stb\stb_rect_pack.h" />
+    <ClInclude Include="..\..\external\stb\stb_textedit.h" />
+    <ClInclude Include="..\..\external\stb\stb_truetype.h" />
+    <ClInclude Include="../../sources/resource.h" />
+    <ClInclude Include="..\..\sources\bulk.h" />
+    <ClInclude Include="..\..\sources\butils.h" />
+    <ClInclude Include="..\..\sources\console.h" />
+    <ClInclude Include="..\..\sources\eod.h" />
+    <ClInclude Include="..\..\sources\eval.h" />
+    <ClInclude Include="..\..\sources\events.h" />
+    <ClInclude Include="..\..\sources\expr.h" />
+    <ClInclude Include="..\..\sources\framework\common.h" />
+    <ClInclude Include="..\..\sources\framework\concurrent_queue.h" />
+    <ClInclude Include="..\..\sources\framework\config.h" />
+    <ClInclude Include="..\..\sources\framework\dispatcher.h" />
+    <ClInclude Include="..\..\sources\framework\function.h" />
+    <ClInclude Include="..\..\sources\framework\generics.h" />
+    <ClInclude Include="..\..\sources\framework\glfw_utils.h" />
+    <ClInclude Include="..\..\sources\framework\handle.h" />
+    <ClInclude Include="..\..\sources\framework\imgui_utils.h" />
+    <ClInclude Include="..\..\sources\framework\jobs.h" />
+    <ClInclude Include="..\..\sources\framework\option.h" />
+    <ClInclude Include="..\..\sources\framework\profiler.h" />
+    <ClInclude Include="..\..\sources\framework\progress.h" />
+    <ClInclude Include="..\..\sources\framework\query.h" />
+    <ClInclude Include="..\..\sources\framework\query_json.h" />
+    <ClInclude Include="..\..\sources\framework\scoped_mutex.h" />
+    <ClInclude Include="..\..\sources\framework\scoped_string.h" />
+    <ClInclude Include="..\..\sources\framework\service.h" />
+    <ClInclude Include="..\..\sources\framework\session.h" />
+    <ClInclude Include="..\..\sources\framework\shared_mutex.h" />
+    <ClInclude Include="..\..\sources\framework\string_table.h" />
+    <ClInclude Include="..\..\sources\framework\table.h" />
+    <ClInclude Include="..\..\sources\framework\tabs.h" />
+    <ClInclude Include="..\..\sources\pattern.h" />
+    <ClInclude Include="..\..\sources\render_pad.h" />
+    <ClInclude Include="..\..\sources\report.h" />
+    <ClInclude Include="..\..\sources\settings.h" />
+    <ClInclude Include="..\..\sources\stock.h" />
+    <ClInclude Include="..\..\sources\symbols.h" />
+    <ClInclude Include="..\..\sources\tests\test_utils.h" />
+    <ClInclude Include="..\..\sources\title.h" />
+    <ClInclude Include="..\..\sources\version.h" />
+    <ClInclude Include="..\..\sources\wallet.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="../../sources/app.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="../../resources/main.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <Natvis Include="bgfx.natvis" />
+    <Natvis Include="bx.natvis" />
+    <Natvis Include="app.natvis" />
+  </ItemGroup>
+  <ItemGroup>
+    <Manifest Include="..\..\resources\main.manifest" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="..\..\resources\JetBrainsMono-ExtraLight.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="astc-encoder.vcxproj">
+      <Project>{c26180a8-efa5-4734-992e-a12f84a0998f}</Project>
+    </ProjectReference>
+    <ProjectReference Include="bgfx.vcxproj">
+      <Project>{28a0e715-db4c-4978-838e-084d83fe9dba}</Project>
+    </ProjectReference>
+    <ProjectReference Include="bimg.vcxproj">
+      <Project>{d9806bc1-3f8e-4061-bc0d-c40dd448b6b7}</Project>
+    </ProjectReference>
+    <ProjectReference Include="bx.vcxproj">
+      <Project>{197ef11a-6c1a-4c55-84ff-9e5ce23226bb}</Project>
+    </ProjectReference>
+    <ProjectReference Include="foundation.vcxproj">
+      <Project>{7919dcce-6589-44e5-9770-a634e1ee4a6b}</Project>
+    </ProjectReference>
+    <ProjectReference Include="imgui.vcxproj">
+      <Project>{42768918-4951-4f79-b35c-49d3aa5e635f}</Project>
+    </ProjectReference>
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

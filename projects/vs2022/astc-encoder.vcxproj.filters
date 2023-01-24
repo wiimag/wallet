@@ -1,0 +1,111 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src">
+      <UniqueIdentifier>{82344439-01e0-4467-b89d-5441039e7a1c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_averages_and_directions.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_block_sizes.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_color_quantize.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_color_unquantize.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_compress_symbolic.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_compute_variance.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_decompress_symbolic.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_diagnostic_trace.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_entry.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_find_best_partitioning.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_ideal_endpoints_and_weights.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_image.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_integer_sequence.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_mathlib.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_mathlib_softfloat.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_partition_tables.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_percentile_tables.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_pick_best_endpoint_format.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_platform_isa_detection.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_quantization.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_symbolic_physical.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_weight_align.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\external\astc-encoder\source\astcenc_weight_quant_xfer_tables.cpp">
+      <Filter>src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_diagnostic_trace.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_internal.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_internal_entry.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_mathlib.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_vecmathlib.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_vecmathlib_avx2_8.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_vecmathlib_common_4.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_vecmathlib_neon_4.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_vecmathlib_none_4.h">
+      <Filter>src</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\external\astc-encoder\source\astcenc_vecmathlib_sse_4.h">
+      <Filter>src</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
