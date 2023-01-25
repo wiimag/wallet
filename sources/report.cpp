@@ -1,3 +1,8 @@
+/*
+ * Copyright 2022-2023 equals-forty-two.com All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
+ */
+
 #include "report.h"
 
 #include "pattern.h"
@@ -62,6 +67,23 @@ FetchLevel::TECHNICAL_EOD;
 static report_t* _reports = nullptr;
 static bool* _last_show_ui_ptr = nullptr;
 static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
+
+static struct {
+    const char* property_name;
+    function<expr_result_t(title_t* t, const stock_t* s)> handler;
+    function<bool(const expr_result_t& v)> filter_out;
+} report_field_property_evalutors[] = {
+    { "sold",  L2(_1->average_quantity ? false : true), L1(_1.as_number() == 0) },
+    { "active",  L2(_1->average_quantity ? true : false), L1(_1.as_number() == 0) },
+    { "ps",  L2(_1->ps.fetch()), L1(math_real_is_nan(_1.as_number())) },
+    { "qty",  L2(_1->average_quantity), L1(_1.as_number() == 0 || math_real_is_nan(_1.as_number()))},
+    { "buy",  L2(_1->buy_adjusted_price), L1(math_real_is_nan(_1.as_number())) },
+    { "price",  L2(_2->current.close), nullptr },
+    { "ask",  L2(_1->ask_price.fetch()), nullptr },
+    { "day",  L2(title_get_day_change(_1, _2)), L1(math_real_is_nan(_1.as_number())) },
+    { "change",  L2(_2->current.change), L1(math_real_is_nan(_1.as_number())) },
+    { "change%",  L2(_2->current.change_p), L1(math_real_is_nan(_1.as_number())) },
+};
 
 // 
 // # PRIVATE
@@ -1372,16 +1394,17 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
         if (title_is_index(title))
             continue;
 
-        thread_yield();
-        fully_resolved &= title->stock->has_resolve(REPORT_FETCH_LEVELS);
-        if (!fully_resolved && !thread_try_wait(100))
+        const bool stock_resolved = title->stock->has_resolve(REPORT_FETCH_LEVELS);
+        fully_resolved &= stock_resolved;
+
+        if (!stock_resolved)
         {
-            if (time_elapsed(title->stock->last_update_time) < 1.0)
+            if (time_elapsed(title->stock->last_update_time) < 3.0)
                 continue;
 
-            if (!stock_update(title->code, title->code_length, title->stock, REPORT_FETCH_LEVELS))
+            if (!stock_update(title->code, title->code_length, title->stock, REPORT_FETCH_LEVELS, 10.0))
             {
-                if (!thread_try_wait(100))
+                if (!thread_try_wait(250))
                 {
                     log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Refreshing %s is taking longer than expected"), title->code);
                     break;
@@ -1396,7 +1419,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     for (const auto& title : generics::fixed_array(report->titles))
         title_refresh(title);
     report_summary_update(report);
-    log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
+    log_infof(0, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
     if (report->table)
         report->table->needs_sorting = true;
 
@@ -1539,27 +1562,10 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
         thread_try_wait(100);
     }
 
-    static struct {
-        const char* property_name;
-        function<expr_result_t(title_t* t, const stock_t* s)> handler;
-        function<bool(const expr_result_t& v)> filter_out;
-    } property_evalutors[] = {
-        { "sold",  L2(_1->average_quantity ? false : true), L1(_1.as_number() == 0) },
-        { "active",  L2(_1->average_quantity ? true : false), L1(_1.as_number() == 0) },
-        { "ps",  L2(_1->ps.fetch()), L1(math_real_is_nan(_1.as_number())) },
-        { "qty",  L2(_1->average_quantity), L1(_1.as_number() == 0 || math_real_is_nan(_1.as_number()))},
-        { "buy",  L2(_1->buy_adjusted_price), L1(math_real_is_nan(_1.as_number())) },
-        { "price",  L2(_2->current.close), nullptr },
-        { "ask",  L2(_1->ask_price.fetch()), nullptr },
-        { "day",  L2(title_get_day_change(_1, _2)), L1(math_real_is_nan(_1.as_number())) },
-        { "change",  L2(_2->current.change), L1(math_real_is_nan(_1.as_number())) },
-        { "change%",  L2(_2->current.change_p), L1(math_real_is_nan(_1.as_number())) },
-    };
-
     expr_result_t* results = nullptr;
-    for (int i = 0; i < ARRAY_COUNT(property_evalutors); ++i)
+    for (int i = 0; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
     {
-        const auto& pe = property_evalutors[i];
+        const auto& pe = report_field_property_evalutors[i];
         if (report_eval_report_field_test(pe.property_name, report, title_filter, field_name, pe.handler, pe.filter_out, &results))
             break;
     }

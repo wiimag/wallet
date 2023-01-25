@@ -78,6 +78,8 @@ void imgui_set_font_ui_scale(float scale);
 
 ImRect imgui_get_available_rect();
 
+void imgui_selectable_label(const char* text, size_t text_length);
+
 namespace ImGui 
 {
 

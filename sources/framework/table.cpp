@@ -614,6 +614,7 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
 FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
 {
     const auto font_height = ImGui::GetFontSize() - imgui_get_font_ui_scale(4.0f);
+    const ImGuiStyle& ims = ImGui::GetStyle();
 
     ImGuiListClipper clipper;
     clipper.Begin(table->rows_visible_count);
@@ -664,8 +665,6 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
                 if ((column.flags & COLUMN_DYNAMIC_VALUE) && !row.fetched && table->update)
                     row.fetched = table->update(element);
 
-                float cpy = ImGui::GetCursorPosY();
-
                 char cell_id_buf[64];
                 string_t cell_id = string_format(STRING_CONST_CAPACITY(cell_id_buf), STRING_CONST("cell_%d_%d"), element_index, column_index);
                 ImGui::PushID(cell_id.str, cell_id.str + cell_id.length);
@@ -677,26 +676,21 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
                 if (alignment_flags == 0 && format_is_numeric(column.format))
                     alignment_flags |= COLUMN_RIGHT_ALIGN;
 
-                const ImGuiStyle& ims = ImGui::GetStyle();
-                const auto& cell_cursor_position = ImGui::GetCursorScreenPos();
-                const auto& cell_available_size = ImGui::GetContentRegionAvail();
+                const ImRect cell_rect = ImGui::TableGetCellBgRect(ct, i);
                 cell.style.rect = { 
-                    i == 0 ? row.rect.Min.x : cell_cursor_position.x - ims.CellPadding.x,
-                    i == 0 ? row.rect.Min.y : cell_cursor_position.y - ims.CellPadding.y,
-                    cell_available_size.x + ims.CellPadding.x * 2.0f, 
-                    row.height 
+                    cell_rect.Min.x,
+                    cell_rect.Min.y,
+                    cell_rect.GetWidth(),
+                    max(row.height, cell_rect.GetHeight())
                 };
 
                 if (column.style_formatter)
                     column.style_formatter(element, &column, &cell, cell.style);
 
-                const ImRect cell_rect = ImGui::TableGetCellBgRect(ct, i);
-                const float cell_rect_height = cell_rect.GetHeight();
-                const float cell_padding = cell_rect_height <= 8.0f ? cell_rect_height : 0.0f;
                 const ImVec2 cell_min = ImVec2(cell.style.rect.x, cell.style.rect.y);
                 const ImVec2 cell_max = ImVec2(
                     cell.style.rect.x + cell.style.rect.width, 
-                    cell.style.rect.y + max(cell.style.rect.height, cell_rect.GetHeight()) + cell_padding);
+                    cell.style.rect.y + cell.style.rect.height);
                 //if (i >= table->column_freeze) // Because of clipping reasons it seems we can't set the cell background color here
                 {
                     if ((table->flags & TABLE_HIGHLIGHT_HOVERED_ROW) && row.hovered)
@@ -801,7 +795,7 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
                     break;
 
                 #if ENABLE_ROW_HEIGHT_MIDDLE
-                max_cell_height = max(ImGui::GetCursorPosY() - cpy, max_cell_height);
+                max_cell_height = max(cell_max.y - cell_min.y, max_cell_height);
                 #endif
             }
 

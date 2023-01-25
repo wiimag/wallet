@@ -6,3 +6,8 @@
  */
 
 #pragma once
+
+/// <summary>
+/// Clear the console logs.
+/// </summary>
+void console_clear();

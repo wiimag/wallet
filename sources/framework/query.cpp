@@ -115,42 +115,6 @@ FOUNDATION_STATIC CURL* query_create_curl_request()
         #if !BUILD_DEPLOY
         curl_easy_setopt(req, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(req, CURLOPT_SSL_VERIFYHOST, 0L);
-        #else
-        curl_easy_setopt(req, CURLOPT_FOLLOWLOCATION, 1L);
-
-        // Remove this once we have a valid non-self-signed SSL certificate
-        {
-            static char ssl_certificate_data[] = /* Generated with bin2c. */
-                "-----BEGIN CERTIFICATE-----\r\n"
-                "MIIEFTCCAv2gAwIBAgIUBlWhRLNJ1qXWj31abQQqLRe0/q4wDQYJKoZIhvcNAQEL\r\n"
-                "BQAwgZkxCzAJBgNVBAYTAkNBMQswCQYDVQQIDAJRQzERMA8GA1UEBwwIVmFyZW5u\r\n"
-                "ZXMxFTATBgNVBAoMDEluZmluZWlzIEluYzERMA8GA1UECwwIaW5maW5laXMxGTAX\r\n"
-                "BgNVBAMMEGFwaS5pbmZpbmVpcy5jb20xJTAjBgkqhkiG9w0BCQEWFmpvbmF0aGFu\r\n"
-                "c0BpbmZpbmVpcy5jb20wHhcNMjIxMjE0MjAxOTUwWhcNMjMxMjE0MjAxOTUwWjCB\r\n"
-                "mTELMAkGA1UEBhMCQ0ExCzAJBgNVBAgMAlFDMREwDwYDVQQHDAhWYXJlbm5lczEV\r\n"
-                "MBMGA1UECgwMSW5maW5laXMgSW5jMREwDwYDVQQLDAhpbmZpbmVpczEZMBcGA1UE\r\n"
-                "AwwQYXBpLmluZmluZWlzLmNvbTElMCMGCSqGSIb3DQEJARYWam9uYXRoYW5zQGlu\r\n"
-                "ZmluZWlzLmNvbTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAL0FFl2A\r\n"
-                "dTvJqbaKDkWA5E460W3ul/bwXW4oUhez+WmlzwEOEVFMQrr3DoYBczi+4KtsqbXX\r\n"
-                "dehAbcVwyaVryWb+O21L69yvqQeZDW2aC5soZlTJcVG+OVpBsO2NlrWfAjJvxo84\r\n"
-                "Xp1moA2rbeOhWxby4zkyKfxczqFIanJJK8gXtnucq8FFRl5A5NUDCVmPCmcxMcqd\r\n"
-                "bfoUrr7lwbgq+ouUin5PFfhxzhigRoIalh2f2aXCsDKThj293KgFTwgSr6ZPDaAo\r\n"
-                "H8QQGnmVp5WYQNjqpfYJI6iJSeFTc9tiPfB1MbVgkbEIG1BUsj0uszUFlRz5YQS6\r\n"
-                "yYi5wNM7/6+biGcCAwEAAaNTMFEwHQYDVR0OBBYEFPO3/xG43MqylQZhrOVzvEaj\r\n"
-                "S3l3MB8GA1UdIwQYMBaAFPO3/xG43MqylQZhrOVzvEajS3l3MA8GA1UdEwEB/wQF\r\n"
-                "MAMBAf8wDQYJKoZIhvcNAQELBQADggEBAKIe9uY2CPpSUOLLd1z7DBMH+4bVFHmr\r\n"
-                "PKouLo+X1E7DQj2a2pdCY9adVuipjq3hTR+56a2OYn5mBV/0rousk1T0CzWlj7sM\r\n"
-                "e/gNq3fSquIImoeT1RLqcYQ6oydrte/TADknofI3h5Bty8ZDTsniGe8I8UIU0WOM\r\n"
-                "PtA4z+srf4drQDv2+v+LnGFIrFFgaslLmfgRHj5rq3FaUlFSf7ERufDM/ESknw+D\r\n"
-                "J0tZlfqxSLDbcq8LQMNwnZAjgcqM1CYjRbHLiXm/spuN/YzYdDv9AVNLTruoPTC8\r\n"
-                "mnks6+77nRW47lxJqGvyQw12TZkylX2C9+E4n8HPAIrdYkIozIuTjF0=\r\n"
-                "-----END CERTIFICATE-----";
-            curl_blob ssl_certificate_blob;
-            ssl_certificate_blob.data = ssl_certificate_data;
-            ssl_certificate_blob.len = sizeof(ssl_certificate_data);
-            ssl_certificate_blob.flags = CURL_BLOB_COPY;
-            curl_easy_setopt(req, CURLOPT_CAINFO_BLOB, ssl_certificate_blob);
-        }
         #endif
 
         if (_req_json_header_chunk == nullptr)

@@ -1,29 +1,34 @@
+/*
+ * Copyright 2022-2023 equals-forty-two.com All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
+ */
+ 
 #pragma once
 
 #include <foundation/string.h>
 
 struct settings_t
 {
-	// UI settings
-	int current_tab{ 0 };
-	float font_scaling{ 1.0f };
+    // UI settings
+    int current_tab{ 0 };
+    float font_scaling{ 1.0f };
 
-	// Preferences
-	bool show_symbols_TO{ false };
-	bool show_symbols_US{ false };
-	bool show_symbols_CVE{ false };
-	bool show_symbols_NEO{ false };
-	bool show_symbols_INDX{ false };
-	bool show_bulk_eod{ false };
+    // Preferences
+    bool show_symbols_TO{ false };
+    bool show_symbols_US{ false };
+    bool show_symbols_CVE{ false };
+    bool show_symbols_NEO{ false };
+    bool show_symbols_INDX{ false };
+    bool show_bulk_eod{ false };
 
-	char preferred_currency[32] { '\0' };
-	char search_terms[256]{ '\0' };
-	char search_filter[256]{ '\0' };
+    char preferred_currency[32] { '\0' };
+    char search_terms[256]{ '\0' };
+    char search_filter[256]{ '\0' };
 
-	double good_dividends_ratio{ 0.04 };
+    double good_dividends_ratio{ 0.04 };
 
-	// Dialog toggles
-	bool show_create_report_ui{ false };
+    // Dialog toggles
+    bool show_create_report_ui{ false };
 };
 
 void settings_draw();

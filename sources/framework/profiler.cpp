@@ -249,7 +249,6 @@ FOUNDATION_STATIC void profiler_window_render()
             _trackers_lock.shared_unlock();
         }
 
-        ImGui::SetWindowFontScale(1.0f);
         ImGui::PopStyleVar(2);
     }
 

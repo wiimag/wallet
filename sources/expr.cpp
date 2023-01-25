@@ -559,6 +559,32 @@ FOUNDATION_STATIC expr_result_t expr_eval_math_count(const expr_func_t* f, vec_e
     return expr_eval_math_count(expr_eval_expand_args(args));
 }
 
+FOUNDATION_STATIC expr_result_t expr_eval_array_index(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    if (args == nullptr || args->len < 1)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    expr_result_t arr = expr_eval(&args->buf[0]);
+    if (!arr.is_set())
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Nothing to index (%d)", arr.type);
+
+    for (int i = 1; i < args->len; ++i)
+    {
+        const expr_result_t& e_index_value = expr_eval(&args->buf[i]);
+        const double index_value = e_index_value.as_number(DNAN);
+        if (math_real_is_nan(index_value))
+            throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid index `%.*s` (%d)", STRING_FORMAT(args->buf[i].token), i);
+
+        expr_result_t elm = arr.element_at((unsigned int)index_value);
+        if (!elm.is_set() || (i + 1) >= args->len)
+            return elm;
+
+        arr = elm;
+    }
+
+    return arr;
+}
+
 expr_result_t expr_error(expr_error_code_t err_code, expr_string_t expr_string, const char* token_pos, const char* err_msg, ...)
 {
     EXPR_ERROR_CODE = err_code;
@@ -1653,7 +1679,7 @@ FOUNDATION_STATIC void eval_run_evaluators()
     }
 }
 
-FOUNDATION_STATIC void eval_render_evaluators()
+void eval_render_evaluators()
 {
     static bool has_ever_show_evaluators = session_key_exists("show_evaluators");
     static bool show_evaluators = session_get_bool("show_evaluators", false);
@@ -1944,6 +1970,8 @@ FOUNDATION_STATIC void eval_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SUM"), expr_eval_math_sum, NULL, 0 })); // SUM(0, 0, 1, 3) == 4
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("AVG"), expr_eval_math_avg, NULL, 0 })); // (AVG(1, [1, 1]) + AVG([1], [2], [3])) == 3
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("COUNT"), expr_eval_math_count, NULL, 0 })); // COUNT(SAMPLES())
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("INDEX"), expr_eval_array_index, NULL, 0 })); // COUNT(SAMPLES())
+
 
     // Vectors and matrices functions
     eval_register_vec_mat_functions(_expr_user_funcs);

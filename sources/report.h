@@ -1,3 +1,8 @@
+/*
+ * Copyright 2022-2023 equals-forty-two.com All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
+ */
+ 
 #pragma once
 
 #include "wallet.h"
@@ -13,57 +18,57 @@ typedef uuid_t report_handle_t;
 
 struct report_transaction_t
 {
-	time_t date{ 0 };
-	bool buy{ false };
-	double qty{ 0 };
-	double price{ 0 };
+    time_t date{ 0 };
+    bool buy{ false };
+    double qty{ 0 };
+    double price{ 0 };
     title_t* title;
 
-	double acc{ 0 };
-	double rated{ 0 };
-	double adjusted{ 0 };
+    double acc{ 0 };
+    double rated{ 0 };
+    double adjusted{ 0 };
 
-	int rx{ 0 };
-	int ry{ 0 };
+    int rx{ 0 };
+    int ry{ 0 };
 };
 
 struct report_t
 {
-	string_table_symbol_t name;
-	config_handle_t data;
-	
-	// Persistent state
-	uuid_t id{ 0 };
-	bool dirty{ false };
-	bool save{ false };
-	int save_index{ 0 };
-	bool opened{ true };
+    string_table_symbol_t name;
+    config_handle_t data;
+    
+    // Persistent state
+    uuid_t id{ 0 };
+    bool dirty{ false };
+    bool save{ false };
+    int save_index{ 0 };
+    bool opened{ true };
 
-	// Title information
+    // Title information
     size_t active_titles{ 0 };
     title_t** titles{ nullptr };
-	report_transaction_t* transactions{ nullptr };
-	double transaction_max_acc{ 0 };
-	double transaction_total_sells{ 0 };
+    report_transaction_t* transactions{ nullptr };
+    double transaction_max_acc{ 0 };
+    double transaction_total_sells{ 0 };
 
-	// Report summary values
-	wallet_t* wallet{ nullptr };
+    // Report summary values
+    wallet_t* wallet{ nullptr };
     tick_t summary_last_update{ 0 };
-	double total_gain { 0 };
-	double total_gain_p { 0 };
-	double total_value{ 0 };
-	double total_investment { 0 };
-	double total_day_gain { 0 };
-	double total_daily_average_p{ 0 };
+    double total_gain { 0 };
+    double total_gain_p { 0 };
+    double total_value{ 0 };
+    double total_investment { 0 };
+    double total_day_gain { 0 };
+    double total_daily_average_p{ 0 };
     bool fully_resolved{ false };
 
-	// UI data
-	table_t* table;
-	bool show_summary{ false };
-	bool show_sold_title{ false };
-	bool show_add_title_ui{ false };
-	bool show_rename_ui{ false };
-	bool show_order_graph{ false };
+    // UI data
+    table_t* table;
+    bool show_summary{ false };
+    bool show_sold_title{ false };
+    bool show_add_title_ui{ false };
+    bool show_rename_ui{ false };
+    bool show_order_graph{ false };
 };
 
 /// <summary>

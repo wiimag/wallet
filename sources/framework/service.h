@@ -18,11 +18,11 @@ typedef void (*service_shutdown_handler_t)(void);
 
 typedef function<void()> service_invoke_handler_t;
 
-#define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, ...) \
-    static Service __ ## NAME ## _service(#NAME, HASH_##NAME, initialize_fn, shutdown_fn, __VA_ARGS__)
-
 #define SERVICE_PRIORITY_UI 1
 #define SERVICE_PRIORITY_TESTS 10
+
+#define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, ...) \
+    static Service __##NAME##_service(#NAME, HASH_##NAME, initialize_fn, shutdown_fn, __VA_ARGS__)
 
 class Service
 {

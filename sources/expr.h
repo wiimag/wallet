@@ -359,6 +359,8 @@ struct expr_result_t
     {
         if (type == EXPR_RESULT_ARRAY && array_size(list) > 0)
             return true;
+        if (type == EXPR_RESULT_POINTER)
+            return true;
         return false;
     }
 
@@ -774,3 +776,5 @@ expr_result_t expr_eval_symbol(string_table_symbol_t symbol);
 expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& value);
 string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message);
 string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message);
+
+void eval_render_evaluators();

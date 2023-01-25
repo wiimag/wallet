@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include "common.h"
 #include "function.h"
 #include "string_table.h"
 
@@ -120,7 +119,7 @@ struct option_t
 };
 
 #if FOUNDATION_PLATFORM_WINDOWS
-typedef option_t<double, DNAN> double_option_t;
+typedef option_t<double, __builtin_nan("0")> double_option_t;
 #else
 struct double_option_t
 {
