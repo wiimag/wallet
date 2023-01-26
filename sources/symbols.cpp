@@ -2,7 +2,9 @@
  * Copyright 2022-2023 equals-forty-two.com All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
- 
+
+#define HASH_SYMBOLS static_hash_string("symbols", 7, 0x2550ceb198e6a738ULL)
+
 #include "symbols.h"
 
 #include "eod.h"
@@ -10,14 +12,15 @@
 #include "pattern.h"
 #include "settings.h"
 
-#include "framework/common.h"
-#include "framework/function.h"
-#include "framework/session.h"
-#include "framework/scoped_string.h"
-#include "framework/imgui.h"
-#include "framework/generics.h"
-#include "framework/scoped_mutex.h"
-#include "framework/table.h"
+#include <framework/common.h>
+#include <framework/function.h>
+#include <framework/session.h>
+#include <framework/scoped_string.h>
+#include <framework/imgui.h>
+#include <framework/generics.h>
+#include <framework/scoped_mutex.h>
+#include <framework/table.h>
+#include <framework/service.h>
 
 #include <foundation/hash.h>
 #include <foundation/array.h>
@@ -35,7 +38,11 @@ static market_report_t* _markets;
 static mutex_t* _symbols_lock = nullptr;
 static volatile int _loading_symbols_id = 0;
 
-static double load_number_field_value(const json_object_t& json, const json_token_t& symbol_token, const char* field_name)
+//
+// # PRIVATE
+//
+
+FOUNDATION_STATIC  double load_number_field_value(const json_object_t& json, const json_token_t& symbol_token, const char* field_name)
 {
     const json_token_t* field_value_token = json_find_token(json.buffer, json.tokens, symbol_token, field_name);
     if (field_value_token == nullptr)
@@ -47,7 +54,7 @@ static double load_number_field_value(const json_object_t& json, const json_toke
     return string_to_real(STRING_ARGS(field_value));
 }
 
-static string_table_symbol_t load_symbol_field_value(const json_object_t& json, const json_token_t& symbol_token, const char* field_name)
+FOUNDATION_STATIC  string_table_symbol_t load_symbol_field_value(const json_object_t& json, const json_token_t& symbol_token, const char* field_name)
 {
     const json_token_t* field_value_token = json_find_token(json.buffer, json.tokens, symbol_token, field_name);
     if (field_value_token != nullptr)
@@ -56,11 +63,11 @@ static string_table_symbol_t load_symbol_field_value(const json_object_t& json, 
         if (field_value_token->type == JSON_PRIMITIVE && string_equal(STRING_CONST("null"), STRING_ARGS(field_value)))
             return STRING_TABLE_NULL_SYMBOL;
         return string_table_encode_unescape(json_token_value(json.buffer, field_value_token));
-    }        
+    }
     return STRING_TABLE_NULL_SYMBOL;
 }
 
-static void symbols_load(int current_symbols_load_id, symbol_t** out_symbols, const json_object_t& data, const char* market, bool filter_null_isin = true)
+FOUNDATION_STATIC  void symbols_load(int current_symbols_load_id, symbol_t** out_symbols, const json_object_t& data, const char* market, bool filter_null_isin = true)
 {
     string_const_t market_cstr = string_const(market, string_length(market));
     if (const auto& lock = scoped_mutex_t(_symbols_lock))
@@ -94,11 +101,11 @@ static void symbols_load(int current_symbols_load_id, symbol_t** out_symbols, co
         const json_token_t* exchange_token = json_find_token(data.buffer, data.tokens, t, "Exchange");
         if (exchange_token != nullptr)
             exchange_code = json_token_value(data.buffer, exchange_token);
-        
+
         string_const_t exchange = market == nullptr ? exchange_code : string_const(market, string_length(market));
-        string_const_t code = string_format_static(STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code_string),  STRING_FORMAT(exchange));
-        
-        symbol_t symbol;      
+        string_const_t code = string_format_static(STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code_string), STRING_FORMAT(exchange));
+
+        symbol_t symbol;
         stock_initialize(STRING_ARGS(code), &symbol.stock);
         symbol.code = string_table_encode(STRING_ARGS(code));
         if (symbol.code == STRING_TABLE_NULL_SYMBOL)
@@ -123,23 +130,23 @@ static void symbols_load(int current_symbols_load_id, symbol_t** out_symbols, co
     }
 }
 
-static void symbols_fetch(symbol_t** symbols, const char* market, bool filter_null_isin)
+FOUNDATION_STATIC void symbols_fetch(symbol_t** symbols, const char* market, bool filter_null_isin)
 {
     if (*symbols == nullptr)
         array_reserve(*symbols, 1);
 
     int loading_symbols_id = ++_loading_symbols_id;
-    if (!eod_fetch_async("exchange-symbol-list", market, FORMAT_JSON_CACHE, 
+    if (!eod_fetch_async("exchange-symbol-list", market, FORMAT_JSON_CACHE,
         [loading_symbols_id, market, symbols, filter_null_isin](const json_object_t& data)
-        { 
+        {
             symbols_load(loading_symbols_id, symbols, data, market, filter_null_isin);
         }))
     {
-        log_warnf(0, WARNING_RESOURCE, STRING_CONST("Failed to fetch %s symbols"), market);
+        log_warnf(HASH_SYMBOLS, WARNING_RESOURCE, STRING_CONST("Failed to fetch %s symbols"), market);
     }
 }
 
-static bool symbols_contains(const symbol_t* symbols, string_const_t code)
+FOUNDATION_STATIC bool symbols_contains(const symbol_t* symbols, string_const_t code)
 {
     for (const auto& s : generics::fixed_array(symbols))
     {
@@ -149,7 +156,7 @@ static bool symbols_contains(const symbol_t* symbols, string_const_t code)
     return false;
 }
 
-static void symbols_fetch_from_news(int current_symbols_load_id, const json_object_t& json, symbol_t** symbols)
+FOUNDATION_STATIC void symbols_fetch_from_news(int current_symbols_load_id, const json_object_t& json, symbol_t** symbols)
 {
     if (json.root == nullptr)
         return;
@@ -186,7 +193,7 @@ static void symbols_fetch_from_news(int current_symbols_load_id, const json_obje
     }
 }
 
-static void symbols_read_search_results(int loading_symbols_id, const json_object_t& data, symbol_t** symbols, string_const_t search_filter)
+FOUNDATION_STATIC void symbols_read_search_results(int loading_symbols_id, const json_object_t& data, symbol_t** symbols, string_const_t search_filter)
 {
     symbols_load(loading_symbols_id, symbols, data, nullptr);
 
@@ -205,7 +212,7 @@ static void symbols_read_search_results(int loading_symbols_id, const json_objec
     }
 }
 
-static void symbols_search(symbol_t** symbols, string_const_t search_filter)
+FOUNDATION_STATIC void symbols_search(symbol_t** symbols, string_const_t search_filter)
 {
     if (*symbols == nullptr)
         array_reserve(*symbols, 1);
@@ -217,17 +224,17 @@ static void symbols_search(symbol_t** symbols, string_const_t search_filter)
             symbols_read_search_results(loading_symbols_id, data, symbols, search_filter);
         }, 0, 6 * 60 * 60ULL))
     {
-        log_warnf(0, WARNING_RESOURCE, STRING_CONST("Failed to execute search"));
+        log_warnf(HASH_SYMBOLS, WARNING_RESOURCE, STRING_CONST("Failed to execute search"));
     }
 }
 
-static cell_t symbol_get_code(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_code(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     return cell_t(string_table_decode(symbol->code));
 }
 
-static cell_t symbol_get_name(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_name(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->name)
@@ -235,7 +242,7 @@ static cell_t symbol_get_name(void* element, const column_t* column)
     return cell_t(string_table_decode(symbol->name));
 }
 
-static cell_t symbol_get_country(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_country(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->country)
@@ -243,7 +250,7 @@ static cell_t symbol_get_country(void* element, const column_t* column)
     return cell_t(string_table_decode(symbol->country));
 }
 
-static cell_t symbol_get_exchange(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_exchange(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->exchange)
@@ -251,7 +258,7 @@ static cell_t symbol_get_exchange(void* element, const column_t* column)
     return cell_t(string_table_decode(symbol->exchange));
 }
 
-static cell_t symbol_get_currency(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_currency(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->currency)
@@ -259,13 +266,13 @@ static cell_t symbol_get_currency(void* element, const column_t* column)
     return cell_t(string_table_decode(symbol->currency));
 }
 
-static cell_t symbol_get_isin(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_isin(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     return cell_t(string_table_decode(symbol->isin));
 }
 
-static cell_t symbol_get_type(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_type(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->type)
@@ -273,7 +280,7 @@ static cell_t symbol_get_type(void* element, const column_t* column)
     return cell_t(string_table_decode(symbol->type));
 }
 
-static double symbol_get_change(void* element, const column_t* column, int rel_days, bool take_last = false)
+FOUNDATION_STATIC double symbol_get_change(void* element, const column_t* column, int rel_days, bool take_last = false)
 {
     symbol_t* symbol = (symbol_t*)element;
     const stock_t* stock_data = symbol->stock;
@@ -287,38 +294,38 @@ static double symbol_get_change(void* element, const column_t* column, int rel_d
     return (stock_data->current.close - ed->close) / ed->close * 100.0;
 }
 
-static cell_t symbol_get_change_cell(void* element, const column_t* column, int rel_days, bool take_last = false)
+FOUNDATION_STATIC cell_t symbol_get_change_cell(void* element, const column_t* column, int rel_days, bool take_last = false)
 {
     double diff = symbol_get_change(element, column, rel_days, take_last);
     return cell_t(diff, COLUMN_FORMAT_PERCENTAGE);
 }
 
-static cell_t symbol_get_day_change(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_day_change(void* element, const column_t* column)
 {
     return symbol_get_change_cell(element, column, 0);
 }
 
-static cell_t symbol_get_week_change(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_week_change(void* element, const column_t* column)
 {
     return symbol_get_change_cell(element, column, -7);
 }
 
-static cell_t symbol_get_month_change(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_month_change(void* element, const column_t* column)
 {
     return symbol_get_change_cell(element, column, -30);
 }
 
-static cell_t symbol_get_year_change(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_year_change(void* element, const column_t* column)
 {
     return symbol_get_change_cell(element, column, -365);
 }
 
-static cell_t symbol_get_max_change(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_max_change(void* element, const column_t* column)
 {
     return symbol_get_change_cell(element, column, -365 * 30, true);
 }
 
-static cell_t symbol_get_dividends_yield(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_dividends_yield(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
 
@@ -334,13 +341,13 @@ static cell_t symbol_get_dividends_yield(void* element, const column_t* column)
     return s->dividends_yield.fetch() * 100.0;
 }
 
-static cell_t symbol_get_price(void* element, const column_t* column)
+FOUNDATION_STATIC cell_t symbol_get_price(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     return cell_t(symbol->price, column->format);
 }
 
-static void symbol_description_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void symbol_description_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     symbol_t* symbol = (symbol_t*)element;
     const stock_t* stock_data = symbol->stock;
@@ -356,7 +363,7 @@ static void symbol_description_tooltip(table_element_ptr_const_t element, const 
     ImGui::PopTextWrapPos();
 }
 
-static void symbol_dividends_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void symbol_dividends_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
 {
     symbol_t* symbol = (symbol_t*)element;
     const stock_t* s = symbol->stock;
@@ -370,7 +377,7 @@ static void symbol_dividends_formatter(table_element_ptr_const_t element, const 
     }
 }
 
-static void symbol_change_p_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style, double threshold)
+FOUNDATION_STATIC void symbol_change_p_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style, double threshold)
 {
     if (cell->number > threshold)
     {
@@ -379,7 +386,7 @@ static void symbol_change_p_formatter(table_element_ptr_const_t element, const c
     }
 }
 
-static void symbol_code_color(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void symbol_code_color(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (symbol->viewed)
@@ -389,14 +396,14 @@ static void symbol_code_color(table_element_ptr_const_t element, const column_t*
     }
 }
 
-static void symbol_code_selected(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void symbol_code_selected(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     symbol_t* symbol = (symbol_t*)element;
     pattern_open(STRING_ARGS(string_table_decode_const(symbol->code)));
     symbol->viewed = true;
 }
 
-static table_t* symbols_table_init(const char* name, function<void(string_const_t)> selector = nullptr)
+FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(string_const_t)> selector = nullptr)
 {
     table_t* table = table_allocate(name);
     table->flags |= TABLE_HIGHLIGHT_HOVERED_ROW;
@@ -452,7 +459,7 @@ static table_t* symbols_table_init(const char* name, function<void(string_const_
             pattern_open(STRING_ARGS(string_table_decode_const(symbol->code)));
             ((symbol_t*)symbol)->viewed = true;
         }
-        
+
         ImGui::MoveCursor(0.0f, 2.0f);
     };
 
@@ -466,10 +473,12 @@ static table_t* symbols_table_init(const char* name, function<void(string_const_
         };
     }
 
-    table_add_column(table, STRING_CONST("Symbol"), symbol_get_code, COLUMN_FORMAT_TEXT, /*COLUMN_FREEZE | */COLUMN_SORTABLE)
-        .set_selected_callback(symbol_code_selected)
+    auto symbol_column = table_add_column(table, STRING_CONST("Symbol"), symbol_get_code, COLUMN_FORMAT_TEXT, /*COLUMN_FREEZE | */COLUMN_SORTABLE)
         .set_style_formatter(symbol_code_color);
-    
+
+    if (!selector)
+        symbol_column.set_selected_callback(symbol_code_selected);
+
     column_t& c_name = table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"), symbol_get_name, COLUMN_FORMAT_TEXT, COLUMN_DYNAMIC_VALUE | COLUMN_SORTABLE | (selector ? COLUMN_STRETCH : COLUMN_OPTIONS_NONE));
     c_name.tooltip = symbol_description_tooltip;
 
@@ -483,17 +492,17 @@ static table_t* symbols_table_init(const char* name, function<void(string_const_
     {
         table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), symbol_get_day_change, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
         table_add_column(table, STRING_CONST("  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week"), symbol_get_week_change, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-        table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"), 
+        table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"),
             symbol_get_month_change, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER)
             .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4) { symbol_change_p_formatter(_1, _2, _3, _4, 3.0); });
-        table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"), 
+        table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"),
             symbol_get_year_change, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER)
             .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4) { symbol_change_p_formatter(_1, _2, _3, _4, 10.0); });
-        table_add_column(table, STRING_CONST("MAX %||" ICON_MD_CALENDAR_MONTH " % since creation"), 
+        table_add_column(table, STRING_CONST("MAX %||" ICON_MD_CALENDAR_MONTH " % since creation"),
             symbol_get_max_change, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER)
-            .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4){ symbol_change_p_formatter(_1, _2, _3, _4, 25.0); });
+            .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4) { symbol_change_p_formatter(_1, _2, _3, _4, 25.0); });
 
-        table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"), 
+        table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"),
             symbol_get_dividends_yield, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ZERO_USE_DASH)
             .set_style_formatter(symbol_dividends_formatter);
     }
@@ -505,17 +514,17 @@ static table_t* symbols_table_init(const char* name, function<void(string_const_
     return table;
 }
 
-static void symbols_market_deallocate(market_report_t* m)
+FOUNDATION_STATIC void symbols_market_deallocate(market_report_t* m)
 {
     table_deallocate(m->table);
     m->table = nullptr;
     array_deallocate(m->symbols);
 }
 
-static market_report_t* symbols_get_or_create_market(const char* market, size_t market_length = 0)
+FOUNDATION_STATIC market_report_t* symbols_get_or_create_market(const char* market, size_t market_length = 0)
 {
     string_table_symbol_t market_symbol = string_table_encode(market, market_length);
-    
+
     for (size_t i = 0; i < array_size(_markets); ++i)
     {
         market_report_t* const mkr = &_markets[i];
@@ -528,6 +537,51 @@ static market_report_t* symbols_get_or_create_market(const char* market, size_t 
     market_report->market = market_symbol;
     return market_report;
 }
+
+FOUNDATION_STATIC void symbols_render_search(string_const_t search_filter, const function<void(string_const_t)>& selector = nullptr)
+{
+    market_report_t* market_report = symbols_get_or_create_market("search");
+    if (market_report == nullptr)
+        return;
+
+    hash_t search_hash = string_hash(STRING_ARGS(search_filter));
+    if (selector)
+        search_hash += 1;
+    if (market_report->symbols == nullptr || market_report->hash != search_hash)
+    {
+        if (auto lock = scoped_mutex_t(_symbols_lock))
+            array_clear(market_report->symbols);
+
+        symbols_search(&market_report->symbols, search_filter);
+
+        if (market_report->table && ((selector && !market_report->table->selected)
+            || (!selector && market_report->table->selected)))
+        {
+            table_deallocate(market_report->table);
+            market_report->table = nullptr;
+        }
+
+        if (market_report->symbols && market_report->table == nullptr)
+            market_report->table = symbols_table_init("Search", selector);
+
+        market_report->hash = search_hash;
+    }
+
+    size_t symbol_count = array_size(market_report->symbols);
+    if (symbol_count > 0)
+    {
+        if (auto lock = scoped_mutex_t(_symbols_lock))
+            table_render(market_report->table, market_report->symbols, (int)symbol_count, sizeof(symbol_t), 0.0f, 0.0f);
+    }
+    else
+    {
+        ImGui::TextWrapped("No search results for %.*s\nYou can still add the search term as a title by pressing Add.", STRING_FORMAT(search_filter));
+    }
+}
+
+//
+// # PUBLIC API
+//
 
 void symbols_render(const char* market, bool filter_null_isin /*= true*/)
 {
@@ -549,53 +603,12 @@ void symbols_render(const char* market, bool filter_null_isin /*= true*/)
         if (auto lock = scoped_mutex_t(_symbols_lock))
         {
             market_report->table->search_filter = string_to_const(SETTINGS.search_filter);
-            table_render(market_report->table, market_report->symbols, (int)symbol_count, sizeof(symbol_t));
+            table_render(market_report->table, market_report->symbols, (int)symbol_count, sizeof(symbol_t), 0.0f, 0.0f);
         }
     }
     else
     {
         ImGui::Text("No results for %s", market);
-    }
-}
-
-static void symbols_render_search(string_const_t search_filter, const function<void(string_const_t)>& selector = nullptr)
-{
-    market_report_t* market_report = symbols_get_or_create_market("search");
-    if (market_report == nullptr)
-        return;
-
-    hash_t search_hash = string_hash(STRING_ARGS(search_filter));
-    if (selector)
-        search_hash += 1;
-    if (market_report->symbols == nullptr || market_report->hash != search_hash)
-    {
-        if (auto lock = scoped_mutex_t(_symbols_lock))
-            array_clear(market_report->symbols);
-
-        symbols_search(&market_report->symbols, search_filter);
-
-        if (market_report->table && ((selector && !market_report->table->selected) 
-                                               || (!selector && market_report->table->selected)))
-        {
-            table_deallocate(market_report->table);
-            market_report->table = nullptr;
-        }
-
-        if (market_report->symbols && market_report->table == nullptr)
-            market_report->table = symbols_table_init("Search", selector);
-
-        market_report->hash = search_hash;
-    }
-
-    size_t symbol_count = array_size(market_report->symbols);
-    if (symbol_count > 0)
-    {
-        if (auto lock = scoped_mutex_t(_symbols_lock))
-            table_render(market_report->table, market_report->symbols, (int)symbol_count, sizeof(symbol_t));
-    }
-    else
-    {
-        ImGui::TextWrapped("No search results for %.*s\nYou can still add the search term as a title by pressing Add.", STRING_FORMAT(search_filter));
     }
 }
 
@@ -618,13 +631,17 @@ void symbols_render_search(const function<void(string_const_t)>& selector /*= nu
         ImGui::TextUnformatted("No search query");
 }
 
-void symbols_initialize()
+//
+// # SYSTEM
+//
+
+FOUNDATION_STATIC void symbols_initialize()
 {
     _symbols_lock = mutex_allocate(STRING_CONST("Symbols"));
     array_reserve(_markets, 1);
 }
 
-void symbols_shutdown()
+FOUNDATION_STATIC void symbols_shutdown()
 {
     for (size_t i = 0; i < array_size(_markets); ++i)
     {
@@ -635,3 +652,5 @@ void symbols_shutdown()
     mutex_deallocate(_symbols_lock);
     _symbols_lock = nullptr;
 }
+
+DEFINE_SERVICE(SYMBOLS, symbols_initialize, symbols_shutdown, SERVICE_PRIORITY_UI);

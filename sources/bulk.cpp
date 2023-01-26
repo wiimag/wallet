@@ -58,6 +58,7 @@ static void bulk_fetch_exchange_list(const json_object_t& json)
         exchanges = array_push(exchanges, ex);
     }
 
+    #if 0
     // Add some missing markets
     exchanges = array_push(exchanges, (exchange_t{
         string_table_encode("Toronto Venture"), // Name
@@ -65,6 +66,7 @@ static void bulk_fetch_exchange_list(const json_object_t& json)
         string_table_encode("Canada"),          // Country
         string_table_encode("CAD"),             // Currency
     }));
+    #endif
 
     if (_exchanges)
         array_deallocate(_exchanges);

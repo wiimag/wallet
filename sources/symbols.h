@@ -13,6 +13,9 @@
 #include <foundation/math.h>
 #include <foundation/string.h>
 
+/// <summary>
+/// Stock symbol information used in the symbol exchange view.
+/// </summary>
 struct symbol_t
 {
     string_table_symbol_t code{};
@@ -29,8 +32,15 @@ struct symbol_t
     bool viewed{ false };
 };
 
+/// <summary>
+/// 
+/// </summary>
+/// <param name="market"></param>
+/// <param name="filter_null_isin"></param>
 void symbols_render(const char* market, bool filter_null_isin = true);
-void symbols_render_search(const function<void(string_const_t)>& selector = nullptr);
 
-void symbols_initialize();
-void symbols_shutdown();
+/// <summary>
+/// 
+/// </summary>
+/// <param name="selector"></param>
+void symbols_render_search(const function<void(string_const_t)>& selector = nullptr);

@@ -157,6 +157,9 @@ FOUNDATION_STATIC void report_filter_out_titles(report_t* report)
 FOUNDATION_STATIC bool report_table_update(table_element_ptr_t element)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return false;
+
     return title_update(title, 10.0);
 }
 
@@ -166,6 +169,9 @@ FOUNDATION_STATIC bool report_table_search(table_element_ptr_const_t element, co
         return true;
 
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return false;
+
     if (string_contains_nocase(title->code, title->code_length, SETTINGS.search_filter, search_filter_length))
         return true;
 
@@ -187,6 +193,9 @@ FOUNDATION_STATIC bool report_table_search(table_element_ptr_const_t element, co
 FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_element_ptr_t element)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return false;
+
     double real_time_elapsed_seconds = 0;
 
     const float decrease_timelapse = 60.0f * 25.0f;
@@ -231,7 +240,6 @@ FOUNDATION_STATIC bool report_table_row_end(table_t* table, row_t* row, table_el
     if (element == nullptr)
         return false;
 
-    title_t* title = *(title_t**)element;
     return false;
 }
 
@@ -465,64 +473,73 @@ FOUNDATION_STATIC cell_t report_column_get_fundamental_value(table_element_ptr_t
 FOUNDATION_STATIC cell_t report_column_get_name(table_element_ptr_t element, const column_t* column)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return nullptr;
     return title->stock->name;
 }
 
 FOUNDATION_STATIC void report_title_open_details_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
     title->show_details_ui = true;
 }
 
 FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
     eod_fetch("real-time", title->code, FORMAT_JSON_CACHE, [title](const json_object_t& json)
+    {
+        string_const_t time_str = string_from_time_static((tick_t)(json["timestamp"].as_number() * 1000.0), true);
+
+        if (time_str.length == 0)
         {
-            string_const_t time_str = string_from_time_static((tick_t)(json["timestamp"].as_number() * 1000.0), true);
+            return ImGui::Text(" %s (%s) \n Data not available \n",
+                title->code, string_table_decode(title->stock->name));
+        }
 
-            if (time_str.length == 0)
-            {
-                return ImGui::Text(" %s (%s) \n Data not available \n",
-                    title->code, string_table_decode(title->stock->name));
-            }
-
-            const double old_price = title->stock->current.close;
-            const double open = json["open"].as_number();
-            const double change = json["change"].as_number();
-            const double volume = json["volume"].as_number();
-            const double current_price = json["close"].as_number();
-            const double previous_close = json["previousClose"].as_number();
-            const double low = json["low"].as_number();
-            const double high = json["high"].as_number();
-            ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), " %s (%s) \n %.*s \n"
-                "\tPrice %.2lf $\n"
-                "\tOpen: %.2lf $\n"
-                "\tChange: %.2lf $ (%.3g %%)\n"
-                "\tYesterday: %.2lf $ (%.3g %%)\n"
-                "\tLow %.2lf $\n"
-                "\tHigh %.2lf $ (%.3g %%)\n"
-                "\tDMA (50d) %.2lf $ (%.3g %%)\n"
-                "\tDMA (200d) %.2lf $ (%.3g %%)\n"
-                "\tVolume %.6g (%.*s)", title->code, string_table_decode(title->stock->name), STRING_FORMAT(time_str),
-                current_price,
-                open,
-                current_price - open, (current_price - open) / open * 100.0,
-                previous_close, (current_price - previous_close) / previous_close * 100.0,
-                low,
-                high, (high - low) / current_price * 100.0,
-                title->stock->dma_50, title->stock->dma_50 / current_price * 100.0,
-                title->stock->dma_200, title->stock->dma_200 / title->stock->high_52 * 100.0,
-                volume, STRING_FORMAT(string_from_currency(volume * change, "9 999 999 999 $")));
-            if (current_price != old_price)
-                title_refresh(title);
-        }, 60ULL);
+        const double old_price = title->stock->current.close;
+        const double open = json["open"].as_number();
+        const double change = json["change"].as_number();
+        const double volume = json["volume"].as_number();
+        const double current_price = json["close"].as_number();
+        const double previous_close = json["previousClose"].as_number();
+        const double low = json["low"].as_number();
+        const double high = json["high"].as_number();
+        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), " %s (%s) \n %.*s \n"
+            "\tPrice %.2lf $\n"
+            "\tOpen: %.2lf $\n"
+            "\tChange: %.2lf $ (%.3g %%)\n"
+            "\tYesterday: %.2lf $ (%.3g %%)\n"
+            "\tLow %.2lf $\n"
+            "\tHigh %.2lf $ (%.3g %%)\n"
+            "\tDMA (50d) %.2lf $ (%.3g %%)\n"
+            "\tDMA (200d) %.2lf $ (%.3g %%)\n"
+            "\tVolume %.6g (%.*s)", title->code, string_table_decode(title->stock->name), STRING_FORMAT(time_str),
+            current_price,
+            open,
+            current_price - open, (current_price - open) / open * 100.0,
+            previous_close, (current_price - previous_close) / previous_close * 100.0,
+            low,
+            high, (high - low) / current_price * 100.0,
+            title->stock->dma_50, title->stock->dma_50 / current_price * 100.0,
+            title->stock->dma_200, title->stock->dma_200 / title->stock->high_52 * 100.0,
+            volume, STRING_FORMAT(string_from_currency(volume * change, "9 999 999 999 $")));
+        if (current_price != old_price)
+            title_refresh(title);
+    }, 60ULL);
 }
 
 
 FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+
     const double current_price = title->stock->current.close;
     if (title_is_index(title))
         return;
@@ -563,6 +580,8 @@ FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_con
 FOUNDATION_STATIC void report_title_total_gain_alerts_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
 {
     const title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
 
     if (!math_real_is_nan(title->wallet->enhanced_earnings) && title->average_quantity > 0 && cell->number > title->wallet->enhanced_earnings)
     {
@@ -575,6 +594,9 @@ FOUNDATION_STATIC void report_title_total_gain_alerts_formatter(table_element_pt
 FOUNDATION_STATIC void report_title_total_gain_p_alerts_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
 {
     const title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+
     const double current_gain_p = title_get_total_gain_p(title, title->stock);
     if (current_gain_p >= title->wallet->profit_ask * 100.0)
     {
@@ -618,6 +640,9 @@ FOUNDATION_STATIC void report_title_total_gain_p_alerts_formatter(table_element_
 FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+
     const double avg = math_ifzero(title->average_price, title->stock->current.close);
     ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
         " (%s $) Bought Price: %.2lf $ \n"
@@ -631,6 +656,9 @@ FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_con
 FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+
     const double avg = math_ifzero(title->average_price, title->stock->current.close);
     ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), "Total Dividends %.2lf $", title->total_dividends);
 }
@@ -638,6 +666,9 @@ FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_co
 FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+
     const double avg = math_ifzero(title->average_price, title->stock->current.close);
     if (!math_real_is_nan(avg))
     {
@@ -658,12 +689,18 @@ FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_con
 FOUNDATION_STATIC void report_title_open_buy_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+
     title->show_buy_ui = true;
 }
 
 FOUNDATION_STATIC void report_title_open_sell_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+
     if (title->average_quantity == 0)
         title->show_details_ui = true;
     else
@@ -923,8 +960,8 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
     if (!report_render_dialog_begin(id, &title->show_details_ui))
         return;
 
-    static report_details_view_order_t* orders = nullptr;
     static table_t* table = nullptr;
+    static report_details_view_order_t* orders = nullptr;
     if (ImGui::IsWindowAppearing())
     {
         if (orders)
@@ -940,14 +977,14 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
         { 
             report_details_view_order_t* order = (report_details_view_order_t*)element;
             return order->data["buy"].as_boolean() ? CTEXT("") : CTEXT(ICON_MD_SELL);
-        }, COLUMN_FORMAT_TEXT, COLUMN_MIDDLE_ALIGN | COLUMN_HIDE_HEADER_TEXT | COLUMN_SORTABLE);
-        ctype.width = 50.0f;
-        ctype.tooltip = [](table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
-        {
-            report_details_view_order_t* order = (report_details_view_order_t*)element;
-            string_const_t tooltip = order->data["buy"].as_boolean() ? CTEXT("Buy") : CTEXT("Sell");
-            ImGui::Text("%.*s", STRING_FORMAT(tooltip));
-        };
+        }, COLUMN_FORMAT_TEXT, COLUMN_MIDDLE_ALIGN | COLUMN_HIDE_HEADER_TEXT | COLUMN_SORTABLE)
+            .set_width(imgui_get_font_ui_scale(50.0f))
+            .set_tooltip_callback([](table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+            {
+                report_details_view_order_t* order = (report_details_view_order_t*)element;
+                string_const_t tooltip = order->data["buy"].as_boolean() ? CTEXT("Buy") : CTEXT("Sell");
+                ImGui::Text("%.*s", STRING_FORMAT(tooltip));
+            });
 
         table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), [](table_element_ptr_t element, const column_t* column)
         {
@@ -955,67 +992,85 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
             report_details_view_order_t* order = (report_details_view_order_t*)element;
             string_const_t date_str = order->data["date"].as_string();
             time_t odate = string_to_date(STRING_ARGS(date_str), &tm_date);
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true))
+
+            if (column->flags & COLUMN_RENDER_ELEMENT)
             {
-                odate = _mktime64(&tm_date);
-                date_str = string_from_date(odate);
-                config_set(order->data, STRING_CONST("date"), STRING_ARGS(date_str));
-                title_refresh(order->title);
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true))
+                {
+                    odate = _mktime64(&tm_date);
+                    date_str = string_from_date(odate);
+                    config_set(order->data, STRING_CONST("date"), STRING_ARGS(date_str));
+                    title_refresh(order->title);
+                }
             }
+
             return odate;
-        }, COLUMN_FORMAT_DATE, COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE).width = 220.0f;
+        }, COLUMN_FORMAT_DATE, COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE).set_width(imgui_get_font_ui_scale(220.0f));
 
         table_add_column(table, STRING_CONST("Quantity " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Order Quantity"), [](table_element_ptr_t element, const column_t* column)
         {
             report_details_view_order_t* order = (report_details_view_order_t*)element;
 
             double quantity = order->data["qty"].as_number();
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            if (ImGui::InputDouble("##Quantity", &quantity, 10.0f, 100.0f, "%.0lf", ImGuiInputTextFlags_None))
+
+            if (column->flags & COLUMN_RENDER_ELEMENT)
             {
-                config_set(order->data, STRING_CONST("qty"), quantity);
-                title_refresh(order->title);
-                report_trigger_update(order->report);
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputDouble("##Quantity", &quantity, 10.0f, 100.0f, "%.0lf", ImGuiInputTextFlags_None))
+                {
+                    config_set(order->data, STRING_CONST("qty"), quantity);
+                    title_refresh(order->title);
+                    report_trigger_update(order->report);
+                }
             }
 
             return quantity;
-        }, COLUMN_FORMAT_NUMBER, COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE).width = 190.0f;
+        }, COLUMN_FORMAT_NUMBER, COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE).set_width(imgui_get_font_ui_scale(190.0f));
 
         table_add_column(table, STRING_CONST("Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Order Price"), [](table_element_ptr_t element, const column_t* column)
         {
             report_details_view_order_t* order = (report_details_view_order_t*)element;
 
             double price = order->data["price"].as_number();
-            double price_scale = price / 10.0f;
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            if (ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, 
-                math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
+
+            if (column->flags & COLUMN_RENDER_ELEMENT)
             {
-                config_set(order->data, STRING_CONST("price"), price);
-                title_refresh(order->title);
-                report_trigger_update(order->report);
+                double price_scale = price / 10.0f;
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f,
+                    math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
+                {
+                    config_set(order->data, STRING_CONST("price"), price);
+                    title_refresh(order->title);
+                    report_trigger_update(order->report);
+                }
             }
 
             return price;
-        }, COLUMN_FORMAT_CURRENCY, COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE).width = 240.0f;
+        }, COLUMN_FORMAT_CURRENCY, COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE).set_width(imgui_get_font_ui_scale(240.0f));
 
         table_add_column(table, STRING_CONST("Ask " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Ask Price"), [](table_element_ptr_t element, const column_t* column)
         {
             report_details_view_order_t* order = (report_details_view_order_t*)element;
 
             double price = order->data["ask"].as_number();
-            double price_scale = price / 10.0f;
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-            if (ImGui::InputDouble("##Ask", &price, price_scale, price_scale * 2.0f,
-                math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
+
+            if (column->flags & COLUMN_RENDER_ELEMENT)
             {
-                config_set(order->data, STRING_CONST("ask"), price);
-                title_refresh(order->title);
+                double price_scale = price / 10.0f;
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+                if (ImGui::InputDouble("##Ask", &price, price_scale, price_scale * 2.0f,
+                    math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
+                {
+                    config_set(order->data, STRING_CONST("ask"), price);
+                    title_refresh(order->title);
+                }
             }
 
             return price;
-        }, COLUMN_FORMAT_CURRENCY, (!show_ask_price ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE).width = 240.0f;
+        }, COLUMN_FORMAT_CURRENCY, (!show_ask_price ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE)
+            .set_width(imgui_get_font_ui_scale(240.0f));
 
         table_add_column(table, STRING_CONST("           Gain " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain"), [](table_element_ptr_t element, const column_t* column)
         {
@@ -1050,21 +1105,25 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
             double price = order->data["price"].as_number();
             return price * quantity;
-        }, COLUMN_FORMAT_CURRENCY, COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE).width = 180.0f;
+        }, COLUMN_FORMAT_CURRENCY, COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE).set_width(imgui_get_font_ui_scale(180.0f));
 
         table_add_column(table, STRING_CONST("||Actions"), [](table_element_ptr_t element, const column_t* column)
         {
-            report_details_view_order_t* order = (report_details_view_order_t*)element;
-            if (ImGui::SmallButton(ICON_MD_DELETE_FOREVER))
+            if (column->flags & COLUMN_RENDER_ELEMENT)
             {
-                auto corders = order->title->data["orders"];
-                if (config_remove(corders, order->data))
+                report_details_view_order_t* order = (report_details_view_order_t*)element;
+                if (ImGui::SmallButton(ICON_MD_DELETE_FOREVER))
                 {
-                    order->deleted = true;
-                    title_refresh(order->title);
-                    report_trigger_update(order->report);
+                    auto corders = order->title->data["orders"];
+                    if (config_remove(corders, order->data))
+                    {
+                        order->deleted = true;
+                        title_refresh(order->title);
+                        report_trigger_update(order->report);
+                    }
                 }
             }
+            
             return CTEXT("DELETE");
         }, COLUMN_FORMAT_TEXT, COLUMN_CUSTOM_DRAWING | COLUMN_STRETCH | COLUMN_MIDDLE_ALIGN | COLUMN_HIDE_HEADER_TEXT);
 
@@ -1076,7 +1135,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
     }
 
     ImGui::PushStyleCompact();
-    table_render(table, orders, array_size(orders), sizeof(report_details_view_order_t));
+    table_render(table, orders, array_size(orders), sizeof(report_details_view_order_t), 0.0f, 0.0f);
     for (auto& order : generics::fixed_array(orders))
     {
         if (order.deleted)

@@ -615,6 +615,7 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
     const ImGuiStyle& ims = ImGui::GetStyle();
 
     ImGuiListClipper clipper;
+    bool has_wrapping_text = false;
     clipper.Begin(table->rows_visible_count);
     while (clipper.Step())
     {
@@ -659,6 +660,8 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
                 column_index++;
                 if (!ImGui::TableNextColumn())
                     continue;
+
+                has_wrapping_text |= (column.flags & COLUMN_TEXT_WRAPPING) != 0;
 
                 if ((column.flags & COLUMN_DYNAMIC_VALUE) && !row.fetched && table->update)
                     row.fetched = table->update(element);
@@ -834,7 +837,7 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
             ImGui::PopID();
         }
     }
-    else
+    else if (has_wrapping_text)
     {
         ImGui::TableNextRow();
         ImGui::TableNextRow();
