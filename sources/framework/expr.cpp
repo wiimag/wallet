@@ -1574,7 +1574,7 @@ expr_t* expr_create(const char* s, size_t len, expr_var_list_t* vars, expr_func_
             n = 1;
             tok = ",";
         }
-        if (*tok < 128 && isspace(*tok)) {
+        if (*tok > 0 && isspace(*tok)) {
             continue;
         }
         int paren_next = EXPR_PAREN_ALLOWED;

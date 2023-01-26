@@ -183,3 +183,4 @@ void service_foreach_window()
 {
     service_foreach(HASH_SERVICE_WINDOW);
 }
+
