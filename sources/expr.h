@@ -31,6 +31,18 @@ struct vec
     T* buf{ nullptr };
     int len{ 0 };
     int cap{ 0 };
+
+    T* get(int index)
+    {
+        FOUNDATION_ASSERT(index < len);
+        return &buf[index];
+    }
+
+    const T* get(int index) const
+    {
+        FOUNDATION_ASSERT(index < len);
+        return &buf[index];
+    }
 };
 
 typedef vec<expr_t> vec_expr_t;
@@ -115,7 +127,7 @@ typedef enum ExprOperatorType {
     OP_VAR,
     OP_FUNC,
     OP_SET,
-    
+
     OP_COUNT
 } expr_type_t;
 
@@ -408,7 +420,7 @@ struct expr_result_t
             return list[index == NO_INDEX ? 0 : index].element_size();
 
         FOUNDATION_ASSERT_FAIL("Unsupported");
-        return sizeof(value);		
+        return sizeof(value);
     }
 
     uint32_t element_count() const
@@ -678,6 +690,50 @@ struct expr_result_t
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
     }
+
+    struct iterator
+    {
+        unsigned index;
+        const expr_result_t* set;
+
+        bool operator!=(const iterator& other) const
+        {
+            if (set != other.set)
+                return true;
+            return (index != other.index);
+        }
+
+        bool operator==(const iterator& other) const
+        {
+            if (set != other.set)
+                return false;
+            return (index == other.index);
+        }
+
+        iterator& operator++()
+        {
+            ++index;
+            return *this;
+        }
+
+        expr_result_t operator*() const
+        {
+            FOUNDATION_ASSERT(set && index != UINT_MAX);
+            return set->element_at(index);
+        }
+    };
+
+    iterator begin(size_t index = 0) const
+    {
+        FOUNDATION_ASSERT(is_set());
+        return iterator{ 0, this };
+    }
+
+    iterator end() const
+    {
+        FOUNDATION_ASSERT(is_set());
+        return iterator{ element_count(), this };
+    }
 };
 
 struct expr_record_t
@@ -704,7 +760,7 @@ struct expr_evaluator_t
 struct expr_func_t
 {
     expr_string_t name;
-    exprfn_t f;
+    exprfn_t handler;
     exprfn_cleanup_t cleanup;
     size_t ctxsz;
 };
@@ -721,7 +777,7 @@ struct expr_t
         } func;
 
         struct {
-            expr_result_t value{};
+            expr_result_t value{ EXPR_RESULT_NULL };
         } result;
 
         struct {
@@ -730,6 +786,7 @@ struct expr_t
     } param;
 
     expr_string_t token;
+
 };
 
 struct expr_var_t
@@ -769,6 +826,7 @@ const expr_result_t* expr_eval_list(const expr_result_t* list);
 bool eval_set_global_var(const char* name, void* ptr, size_t size = 0);
 void eval_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t cleanup = nullptr, size_t context_size = 0);
 bool eval_unregister_function(const char* name, exprfn_t fn = nullptr);
+expr_var_t* eval_get_or_create_global_var(const char* name, size_t name_length = 0ULL);
 
 void eval_register_vec_mat_functions(expr_func_t*& funcs);
 
@@ -778,3 +836,4 @@ string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, cons
 string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message);
 
 void eval_render_evaluators();
+

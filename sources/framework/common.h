@@ -89,6 +89,8 @@ time_t string_to_date(const char* date_str, size_t date_str_length, tm* out_tm =
 string_const_t string_to_const(const char* str);
 string_const_t string_trim(string_const_t str, char c = ' ');
 bool string_compare_less(const char* str1, const char* str2);
+bool string_compare_less(const char* str1, size_t str1_length, const char* str2, size_t str2_length);
+string_t string_remove_line_returns(const char* str, size_t length);
 
 FOUNDATION_FORCEINLINE bool is_whitespace(char c)
 {
@@ -236,7 +238,7 @@ void array_sort(T* arr, const function<bool(const T& a, const T& b)>& less_compa
     });
 }
 #else
-#define array_sort(ARRAY, EXPRESSION) std::sort(ARRAY, ARRAY + array_size(ARRAY), [=](const auto& a, const auto& b){ return EXPRESSION; });
+#define array_sort(ARRAY, EXPRESSION) std::stable_sort(ARRAY, ARRAY + array_size(ARRAY), [=](const auto& a, const auto& b){ return EXPRESSION; });
 #endif
 
 template<typename T, typename U>

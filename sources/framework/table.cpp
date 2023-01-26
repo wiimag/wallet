@@ -232,10 +232,10 @@ FOUNDATION_STATIC int table_qsort_cells(void* pcontext, void const* va, void con
             }
         }
     }
-
-    const column_format_t format = sorting_column->format;
+    
     const cell_t& ca = sorting_column->fetch_value(a, sorting_column);
     const cell_t& cb = sorting_column->fetch_value(b, sorting_column);
+    const column_format_t format = ca.format;
 
     if (format_is_numeric(format))
     {

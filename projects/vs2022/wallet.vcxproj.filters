@@ -300,6 +300,9 @@
     <ClCompile Include="..\..\sources\render_pad.cpp">
       <Filter>app</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\sources\report_expr.cpp">
+      <Filter>app</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="../../resources/main.ico">

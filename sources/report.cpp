@@ -10,7 +10,6 @@
 #include "title.h"
 #include "symbols.h"
 #include "eod.h"
-#include "expr.h"
 
 #include "framework/session.h"
 #include "framework/imgui_utils.h"
@@ -67,23 +66,6 @@ FetchLevel::TECHNICAL_EOD;
 static report_t* _reports = nullptr;
 static bool* _last_show_ui_ptr = nullptr;
 static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
-
-static struct {
-    const char* property_name;
-    function<expr_result_t(title_t* t, const stock_t* s)> handler;
-    function<bool(const expr_result_t& v)> filter_out;
-} report_field_property_evalutors[] = {
-    { "sold",  L2(_1->average_quantity ? false : true), L1(_1.as_number() == 0) },
-    { "active",  L2(_1->average_quantity ? true : false), L1(_1.as_number() == 0) },
-    { "ps",  L2(_1->ps.fetch()), L1(math_real_is_nan(_1.as_number())) },
-    { "qty",  L2(_1->average_quantity), L1(_1.as_number() == 0 || math_real_is_nan(_1.as_number()))},
-    { "buy",  L2(_1->buy_adjusted_price), L1(math_real_is_nan(_1.as_number())) },
-    { "price",  L2(_2->current.close), nullptr },
-    { "ask",  L2(_1->ask_price.fetch()), nullptr },
-    { "day",  L2(title_get_day_change(_1, _2)), L1(math_real_is_nan(_1.as_number())) },
-    { "change",  L2(_2->current.change), L1(math_real_is_nan(_1.as_number())) },
-    { "change%",  L2(_2->current.change_p), L1(math_real_is_nan(_1.as_number())) },
-};
 
 // 
 // # PRIVATE
@@ -272,6 +254,8 @@ FOUNDATION_STATIC void report_table_setup(report_handle_t report_handle, table_t
 FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element, const column_t* column)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return nullptr;
 
     // If all titles are sold, return the sold average price.
     if (title->sell_total_quantity > 0 && title->average_quantity == 0)
@@ -296,6 +280,9 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
     title_t* title = *(title_t**)element;
 
     if ((column->flags & COLUMN_COMPUTE_SUMMARY) && title_is_index(title))
+        return nullptr;
+
+    if (title == nullptr)
         return nullptr;
 
     switch (formula)
@@ -435,6 +422,8 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
 FOUNDATION_STATIC cell_t report_column_get_change_value(table_element_ptr_t element, const column_t* column, int rel_days)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return nullptr;
     if ((column->flags & COLUMN_COMPUTE_SUMMARY) && title_is_index(title))
         return nullptr;
 
@@ -453,6 +442,9 @@ FOUNDATION_STATIC bool report_column_is_numeric(column_format_t format)
 FOUNDATION_STATIC cell_t report_column_get_fundamental_value(table_element_ptr_t element, const column_t* column, const char* filter_name, size_t filter_name_length)
 {
     title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return DNAN;
+
     const config_handle_t& filter_value = title_get_fundamental_config_value(title, filter_name, filter_name_length);
     if (!filter_value)
         return DNAN;
@@ -1406,7 +1398,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
             {
                 if (!thread_try_wait(250))
                 {
-                    log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Refreshing %s is taking longer than expected"), title->code);
+                    log_debugf(0, STRING_CONST("Refreshing %s is taking longer than expected"), title->code);
                     break;
                 }
             }
@@ -1425,217 +1417,6 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
 
     report->fully_resolved = fully_resolved;
     return fully_resolved;
-}
-
-FOUNDATION_STATIC expr_result_t report_eval_stock_realtime(const expr_func_t* f, vec_expr_t* args, void* c)
-{
-    // Examples: S(GLF.TO, open)
-    //           S(GFL.TO, close) - S(GFL.TO, open)
-
-    const auto& code = expr_eval_get_string_copy_arg(args, 0, "Invalid symbol code");
-    const auto& field = expr_eval_get_string_arg(args, 1, "Invalid field name");
-
-    double value = NAN;
-    eod_fetch("real-time", code.str, FORMAT_JSON, [field, &value](const json_object_t& json)
-    {
-        value = json[field].as_number();
-    }, 10ULL * 60ULL);
-
-    return value;
-}
-
-FOUNDATION_STATIC expr_result_t report_eval_stock_fundamental(const expr_func_t* f, vec_expr_t* args, void* c)
-{
-    // Examples: F(PFE.NEO, "General.ISIN")
-    //           F("CSH-UN.TO", "Highlights.WallStreetTargetPrice")
-    //           F("U.US", "Technicals")
-
-    const auto& code = expr_eval_get_string_arg(args, 0, "Invalid symbol code");
-    const auto& field = expr_eval_get_string_arg(args, 1, "Invalid field name");
-
-    expr_result_t value;
-    eod_fetch("fundamentals", code.str, FORMAT_JSON_CACHE, [field, &value](const json_object_t& json)
-    {
-        const bool allow_nulls = false;
-        const json_object_t& ref = json.find(STRING_ARGS(field), allow_nulls);
-        if (ref.is_null())
-            return;
-
-        if (ref.root->type == JSON_STRING)
-        {
-            value.type = EXPR_RESULT_SYMBOL;
-            value.value = string_table_encode(ref.as_string());
-        }
-        else if (ref.root->type == JSON_OBJECT)
-        {
-            expr_result_t* child_fields = nullptr;
-
-            for (const auto& e : ref)
-            {
-                string_const_t id = e.id();
-                string_const_t value = e.as_string();
-
-                char value_preview_buffer[64];
-                string_t value_preview = string_format(STRING_CONST_CAPACITY(value_preview_buffer), STRING_CONST("%.*s = %.*s"), 
-                    min(48, (int)id.length), id.str, STRING_FORMAT(value));
-                string_table_symbol_t store_value_symbol = string_table_encode(value_preview);
-                
-                expr_result_t r { EXPR_RESULT_SYMBOL, store_value_symbol, value_preview.length };
-                array_push(child_fields, r);
-            }
-
-            value = expr_eval_list(child_fields);
-        }
-        else
-            value = ref.as_number();
-    }, 12 * 60ULL * 60ULL);
-
-    return value;
-}
-
-FOUNDATION_STATIC bool report_eval_report_field_test(
-    const char* property_name, report_t* report, 
-    string_const_t title_filter, string_const_t field_name, 
-    const function<expr_result_t(title_t* t, const stock_t* s)> property_evalutor,
-    const function<bool(const expr_result_t& v)> property_filter_out,
-    expr_result_t** results)
-{
-    if (!string_equal_nocase(property_name, string_length(property_name), STRING_ARGS(field_name)))
-        return false;
-
-    for (auto t : generics::fixed_array(report->titles))
-    {
-        const stock_t* s = t->stock;
-        if (!s || s->has_resolve(FetchLevel::EOD | FetchLevel::REALTIME))
-            continue;
-
-        if (title_filter.length && !string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
-            continue;
-
-        expr_result_t value = property_evalutor(t, s);
-        if (title_filter.length || !property_filter_out || !property_filter_out(value))
-        {
-            const expr_result_t& kvp = expr_eval_pair(expr_eval_symbol(s->code), value);
-            array_push(*results, kvp);
-        }
-
-        if (title_filter.length && string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
-            return true;
-    }
-
-    return true;
-}
-
-FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, vec_expr_t* args, void* c)
-{
-    // Examples: R('FLEX', 'ps')
-    //           R('_300K', BB.TO, 'ps')
-    //           R('_300K', 'buy')
-
-    const auto& report_name = expr_eval_get_string_arg(args, 0, "Invalid report name");
-    if (report_name.length < 2)
-        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid report name %.*s", STRING_FORMAT(report_name));
-
-    const bool underscore_name = report_name.str[0] == '_';
-    report_handle_t report_handle = report_find_no_case(
-        underscore_name ? report_name.str+1 : report_name.str, 
-        underscore_name ? report_name.length - 1 : report_name.length);
-    if (!report_handle_is_valid(report_handle))
-        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Cannot find report %.*s", STRING_FORMAT(report_name));
-
-    size_t field_name_index = 1;
-    string_const_t title_filter{};
-    if (args->len >= 3)
-    {
-        title_filter = expr_eval_get_string_arg(args, 1, "Invalid title name");
-        field_name_index = 2;
-    }
-
-    report_t* report = report_get(report_handle);
-    const auto& field_name = expr_eval_get_string_arg(args, field_name_index, "Invalid field name");
-
-    tick_t s = time_current();
-    while (!report_sync_titles(report))
-    {
-        if (time_elapsed(s) > 30.0f)
-            throw ExprError(EXPR_ERROR_EVALUATION_TIMEOUT, "Sync timeout, retry later...", STRING_FORMAT(report_name));
-        thread_try_wait(100);
-    }
-
-    expr_result_t* results = nullptr;
-    for (int i = 0; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
-    {
-        const auto& pe = report_field_property_evalutors[i];
-        if (report_eval_report_field_test(pe.property_name, report, title_filter, field_name, pe.handler, pe.filter_out, &results))
-            break;
-    }
-
-    if (results == nullptr)
-        throw ExprError(EXPR_ERROR_EVALUATION_NOT_IMPLEMENTED, "Field %.*s not supported", STRING_FORMAT(field_name));
-
-    if (array_size(results) == 1)
-    {
-        expr_result_t single_value = results[0];
-        array_deallocate(results);
-        return single_value.list[1];
-    }
-
-    return expr_eval_list(results);
-}
-
-FOUNDATION_STATIC void report_eval_read_object_fields(const json_object_t& json, const json_token_t* obj, expr_result_t** field_names, const char* s = nullptr, size_t len = 0)
-{
-    unsigned int e = obj->child;
-    for (size_t i = 0; i < obj->value_length; ++i)
-    {
-        const json_token_t* t = &json.tokens[e];
-        e = t->sibling;
-        if (t->id_length == 0)
-            continue;
-
-        char path[256];
-        size_t path_length = 0;
-        if (s && len > 0)
-            path_length = string_format(STRING_CONST_CAPACITY(path), STRING_CONST("%.*s.%.*s"), len, s, t->id_length, &json.buffer[t->id]).length;
-        else
-            path_length = string_copy(STRING_CONST_CAPACITY(path), &json.buffer[t->id], t->id_length).length;
-
-        if (t->type == JSON_OBJECT)
-            report_eval_read_object_fields(json, t, field_names, path, path_length);
-        else
-        {
-            expr_result_t s;
-            s.type = EXPR_RESULT_SYMBOL;
-            s.value = string_table_encode(path, path_length);
-            array_push(*field_names, s);
-        }
-    }
-}
-
-FOUNDATION_STATIC expr_result_t report_eval_list_fields(const expr_func_t* f, vec_expr_t* args, void* c)
-{
-    // Examples: FIELDS("U.US", 'real-time')
-    //           FIELDS("U.US", 'fundamentals')
-
-    const auto& code = expr_eval_get_string_arg(args, 0, "Invalid symbol code");
-    const auto& api = expr_eval_get_string_arg(args, 1, "Invalid API end-point");
-
-    expr_result_t* field_names = nullptr;
-    string_const_t url = eod_build_url(api.str, code.str, FORMAT_JSON_CACHE);
-    query_execute_json(url.str, FORMAT_JSON_CACHE, [&field_names](const json_object_t& json)
-    {
-        if (json.root == nullptr)
-            return;
-
-        if (json.root->type == JSON_OBJECT)
-            report_eval_read_object_fields(json, json.root, &field_names);
-
-        if (json.root->type == JSON_ARRAY)
-            report_eval_read_object_fields(json, &json.tokens[json.root->child], &field_names);
-
-    }, 15 * 60 * 60ULL);
-
-    return expr_eval_list(field_names);
 }
 
 FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_handle, table_t* table)
@@ -2208,11 +1989,6 @@ void report_initialize()
 
     report_sort_order();
     string_array_deallocate(paths);
-
-    eval_register_function("S", report_eval_stock_realtime);
-    eval_register_function("F", report_eval_stock_fundamental);
-    eval_register_function("R", report_eval_report_field);
-    eval_register_function("FIELDS", report_eval_list_fields);
 }
 
 void report_shutdown()

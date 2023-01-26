@@ -25,16 +25,16 @@
 #include <stdarg.h>
 
 #if FOUNDATION_PLATFORM_WINDOWS
-    #include <foundation/windows.h>
-    #include <Commdlg.h>
+#include <foundation/windows.h>
+#include <Commdlg.h>
 
-    #include <stdio.h>
-    #include <fcntl.h>
-    #include <io.h>
-    #include <iostream>
-    #include <fstream>
+#include <stdio.h>
+#include <fcntl.h>
+#include <io.h>
+#include <iostream>
+#include <fstream>
 
-    extern HWND _window_handle;
+extern HWND _window_handle;
 #endif
 
 #include <numeric>
@@ -54,7 +54,7 @@ size_t string_occurence(const char* str, size_t len, char c)
         offset = foffset + 1;
         occurence++;
     }
-    return occurence + (offset+1 < len);
+    return occurence + (offset + 1 < len);
 }
 
 size_t string_line_count(const char* str, size_t len)
@@ -106,7 +106,7 @@ string_t string_utf8_unescape(const char* s, size_t length)
             continue;
         }
 
-        if (size_t(c+6 - s) < length && c[1] == 'u' &&
+        if (size_t(c + 6 - s) < length && c[1] == 'u' &&
             is_char_alpha_num_hex(c[2]) &&
             is_char_alpha_num_hex(c[3]) &&
             is_char_alpha_num_hex(c[4]) &&
@@ -120,7 +120,7 @@ string_t string_utf8_unescape(const char* s, size_t length)
                 utf8.str[utf8.length++] = utf_chars_buffer[j];
             c += 5;
         }
-        else if (size_t(c+1 - s) < length && c[1] == '/')
+        else if (size_t(c + 1 - s) < length && c[1] == '/')
         {
             utf8.str[utf8.length++] = *(++c);
         }
@@ -227,11 +227,11 @@ time_t time_now()
 
 bool time_to_local(time_t at, tm* out_tm)
 {
-    #if FOUNDATION_PLATFORM_WINDOWS
+#if FOUNDATION_PLATFORM_WINDOWS
     return localtime_s(out_tm, &at) != 0;
-    #else
+#else
     return localtime_r(&at, out_tm);
-    #endif
+#endif
 }
 
 time_t time_add_days(time_t t, int days)
@@ -285,7 +285,7 @@ string_t string_static_buffer(size_t required_length /*= 64*/, bool clear_memory
     if (required_length > buffer_capacity)
     {
         FOUNDATION_ASSERT_FAILFORMAT("Required length too large %zu > %zu", required_length, buffer_capacity);
-        return string_t{0, 0};
+        return string_t{ 0, 0 };
     }
 
     char* cstr = nullptr;
@@ -304,7 +304,7 @@ string_t string_static_buffer(size_t required_length /*= 64*/, bool clear_memory
         memset(cstr, 0, required_length);
     else if (required_length > 0)
         cstr[0] = '\0';
-    return string_t { cstr, required_length };
+    return string_t{ cstr, required_length };
 }
 
 string_const_t string_from_currency(double value, const char* money_fmt /*= nullptr*/, size_t money_fmt_length /*= 0*/)
@@ -319,7 +319,7 @@ string_const_t string_from_currency(double value, const char* money_fmt /*= null
         return string_format_static(STRING_CONST("%.3gB $"), value / 1e9);
     else if (abs_value >= 1e7)
         return string_format_static(STRING_CONST("%.3gM $"), value / 1e6);
-    
+
     string_t fmt_buffer = string_static_buffer(32);
 
     if (money_fmt == nullptr)
@@ -349,12 +349,12 @@ string_const_t string_from_currency(double value, const char* money_fmt /*= null
     return string_to_const(string_format(STRING_ARGS(fmt_buffer), money_fmt, money_fmt_length, value));
 }
 
-char from_hex(char ch) 
+char from_hex(char ch)
 {
     return isdigit(ch) ? ch - '0' : tolower(ch) - 'a' + 10;
 }
 
-char to_hex(char code) 
+char to_hex(char code)
 {
     static char hex[] = "0123456789abcdef";
     return hex[code & 15];
@@ -369,9 +369,9 @@ string_const_t url_encode(const char* str, size_t str_length)
         if (*pstr < 0 || isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~')
             *pbuf++ = *pstr;
         else if (*pstr == ' ')
-            *pbuf++ = '%', *pbuf++ = '2', *pbuf++ = '0';
+            *pbuf++ = '%', * pbuf++ = '2', * pbuf++ = '0';
         else
-            *pbuf++ = '%', *pbuf++ = to_hex(*pstr >> 4), *pbuf++ = to_hex(*pstr & 15);
+            *pbuf++ = '%', * pbuf++ = to_hex(*pstr >> 4), * pbuf++ = to_hex(*pstr & 15);
         pstr++;
     }
     *pbuf = '\0';
@@ -379,7 +379,7 @@ string_const_t url_encode(const char* str, size_t str_length)
     return string_to_const(buf);
 }
 
-string_const_t url_decode(const char* str, size_t str_length) 
+string_const_t url_decode(const char* str, size_t str_length)
 {
     const char* pstr = str;
     string_t buf = string_static_buffer((str_length > 0 ? str_length : string_length(str)) + 1);
@@ -406,18 +406,18 @@ string_const_t url_decode(const char* str, size_t str_length)
 
 void open_in_shell(const char* path)
 {
-    #ifdef _WIN32
-        ::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT);
-    #else
-        #if __APPLE__
-            const char* open_executable = "open";
-        #else
-            const char* open_executable = "xdg-open";
-        #endif
-        char command[2048];
-        snprintf(command, 2048, "%s \"%s\"", open_executable, path);
-        system(command);
-    #endif
+#ifdef _WIN32
+    ::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT);
+#else
+#if __APPLE__
+    const char* open_executable = "open";
+#else
+    const char* open_executable = "xdg-open";
+#endif
+    char command[2048];
+    snprintf(command, 2048, "%s \"%s\"", open_executable, path);
+    system(command);
+#endif
 }
 
 string_const_t string_format_static(const char* fmt, size_t fmt_length, ...)
@@ -449,7 +449,7 @@ double math_average(const double* pn, size_t count, size_t stride /*= sizeof(dou
     for (size_t i = 0; i < count; ++i)
     {
         total += math_ifnan(*pn, 0.0);
-        pn = (double*)(((uint8_t*)pn)+stride);
+        pn = (double*)(((uint8_t*)pn) + stride);
     }
 
     return total / count;
@@ -472,7 +472,7 @@ double math_median_average(double* values, double& median, double& average)
 string_t fs_read_text(const char* path, size_t path_length)
 {
     if (!fs_is_file(path, path_length))
-        return string_t{nullptr, 0};
+        return string_t{ nullptr, 0 };
 
     stream_t* text_stream = fs_open_file(path, path_length, STREAM_IN | STREAM_BINARY);
     if (text_stream == nullptr)
@@ -494,7 +494,7 @@ string_const_t fs_clean_file_name(const char* filename, size_t filename_length)
     {
         if (string_find(STRING_ARGS(illegal_chars), c, 0) == STRING_NPOS)
             *p++ = c;
-            
+
     }
     *p = '\0';
     return string_to_const(out_filename);
@@ -550,55 +550,55 @@ time_t string_to_date(const char* date_str, size_t date_str_length, tm* out_tm /
 }
 
 #if FOUNDATION_PLATFORM_WINDOWS
-    bool open_file_dialog(const char* dialog_title, const char* extension, const char* current_file_path, function<bool(string_const_t)> selected_file_callback)
+bool open_file_dialog(const char* dialog_title, const char* extension, const char* current_file_path, function<bool(string_const_t)> selected_file_callback)
+{
+    string_t file_path_buffer = string_static_buffer(1024, true);
+    if (current_file_path != nullptr)
     {
-        string_t file_path_buffer = string_static_buffer(1024, true);
-        if (current_file_path != nullptr)
-        {
-            string_t file_path = string_format(STRING_ARGS(file_path_buffer), STRING_CONST("%s"), current_file_path);
-            file_path = path_clean(STRING_ARGS(file_path), file_path_buffer.length);
-            file_path = string_replace(STRING_ARGS(file_path), file_path_buffer.length,
-                STRING_CONST("/"), STRING_CONST("\\"), true);
-        }
-
-        OPENFILENAMEA ofn;
-        ZeroMemory(&ofn, sizeof(ofn));
-        ofn.lStructSize = sizeof(ofn);
-        ofn.hwndOwner = _window_handle;
-        ofn.lpstrFile = file_path_buffer.str;
-        ofn.nMaxFile = (DWORD)file_path_buffer.length;
-        if (extension == nullptr)
-        {
-            ofn.lpstrFilter = "All\0*.*\0";
-        }
-        else
-        {
-            char file_extensions_buffer[1024] = { '\0' };
-            string_t extension_filters = string_format(STRING_CONST_CAPACITY(file_extensions_buffer),
-                STRING_CONST("%s|All Files (*.*)|*.*"), extension);
-            extension_filters = string_replace(STRING_ARGS(extension_filters), sizeof(file_extensions_buffer),
-                STRING_CONST("|"), "\0", 1, true);
-            extension_filters.str[extension_filters.length+1] = '\0';
-            ofn.lpstrFilter = extension_filters.str;
-        }
-        ofn.nFilterIndex = 1;
-        ofn.lpstrFileTitle = NULL;
-        ofn.nMaxFileTitle = 0;
-        ofn.lpstrTitle = dialog_title;
-        ofn.lpstrInitialDir = NULL;
-        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-        if (GetOpenFileNameA(&ofn))
-        {
-            selected_file_callback(string_const(file_path_buffer.str, string_length(file_path_buffer.str)));
-            return true;
-        }
-        
-        return false;
+        string_t file_path = string_format(STRING_ARGS(file_path_buffer), STRING_CONST("%s"), current_file_path);
+        file_path = path_clean(STRING_ARGS(file_path), file_path_buffer.length);
+        file_path = string_replace(STRING_ARGS(file_path), file_path_buffer.length,
+            STRING_CONST("/"), STRING_CONST("\\"), true);
     }
+
+    OPENFILENAMEA ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = _window_handle;
+    ofn.lpstrFile = file_path_buffer.str;
+    ofn.nMaxFile = (DWORD)file_path_buffer.length;
+    if (extension == nullptr)
+    {
+        ofn.lpstrFilter = "All\0*.*\0";
+    }
+    else
+    {
+        char file_extensions_buffer[1024] = { '\0' };
+        string_t extension_filters = string_format(STRING_CONST_CAPACITY(file_extensions_buffer),
+            STRING_CONST("%s|All Files (*.*)|*.*"), extension);
+        extension_filters = string_replace(STRING_ARGS(extension_filters), sizeof(file_extensions_buffer),
+            STRING_CONST("|"), "\0", 1, true);
+        extension_filters.str[extension_filters.length + 1] = '\0';
+        ofn.lpstrFilter = extension_filters.str;
+    }
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFileTitle = NULL;
+    ofn.nMaxFileTitle = 0;
+    ofn.lpstrTitle = dialog_title;
+    ofn.lpstrInitialDir = NULL;
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+    if (GetOpenFileNameA(&ofn))
+    {
+        selected_file_callback(string_const(file_path_buffer.str, string_length(file_path_buffer.str)));
+        return true;
+    }
+
+    return false;
+}
 #elif FOUNDATION_PLATFORM_MACOS
-    // See common.m
+// See common.m
 #else
-    #error "Not implemented"
+#error "Not implemented"
 #endif
 
 hash_t fs_hash_file(string_t file_path)
@@ -624,6 +624,29 @@ hash_t fs_hash_file(string_const_t file_path)
     stream_deallocate(fstream);
 
     return stream_hash;
+}
+
+bool string_compare_less(const char* str1, size_t str1_length, const char* str2, size_t str2_length)
+{
+    if (str1 == nullptr && str2 != nullptr)
+        return false;
+
+    if (str1_length == 0 && str2_length != 0)
+        return false;
+
+    if (str2 == nullptr && str1 != nullptr)
+        return true;
+
+    if (str2_length == 0 && str1_length != 0)
+        return true;
+
+    if (str2 == nullptr && str1 == nullptr)
+        return false;
+
+    if (str2_length == 0 && str1_length == 0)
+        return false;
+
+    return strncmp(str1, str2, min(str1_length, str2_length)) < 0;
 }
 
 bool string_compare_less(const char* str1, const char* str2)
@@ -655,11 +678,11 @@ FOUNDATION_STATIC string_const_t environment_command_line_trim_param(string_cons
 }
 
 FOUNDATION_STATIC bool environment_command_line_read_value(
-    const string_const_t* cmdline, 
-    string_const_t arg, 
-    size_t& arg_index, 
-    size_t arg_size, 
-    string_const_t param, 
+    const string_const_t* cmdline,
+    string_const_t arg,
+    size_t& arg_index,
+    size_t arg_size,
+    string_const_t param,
     string_const_t* value /*= nullptr*/)
 {
     arg = environment_command_line_trim_param(arg);
@@ -707,7 +730,7 @@ bool environment_command_line_arg(string_const_t name, string_const_t* value /*=
     name = environment_command_line_trim_param(name);
     const string_const_t* cmdline = environment_command_line();
 
-    for (size_t iarg = 0, argsize = array_size(cmdline); iarg < argsize; ++iarg) 
+    for (size_t iarg = 0, argsize = array_size(cmdline); iarg < argsize; ++iarg)
     {
         string_const_t arg = cmdline[iarg];
 
@@ -768,13 +791,13 @@ bool path_equals(const char* a, size_t a_length, const char* b, size_t b_length)
 
 void process_debug_output(const char* output, size_t output_length /*= 0*/)
 {
-    #if !BUILD_DEPLOY
-        #if FOUNDATION_PLATFORM_WINDOWS
-            OutputDebugStringA(output);
-        #else
-            fprintf(stdout, "%.*s", output_length ? (int)output_length : (int)string_length(output), output);
-        #endif
-    #endif
+#if !BUILD_DEPLOY
+#if FOUNDATION_PLATFORM_WINDOWS
+    OutputDebugStringA(output);
+#else
+    fprintf(stdout, "%.*s", output_length ? (int)output_length : (int)string_length(output), output);
+#endif
+#endif
 }
 
 bool process_redirect_io_to_console()
@@ -861,4 +884,33 @@ bool process_release_console()
 #else
     return false;
 #endif
+}
+
+string_t string_remove_line_returns(const char* str, size_t length)
+{
+    if (string_find(str, length, '\n', 0) == STRING_NPOS)
+        return {};
+
+    bool space_injected = false;
+    string_t result = string_allocate(0, length + 1);
+    for (size_t i = 0; i < length; ++i)
+    {
+        const char tok = str[i];
+        if (tok <= ' ')
+        {
+            if (!space_injected)
+            {
+                result.str[result.length++] = ' ';
+                space_injected = true;
+            }
+        }
+        else
+        {
+            result.str[result.length++] = tok;
+            space_injected = false;
+        }
+    }
+
+    result.str[result.length] = '\0';
+    return result;
 }

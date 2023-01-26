@@ -529,17 +529,14 @@ void eval_register_vec_mat_functions(expr_func_t*& funcs)
     array_push(funcs, (expr_func_t{ STRING_CONST("ABS"), expr_eval_vecmat_abs, NULL, VECMAT_CONTEXT_SIZE }));
     
     array_push(funcs, (expr_func_t{ STRING_CONST("IDENTITY"), expr_eval_vecmat_identity, NULL, VECMAT_CONTEXT_SIZE }));
-    array_push(funcs, (expr_func_t{ STRING_CONST("T"), expr_eval_vecmat_translation, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("TRANSLATION"), expr_eval_vecmat_translation, NULL, VECMAT_CONTEXT_SIZE }));
-    array_push(funcs, (expr_func_t{ STRING_CONST("R"), expr_eval_vecmat_rotation, NULL, VECMAT_CONTEXT_SIZE }));
+    array_push(funcs, (expr_func_t{ STRING_CONST("ROTATION"), expr_eval_vecmat_rotation, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("RX"), expr_eval_vecmat_rotation_x, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("RY"), expr_eval_vecmat_rotation_y, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("RZ"), expr_eval_vecmat_rotation_z, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("RZYZ"), expr_eval_vecmat_rotation_zyx, NULL, VECMAT_CONTEXT_SIZE }));
-    array_push(funcs, (expr_func_t{ STRING_CONST("ROTATION"), expr_eval_vecmat_rotation, NULL, VECMAT_CONTEXT_SIZE }));
-    array_push(funcs, (expr_func_t{ STRING_CONST("S"), expr_eval_vecmat_scale, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("SCALE"), expr_eval_vecmat_scale, NULL, VECMAT_CONTEXT_SIZE }));
-               
+
     array_push(funcs, (expr_func_t{ STRING_CONST("INVERSE"), expr_eval_vecmat_inverse, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("TRANSPOSE"), expr_eval_vecmat_transpose, NULL, VECMAT_CONTEXT_SIZE }));
 

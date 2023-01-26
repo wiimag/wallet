@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
+ * Copyright 2022-2023 Infineis Inc. All rights reserved.
  * License: https://infineis.com/LICENSE
  */
 
@@ -34,6 +34,7 @@ struct log_message_t
     hash_t key;
     error_level_t severity;
     string_t msg{ nullptr, 0 };
+    string_t preview{ nullptr, 0 };
     size_t occurence{ 1 };
     bool selectable{ false };
 };
@@ -62,6 +63,7 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
         scoped_mutex_t lock(_message_lock);
         log_message_t m{ _next_log_message_id++, string_hash(msg, length), severity };
         m.msg = string_clone(msg, length);
+        m.preview = string_remove_line_returns(msg, length);
         array_push(_messages, m);
     }
 
@@ -69,18 +71,12 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
     memory_context_pop();
 }
 
-FOUNDATION_STATIC void console_render_messages()
+FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
 {
     const size_t log_count = array_size(_messages);
-
-    const float selected_msg_height = _selected_msg.length ? imgui_get_font_ui_scale(120.0f) : 0.0f;
     const int loop_count = _filtered_message_count <= 0 ? (int)log_count : _filtered_message_count;
     const float selectable_item_height = imgui_get_font_ui_scale(30.0f);
-    
-    if (!ImGui::BeginChild("Messages", ImVec2(0, -selected_msg_height)))
-        return ImGui::EndChild();
-
-    ImGui::SetWindowFontScale(0.9f);
+    const ImVec2 row_size = ImVec2(0.0f, selectable_item_height);
     ImGuiListClipper clipper;
     clipper.Begin(loop_count);
     while (clipper.Step())
@@ -91,7 +87,7 @@ FOUNDATION_STATIC void console_render_messages()
         if (mutex_lock(_message_lock))
         {
             const float item_width = ImGui::GetContentRegionAvail().x;
-            for (size_t i = clipper.DisplayStart; i < clipper.DisplayEnd; ++i)
+            for (size_t i = clipper.DisplayStart; i < min(clipper.DisplayEnd, (int)array_size(_messages)); ++i)
             {
                 log_message_t& log = _messages[i];
 
@@ -101,7 +97,8 @@ FOUNDATION_STATIC void console_render_messages()
                     ImGui::PushStyleColor(ImGuiCol_Text, TEXT_WARN_COLOR);
 
                 ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.0f, 0.0f));
-                if (ImGui::Selectable(log.msg.str, &log.selectable, ImGuiSelectableFlags_DontClosePopups, ImVec2(0.0f, selectable_item_height)))
+                const char* msg_str = log.preview.length ? log.preview.str : log.msg.str;
+                if (ImGui::Selectable(msg_str, &log.selectable, ImGuiSelectableFlags_DontClosePopups, row_size))
                 {
                     if (_selected_msg.str != log.msg.str)
                         _selected_msg = log.msg;
@@ -124,20 +121,34 @@ FOUNDATION_STATIC void console_render_messages()
 
     if (_logger_focus_last_message)
     {
-        ImGui::Dummy(ImVec2());
+        ImGui::Dummy({});
         ImGui::ScrollToItem();
         ImGui::SetItemDefaultFocus();
         _logger_focus_last_message = false;
     }
+}
 
-    ImGui::EndChild();
+FOUNDATION_STATIC void console_render_selected_log(const ImRect& rect)
+{
+    if (_selected_msg.length == 0)
+        return;
+    const ImVec2 asize = ImGui::GetContentRegionAvail();
+    ImGui::InputTextMultiline("##SelectedTex", _selected_msg.str, _selected_msg.length,
+        asize, ImGuiInputTextFlags_ReadOnly);
+}
 
+FOUNDATION_STATIC void console_render_messages()
+{
+    ImGui::SetWindowFontScale(0.9f);
+
+    imgui_frame_render_callback_t selected_log_frame = nullptr;
     if (_selected_msg.length)
-    {
-        ImGui::InputTextMultiline("##SelectedTex", _selected_msg.str, _selected_msg.length,
-            ImVec2(ImGui::GetContentRegionAvail().x, selected_msg_height - 1.0f), 
-            ImGuiInputTextFlags_ReadOnly);
-    }
+        selected_log_frame = console_render_selected_log;
+
+    imgui_draw_splitter("Messages", 
+        console_render_logs, 
+        selected_log_frame,
+        IMGUI_SPLITTER_VERTICAL, ImGuiWindowFlags_None, 0.80f, true);
 
     ImGui::SetWindowFontScale(1.0f);
 }
@@ -152,7 +163,10 @@ FOUNDATION_STATIC void console_clear_all()
     _log_search_filter[0] = '\0';
     const size_t log_count = array_size(_messages);
     for (size_t i = 0; i != log_count; ++i)
+    {
         string_deallocate(_messages[i].msg.str);
+        string_deallocate(_messages[i].preview.str);
+    }
     array_deallocate(_messages);
 
     mutex_unlock(_message_lock);

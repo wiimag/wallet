@@ -215,6 +215,7 @@ static void stock_read_technical_results(const json_object_t& json, stock_index_
         const auto& e = json[i];
         const time_t date = string_to_date(STRING_ARGS(e["date"].as_string()));
 
+        bool applied_to_current = false;
         for (; h != h_end;)
         {
             day_result_t* ed = &history[h];
@@ -224,7 +225,11 @@ static void stock_read_technical_results(const json_object_t& json, stock_index_
                 {
                     const double v = e[desc.field_names[i]].as_number();
                     *(double*)(((uint8_t*)ed) + desc.field_offsets[i]) = v;
+
+                    if (!applied_to_current)
+                        *(double*)(((uint8_t*)&s->current) + desc.field_offsets[i]) = v;
                 }
+                applied_to_current = true;
                 break;
             }
             else if (ed->date < date)
@@ -301,6 +306,18 @@ static void stock_read_eod_indexed_prices(const json_object_t& json, stock_index
         }
     }
 
+    if (math_real_is_nan(s->current.price_factor))
+    {
+        foreach(h, history)
+        {
+            if (!math_real_is_nan(h->price_factor))
+            {
+                s->current.price_factor = h->price_factor;
+                break;
+            }
+        }
+    }
+
     s->mark_resolved(FetchLevel::TECHNICAL_INDEXED_PRICE);
 }
 
@@ -360,11 +377,35 @@ static void stock_read_eod_results(const json_object_t& json, stock_index_t inde
     if (auto lock = scoped_mutex_t(_db_lock))
     {
         stock_t& entry = _db_stocks[index];
-        //log_infof(HASH_STOCK, STRING_CONST("############ Reading %s EOD results %d"), string_table_decode(entry.code), eod_fetch_level);
         if (entry.history != nullptr)
             array_push(_trashed_history, entry.history);
         entry.history = history;
         entry.history_count = array_size(history);
+
+        if (math_real_is_nan(entry.current.change_p_high))
+        {
+            foreach(h, history)
+            {
+                if (!math_real_is_nan(h->change_p_high))
+                {
+                    entry.current.change_p_high = h->change_p_high;
+                    break;
+                }
+            }
+        }
+
+        if (math_real_is_nan(entry.current.price_factor))
+        {
+            foreach(h, history)
+            {
+                if (!math_real_is_nan(h->price_factor))
+                {
+                    entry.current.price_factor = h->price_factor;
+                    break;
+                }
+            }
+        }
+
 
         if (eod_fetch_level == FetchLevel::EOD)
             eod_fetch_level |= FetchLevel::TECHNICAL_INDEXED_PRICE;

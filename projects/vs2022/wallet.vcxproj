@@ -106,6 +106,7 @@
     <ClCompile Include="..\..\sources\render_pad.cpp" />
     <ClCompile Include="..\..\sources\report.cpp" />
     <ClCompile Include="..\..\sources\reportgraph.cpp" />
+    <ClCompile Include="..\..\sources\report_expr.cpp" />
     <ClCompile Include="..\..\sources\settings.cpp" />
     <ClCompile Include="..\..\sources\stock.cpp" />
     <ClCompile Include="..\..\sources\symbols.cpp" />

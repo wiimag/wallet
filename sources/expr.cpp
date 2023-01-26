@@ -12,6 +12,8 @@
 #include "framework/service.h"
 
 #include <foundation/string.h>
+#include <foundation/math.h>
+#include <foundation/random.h>
 
 #include <imgui/imgui.h>
 #include <imgui/implot.h>
@@ -66,16 +68,16 @@ static struct {
 };
 
 enum ExprParsingOptions {
-    EXPR_TOP		= (1 << 0),
-    EXPR_TOPEN		= (1 << 1),
-    EXPR_TCLOSE		= (1 << 2),
-    EXPR_TNUMBER	= (1 << 3),
-    EXPR_TWORD		= (1 << 4),
+    EXPR_TOP = (1 << 0),
+    EXPR_TOPEN = (1 << 1),
+    EXPR_TCLOSE = (1 << 2),
+    EXPR_TNUMBER = (1 << 3),
+    EXPR_TWORD = (1 << 4),
     EXPR_TDEFAULT = (EXPR_TOPEN | EXPR_TNUMBER | EXPR_TWORD),
 
-    EXPR_UNARY		= (1 << 5),
-    EXPR_COMMA		= (1 << 6),
-    EXPR_SET		= (1 << 7),
+    EXPR_UNARY = (1 << 5),
+    EXPR_COMMA = (1 << 6),
+    EXPR_SET = (1 << 7),
 };
 
 enum ExprParsingParens {
@@ -92,7 +94,7 @@ FOUNDATION_FORCEINLINE bool isfirstvarchr(char c)
 {
     return (((unsigned char)c >= '@' && c != '^' && c != '|' && c != '[' && c != ']') || c == '$');
 }
-    
+
 FOUNDATION_FORCEINLINE bool isvarchr(char c)
 {
     return (((unsigned char)c >= '@' && c != '^' && c != '|' && c != '[' && c != ']') || c == '$' || c == '#' || c == '.' || (c >= '0' && c <= '9'));
@@ -110,6 +112,42 @@ FOUNDATION_FORCEINLINE bool isvarchr(char c)
     for ((iter) = 0; (iter) < (v)->len && (((var) = (v)->buf[(iter)]), 1);     \
          ++(iter))
 
+/*
+ * Simple expandable vector implementation
+ */
+FOUNDATION_STATIC int expr_vec_expand(char** buf, int* length, int* cap, int memsz)
+{
+    if (*length + 1 > *cap)
+    {
+        void* ptr;
+        int n = (*cap == 0) ? 1 : *cap << 1;
+        ptr = memory_reallocate(*buf, n * memsz, 8, *cap * memsz/*memory_size(*buf)*/, MEMORY_PERSISTENT);
+        if (ptr == NULL)
+        {
+            log_errorf(HASH_EXPR, ERROR_OUT_OF_MEMORY, STRING_CONST("Failed to allocate memory to expand vector"));
+            return EXPR_ERROR_ALLOCATION_FAILED; /* allocation failed */
+        }
+        *buf = (char*)ptr;
+        *cap = n;
+    }
+    return 0;
+}
+
+FOUNDATION_FORCEINLINE expr_t expr_init(expr_type_t type)
+{
+    return expr_t{ type, {}, {}, {nullptr, 0} };
+}
+
+FOUNDATION_FORCEINLINE expr_t expr_init(expr_type_t type, string_const_t token)
+{
+    return expr_t{ type, {}, {}, token };
+}
+
+FOUNDATION_FORCEINLINE expr_t expr_init(expr_type_t type, const char* token, size_t token_length = -1)
+{
+    return expr_t{ type, {}, {}, {token, token_length != -1 ? token_length : string_length(token)} };
+}
+
 template<typename T>
 string_const_t expr_result_string_join(const expr_result_t& e, const char* fmt)
 {
@@ -117,11 +155,11 @@ string_const_t expr_result_string_join(const expr_result_t& e, const char* fmt)
     if (element_count > 99)
         return string_format_static(S("[too many values (%u)...]"), element_count);
     return string_join<const T>((const T*)e.ptr, e.element_count(), [fmt](const T& v)
-    {
-        static thread_local char buf[32];
-        string_t f = string_format(STRING_CONST_CAPACITY(buf), fmt, string_length(fmt), v);
-        return string_to_const(f);
-    }, CTEXT(", "), CTEXT("["), CTEXT("]"));
+        {
+            static thread_local char buf[32];
+            string_t f = string_format(STRING_CONST_CAPACITY(buf), fmt, string_length(fmt), v);
+            return string_to_const(f);
+        }, CTEXT(", "), CTEXT("["), CTEXT("]"));
 }
 
 string_const_t expr_result_t::as_string(const char* fmt /*= nullptr*/) const
@@ -202,7 +240,7 @@ const expr_result_t* expr_eval_list(const expr_result_t* list)
 static expr_result_t expr_eval_set(expr_t* e)
 {
     expr_result_t* resolved_values = nullptr;
-    
+
     for (int i = 0; i < e->args.len; ++i)
     {
         expr_result_t r = expr_eval(&e->args.buf[i]);
@@ -238,7 +276,7 @@ string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx,
 {
     const auto& arg_string = expr_eval_get_string_arg(args, idx, message);
 
-    string_t arg_buffer = string_static_buffer(arg_string.length+1);
+    string_t arg_buffer = string_static_buffer(arg_string.length + 1);
     return string_to_const(string_copy(STRING_ARGS(arg_buffer), STRING_ARGS(arg_string)));
 }
 
@@ -273,7 +311,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_raw_math_min(void* ptr, uint16_t eleme
         FOUNDATION_ASSERT(element_size == 8);
         return min_range((const double*)ptr, element_count);
     }
-        
+
     if ((flags & EXPR_POINTER_ARRAY_INTEGER))
     {
         if ((flags & EXPR_POINTER_ARRAY_UNSIGNED) == EXPR_POINTER_ARRAY_UNSIGNED)
@@ -295,7 +333,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_raw_math_min(void* ptr, uint16_t eleme
     }
 
     FOUNDATION_ASSERT(!"Unsupported");
-    return NIL;        
+    return NIL;
 }
 
 FOUNDATION_STATIC expr_result_t expr_eval_raw_math_max(void* ptr, uint16_t element_size, uint32_t element_count, uint64_t flags)
@@ -559,6 +597,319 @@ FOUNDATION_STATIC expr_result_t expr_eval_math_count(const expr_func_t* f, vec_e
     return expr_eval_math_count(expr_eval_expand_args(args));
 }
 
+FOUNDATION_STATIC expr_result_t expr_eval_ceil(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: CEIL(1.2345) == 2.0
+
+    if (args == nullptr || args->len != 1)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    return (double)math_ceil(expr_eval(&args->buf[0]).as_number());
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_floor(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: FLOOR(1.2345) == 1.0
+
+    if (args == nullptr || args->len != 1)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    return (double)math_floor(expr_eval(&args->buf[0]).as_number());
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_random(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: RANDOM(5) => [0..5[
+    //           RANDOM() => [0..1[
+    //           RANDOM(4, 77) => [4..77[
+
+    if (args == nullptr || args->len > 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    if (args->len == 0)
+        return random_normalized();
+
+    if (args->len == 1)
+        return random_range(0, expr_eval(&args->buf[0]).as_number());
+
+    return random_range(expr_eval(&args->buf[0]).as_number(), expr_eval(&args->buf[1]).as_number());
+}
+
+FOUNDATION_STATIC void expr_array_sort(expr_result_t* elements, bool (*comparer)(const expr_result_t& a, const expr_result_t& b, bool ascending, size_t vindex), bool ascending, size_t vindex)
+{
+    if (elements == nullptr)
+        return;
+
+    const int len = array_size(elements);
+    for (int i = 0; i < len - 1; ++i)
+    {
+        for (int j = 0; j < len - i - 1; ++j)
+        {
+            if (!comparer(elements[j], elements[j + 1], ascending, vindex))
+                std::swap(elements[j], elements[j + 1]);
+        }
+    }
+}
+
+FOUNDATION_STATIC bool expr_sort_results_comparer(const expr_result_t& a, const expr_result_t& b, bool ascending, size_t vindex)
+{
+    if (a.type == EXPR_RESULT_ARRAY && vindex == SIZE_MAX)
+        expr_array_sort((expr_result_t*)a.list, expr_sort_results_comparer, ascending, vindex);
+
+    if (b.type == EXPR_RESULT_ARRAY && vindex == SIZE_MAX)
+        expr_array_sort((expr_result_t*)b.list, expr_sort_results_comparer, ascending, vindex);
+
+    if (a.type == EXPR_RESULT_SYMBOL && b.type == EXPR_RESULT_NUMBER)
+        return ascending;
+
+    if (a.type == EXPR_RESULT_SYMBOL)
+    {
+        string_const_t sa = a.as_string();
+        string_const_t sb = b.as_string();
+        const bool cless = string_compare_less(STRING_ARGS(sa), STRING_ARGS(sb));
+        if (ascending)
+            return cless;
+        return !cless;
+    }
+
+    const double n1 = a.as_number(DNAN, vindex == SIZE_MAX ? 0 : vindex);
+    const double n2 = b.as_number(DNAN, vindex == SIZE_MAX ? 0 : vindex);
+    if (ascending)
+        return n1 < n2;
+    return n1 >= n2;
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_sort(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: SORT([2, 1, 3]) => [1, 2, 3]
+    //           SORT([33, 1, 0, true, 6, [2, 14]], 1, 1) == [0, 1, 6, [2, 14], 33, true]
+    //           SORT(R(_300K, ps), DESC, 1)
+    //           MAP(SORT(R(_300K, change_p), DESC, 1), INDEX($1, 0))
+
+    if (args == nullptr || args->len < 1 || args->len > 3)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    // Get first argument elements
+    expr_result_t elements = expr_eval(args->get(0));
+    if (!elements.is_set())
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a set");
+
+    size_t vindex = SIZE_MAX;
+    bool ascending = true;
+    if (args->len >= 2)
+    {
+        string_const_t sort_dir_string = CTEXT("ASC");
+        auto sort_dir_arg = args->get(1);
+        if (sort_dir_arg->type == OP_VAR)
+            sort_dir_string = sort_dir_arg->token;
+        else
+        {
+            auto sort_dir_result = expr_eval(sort_dir_arg);
+            if (sort_dir_result.type == EXPR_RESULT_SYMBOL)
+                sort_dir_string = sort_dir_result.as_string();
+            else if (sort_dir_result.as_number() == 0)
+                sort_dir_string = CTEXT("DESC");
+        }
+
+        if (string_equal_nocase(STRING_ARGS(sort_dir_string), STRING_CONST("ASC")))
+            ascending = true;
+        else if (string_equal_nocase(STRING_ARGS(sort_dir_string), STRING_CONST("DESC")))
+            ascending = false;
+        else
+            throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Sort direction `%.*s` not supported", STRING_FORMAT(sort_dir_string));
+
+        if (args->len == 3)
+            vindex = expr_eval(args->get(2)).as_number(0);
+    }
+
+    // Sort elements
+    expr_array_sort((expr_result_t*)elements.list, expr_sort_results_comparer, ascending, vindex);
+
+    return elements;
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_reduce(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: REDUCE([1, 2, 3], ADD($0, $1))
+    //           REDUCE([1, 2, 3], ADD(), 5) == 11
+
+    if (args == nullptr || args->len < 2 || args->len > 3)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    // Make sure first argument is a set
+    expr_result_t elements = expr_eval(&args->buf[0]);
+    if (!elements.is_set())
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a set");
+
+    // Evaluate function
+    expr_result_t result{ elements.element_at(0).type };
+    if (args->len == 3)
+        result = expr_eval(args->get(2));
+
+    // Loop on all elements and invoke function
+    for (auto e : elements)
+    {
+        expr_var_t* vr = eval_get_or_create_global_var(STRING_CONST("$0"));
+        vr->value = result;
+
+        expr_var_t* ve = eval_get_or_create_global_var(STRING_CONST("$1"));
+        ve->value = e;
+
+        if (args->buf[1].type == OP_FUNC)
+        {
+            vec_expr_t fargs;
+            for (int i = 0; i < args->buf[1].args.len; ++i)
+            {
+                auto& p = args->buf[1].args.buf[i];
+                expr_t vexpr = expr_init(OP_CONST, STRING_ARGS(p.token));
+                vexpr.param.result.value = expr_eval(&p);
+                vec_push(&fargs, vexpr);
+            }
+
+            {
+                expr_t vexpr = expr_init(OP_CONST, STRING_CONST("RESULT"));
+                vexpr.param.result.value = result;
+                vec_push(&fargs, vexpr);
+            }
+
+            {
+                expr_t vexpr = expr_init(OP_CONST, STRING_CONST("ELEMENT"));
+                vexpr.param.result.value = e;
+                vec_push(&fargs, vexpr);
+            }
+
+            auto fn = args->buf[1].param.func;
+            result = fn.f->handler(fn.f, &fargs, fn.context ? fn.context : c);
+
+            vec_free(&fargs);
+        }
+        else
+        {
+            result = expr_eval(args->get(1));
+        }
+    }
+
+    return result;
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_repeat(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: REPEAT(RANDOM($i, $count), 5)
+
+    if (args == nullptr || args->len == 0 || args->len > 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    expr_result_t* results = nullptr;
+    const int repeat_count = math_round(expr_eval(&args->buf[1]).as_number());
+
+    expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$count"));
+    v->value = expr_result_t((double)repeat_count);
+
+    for (int i = 0; i < repeat_count; ++i)
+    {
+        expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$i"));
+        v->value = expr_result_t((double)i);
+
+        expr_result_t r = expr_eval(&args->buf[0]);
+        array_push_memcpy(results, &r);
+    }
+
+    return expr_eval_list(results);
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_round(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: ROUND(1.2345) == 1.0
+    //           ROUND(1.2345, 2) == 1.23
+    //           ROUND(144.23455567, -2) == 100
+
+    if (args == nullptr || args->len < 1 || args->len > 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    const double r = expr_eval(&args->buf[0]).as_number();
+    if (args->len == 1)
+        return (double)math_round(r);
+
+    // Round ##r at decimal place ##round_at
+    const double round_at = expr_eval(&args->buf[1]).as_number(0);
+    const double rpow = math_pow(10.0, round_at);
+    return (double)math_round(r * rpow) / rpow;
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_inline(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: EVAL(1+1, 2+2, 3+3) == [2, 4, 6]
+    //       
+
+    if (args == nullptr || args->len < 1)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    if (args->len == 1)
+        return expr_eval(&args->buf[0]);
+
+    expr_result_t* results = nullptr;
+    for (int i = 0; i < args->len; ++i)
+    {
+        const auto& r = expr_eval(&args->buf[i]);
+        array_push_memcpy(results, &r);
+    }
+    return expr_eval_list(results);
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: FILTER([1, 2, 3], EVAL($1 >= 3)) == [3]
+    //           FILTER([2, 1, 4, 5, 0, 55, 6], $1 > 3) == [4, 5, 55, 6]
+    //           SUM(INDEX(FILTER(R(_300K, day), INDEX($1, 1) > 0), 1))
+    //           SUM(MAP(FILTER(R(_300K, day), INDEX($1, 1) > 0), INDEX($1, 1)))
+
+    if (args == nullptr || args->len != 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    expr_result_t elements = expr_eval(&args->buf[0]);
+    if (!elements.is_set())
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a result set");
+
+    expr_result_t* results = nullptr;
+    for (const auto& e : elements)
+    {
+        expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$1"));
+        v->value = e;
+
+        expr_result_t r = expr_eval(&args->buf[1]);
+        if (r.as_number() != 0)
+            array_push_memcpy(results, &e);
+    }
+
+    return expr_eval_list(results);
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: MAP([[a, 1], [b, 2], [c, 3]], INDEX($1, 1)) == [1, 2, 3]
+    //           MAP([[a, 1], [b, 2], [c, 3]], ADD(INDEX($1, 1), $0)) == [2, 4, 6]
+    //           SUM(MAP(R(_300K, day), INDEX($1, 1)))
+
+    if (args == nullptr || args->len != 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    expr_result_t elements = expr_eval(&args->buf[0]);
+    if (!elements.is_set())
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a result set");
+
+    expr_result_t* results = nullptr;
+    for (const auto& e : elements)
+    {
+        expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$1"));
+        v->value = e;
+
+        expr_result_t r = expr_eval(&args->buf[1]);
+        array_push_memcpy(results, &r);
+    }
+
+    return expr_eval_list(results);
+}
+
 FOUNDATION_STATIC expr_result_t expr_eval_array_index(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     if (args == nullptr || args->len < 1)
@@ -665,42 +1016,6 @@ const char* expr_error_cstr(int error_code)
     return "Unknown error";
 }
 
-/*
- * Simple expandable vector implementation
- */
-FOUNDATION_STATIC int expr_vec_expand(char** buf, int* length, int* cap, int memsz)
-{
-    if (*length + 1 > *cap)
-    {
-        void* ptr;
-        int n = (*cap == 0) ? 1 : *cap << 1;
-        ptr = memory_reallocate(*buf, n * memsz, 8, *cap * memsz/*memory_size(*buf)*/, MEMORY_PERSISTENT);
-        if (ptr == NULL)
-        {
-            log_errorf(HASH_EXPR, ERROR_OUT_OF_MEMORY, STRING_CONST("Failed to allocate memory to expand vector"));
-            return EXPR_ERROR_ALLOCATION_FAILED; /* allocation failed */
-        }
-        *buf = (char*)ptr;
-        *cap = n;
-    }
-    return 0;
-}
-
-FOUNDATION_FORCEINLINE expr_t expr_init(expr_type_t type)
-{
-    return expr_t{ type, {}, {}, {nullptr, 0} };
-}
-
-FOUNDATION_FORCEINLINE expr_t expr_init(expr_type_t type, string_const_t token)
-{
-    return expr_t{ type, {}, {}, token };
-}
-
-FOUNDATION_FORCEINLINE expr_t expr_init(expr_type_t type, const char* token, size_t token_length = -1)
-{
-    return expr_t{ type, {}, {}, {token, token_length != -1 ? token_length : string_length(token)} };
-}
-
 FOUNDATION_FORCEINLINE int expr_is_unary(const expr_type_t op)
 {
     return op == OP_UNARY_MINUS || op == OP_UNARY_LOGICAL_NOT || op == OP_UNARY_BITWISE_NOT;
@@ -714,7 +1029,7 @@ FOUNDATION_FORCEINLINE int expr_is_binary(const expr_type_t op)
 FOUNDATION_FORCEINLINE int expr_prec(const expr_type_t a, const expr_type_t b)
 {
     static constexpr const int prec[] = { 0, 1, 1, 1, 2, 2, 2, 2,  3,  3,  4,  4, 5, 5,
-                                          5, 5, 5, 5, 6, 7, 8, 9, 10, 11, 12/*OP_COMMA*/,  0, 0, 0, 0};
+                                          5, 5, 5, 5, 6, 7, 8, 9, 10, 11, 12/*OP_COMMA*/,  0, 0, 0, 0 };
     FOUNDATION_ASSERT(ARRAY_COUNT(prec) == OP_COUNT);
     int left = expr_is_binary(a) && a != OP_ASSIGN && a != OP_POWER && a != OP_COMMA;
     return (left && prec[a] >= prec[b]) || (prec[a] > prec[b]);
@@ -810,6 +1125,7 @@ static expr_var_t* expr_var(expr_var_list_t* vars, const char* s, size_t len)
     memset(v, 0, sizeof(expr_var_t) + len + 1);
     v->next = vars->head;
     v->name = string_copy((char*)v + sizeof(expr_var_t), len + 1, s, len);
+    v->value = expr_result_t(EXPR_RESULT_SYMBOL, string_table_encode(v->name.str), v->name.length);
     vars->head = v;
     return v;
 }
@@ -926,11 +1242,16 @@ expr_result_t expr_eval(expr_t* e)
         return expr_eval_var(e);
 
     case OP_FUNC:
-        return e->param.func.f->f(e->param.func.f, &e->args, e->param.func.context);
+    {
+        expr_result_t fn_result = e->param.func.f->handler(e->param.func.f, &e->args, e->param.func.context);
+        expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$0"));
+        v->value = fn_result;
+        return fn_result;
+    }
 
     case OP_SET:
         return expr_eval_set(e);
-            
+
     default:
         expr_error(EXPR_ERROR_UNKNOWN_OPERATOR, e->token, nullptr, "Failed to evaluate operator %d", e->type);
         break;
@@ -1377,6 +1698,7 @@ expr_t* expr_create(const char* s, size_t len, expr_var_list_t* vars, expr_func_
                         expr_t bound_func = expr_init(OP_FUNC);
                         bound_func.param.func.f = f;
                         bound_func.args = arg.args;
+                        bound_func.token = {str.str, (tok - str.str) + 1ULL };
                         if (f->ctxsz > 0)
                         {
                             void* p = memory_allocate(HASH_EXPR, f->ctxsz, 8, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
@@ -1544,8 +1866,8 @@ expr_result_t eval(string_const_t expression)
     }
     catch (ExprError err)
     {
-        expr_error(err.code, expression, nullptr, 
-            "Failed to evaluate expression: %.*s", err.message_length, err.message);
+        expr_error(err.code, expression, nullptr,
+            "%.*s", err.message_length, err.message);
     }
 
     expr_destroy(e, nullptr);
@@ -1595,36 +1917,36 @@ static void eval_load_evaluators(config_handle_t evaluators_data)
 FOUNDATION_STATIC void eval_save_evaluators()
 {
     config_write_file(eval_evaluators_file_path(), [](config_handle_t evaluators_data)
-    {
-        for (size_t i = 0; i < array_size(_evaluators); ++i)
         {
-            expr_evaluator_t& e = _evaluators[i];
-
-            config_handle_t ecv = config_array_push(evaluators_data, CONFIG_VALUE_OBJECT);
-            config_set(ecv, "code", e.code, string_length(e.code));
-            config_set(ecv, "label", e.label, string_length(e.label));
-            config_set(ecv, "expression", e.expression, string_length(e.expression));
-            config_set(ecv, "assertion", e.assertion, string_length(e.assertion));
-            config_set(ecv, "frequency", e.frequency);
-
-            config_handle_t records_data = config_set_array(ecv, STRING_CONST("records"));
-
-            for (size_t ri = 0; ri < array_size(e.records); ++ri)
+            for (size_t i = 0; i < array_size(_evaluators); ++i)
             {
-                const expr_record_t& r = e.records[ri];
-                auto rcv = config_array_push(records_data, CONFIG_VALUE_OBJECT);
-                config_set(rcv, "time", (double)r.time);
-                config_set(rcv, "value", r.value);
-                config_set(rcv, "tag", string_table_decode_const(r.tag));
-                config_set(rcv, "assertion", r.assertion);
+                expr_evaluator_t& e = _evaluators[i];
+
+                config_handle_t ecv = config_array_push(evaluators_data, CONFIG_VALUE_OBJECT);
+                config_set(ecv, "code", e.code, string_length(e.code));
+                config_set(ecv, "label", e.label, string_length(e.label));
+                config_set(ecv, "expression", e.expression, string_length(e.expression));
+                config_set(ecv, "assertion", e.assertion, string_length(e.assertion));
+                config_set(ecv, "frequency", e.frequency);
+
+                config_handle_t records_data = config_set_array(ecv, STRING_CONST("records"));
+
+                for (size_t ri = 0; ri < array_size(e.records); ++ri)
+                {
+                    const expr_record_t& r = e.records[ri];
+                    auto rcv = config_array_push(records_data, CONFIG_VALUE_OBJECT);
+                    config_set(rcv, "time", (double)r.time);
+                    config_set(rcv, "value", r.value);
+                    config_set(rcv, "tag", string_table_decode_const(r.tag));
+                    config_set(rcv, "assertion", r.assertion);
+                }
+
+                array_deallocate(e.records);
             }
 
-            array_deallocate(e.records);
-        }
-
-        return true;
-    }, CONFIG_VALUE_ARRAY, CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
-    CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
+            return true;
+        }, CONFIG_VALUE_ARRAY, CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
+        CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
 }
 
 FOUNDATION_STATIC void eval_run_evaluators()
@@ -1849,14 +2171,14 @@ void eval_render_evaluators()
                         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max + (max - min) * 0.05);
 
                         ImPlot::PlotLineG("##Values", [](int idx, void* user_data)->ImPlotPoint
-                        {
-                            expr_evaluator_t* c = (expr_evaluator_t*)user_data;
-                            const expr_record_t* r = &c->records[idx];
+                            {
+                                expr_evaluator_t* c = (expr_evaluator_t*)user_data;
+                                const expr_record_t* r = &c->records[idx];
 
-                            const double x = (double)r->time;
-                            const double y = r->value;
-                            return ImPlotPoint(x, y);
-                        }, & ev, array_size(ev.records), ImPlotLineFlags_SkipNaN);
+                                const double x = (double)r->time;
+                                const double y = r->value;
+                                return ImPlotPoint(x, y);
+                            }, &ev, array_size(ev.records), ImPlotLineFlags_SkipNaN);
                         ImPlot::EndPlot();
                     }
 
@@ -1885,11 +2207,11 @@ void eval_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t clea
     array_push(_expr_user_funcs_names, name_copy);
 
     expr_func_t efn;
-    efn.f = fn;
+    efn.handler = fn;
     efn.cleanup = cleanup;
     efn.ctxsz = context_size;
     efn.name = string_to_const(name_copy);
-    array_insert_memcpy_safe(_expr_user_funcs, array_size(_expr_user_funcs)-2, &efn);
+    array_insert_memcpy_safe(_expr_user_funcs, array_size(_expr_user_funcs) - 2, &efn);
 
     memory_context_pop();
 }
@@ -1899,7 +2221,7 @@ bool eval_unregister_function(const char* name, exprfn_t fn /*= nullptr*/)
     for (unsigned i = 0, end = array_size(_expr_user_funcs); i < end; ++i)
     {
         expr_func_t& efn = _expr_user_funcs[i];
-        if (efn.f == fn || string_equal_nocase(name, string_length(name), STRING_ARGS(efn.name)))
+        if (efn.handler == fn || string_equal_nocase(name, string_length(name), STRING_ARGS(efn.name)))
         {
             array_erase_ordered_safe(_expr_user_funcs, i);
             return true;
@@ -1922,7 +2244,7 @@ expr_var_t* eval_find_global_var(const char* name, size_t name_length)
     return nullptr;
 }
 
-expr_var_t* eval_get_or_create_global_var(const char* name, size_t name_length = 0ULL)
+expr_var_t* eval_get_or_create_global_var(const char* name, size_t name_length /*= 0ULL*/)
 {
     name_length = name_length == 0ULL ? string_length(name) : name_length;
     expr_var_t* v = eval_find_global_var(name, name_length);
@@ -1970,8 +2292,19 @@ FOUNDATION_STATIC void eval_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SUM"), expr_eval_math_sum, NULL, 0 })); // SUM(0, 0, 1, 3) == 4
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("AVG"), expr_eval_math_avg, NULL, 0 })); // (AVG(1, [1, 1]) + AVG([1], [2], [3])) == 3
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("COUNT"), expr_eval_math_count, NULL, 0 })); // COUNT(SAMPLES())
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("INDEX"), expr_eval_array_index, NULL, 0 })); // COUNT(SAMPLES())
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("INDEX"), expr_eval_array_index, NULL, 0 })); // INDEX([1, 2, 3], 2) == 2
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("MAP"), expr_eval_map, NULL, 0 })); // MAP([[a, 1], [b, 2], [c, 3]], INDEX($1, 1)) == [1, 2, 3]
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("FILTER"), expr_eval_filter, NULL, 0 })); // FILTER([1, 2, 3], EVAL($1 >= 3)) == [3]
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("EVAL"), expr_eval_inline, NULL, 0 })); // ADD(5, 5), EVAL($0 >= 10)
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REPEAT"), expr_eval_repeat, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REDUCE"), expr_eval_reduce, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SORT"), expr_eval_sort, NULL, 0 }));
 
+    // Math functions
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ROUND"), expr_eval_round, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("CEIL"), expr_eval_ceil, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("FLOOR"), expr_eval_floor, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RANDOM"), expr_eval_random, NULL, 0 }));
 
     // Vectors and matrices functions
     eval_register_vec_mat_functions(_expr_user_funcs);

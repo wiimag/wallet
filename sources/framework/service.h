@@ -18,7 +18,8 @@ typedef void (*service_shutdown_handler_t)(void);
 
 typedef function<void()> service_invoke_handler_t;
 
-#define SERVICE_PRIORITY_UI 1
+#define SERVICE_PRIORITY_MODULE 1
+#define SERVICE_PRIORITY_UI 2
 #define SERVICE_PRIORITY_TESTS 10
 
 #define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, ...) \
