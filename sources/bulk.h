@@ -49,5 +49,3 @@ struct bulk_t
 };
 
 void bulk_render();
-void bulk_initialize();
-void bulk_shutdown();

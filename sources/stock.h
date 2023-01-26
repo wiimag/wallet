@@ -143,8 +143,6 @@ struct stock_t
 
 struct stock_handle_t;
 
-bool stock_request(const stock_handle_t& handle, const stock_t** out_stock);
-
 struct stock_handle_t
 {
     hash_t id;
@@ -154,6 +152,8 @@ struct stock_handle_t
 
     const stock_t* operator*() const
     {
+        bool stock_request(const stock_handle_t & handle, const stock_t * *out_stock);
+        
         if (id == 0)
             return nullptr;
 
@@ -189,51 +189,44 @@ struct stock_handle_t
 /// <summary>
 /// 
 /// </summary>
-/// <param name="handle"></param>
-/// <param name="out_stock"></param>
-/// <returns></returns>
 bool stock_request(const stock_handle_t& handle, const stock_t** out_stock);
 
 /// <summary>
 /// 
 /// </summary>
-void stock_initialize();
-
-/// <summary>
-/// 
-/// </summary>
-void stock_shutdown();
-
-/// <summary>
-/// 
-/// </summary>
-/// <param name="code"></param>
-/// <param name="code_length"></param>
-/// <param name="stock_handle"></param>
-/// <returns></returns>
 status_t stock_initialize(const char* code, size_t code_length, stock_handle_t* stock_handle);
 
 /// <summary>
 /// 
 /// </summary>
-/// <param name="stock_handle"></param>
-/// <returns></returns>
 status_t stock_resolve(stock_handle_t& stock_handle, fetch_level_t fetch_levels);
 
 /// <summary>
 /// 
 /// </summary>
-/// <param name="symbol"></param>
-/// <param name="symbol_length"></param>
-/// <param name="fetch_level"></param>
-/// <param name="out_stock"></param>
-/// <returns></returns>
 stock_handle_t stock_request(const char* symbol, size_t symbol_length, fetch_level_t fetch_level);
 
+/// <summary>
+/// 
+/// </summary>
 bool stock_update(stock_handle_t& handle, fetch_level_t fetch_level, double timeout = 15.0);
+
+/// <summary>
+/// 
+/// </summary>
 bool stock_update(const char* code, size_t code_length, stock_handle_t& handle, fetch_level_t fetch_level, double timeout = 5.0);
 
+/// <summary>
+/// 
+/// </summary>
 double stock_exchange_rate(const char* from, size_t from_length, const char* to, size_t to_length, time_t at = 0);
 
+/// <summary>
+/// 
+/// </summary>
 const day_result_t* stock_get_EOD(const stock_t* stock_data, int rel_day, bool take_last = false);
+
+/// <summary>
+/// 
+/// </summary>
 const day_result_t* stock_get_EOD(const stock_t* stock_data, time_t day_time, bool take_last = false);

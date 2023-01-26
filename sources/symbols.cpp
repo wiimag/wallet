@@ -653,4 +653,4 @@ FOUNDATION_STATIC void symbols_shutdown()
     _symbols_lock = nullptr;
 }
 
-DEFINE_SERVICE(SYMBOLS, symbols_initialize, symbols_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_SERVICE(SYMBOLS, symbols_initialize, symbols_shutdown, SERVICE_PRIORITY_LOW);

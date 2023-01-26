@@ -11,9 +11,10 @@
 #include "symbols.h"
 #include "eod.h"
 
-#include "framework/session.h"
-#include "framework/imgui.h"
-#include "framework/table.h"
+#include <framework/imgui.h>
+#include <framework/session.h>
+#include <framework/table.h>
+#include <framework/service.h>
 
 #include <foundation/fs.h>
 #include <foundation/uuid.h>
@@ -2030,7 +2031,7 @@ bool report_sync_titles(report_t* report)
 // # SYSTEM
 //
 
-void report_initialize()
+FOUNDATION_STATIC void report_initialize()
 {
     string_const_t report_dir_path = session_get_user_file_path(STRING_ARGS(REPORTS_DIR_NAME));
     fs_make_directory(STRING_ARGS(report_dir_path));
@@ -2047,7 +2048,7 @@ void report_initialize()
     string_array_deallocate(paths);
 }
 
-void report_shutdown()
+FOUNDATION_STATIC void report_shutdown()
 {
     for (int i = 0, end = array_size(_reports); i < end; ++i)
     {
@@ -2067,3 +2068,5 @@ void report_shutdown()
     array_deallocate(_reports);
     _reports = nullptr;
 }
+
+DEFINE_SERVICE(REPORT, report_initialize, report_shutdown, SERVICE_PRIORITY_HIGH);

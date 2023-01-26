@@ -2145,4 +2145,3 @@ FOUNDATION_STATIC void pattern_shutdown()
 }
 
 DEFINE_SERVICE(PATTERN, pattern_initialize, pattern_shutdown, SERVICE_PRIORITY_UI);
-

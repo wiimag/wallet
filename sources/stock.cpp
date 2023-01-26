@@ -7,12 +7,13 @@
 
 #include "eod.h"
 
-#include "framework/common.h"
-#include "framework/query.h"
-#include "framework/scoped_string.h"
-#include "framework/scoped_mutex.h"
-#include "framework/jobs.h"
-#include "framework/query.h"
+#include <framework/common.h>
+#include <framework/query.h>
+#include <framework/scoped_string.h>
+#include <framework/scoped_mutex.h>
+#include <framework/jobs.h>
+#include <framework/query.h>
+#include <framework/service.h>
 
 #include <foundation/log.h>
 #include <foundation/array.h>
@@ -26,66 +27,23 @@
 #include <ctime>
 #include <algorithm>
 
-static volatile size_t _db_capacity;
-static stock_t* _db_stocks {};
-static hashtable64_t* _db_hashes {};
-static mutex_t* _db_lock;
-
-static hashtable64_t* _exchange_rates{};
-static day_result_t** _trashed_history = nullptr;
-
 #define HASH_STOCK static_hash_string("stock", 5, 0x1a0dd7af24ebee7aLL)
 
-void stock_initialize()
+struct technical_descriptor_t
 {
-    _db_capacity = 256;
-    _db_lock = mutex_allocate(STRING_CONST("Stock_DB_Lock"));
-    _db_hashes = hashtable64_allocate(_db_capacity);
-    array_push(_db_stocks, stock_t{});
-}
+    uint8_t field_count;
+    const char* field_names[4];
+    uint8_t field_offsets[4];
+};
 
-void stock_shutdown()
-{
-    hashtable64_deallocate(_exchange_rates);
-    _exchange_rates = nullptr;
+static volatile size_t _db_capacity;
+static mutex_t* _db_lock = nullptr;
+static day_result_t** _trashed_history = nullptr;
+static stock_t* _db_stocks = nullptr;
+static hashtable64_t* _db_hashes = nullptr;
+static hashtable64_t* _exchange_rates = nullptr;
 
-    if (auto lock = scoped_mutex_t(_db_lock))
-    {
-        for (size_t i = 0; i < array_size(_trashed_history); ++i)
-            array_deallocate(_trashed_history[i]);
-        array_deallocate(_trashed_history);
-
-        for (size_t i = 0; i < array_size(_db_stocks); ++i)
-        {
-            stock_t* stock_data = &_db_stocks[i];
-            array_deallocate(stock_data->previous);
-            array_deallocate(stock_data->history);
-            stock_data->history_count = 0;
-        }
-
-        array_deallocate(_db_stocks);
-        _db_stocks = nullptr;
-
-        hashtable64_deallocate(_db_hashes);
-        _db_hashes = nullptr;
-    }
-
-    mutex_deallocate(_db_lock);
-    _db_lock = nullptr;
-}
-
-status_t stock_initialize(const char* code, size_t code_length, stock_handle_t* stock_handle)
-{
-    if (code == nullptr || code_length <= 0 || stock_handle == nullptr)
-        return STATUS_ERROR_NULL_REFERENCE;
-
-    stock_handle->code = string_table_encode(code, code_length);
-    stock_handle->id = hash(code, code_length);
-
-    return STATUS_OK;
-}
-
-static void stock_grow_db()
+FOUNDATION_STATIC void stock_grow_db()
 {
     // TODO: Dispose of old stocks (outdated)?
     hashtable64_t* old_table = _db_hashes;
@@ -106,7 +64,7 @@ static void stock_grow_db()
     hashtable64_deallocate(old_table);
 }
 
-static bool stock_fetch_description(stock_index_t stock_index, string_table_symbol_t& value)
+FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string_table_symbol_t& value)
 {
     if (_db_stocks == nullptr || stock_index >= array_size(_db_stocks))
         return false;	
@@ -122,7 +80,7 @@ static bool stock_fetch_description(stock_index_t stock_index, string_table_symb
     }, 0, 7 * 24 * 60 * 60ULL);
 }
 
-static void stock_read_real_time_results(const json_object_t& json, uint64_t index)
+FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, uint64_t index)
 {
     day_result_t dresult{};
     dresult.date = (time_t)json_read_number(json, STRING_CONST("timestamp"));
@@ -148,7 +106,7 @@ static void stock_read_real_time_results(const json_object_t& json, uint64_t ind
     }
 }
 
-static void stock_read_fundamentals_results(const json_object_t& json, uint64_t index)
+FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json, uint64_t index)
 {	
     if (_db_stocks == nullptr)
         return;
@@ -197,14 +155,7 @@ static void stock_read_fundamentals_results(const json_object_t& json, uint64_t 
     entry.mark_resolved(FetchLevel::FUNDAMENTALS);
 }
 
-struct technical_descriptor_t
-{
-    uint8_t field_count;
-    const char* field_names[4];
-    uint8_t field_offsets[4];
-};
-
-static void stock_read_technical_results(const json_object_t& json, stock_index_t index, FetchLevel level, const technical_descriptor_t& desc)
+FOUNDATION_STATIC void stock_read_technical_results(const json_object_t& json, stock_index_t index, FetchLevel level, const technical_descriptor_t& desc)
 {
     auto lock = scoped_mutex_t(_db_lock);
     stock_t* s = &_db_stocks[index];
@@ -242,7 +193,7 @@ static void stock_read_technical_results(const json_object_t& json, stock_index_
     s->mark_resolved(level);
 }
 
-static void stock_fetch_technical_results(
+FOUNDATION_STATIC void stock_fetch_technical_results(
     fetch_level_t access_level, status_t& status, fetch_level_t fetch_levels, 
     const char* ticker, stock_index_t index, const char* fn_name, 
     technical_descriptor_t desc)
@@ -271,7 +222,7 @@ static void stock_fetch_technical_results(
     }
 }
 
-static void stock_fetch_technical_results(
+FOUNDATION_STATIC void stock_fetch_technical_results(
     fetch_level_t access_level, status_t& status, fetch_level_t fetch_levels,
     const char* ticker, stock_index_t index, const char* fn_name,
     const char* field_name, size_t offset)
@@ -280,7 +231,7 @@ static void stock_fetch_technical_results(
         technical_descriptor_t{1, {field_name}, {(uint8_t)offset}});
 }
 
-static void stock_read_eod_indexed_prices(const json_object_t& json, stock_index_t index)
+FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, stock_index_t index)
 {
     auto lock = scoped_mutex_t(_db_lock);
     stock_t* s = &_db_stocks[index];
@@ -321,7 +272,7 @@ static void stock_read_eod_indexed_prices(const json_object_t& json, stock_index
     s->mark_resolved(FetchLevel::TECHNICAL_INDEXED_PRICE);
 }
 
-static void stock_read_eod_results(const json_object_t& json, stock_index_t index, FetchLevel eod_fetch_level)
+FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_index_t index, FetchLevel eod_fetch_level)
 {
     day_result_t* history = nullptr;
     array_reserve(history, json.root->value_length + 1);
@@ -417,6 +368,10 @@ static void stock_read_eod_results(const json_object_t& json, stock_index_t inde
         array_deallocate(history);
     }
 }
+
+//
+// # PUBLIC API
+//
 
 status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 {
@@ -720,6 +675,17 @@ const day_result_t* stock_get_EOD(const stock_t* stock_data, int rel_day, bool t
     return stock_get_EOD(stock_data, day_time, take_last);
 }
 
+status_t stock_initialize(const char* code, size_t code_length, stock_handle_t* stock_handle)
+{
+    if (code == nullptr || code_length <= 0 || stock_handle == nullptr)
+        return STATUS_ERROR_NULL_REFERENCE;
+
+    stock_handle->code = string_table_encode(code, code_length);
+    stock_handle->id = hash(code, code_length);
+
+    return STATUS_OK;
+}
+
 bool stock_update(stock_handle_t& handle, fetch_level_t fetch_level, double timeout /*= 5.0*/)
 {
     stock_t* s = (stock_t*)(const stock_t*)handle;
@@ -764,3 +730,47 @@ bool stock_update(const char* code, size_t code_length, stock_handle_t& handle, 
 
     return stock_update(handle, fetch_level, timeout);
 }
+
+//
+// # SYSTEM
+//
+
+FOUNDATION_STATIC void stock_initialize()
+{
+    _db_capacity = 256;
+    _db_lock = mutex_allocate(STRING_CONST("Stock_DB_Lock"));
+    _db_hashes = hashtable64_allocate(_db_capacity);
+    array_push(_db_stocks, stock_t{});
+}
+
+FOUNDATION_STATIC void stock_shutdown()
+{
+    hashtable64_deallocate(_exchange_rates);
+    _exchange_rates = nullptr;
+
+    if (auto lock = scoped_mutex_t(_db_lock))
+    {
+        for (size_t i = 0; i < array_size(_trashed_history); ++i)
+            array_deallocate(_trashed_history[i]);
+        array_deallocate(_trashed_history);
+
+        for (size_t i = 0; i < array_size(_db_stocks); ++i)
+        {
+            stock_t* stock_data = &_db_stocks[i];
+            array_deallocate(stock_data->previous);
+            array_deallocate(stock_data->history);
+            stock_data->history_count = 0;
+        }
+
+        array_deallocate(_db_stocks);
+        _db_stocks = nullptr;
+
+        hashtable64_deallocate(_db_hashes);
+        _db_hashes = nullptr;
+    }
+
+    mutex_deallocate(_db_lock);
+    _db_lock = nullptr;
+}
+
+DEFINE_SERVICE(STOCK, stock_initialize, stock_shutdown, SERVICE_PRIORITY_BASE);

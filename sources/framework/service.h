@@ -18,15 +18,17 @@ typedef void (*service_shutdown_handler_t)(void);
 
 typedef function<void()> service_invoke_handler_t;
 
-#define SERVICE_PRIORITY_CRITICAL -10
-#define SERVICE_PRIORITY_SYSTEM -1
-#define SERVICE_PRIORITY_BASE 0
-#define SERVICE_PRIORITY_MODULE 1
-#define SERVICE_PRIORITY_UI 2
-#define SERVICE_PRIORITY_TESTS 10
+#define SERVICE_PRIORITY_CRITICAL   -10
+#define SERVICE_PRIORITY_SYSTEM      -1
+#define SERVICE_PRIORITY_BASE         0
+#define SERVICE_PRIORITY_HIGH         1
+#define SERVICE_PRIORITY_LOW          2
+#define SERVICE_PRIORITY_MODULE       3
+#define SERVICE_PRIORITY_UI           5
+#define SERVICE_PRIORITY_TESTS       10
 
 #define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, ...) \
-    static Service __##NAME##_service(#NAME, HASH_##NAME, initialize_fn, shutdown_fn, __VA_ARGS__)
+    static Service __##NAME##_service(#NAME, HASH_##NAME, initialize_fn, shutdown_fn, __VA_ARGS__);
 
 class Service
 {
@@ -39,7 +41,7 @@ public:
     Service(const char* FOUNDATION_RESTRICT name, hash_t service_hash,
         service_initialize_handler_t initialize_handler,
         service_shutdown_handler_t shutdown_handler)
-        : Service(name, service_hash, initialize_handler, shutdown_handler, INT_MAX)
+        : Service(name, service_hash, initialize_handler, shutdown_handler, SERVICE_PRIORITY_LOW)
     {
     }
 };
