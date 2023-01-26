@@ -28,11 +28,10 @@ FOUNDATION_STATIC void tab_capture_cursor(tabbar_t* tb)
 }
 
 void tab_draw(
-    const char* label,
-    bool* opened,
+    const char* label, bool* opened,
     ImGuiTabItemFlags tab_flags,
-    function<void(void)> render_tab_callback,
-    function<void(void)> tab_tools_callback)
+    const function<void(void)>& render_tab_callback,
+    const function<void(void)>& tab_tools_callback)
 {
     static bool tab_init_selected = false;
 

@@ -27,8 +27,17 @@ void tab_draw(
     const char* label,
     bool* opened,
     ImGuiTabItemFlags tab_flags,
-    function<void(void)> render_tab_callback,
-    function<void(void)> tab_tools_callback = nullptr);
+    const function<void(void)>& render_tab_callback,
+    const function<void(void)>& tab_tools_callback = nullptr);
+
+FOUNDATION_FORCEINLINE void tab_draw(
+    const char* label,
+    bool* opened,
+    const function<void(void)>& render_tab_callback,
+    const function<void(void)>& tab_tools_callback = nullptr)
+{
+    return tab_draw(label, opened, ImGuiTabItemFlags_None, render_tab_callback, tab_tools_callback);
+}
 
 void tab_set_color(const ImVec4& c);
 

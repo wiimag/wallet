@@ -955,6 +955,10 @@ static GLFWwindow* setup_main_window()
     GLFWwindow* window = glfw_create_window_geometry(app_title());
     if (window == nullptr)
         return nullptr;
+
+    const application_t* app = environment_application();
+    string_const_t version_string = string_from_version_static(app->version);
+    glfwSetWindowTitle(window, string_format_static_const("%s v.%.*s", app_title(), STRING_FORMAT(version_string)));
     
     return window;
 }

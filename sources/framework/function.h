@@ -215,7 +215,7 @@ struct function<R(Args...)>
         return handler != nullptr;
     }
 
-    FOUNDATION_FORCEINLINE bool operator!=(const std::nullptr_t& n)
+    FOUNDATION_FORCEINLINE bool operator!=(const std::nullptr_t& n) const
     {
         FOUNDATION_UNUSED(n);
         return handler != nullptr;
