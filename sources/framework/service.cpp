@@ -5,8 +5,8 @@
 
 #include "service.h"
 
-#include "common.h"
-#include "profiler.h"
+#include <framework/common.h>
+#include <framework/profiler.h>
 
 #include <foundation/array.h>
 
@@ -14,6 +14,7 @@
 
 #define HASH_SERVICE_TABS (static_hash_string("service_tabs", 12, 0xeee279126075ccf8ULL))
 #define HASH_SERVICE_MENU (static_hash_string("service_menu", 12, 0x597ea6b5d910db56ULL))
+#define HASH_SERVICE_WINDOW (static_hash_string("service_window", 14, 0x576d11d2f45d4892ULL))
 
 struct service_handler_t
 {
@@ -40,8 +41,8 @@ static size_t _service_count = 0;
 static bool _services_initialize = false;
 
 Service::Service(const char* FOUNDATION_RESTRICT name, hash_t service_hash,
-    service_initialize_handler_t initialize_handler, 
-    service_shutdown_handler_t shutdown_handler, 
+    service_initialize_handler_t initialize_handler,
+    service_shutdown_handler_t shutdown_handler,
     int priority)
 {
     const size_t MAX_SERVICE_COUNT = ARRAY_COUNT(_services);
@@ -148,6 +149,11 @@ void service_register_tabs(hash_t service_key, const service_invoke_handler_t& t
     service_register_handler(service_key, HASH_SERVICE_TABS, tabs_handler);
 }
 
+void service_register_window(hash_t service_key, const service_invoke_handler_t& window_handler)
+{
+    service_register_handler(service_key, HASH_SERVICE_WINDOW, window_handler);
+}
+
 void service_foreach(hash_t handler_key)
 {
     for (size_t i = 0, end = _service_count; i != end; ++i)
@@ -173,3 +179,7 @@ void service_foreach_tabs()
     service_foreach(HASH_SERVICE_TABS);
 }
 
+void service_foreach_window()
+{
+    service_foreach(HASH_SERVICE_WINDOW);
+}

@@ -12,7 +12,6 @@
 #include <framework/config.h>
 #include <framework/common.h>
 
-#include <foundation/math.h>
 #include <foundation/string.h>
 
 #include <doctest/doctest.h>

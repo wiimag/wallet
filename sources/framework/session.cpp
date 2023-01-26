@@ -8,14 +8,14 @@
 #include "common.h"
 #include "config.h"
 #include "scoped_string.h"
+
+#include <framework/imgui.h>
  
 #include <foundation/environment.h>
 #include <foundation/path.h>
 #include <foundation/assert.h>
 #include <foundation/fs.h>
 #include <foundation/string.h>
-
-#include <imgui/imgui.h>
 
 static const char IMGUI_FILE_NAME[] = "imgui.ini";
 

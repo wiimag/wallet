@@ -7,8 +7,8 @@
 
 #include "function.h"
 
-#include <foundation/string.h>
 #include <foundation/math.h>
+#include <foundation/string.h>
 
 struct config_t;
 struct config_value_t;

@@ -134,10 +134,12 @@ bool dispatcher_unregister_event_listener(
 
 /* =======> Application framework header inclusions <======== */
 
-#include "framework/common.h"
-#include "framework/service.h"
-#include "framework/imgui_utils.h"
-#include "framework/tabs.h"
+#include <framework/math.h>
+#include <framework/imgui.h>
+#include <framework/common.h>
+#include <framework/service.h>
+#include <framework/imgui_utils.h>
+#include <framework/tabs.h>
 
 /* =======> External 3rdparty header inclusions <======== 
             - Grouped per library

@@ -5,12 +5,10 @@
 
 #include "test_utils.h"
 
+#include <framework/imgui.h>
 #include <framework/service.h>
 
 #include <foundation/hashstrings.h>
-
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
 
 #include <doctest/doctest.h>
 

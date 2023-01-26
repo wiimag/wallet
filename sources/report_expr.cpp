@@ -136,7 +136,7 @@ static struct {
 // # PRIVATE
 //
 
-FOUNDATION_STATIC expr_result_t report_eval_stock_realtime(const expr_func_t* f, vec_expr_t* args, void* c)
+FOUNDATION_STATIC expr_result_t report_expr_eval_stock(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Examples: S(GLF.TO, open)
     //           S(GFL.TO, close) - S(GFL.TO, open)
@@ -156,7 +156,7 @@ FOUNDATION_STATIC expr_result_t report_eval_stock_realtime(const expr_func_t* f,
     return value;
 }
 
-FOUNDATION_STATIC expr_result_t report_eval_stock_fundamental(const expr_func_t* f, vec_expr_t* args, void* c)
+FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Examples: F(PFE.NEO, "General.ISIN")
     //           F("CSH-UN.TO", "Highlights.WallStreetTargetPrice")
@@ -607,8 +607,8 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
 
 FOUNDATION_STATIC void report_expr_initialize()
 {
-    eval_register_function("S", report_eval_stock_realtime);
-    eval_register_function("F", report_eval_stock_fundamental);
+    eval_register_function("S", report_expr_eval_stock);
+    eval_register_function("F", report_expr_eval_stock_fundamental);
     eval_register_function("R", report_eval_report_field);
     eval_register_function("FIELDS", report_eval_list_fields);
     eval_register_function("TABLE", report_eval_table);

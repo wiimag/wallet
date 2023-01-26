@@ -5,13 +5,12 @@
 
 #pragma once
 
+#include <framework/imgui.h>
+
 #include <foundation/math.h>
 #include <foundation/platform.h>
 
 #include <bx/math.h>
-#include <bgfx/bgfx.h>
-
-#include <imgui/imgui.h>
 
 typedef struct vec2_t
 {
@@ -21,14 +20,14 @@ typedef struct vec2_t
     FOUNDATION_FORCEINLINE vec2_t(int x, int y) : x((float)x), y((float)y) {}
     FOUNDATION_FORCEINLINE vec2_t(float x, float y) : x(x), y(y) {}
     FOUNDATION_FORCEINLINE vec2_t(const ImVec2& iv2) : xy(iv2) {}
-    FOUNDATION_FORCEINLINE vec2_t(const bx::Vec3& bxv3) : xyz(bxv3) {}
+    FOUNDATION_FORCEINLINE vec2_t(const bx::Vec3& bxv3) : x(bxv3.x), y(bxv3.y) {}
     FOUNDATION_FORCEINLINE vec2_t(const float* p, unsigned length = UINT_MAX) : x(p[0]), y(length > 1 ? p[1] : 0) {}
 
     FOUNDATION_FORCEINLINE vec2_t(ImVec2&& iv2) : x(iv2.x), y(iv2.y) {}
     FOUNDATION_FORCEINLINE vec2_t(bx::Vec3&& bxv3) : vec2_t(bxv3.x, bxv3.y) {}
 
-    FOUNDATION_FORCEINLINE operator bx::Vec3& () { return xyz; }
-    FOUNDATION_FORCEINLINE operator const bx::Vec3& () const { return xyz; }
+    FOUNDATION_FORCEINLINE operator bx::Vec3 () { return bx::Vec3(x, y, 0); }
+    FOUNDATION_FORCEINLINE operator const bx::Vec3 () const { return bx::Vec3(x, y, 0); }
 
     FOUNDATION_FORCEINLINE operator ImVec2& () { return xy; }
     FOUNDATION_FORCEINLINE operator const ImVec2& () const { return xy; }
@@ -43,7 +42,6 @@ typedef struct vec2_t
         struct {
             float x, y;
         };
-        bx::Vec3 xyz{0,0,0};
         ImVec2 xy;
         struct {
             float i, j;
@@ -144,8 +142,11 @@ typedef struct vec4_t
         float components[4]{ 0, 0, 0, 1 };
         ImVec2 xy;
         ImVec4 xyzw;
+        ImRect rect;
+        ImColor color;
         bx::Vec3 xyz;
         bx::Quaternion q;
+        bx::Plane plane;
         vec2_t v2;
         vec3_t v3;
         struct {
@@ -305,4 +306,3 @@ FOUNDATION_FORCEINLINE bool operator== (const vec3& a, const vec3& b)
     return math_float_eq(a.x, b.x, 50) && math_float_eq(a.y, b.y, 50) && math_float_eq(a.z, b.z, 50);
 }
 
-bgfx::ShaderHandle load_shader(const char* filename);

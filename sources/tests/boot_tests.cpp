@@ -9,6 +9,8 @@
 
 #include "test_utils.h"
 
+#include <framework/glfw.h>
+
 #include <foundation/array.h>
 #include <foundation/assert.h>
 #include <foundation/environment.h>
@@ -22,8 +24,6 @@
     #define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
 #endif
 #include <doctest/doctest.h>
-
-#include <GLFW/glfw3.h>
 
 #include <ostream>
 

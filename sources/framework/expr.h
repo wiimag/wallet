@@ -5,16 +5,13 @@
 
 #pragma once
 
-#include "framework/config.h"
-#include "framework/common.h"
-#include "framework/string_table.h"
+#include <framework/common.h>
+#include <framework/string_table.h>
 
 #include <foundation/math.h>
-#include <foundation/string.h>
+#include <foundation/array.h>
 #include <foundation/assert.h>
 #include <foundation/hash.h>
-
-#include <ctype.h> /* for isdigit, isspace */
 
 #define HASH_EXPR static_hash_string("expr", 4, 0xe44cd53772fb5e1eLL)
 
@@ -832,6 +829,7 @@ void eval_register_vec_mat_functions(expr_func_t*& funcs);
 
 expr_result_t expr_eval_symbol(string_table_symbol_t symbol);
 expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& value);
+expr_result_t expr_eval_merge(const expr_result_t& key, const expr_result_t& value, bool keep_nulls);
 string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message);
 string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message);
 

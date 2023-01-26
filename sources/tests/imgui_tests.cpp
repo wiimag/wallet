@@ -5,11 +5,9 @@
 
 #include "test_utils.h"
 
+#include <framework/imgui.h>
 #include <framework/config.h>
 #include <framework/common.h>
-
-#include <imgui/imgui.h>
-#include <imgui/imgui_internal.h>
 
 #include <doctest/doctest.h>
 

@@ -5,21 +5,15 @@
 
 #include "expr.h"
 
-#include "common.h"
-#include "config.h"
-#include "imgui.h"
-#include "session.h"
-#include "service.h"
+#include <framework/imgui.h>
+#include <framework/session.h>
+#include <framework/service.h>
 
-#include <foundation/string.h>
-#include <foundation/math.h>
 #include <foundation/random.h>
 
-#include <imgui/imgui.h>
-#include <imgui/implot.h>
+#include <ctype.h> /* for isdigit, isspace */
 
 #include <numeric>
-#include <algorithm>
 
 thread_local char EXPR_ERROR_MSG[256];
 thread_local expr_error_code_t EXPR_ERROR_CODE;
@@ -248,6 +242,41 @@ static expr_result_t expr_eval_set(expr_t* e)
     }
 
     return expr_eval_list(resolved_values);
+}
+
+expr_result_t expr_eval_merge(const expr_result_t& key, const expr_result_t& value, bool keep_nulls)
+{
+    expr_result_t* kvp = nullptr;
+    if (key.type == EXPR_RESULT_ARRAY)
+    {
+        for (const auto& e : key)
+        {
+            if (keep_nulls || !e.is_null())
+                array_push(kvp, e);
+        }
+    }
+    else if (keep_nulls || !key.is_null())
+        array_push(kvp, key);
+
+    if (value.type == EXPR_RESULT_ARRAY)
+    {
+        for (const auto& e : value)
+        {
+            if (keep_nulls || !e.is_null())
+                array_push(kvp, e);
+        }
+    }
+    else if (keep_nulls || !value.is_null())
+        array_push(kvp, value);
+
+    if (array_size(kvp) == 1)
+    {
+        expr_result_t single_value = kvp[0];
+        array_deallocate(kvp);
+        return single_value;
+    }
+
+    return expr_eval_list(kvp);
 }
 
 expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& value)
@@ -1234,7 +1263,7 @@ expr_result_t expr_eval(expr_t* e)
         return n;
     case OP_COMMA:
         n = expr_eval(&e->args.buf[0]);
-        return expr_eval_pair(n, expr_eval(&e->args.buf[1]));
+        return expr_eval_merge(n, expr_eval(&e->args.buf[1]), false);
     case OP_CONST:
         return e->param.result.value;
 
@@ -1285,18 +1314,18 @@ static int expr_next_token(const char* s, size_t len, int& flags)
         }
         return i;
     }
-    else if (isspace(c)) {
-        while (i < len && isspace(s[i]) && s[i] != '\n') {
+    else if (c > 0 && isspace(c)) {
+        while (i < len && (s[i] > 0 && isspace(s[i])) && s[i] != '\n') {
             i++;
         }
         return i;
     }
-    else if (isdigit(c)) {
+    else if (c > 0 && isdigit(c)) {
         if ((flags & EXPR_TNUMBER) == 0) {
             return EXPR_ERROR_UNEXPECTED_NUMBER; // unexpected number
         }
         flags = EXPR_TOP | EXPR_TCLOSE;
-        while ((c == '.' || isdigit(c) || (i == 1 && c == 'x')) && i < len) {
+        while ((c == '.' || (c > 0 && isdigit(c)) || (i == 1 && c == 'x')) && i < len) {
             i++;
             c = s[i];
         }
@@ -1545,7 +1574,7 @@ expr_t* expr_create(const char* s, size_t len, expr_var_list_t* vars, expr_func_
             n = 1;
             tok = ",";
         }
-        if (isspace(*tok)) {
+        if (*tok < 128 && isspace(*tok)) {
             continue;
         }
         int paren_next = EXPR_PAREN_ALLOWED;
@@ -2007,7 +2036,7 @@ void eval_render_evaluators()
     static bool show_evaluators = session_get_bool("show_evaluators", false);
 
     bool start_show_stock_console = show_evaluators;
-    if (shortcut_executed(298/*GLFW_KEY_F9,#*/))
+    if (shortcut_executed(ImGuiKey_F9))
         show_evaluators = !show_evaluators;
 
     eval_run_evaluators();
@@ -2331,6 +2360,8 @@ FOUNDATION_STATIC void eval_initialize()
         eval_load_evaluators(evaluators_data);
         config_deallocate(evaluators_data);
     }
+
+    service_register_window(HASH_EXPR, eval_render_evaluators);
 }
 
 FOUNDATION_STATIC void eval_shutdown()
@@ -2348,4 +2379,4 @@ FOUNDATION_STATIC void eval_shutdown()
     expr_destroy(nullptr, &_global_vars);
 }
 
-DEFINE_SERVICE(EXPR, eval_initialize, eval_shutdown, -2);
+DEFINE_SERVICE(EXPR, eval_initialize, eval_shutdown, SERVICE_PRIORITY_SYSTEM);

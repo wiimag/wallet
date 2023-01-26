@@ -13,6 +13,7 @@
 #include "shared_mutex.h"
 #include "imgui.h"
 #include "table.h"
+#include <framework/imgui.h>
 
 #include <foundation/hash.h>
 #include <foundation/string.h>
@@ -20,8 +21,6 @@
 #include <foundation/stream.h>
 
 #include <bx/sort.h>
-
-#include <imgui/imgui.h>
 
 #include <algorithm>
 

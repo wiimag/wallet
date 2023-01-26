@@ -3,20 +3,19 @@
  * License: https://infineis.com/LICENSE
  */
 
-#include "common.h"
-#include "session.h"
-#include "dispatcher.h"
-#include "profiler.h"
-#include "glfw.h"
-
-#include <foundation/foundation.h>
+#include <framework/common.h>
+#include <framework/session.h>
+#include <framework/dispatcher.h>
+#include <framework/profiler.h>
+#include <framework/glfw.h>
  
+#include <foundation/foundation.h>
+  
 #include <imgui/imgui.h>
 #include <imgui/implot.h>
 #include <imgui/fs_imgui.bin.h>
 #include <imgui/vs_imgui.bin.h>
 
-#include <bx/bx.h>
 #include <bx/math.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>

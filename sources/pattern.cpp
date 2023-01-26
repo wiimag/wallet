@@ -8,20 +8,15 @@
 #include "settings.h"
 #include "eod.h"
 
-#include "framework/jobs.h"
-#include "framework/session.h"
-#include "framework/scoped_string.h"
-#include "framework/imgui.h"
-#include "framework/generics.h"
-#include "framework/scoped_mutex.h"
-#include "framework/table.h"
+#include <framework/jobs.h>
+#include <framework/session.h>
+#include <framework/imgui.h>
+#include <framework/table.h>
+#include <framework/service.h>
 
-#include <foundation/array.h>
-#include <foundation/mutex.h>
-#include <foundation/hash.h>
- 
-#include <time.h>
 #include <algorithm>
+
+#define HASH_PATTERN static_hash_string("pattern", 7, 0xf53f39240bdce58aULL)
 
 #define STATS_COLUMN_V1_WIDTH (130.0f)
 #define STATS_COLUMN_V2_WIDTH (120.0f)
@@ -112,12 +107,12 @@ struct pattern_graph_data_t
     bool refresh { false };
 };
 
-static string_const_t pattern_today()
+FOUNDATION_STATIC string_const_t pattern_today()
 {
     return string_from_date(time_now());
 }
 
-static time_t pattern_date(const pattern_t* pattern, int days)
+FOUNDATION_STATIC time_t pattern_date(const pattern_t* pattern, int days)
 {
     time_t pdate = time_add_days(pattern->date, days);
     tm tm;
@@ -133,12 +128,12 @@ static time_t pattern_date(const pattern_t* pattern, int days)
     return pdate;
 }
 
-static string_const_t pattern_date_to_string(const pattern_t* pattern, int days)
+FOUNDATION_STATIC string_const_t pattern_date_to_string(const pattern_t* pattern, int days)
 {
     return string_from_date(pattern_date(pattern, days));
 }
 
-static string_const_t pattern_format_number(const char* fmt, size_t fmt_length, double value, double default_value = DNAN)
+FOUNDATION_STATIC string_const_t pattern_format_number(const char* fmt, size_t fmt_length, double value, double default_value = DNAN)
 {
     if (math_real_is_nan(value) && math_real_is_nan(default_value))
         return CTEXT("-");
@@ -146,7 +141,7 @@ static string_const_t pattern_format_number(const char* fmt, size_t fmt_length, 
     return string_format_static(fmt, fmt_length, math_ifnan(value, default_value));
 }
 
-static string_const_t pattern_format_currency(double value, double default_value = DNAN)
+FOUNDATION_STATIC string_const_t pattern_format_currency(double value, double default_value = DNAN)
 {
     if (value < 0.05)
         return pattern_format_number(STRING_CONST("%.3lf $"), value, default_value);
@@ -154,13 +149,13 @@ static string_const_t pattern_format_currency(double value, double default_value
     return pattern_format_number(STRING_CONST("%.2lf $"), value, default_value);
 }
 
-static string_const_t pattern_format_percentage(double value, double default_value = DNAN)
+FOUNDATION_STATIC string_const_t pattern_format_percentage(double value, double default_value = DNAN)
 {
     string_const_t fmt = value < 1e3 ? CTEXT("%.3g %%") : CTEXT("%.4g %%");
     return pattern_format_number(STRING_ARGS(fmt), value, default_value);
 }
 
-static void pattern_render_info(const char* field_name, double value, const char* fmt)
+FOUNDATION_STATIC void pattern_render_info(const char* field_name, double value, const char* fmt)
 {
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
@@ -170,7 +165,7 @@ static void pattern_render_info(const char* field_name, double value, const char
     table_cell_right_aligned_label(STRING_ARGS(string_from_currency(value, fmt)));
 }
 
-static int pattern_format_date_label(double value, char* buff, int size, void* user_data)
+FOUNDATION_STATIC int pattern_format_date_label(double value, char* buff, int size, void* user_data)
 {
     pattern_graph_data_t& graph = *(pattern_graph_data_t*)user_data;
     time_t then = graph.pattern->date - (time_t)value * time_one_day();
@@ -178,7 +173,7 @@ static int pattern_format_date_label(double value, char* buff, int size, void* u
     return (int)string_format(buff, size, STRING_CONST("%.*s (%d)"), STRING_FORMAT(date_str), math_round(value)).length;
 }
 
-static int pattern_formatx_label(double value, char* buff, int size, void* user_data)
+FOUNDATION_STATIC int pattern_formatx_label(double value, char* buff, int size, void* user_data)
 {
     if (math_real_is_nan(value))
         return 0;
@@ -206,7 +201,7 @@ static int pattern_formatx_label(double value, char* buff, int size, void* user_
     return (int)string_format(buff, size, STRING_CONST("%.0lfD"), value).length;
 }
 
-static void pattern_render_planning_line(string_const_t v1, string_const_t v1_url, string_const_t v2, string_const_t v3, string_const_t v4)
+FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v1_url, string_const_t v2, string_const_t v3, string_const_t v4)
 {
     ImGui::TableNextRow();
 
@@ -227,12 +222,12 @@ static void pattern_render_planning_line(string_const_t v1, string_const_t v1_ur
     if (!string_is_null(v4)) table_cell_right_aligned_label(STRING_ARGS(v4));
 }
 
-static void pattern_render_planning_line(string_const_t v1, string_const_t v2, string_const_t v3, string_const_t v4)
+FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v2, string_const_t v3, string_const_t v4)
 {
     pattern_render_planning_line(v1, string_null(), v2, v3, v4);
 }
 
-static double pattern_mark_change_p(const pattern_t* pattern, int mark_index)
+FOUNDATION_STATIC double pattern_mark_change_p(const pattern_t* pattern, int mark_index)
 {
     pattern_mark_t& mark = ((pattern_t*)pattern)->marks[mark_index];
     if (!mark.fetched)
@@ -256,7 +251,7 @@ static double pattern_mark_change_p(const pattern_t* pattern, int mark_index)
     return mark.change_p;
 }
 
-static string_const_t pattern_mark_change_p_to_string(const pattern_t* pattern, int mark_index)
+FOUNDATION_STATIC string_const_t pattern_mark_change_p_to_string(const pattern_t* pattern, int mark_index)
 {
     double change_p = pattern_mark_change_p(pattern, mark_index);
     if (math_real_is_nan(change_p))
@@ -265,7 +260,7 @@ static string_const_t pattern_mark_change_p_to_string(const pattern_t* pattern, 
     return string_format_static(STRING_CONST("%.*g %%"), math_abs(change_p) < 0.01 ? 2 : 3, change_p * 100.0);
 }
 
-static void pattern_render_planning_url(string_const_t label, string_const_t url, const pattern_t* pattern, int mark_index, bool can_skip_if_not_valid = false)
+FOUNDATION_STATIC void pattern_render_planning_url(string_const_t label, string_const_t url, const pattern_t* pattern, int mark_index, bool can_skip_if_not_valid = false)
 {
     pattern_mark_t& mark = ((pattern_t*)pattern)->marks[mark_index];
     string_const_t change_p_str = pattern_mark_change_p_to_string(pattern, mark_index);
@@ -282,12 +277,12 @@ static void pattern_render_planning_url(string_const_t label, string_const_t url
         change_p_str);
 }
 
-static void pattern_render_planning_line(string_const_t label, const pattern_t* pattern, int mark_index, bool can_skip_if_not_valid = false)
+FOUNDATION_STATIC void pattern_render_planning_line(string_const_t label, const pattern_t* pattern, int mark_index, bool can_skip_if_not_valid = false)
 {
     pattern_render_planning_url(label, string_null(), pattern, mark_index, can_skip_if_not_valid);
 }
 
-static void pattern_render_stats_line(string_const_t v1, string_const_t v2, string_const_t v3)
+FOUNDATION_STATIC void pattern_render_stats_line(string_const_t v1, string_const_t v2, string_const_t v3)
 {
     ImGui::TableNextRow();
 
@@ -302,7 +297,7 @@ static void pattern_render_stats_line(string_const_t v1, string_const_t v2, stri
     if (!string_is_null(v3)) table_cell_right_aligned_label(STRING_ARGS(v3));
 }
 
-static void pattern_render_decision_line(int rank, bool* check, const char* text, size_t text_length)
+FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const char* text, size_t text_length)
 {
     ImGui::TableNextRow();
 
@@ -319,7 +314,7 @@ static void pattern_render_decision_line(int rank, bool* check, const char* text
     ImGui::TextWrapped("%.*s", text_length, text);
 }
 
-static string_const_t pattern_price(const pattern_t* pattern)
+FOUNDATION_STATIC string_const_t pattern_price(const pattern_t* pattern)
 {
     const stock_t* s = pattern->stock;
     if (s == nullptr)
@@ -328,7 +323,7 @@ static string_const_t pattern_price(const pattern_t* pattern)
     return string_from_currency(s->current.close);
 }
 
-static string_const_t pattern_currency_conversion(const pattern_t* pattern)
+FOUNDATION_STATIC string_const_t pattern_currency_conversion(const pattern_t* pattern)
 {
     const stock_t* s = pattern->stock;
     if (s == nullptr)
@@ -345,7 +340,7 @@ static string_const_t pattern_currency_conversion(const pattern_t* pattern)
         STRING_FORMAT(string_from_currency(exg_rate, "9.99"))));
 }
 
-static string_const_t pattern_eod_to_google_exchange(string_const_t eod_exchange)
+FOUNDATION_STATIC string_const_t pattern_eod_to_google_exchange(string_const_t eod_exchange)
 {
     if (string_equal(STRING_ARGS(eod_exchange), STRING_CONST("TO")))
         return CTEXT("TSE");
@@ -356,7 +351,7 @@ static string_const_t pattern_eod_to_google_exchange(string_const_t eod_exchange
     return eod_exchange;
 }
 
-static string_const_t pattern_google_finance_url(const pattern_t* pattern)
+FOUNDATION_STATIC string_const_t pattern_google_finance_url(const pattern_t* pattern)
 {
     const stock_t* s = pattern->stock;
     if (s == nullptr)
@@ -371,7 +366,7 @@ static string_const_t pattern_google_finance_url(const pattern_t* pattern)
     return string_to_const(url);
 }
 
-static string_const_t pattern_google_new_url(const pattern_t* pattern)
+FOUNDATION_STATIC string_const_t pattern_google_new_url(const pattern_t* pattern)
 {
     const stock_t* s = pattern->stock;
     if (s == nullptr)
@@ -384,7 +379,7 @@ static string_const_t pattern_google_new_url(const pattern_t* pattern)
     return string_to_const(url);
 }
 
-static float pattern_render_planning(const pattern_t* pattern)
+FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
 {
     ImGuiTableFlags flags =
         ImGuiTableFlags_NoSavedSettings |
@@ -440,7 +435,7 @@ static float pattern_render_planning(const pattern_t* pattern)
     return y_offset;
 }
 
-static float pattern_render_stats(const pattern_t* pattern)
+FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
 {
     ImGuiTableFlags flags =
         ImGuiTableFlags_NoSavedSettings |
@@ -537,7 +532,7 @@ static float pattern_render_stats(const pattern_t* pattern)
     return y_offset;
 }
 
-static float pattern_render_decisions(const pattern_t* pattern)
+FOUNDATION_STATIC float pattern_render_decisions(const pattern_t* pattern)
 {
     ImGuiTableFlags flags =
         ImGuiTableFlags_NoSavedSettings |
@@ -570,7 +565,7 @@ static float pattern_render_decisions(const pattern_t* pattern)
     return y_offset;
 }
 
-static void pattern_render_graph_change_high(pattern_t* pattern, const stock_t* s)
+FOUNDATION_STATIC void pattern_render_graph_change_high(pattern_t* pattern, const stock_t* s)
 {
     const size_t max_render_count = 1024;
     plot_context_t c{ pattern->date, s->history_count, (s->history_count / max_render_count) + 1, s->history };
@@ -587,7 +582,7 @@ static void pattern_render_graph_change_high(pattern_t* pattern, const stock_t* 
     }, & c, (int)min(s->history_count, max_render_count), ImPlotLineFlags_Shaded);
 }
 
-static void pattern_render_graph_change(pattern_t* pattern, const stock_t* s)
+FOUNDATION_STATIC void pattern_render_graph_change(pattern_t* pattern, const stock_t* s)
 {
     const size_t max_render_count = 1024;
     plot_context_t c{ pattern->date, s->history_count, (s->history_count / max_render_count) + 1, s->history };
@@ -604,7 +599,7 @@ static void pattern_render_graph_change(pattern_t* pattern, const stock_t* s)
     }, & c, (int)min(s->history_count, max_render_count), ImPlotLineFlags_Shaded);
 }
 
-static void pattern_render_graph_change_acc(pattern_t* pattern, const stock_t* s)
+FOUNDATION_STATIC void pattern_render_graph_change_acc(pattern_t* pattern, const stock_t* s)
 {
     ImPlot::HideNextItem(true, ImPlotCond_Once);
     plot_context_t c{ pattern->date, min(s->history_count, (size_t)pattern->range), 1, s->history, 0.0 };
@@ -628,7 +623,7 @@ static void pattern_render_graph_change_acc(pattern_t* pattern, const stock_t* s
         ImPlot::Annotation(pattern->range, c.acc, ImVec4(1.0f, 0, 0, 1.0f), ImVec2(4, -4), true, true);
 }
 
-static void pattern_compute_trend(plot_context_t& c)
+FOUNDATION_STATIC void pattern_compute_trend(plot_context_t& c)
 {
     // Trend
     // Y = a + bX
@@ -641,7 +636,7 @@ static void pattern_compute_trend(plot_context_t& c)
     c.a = (c.e / c.n) - c.b * (c.d / c.n);
 }
 
-static bool pattern_build_trend(plot_context_t& c, double x, double y)
+FOUNDATION_STATIC bool pattern_build_trend(plot_context_t& c, double x, double y)
 {
     if (math_real_is_nan(x) || math_real_is_nan(y))
         return false;
@@ -655,7 +650,7 @@ static bool pattern_build_trend(plot_context_t& c, double x, double y)
     return true;
 }
 
-static void pattern_render_graph_trend(const char* label, double x1, double x2, double a, double b, bool x_axis_inverted)
+FOUNDATION_STATIC void pattern_render_graph_trend(const char* label, double x1, double x2, double a, double b, bool x_axis_inverted)
 {
     // Y = a + bX
     const double x_diff = x2 - x1;
@@ -684,7 +679,7 @@ static void pattern_render_graph_trend(const char* label, double x1, double x2, 
         "%s = %.2g %s %.1gx (" ICON_MD_CHANGE_HISTORY  "%.2g)", label, a, b < 0 ? "-" : "+", math_abs(b), y_diff);
 }
 
-static void pattern_render_trend(const char* label, const plot_context_t& c, bool x_axis_inverted)
+FOUNDATION_STATIC void pattern_render_trend(const char* label, const plot_context_t& c, bool x_axis_inverted)
 {
     if (c.n <= 0)
         return;
@@ -693,7 +688,7 @@ static void pattern_render_trend(const char* label, const plot_context_t& c, boo
     ImPlot::PopStyleVar(1);
 }
 
-static void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool x_axis_inverted)
+FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool x_axis_inverted)
 {
     plot_context_t c{ pattern->date, min(4096ULL, s->history_count), offset, s->history };
     c.acc = pattern->range;
@@ -725,7 +720,7 @@ static void pattern_render_graph_day_value(const char* label, pattern_t* pattern
     }
 }
 
-static void pattern_render_graph_price(pattern_t* pattern, const stock_t* s, ImAxis y_axis, bool x_axis_inverted)
+FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stock_t* s, ImAxis y_axis, bool x_axis_inverted)
 {
     plot_context_t c{ pattern->date, min(4096ULL, s->history_count), 1, s->history };
     c.acc = pattern->range;
@@ -754,7 +749,7 @@ static void pattern_render_graph_price(pattern_t* pattern, const stock_t* s, ImA
     }
 }
 
-static bool pattern_flex_update(pattern_t* pattern)
+FOUNDATION_STATIC bool pattern_flex_update(pattern_t* pattern)
 {
     const stock_t* s = pattern->stock;
     if (!s || array_size(s->history) == 0)
@@ -828,13 +823,13 @@ static bool pattern_flex_update(pattern_t* pattern)
     return true;
 }
 
-static bool pattern_flex_update(pattern_handle_t handle)
+FOUNDATION_STATIC bool pattern_flex_update(pattern_handle_t handle)
 {
     pattern_t* pattern = &_patterns[handle];
     return pattern_flex_update(pattern);
 }
 
-static int pattern_label_max_range(const pattern_graph_data_t& graph)
+FOUNDATION_STATIC int pattern_label_max_range(const pattern_graph_data_t& graph)
 {
     for (int i = 0; i < (int)graph.x_count; i++)
     {
@@ -845,7 +840,7 @@ static int pattern_label_max_range(const pattern_graph_data_t& graph)
     return (int)graph.x_count - (graph.x_data[10] > graph.x_data[11] ? 1 : 0);
 }
 
-static void pattern_render_graph_setup_days_axis(pattern_t* pattern, pattern_graph_data_t& graph, bool x_axis_inverted)
+FOUNDATION_STATIC void pattern_render_graph_setup_days_axis(pattern_t* pattern, pattern_graph_data_t& graph, bool x_axis_inverted)
 {
     ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight | (x_axis_inverted ? ImPlotAxisFlags_Invert : 0));
     ImPlot::SetupAxisFormat(ImAxis_X1, pattern_formatx_label, nullptr);
@@ -855,19 +850,19 @@ static void pattern_render_graph_setup_days_axis(pattern_t* pattern, pattern_gra
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, max(graph.min_d, 1.0), graph.max_d);
 }
 
-static void pattern_render_graph_limit(const char* label, double min, double max, double value)
+FOUNDATION_STATIC void pattern_render_graph_limit(const char* label, double min, double max, double value)
 {
     const double range[]{ min, max };
     const double limit[]{ value, value };
     ImPlot::PlotLine(label, range, limit, ARRAY_COUNT(limit), ImPlotLineFlags_NoClip);
 }
 
-static void pattern_render_graph_limit(const char* label, pattern_graph_data_t& graph, double value)
+FOUNDATION_STATIC void pattern_render_graph_limit(const char* label, pattern_graph_data_t& graph, double value)
 {
     pattern_render_graph_limit(label, graph.min_d, graph.max_d, value);
 }
 
-static void pattern_render_graph_end(pattern_t* pattern, const stock_t* s, pattern_graph_data_t& graph)
+FOUNDATION_STATIC void pattern_render_graph_end(pattern_t* pattern, const stock_t* s, pattern_graph_data_t& graph)
 {
     if ((graph.refresh || !pattern->autofit) && (s == nullptr || s->has_resolve(FETCH_ALL)))
     {
@@ -877,7 +872,7 @@ static void pattern_render_graph_end(pattern_t* pattern, const stock_t* s, patte
     }
 }
 
-static void pattern_render_graph_flex(pattern_t* pattern, pattern_graph_data_t& graph)
+FOUNDATION_STATIC void pattern_render_graph_flex(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     if (pattern->flex == nullptr && !pattern_flex_update(pattern))
         return;
@@ -992,7 +987,7 @@ void pattern_fetch_lcf_data(const pattern_t* pattern, const json_object_t& json,
     lcf->symbols = symbols;
 }
 
-static int pattern_load_lcf_thread(payload_t* payload)
+FOUNDATION_STATIC int pattern_load_lcf_thread(payload_t* payload)
 {
     pattern_t* pattern = (pattern_t*)payload;
 
@@ -1022,7 +1017,7 @@ static int pattern_load_lcf_thread(payload_t* payload)
     return 0;
 }
 
-static void pattern_render_lcf_table(pattern_t* pattern)
+FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
 {
     int date_count = array_size(pattern->lcf);
 
@@ -1204,7 +1199,7 @@ static void pattern_render_lcf_table(pattern_t* pattern)
     ImGui::SetWindowFontScale(1.0f);
 }
 
-static void pattern_render_lcf(pattern_t* pattern, pattern_graph_data_t& graph)
+FOUNDATION_STATIC void pattern_render_lcf(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     if (!pattern->stock->has_resolve(FetchLevel::TECHNICAL_EOD))
     {
@@ -1233,7 +1228,7 @@ static void pattern_render_lcf(pattern_t* pattern, pattern_graph_data_t& graph)
     }
 }
 
-static void pattern_render_graph_trends(pattern_t* pattern, pattern_graph_data_t& graph)
+FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     const stock_t* s = pattern->stock;
     if (s == nullptr)
@@ -1344,7 +1339,7 @@ static void pattern_render_graph_trends(pattern_t* pattern, pattern_graph_data_t
     pattern_render_graph_end(pattern, s, graph);
 }
 
-static void pattern_render_graph_price(pattern_t* pattern, pattern_graph_data_t& graph)
+FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     const stock_t* s = pattern->stock;
     if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::TECHNICAL_EOD))
@@ -1446,7 +1441,7 @@ static void pattern_render_graph_price(pattern_t* pattern, pattern_graph_data_t&
     pattern_render_graph_end(pattern, s, graph);
 }
 
-static void pattern_render_graph_analysis(pattern_t* pattern, pattern_graph_data_t& graph)
+FOUNDATION_STATIC void pattern_render_graph_analysis(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     const stock_t* s = pattern->stock;
     const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
@@ -1495,7 +1490,7 @@ static void pattern_render_graph_analysis(pattern_t* pattern, pattern_graph_data
     pattern_render_graph_end(pattern, s, graph);
 }
 
-static void pattern_refresh(pattern_t* pattern)
+FOUNDATION_STATIC void pattern_refresh(pattern_t* pattern)
 {
     pattern->stock->resolved_level = FetchLevel::NONE;
     array_deallocate(pattern->flex);
@@ -1503,7 +1498,7 @@ static void pattern_refresh(pattern_t* pattern)
         m.fetched = false;
 }
 
-static void pattern_history_min_max_price(pattern_t* pattern, time_t ref, double& min, double& max)
+FOUNDATION_STATIC void pattern_history_min_max_price(pattern_t* pattern, time_t ref, double& min, double& max)
 {
     min = DBL_MAX;
     max = -DBL_MAX;
@@ -1517,7 +1512,7 @@ static void pattern_history_min_max_price(pattern_t* pattern, time_t ref, double
     }
 }
 
-static void pattern_render_graph_zoom(pattern_t* pattern, pattern_graph_data_t& graph)
+FOUNDATION_STATIC void pattern_render_graph_zoom(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     double ymin = 0, ymax = 0;
     pattern_history_min_max_price(pattern, time_add_days(pattern->date, -pattern->range), ymin, ymax);
@@ -1525,7 +1520,7 @@ static void pattern_render_graph_zoom(pattern_t* pattern, pattern_graph_data_t& 
     ImPlot::SetNextAxesLimits(graph.min_d, pattern->range + 5, ymin - delta_space, ymax + delta_space, ImGuiCond_Always);
 }
 
-static void pattern_render_graph_toolbar(pattern_t* pattern, pattern_graph_data_t& graph)
+FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     int previous_graph_type = pattern->type;
     if (shortcut_executed('1')) pattern->type = PATTERN_GRAPH_DEFAULT;
@@ -1602,7 +1597,7 @@ static void pattern_render_graph_toolbar(pattern_t* pattern, pattern_graph_data_
     }
 }
 
-static pattern_graph_data_t const pattern_render_build_graph_data(pattern_t* pattern)
+FOUNDATION_STATIC pattern_graph_data_t const pattern_render_build_graph_data(pattern_t* pattern)
 {
     pattern_graph_data_t graph_data{ pattern };
     for (int i = 0; i < ARRAY_COUNT(FIXED_MARKS); ++i)
@@ -1626,7 +1621,7 @@ static pattern_graph_data_t const pattern_render_build_graph_data(pattern_t* pat
     return graph_data;
 }
 
-static pattern_activity_t* pattern_find_activity(pattern_activity_t* activities, time_t d)
+FOUNDATION_STATIC pattern_activity_t* pattern_find_activity(pattern_activity_t* activities, time_t d)
 {
     for (size_t i = 0; i < array_size(activities); ++i)
     {
@@ -1637,7 +1632,7 @@ static pattern_activity_t* pattern_find_activity(pattern_activity_t* activities,
     return nullptr;
 }
 
-static void pattern_activity_min_max_date(pattern_activity_t* activities, time_t& min, time_t& max, double& space)
+FOUNDATION_STATIC void pattern_activity_min_max_date(pattern_activity_t* activities, time_t& min, time_t& max, double& space)
 {
     min = time_now();
     max = 0;
@@ -1653,7 +1648,7 @@ static void pattern_activity_min_max_date(pattern_activity_t* activities, time_t
     }
 }
 
-static int pattern_activity_format_date(double value, char* buff, int size, void* user_data)
+FOUNDATION_STATIC int pattern_activity_format_date(double value, char* buff, int size, void* user_data)
 {
     time_t d = (time_t)value;
     if (d == 0 || d == -1)
@@ -1663,7 +1658,7 @@ static int pattern_activity_format_date(double value, char* buff, int size, void
     return (int)string_copy(buff, size, STRING_ARGS(date_str)).length;
 }
 
-static void pattern_render_activity(pattern_t* pattern, pattern_graph_data_t& graph)
+FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     static hash_t activity_hash = 0;
 
@@ -1790,7 +1785,7 @@ static void pattern_render_activity(pattern_t* pattern, pattern_graph_data_t& gr
     ImPlot::EndPlot();
 }
 
-static void pattern_render_graphs(pattern_t* pattern)
+FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
 {
     pattern_graph_data_t graph_data = pattern_render_build_graph_data(pattern);
 
@@ -1937,7 +1932,7 @@ void pattern_render(pattern_handle_t handle)
     ImGui::EndTable();	
 }
 
-static bool pattern_fetch_flex_low(pattern_handle_t handle, double& value)
+FOUNDATION_STATIC bool pattern_fetch_flex_low(pattern_handle_t handle, double& value)
 {
     pattern_t* pattern = &_patterns[handle];
     if (pattern->flex == nullptr && !pattern_flex_update(handle))
@@ -1947,7 +1942,7 @@ static bool pattern_fetch_flex_low(pattern_handle_t handle, double& value)
     return true;
 }
 
-static bool pattern_fetch_flex_high(pattern_handle_t handle, double& value)
+FOUNDATION_STATIC bool pattern_fetch_flex_high(pattern_handle_t handle, double& value)
 {
     pattern_t* pattern = &_patterns[handle];
     if (pattern->flex == nullptr && !pattern_flex_update(handle))
@@ -1957,7 +1952,7 @@ static bool pattern_fetch_flex_high(pattern_handle_t handle, double& value)
     return true;
 }
 
-static void pattern_initialize(pattern_handle_t handle)
+FOUNDATION_STATIC void pattern_initialize(pattern_handle_t handle)
 {
     pattern_t* pattern = &_patterns[handle];
 
@@ -2050,7 +2045,7 @@ string_const_t pattern_get_user_file_path()
     return session_get_user_file_path(STRING_CONST("patterns.json"));
 }
 
-static void pattern_load(const config_handle_t& pattern_data, pattern_t& pattern)
+FOUNDATION_STATIC void pattern_load(const config_handle_t& pattern_data, pattern_t& pattern)
 {
     int check_index = 0;
     for (auto c : pattern_data["checks"])
@@ -2071,7 +2066,7 @@ static void pattern_load(const config_handle_t& pattern_data, pattern_t& pattern
     pattern.price_limits.ymax = cv_price_limits["ymax"].as_number();
 }
 
-static void pattern_save(config_handle_t pattern_data, const pattern_t& pattern)
+FOUNDATION_STATIC void pattern_save(config_handle_t pattern_data, const pattern_t& pattern)
 {
     config_set(pattern_data, STRING_CONST("opened"), pattern.opened);
     config_set(pattern_data, STRING_CONST("extra_charts"), pattern.extra_charts);
@@ -2095,7 +2090,7 @@ static void pattern_save(config_handle_t pattern_data, const pattern_t& pattern)
     }
 }
 
-void pattern_initialize()
+FOUNDATION_STATIC void pattern_initialize()
 {
     if (_patterns == nullptr)
         array_reserve(_patterns, 8);
@@ -2115,7 +2110,7 @@ void pattern_initialize()
     }
 }
 
-void pattern_shutdown()
+FOUNDATION_STATIC void pattern_shutdown()
 {
     array_deallocate(_activities);
 
@@ -2148,3 +2143,6 @@ void pattern_shutdown()
     array_deallocate(_patterns);
     _patterns = nullptr;
 }
+
+DEFINE_SERVICE(PATTERN, pattern_initialize, pattern_shutdown, SERVICE_PRIORITY_UI);
+
