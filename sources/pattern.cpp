@@ -11,7 +11,7 @@
 #include "framework/jobs.h"
 #include "framework/session.h"
 #include "framework/scoped_string.h"
-#include "framework/imgui_utils.h"
+#include "framework/imgui.h"
 #include "framework/generics.h"
 #include "framework/scoped_mutex.h"
 #include "framework/table.h"
@@ -19,10 +19,6 @@
 #include <foundation/array.h>
 #include <foundation/mutex.h>
 #include <foundation/hash.h>
-
-#include <imgui/imgui.h>
-#include <imgui/implot.h>
-#include <imgui/imgui_date_chooser.h>
  
 #include <time.h>
 #include <algorithm>

@@ -6,11 +6,11 @@
 #include "report.h"
 
 #include "app.h"
-#include "expr.h"
 #include "eod.h"
 #include "stock.h"
 #include "title.h"
 
+#include <framework/expr.h>
 #include <framework/service.h>
 #include <framework/table.h>
 
@@ -488,9 +488,6 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
     if (args->len < 2)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Requires at least two arguments");
 
-    // Get the table name from the first argument.
-    string_const_t table_name = expr_eval(args->get(0)).as_string("none");
-
     // Get the data set
     expr_result_t elements = expr_eval(args->get(1));
     if (!elements.is_set())
@@ -588,6 +585,10 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
         array_push_memcpy(records, &record);
     }
 
+    // Get the table name from the first argument.
+    string_const_t table_name = expr_eval(args->get(0)).as_string("none");
+
+    // Create the dynamic report
     dynamic_report_t* report = (dynamic_report_t*)memory_allocate(HASH_REPORT_EXPRESSION, sizeof(dynamic_report_t), 0, MEMORY_PERSISTENT);
     report->name = string_clone(STRING_ARGS(table_name));
     report->columns = columns;

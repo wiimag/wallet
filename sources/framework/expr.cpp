@@ -5,11 +5,11 @@
 
 #include "expr.h"
 
-#include "framework/common.h"
-#include "framework/config.h"
-#include "framework/imgui_utils.h"
-#include "framework/session.h"
-#include "framework/service.h"
+#include "common.h"
+#include "config.h"
+#include "imgui.h"
+#include "session.h"
+#include "service.h"
 
 #include <foundation/string.h>
 #include <foundation/math.h>
@@ -1917,36 +1917,36 @@ static void eval_load_evaluators(config_handle_t evaluators_data)
 FOUNDATION_STATIC void eval_save_evaluators()
 {
     config_write_file(eval_evaluators_file_path(), [](config_handle_t evaluators_data)
+    {
+        for (size_t i = 0; i < array_size(_evaluators); ++i)
         {
-            for (size_t i = 0; i < array_size(_evaluators); ++i)
+            expr_evaluator_t& e = _evaluators[i];
+
+            config_handle_t ecv = config_array_push(evaluators_data, CONFIG_VALUE_OBJECT);
+            config_set(ecv, "code", e.code, string_length(e.code));
+            config_set(ecv, "label", e.label, string_length(e.label));
+            config_set(ecv, "expression", e.expression, string_length(e.expression));
+            config_set(ecv, "assertion", e.assertion, string_length(e.assertion));
+            config_set(ecv, "frequency", e.frequency);
+
+            config_handle_t records_data = config_set_array(ecv, STRING_CONST("records"));
+
+            for (size_t ri = 0; ri < array_size(e.records); ++ri)
             {
-                expr_evaluator_t& e = _evaluators[i];
-
-                config_handle_t ecv = config_array_push(evaluators_data, CONFIG_VALUE_OBJECT);
-                config_set(ecv, "code", e.code, string_length(e.code));
-                config_set(ecv, "label", e.label, string_length(e.label));
-                config_set(ecv, "expression", e.expression, string_length(e.expression));
-                config_set(ecv, "assertion", e.assertion, string_length(e.assertion));
-                config_set(ecv, "frequency", e.frequency);
-
-                config_handle_t records_data = config_set_array(ecv, STRING_CONST("records"));
-
-                for (size_t ri = 0; ri < array_size(e.records); ++ri)
-                {
-                    const expr_record_t& r = e.records[ri];
-                    auto rcv = config_array_push(records_data, CONFIG_VALUE_OBJECT);
-                    config_set(rcv, "time", (double)r.time);
-                    config_set(rcv, "value", r.value);
-                    config_set(rcv, "tag", string_table_decode_const(r.tag));
-                    config_set(rcv, "assertion", r.assertion);
-                }
-
-                array_deallocate(e.records);
+                const expr_record_t& r = e.records[ri];
+                auto rcv = config_array_push(records_data, CONFIG_VALUE_OBJECT);
+                config_set(rcv, "time", (double)r.time);
+                config_set(rcv, "value", r.value);
+                config_set(rcv, "tag", string_table_decode_const(r.tag));
+                config_set(rcv, "assertion", r.assertion);
             }
 
-            return true;
-        }, CONFIG_VALUE_ARRAY, CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
-        CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
+            array_deallocate(e.records);
+        }
+
+        return true;
+    }, CONFIG_VALUE_ARRAY, CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
+    	CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
 }
 
 FOUNDATION_STATIC void eval_run_evaluators()
@@ -2171,14 +2171,14 @@ void eval_render_evaluators()
                         ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max + (max - min) * 0.05);
 
                         ImPlot::PlotLineG("##Values", [](int idx, void* user_data)->ImPlotPoint
-                            {
-                                expr_evaluator_t* c = (expr_evaluator_t*)user_data;
-                                const expr_record_t* r = &c->records[idx];
+                        {
+                            expr_evaluator_t* c = (expr_evaluator_t*)user_data;
+                            const expr_record_t* r = &c->records[idx];
 
-                                const double x = (double)r->time;
-                                const double y = r->value;
-                                return ImPlotPoint(x, y);
-                            }, &ev, array_size(ev.records), ImPlotLineFlags_SkipNaN);
+                            const double x = (double)r->time;
+                            const double y = r->value;
+                            return ImPlotPoint(x, y);
+                        }, & ev, array_size(ev.records), ImPlotLineFlags_SkipNaN);
                         ImPlot::EndPlot();
                     }
 

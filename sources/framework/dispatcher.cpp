@@ -7,7 +7,7 @@
 
 #include "common.h"
 #include "session.h"
-#include "glfw_utils.h"
+#include "glfw.h"
 #include "shared_mutex.h"
 #include "profiler.h"
 

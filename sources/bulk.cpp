@@ -11,16 +11,13 @@
 
 #include "framework/config.h"
 #include "framework/session.h"
-#include "framework/imgui_utils.h"
+#include "framework/imgui.h"
 #include "framework/scoped_mutex.h"
 #include "framework/table.h"
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>
 #include <foundation/mutex.h>
-
-#include <imgui/imgui.h>
-#include <imgui/imgui_date_chooser.h>
 
 #include <time.h>
 

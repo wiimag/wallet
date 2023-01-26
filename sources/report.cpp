@@ -12,17 +12,14 @@
 #include "eod.h"
 
 #include "framework/session.h"
-#include "framework/imgui_utils.h"
+#include "framework/imgui.h"
 #include "framework/table.h"
 
 #include <foundation/fs.h>
 #include <foundation/uuid.h>
 #include <foundation/path.h>
 #include <foundation/thread.h>
-
-#include <imgui/imgui.h>
-#include <imgui/imgui_date_chooser.h>
-  
+ 
 #include <time.h>
 #include <algorithm>
 

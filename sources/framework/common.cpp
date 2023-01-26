@@ -25,16 +25,16 @@
 #include <stdarg.h>
 
 #if FOUNDATION_PLATFORM_WINDOWS
-#include <foundation/windows.h>
-#include <Commdlg.h>
+    #include <foundation/windows.h>
+    #include <Commdlg.h>
 
-#include <stdio.h>
-#include <fcntl.h>
-#include <io.h>
-#include <iostream>
-#include <fstream>
+    #include <stdio.h>
+    #include <fcntl.h>
+    #include <io.h>
+    #include <iostream>
+    #include <fstream>
 
-extern HWND _window_handle;
+    extern HWND _window_handle;
 #endif
 
 #include <numeric>
@@ -227,11 +227,11 @@ time_t time_now()
 
 bool time_to_local(time_t at, tm* out_tm)
 {
-#if FOUNDATION_PLATFORM_WINDOWS
+    #if FOUNDATION_PLATFORM_WINDOWS
     return localtime_s(out_tm, &at) != 0;
-#else
+    #else
     return localtime_r(&at, out_tm);
-#endif
+    #endif
 }
 
 time_t time_add_days(time_t t, int days)
@@ -406,18 +406,18 @@ string_const_t url_decode(const char* str, size_t str_length)
 
 void open_in_shell(const char* path)
 {
-#ifdef _WIN32
-    ::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT);
-#else
-#if __APPLE__
-    const char* open_executable = "open";
-#else
-    const char* open_executable = "xdg-open";
-#endif
-    char command[2048];
-    snprintf(command, 2048, "%s \"%s\"", open_executable, path);
-    system(command);
-#endif
+    #ifdef _WIN32
+        ::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT);
+    #else
+        #if __APPLE__
+            const char* open_executable = "open";
+        #else
+            const char* open_executable = "xdg-open";
+        #endif
+        char command[2048];
+        snprintf(command, 2048, "%s \"%s\"", open_executable, path);
+        system(command);
+    #endif
 }
 
 string_const_t string_format_static(const char* fmt, size_t fmt_length, ...)
@@ -494,7 +494,6 @@ string_const_t fs_clean_file_name(const char* filename, size_t filename_length)
     {
         if (string_find(STRING_ARGS(illegal_chars), c, 0) == STRING_NPOS)
             *p++ = c;
-
     }
     *p = '\0';
     return string_to_const(out_filename);
@@ -550,55 +549,55 @@ time_t string_to_date(const char* date_str, size_t date_str_length, tm* out_tm /
 }
 
 #if FOUNDATION_PLATFORM_WINDOWS
-bool open_file_dialog(const char* dialog_title, const char* extension, const char* current_file_path, function<bool(string_const_t)> selected_file_callback)
-{
-    string_t file_path_buffer = string_static_buffer(1024, true);
-    if (current_file_path != nullptr)
+    bool open_file_dialog(const char* dialog_title, const char* extension, const char* current_file_path, function<bool(string_const_t)> selected_file_callback)
     {
-        string_t file_path = string_format(STRING_ARGS(file_path_buffer), STRING_CONST("%s"), current_file_path);
-        file_path = path_clean(STRING_ARGS(file_path), file_path_buffer.length);
-        file_path = string_replace(STRING_ARGS(file_path), file_path_buffer.length,
-            STRING_CONST("/"), STRING_CONST("\\"), true);
-    }
+        string_t file_path_buffer = string_static_buffer(1024, true);
+        if (current_file_path != nullptr)
+        {
+            string_t file_path = string_format(STRING_ARGS(file_path_buffer), STRING_CONST("%s"), current_file_path);
+            file_path = path_clean(STRING_ARGS(file_path), file_path_buffer.length);
+            file_path = string_replace(STRING_ARGS(file_path), file_path_buffer.length,
+                STRING_CONST("/"), STRING_CONST("\\"), true);
+        }
 
-    OPENFILENAMEA ofn;
-    ZeroMemory(&ofn, sizeof(ofn));
-    ofn.lStructSize = sizeof(ofn);
-    ofn.hwndOwner = _window_handle;
-    ofn.lpstrFile = file_path_buffer.str;
-    ofn.nMaxFile = (DWORD)file_path_buffer.length;
-    if (extension == nullptr)
-    {
-        ofn.lpstrFilter = "All\0*.*\0";
+        OPENFILENAMEA ofn;
+        ZeroMemory(&ofn, sizeof(ofn));
+        ofn.lStructSize = sizeof(ofn);
+        ofn.hwndOwner = _window_handle;
+        ofn.lpstrFile = file_path_buffer.str;
+        ofn.nMaxFile = (DWORD)file_path_buffer.length;
+        if (extension == nullptr)
+        {
+            ofn.lpstrFilter = "All\0*.*\0";
+        }
+        else
+        {
+            char file_extensions_buffer[1024] = { '\0' };
+            string_t extension_filters = string_format(STRING_CONST_CAPACITY(file_extensions_buffer),
+                STRING_CONST("%s|All Files (*.*)|*.*"), extension);
+            extension_filters = string_replace(STRING_ARGS(extension_filters), sizeof(file_extensions_buffer),
+                STRING_CONST("|"), "\0", 1, true);
+            extension_filters.str[extension_filters.length+1] = '\0';
+            ofn.lpstrFilter = extension_filters.str;
+        }
+        ofn.nFilterIndex = 1;
+        ofn.lpstrFileTitle = NULL;
+        ofn.nMaxFileTitle = 0;
+        ofn.lpstrTitle = dialog_title;
+        ofn.lpstrInitialDir = NULL;
+        ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
+        if (GetOpenFileNameA(&ofn))
+        {
+            selected_file_callback(string_const(file_path_buffer.str, string_length(file_path_buffer.str)));
+            return true;
+        }
+        
+        return false;
     }
-    else
-    {
-        char file_extensions_buffer[1024] = { '\0' };
-        string_t extension_filters = string_format(STRING_CONST_CAPACITY(file_extensions_buffer),
-            STRING_CONST("%s|All Files (*.*)|*.*"), extension);
-        extension_filters = string_replace(STRING_ARGS(extension_filters), sizeof(file_extensions_buffer),
-            STRING_CONST("|"), "\0", 1, true);
-        extension_filters.str[extension_filters.length + 1] = '\0';
-        ofn.lpstrFilter = extension_filters.str;
-    }
-    ofn.nFilterIndex = 1;
-    ofn.lpstrFileTitle = NULL;
-    ofn.nMaxFileTitle = 0;
-    ofn.lpstrTitle = dialog_title;
-    ofn.lpstrInitialDir = NULL;
-    ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
-    if (GetOpenFileNameA(&ofn))
-    {
-        selected_file_callback(string_const(file_path_buffer.str, string_length(file_path_buffer.str)));
-        return true;
-    }
-
-    return false;
-}
 #elif FOUNDATION_PLATFORM_MACOS
-// See common.m
+    // See common.m
 #else
-#error "Not implemented"
+    #error "Not implemented"
 #endif
 
 hash_t fs_hash_file(string_t file_path)
@@ -791,13 +790,13 @@ bool path_equals(const char* a, size_t a_length, const char* b, size_t b_length)
 
 void process_debug_output(const char* output, size_t output_length /*= 0*/)
 {
-#if !BUILD_DEPLOY
-#if FOUNDATION_PLATFORM_WINDOWS
-    OutputDebugStringA(output);
-#else
-    fprintf(stdout, "%.*s", output_length ? (int)output_length : (int)string_length(output), output);
-#endif
-#endif
+    #if !BUILD_DEPLOY
+        #if FOUNDATION_PLATFORM_WINDOWS
+            OutputDebugStringA(output);
+        #else
+            fprintf(stdout, "%.*s", output_length ? (int)output_length : (int)string_length(output), output);
+        #endif
+    #endif
 }
 
 bool process_redirect_io_to_console()
@@ -914,3 +913,4 @@ string_t string_remove_line_returns(const char* str, size_t length)
     result.str[result.length] = '\0';
     return result;
 }
+

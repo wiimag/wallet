@@ -4,18 +4,16 @@
  */
 
 #include "console.h"
-#include "expr.h"
 
-#include "framework/common.h"
-#include "framework/session.h"
-#include "framework/service.h"
-#include "framework/imgui_utils.h"
-#include "framework/scoped_mutex.h"
+#include <framework/expr.h>
+#include <framework/common.h>
+#include <framework/session.h>
+#include <framework/service.h>
+#include <framework/imgui.h>
+#include <framework/scoped_mutex.h>
 
 #include <foundation/log.h>
 #include <foundation/array.h>
-
-#include <imgui/imgui.h>
 
 #include <algorithm>
 

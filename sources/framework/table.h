@@ -272,15 +272,13 @@ void table_deallocate(table_t* table);
 
 size_t table_column_count(table_t* table);
 
-void table_render(table_t* table, table_element_ptr_const_t elements, const int element_count, size_t element_size, float outer_size_x = 0.0F, float outer_size_y = 0.0F);
+void table_render(table_t* table, table_element_ptr_const_t elements, const int element_count, size_t element_size, float outer_size_x, float outer_size_y);
 
-#if 0
 template<typename T>
 void table_render(table_t* table, const T* elements, float outer_size_x = 0.0F, float outer_size_y = 0.0F)
 {
     table_render(table, elements, array_size(elements), sizeof(T), outer_size_x, outer_size_y);
 }
-#endif
 
 column_t& table_add_column(table_t* table, 
     const char* name, size_t name_length, 

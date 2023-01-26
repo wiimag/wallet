@@ -14,15 +14,13 @@
 #include "framework/function.h"
 #include "framework/session.h"
 #include "framework/scoped_string.h"
-#include "framework/imgui_utils.h"
+#include "framework/imgui.h"
 #include "framework/generics.h"
 #include "framework/scoped_mutex.h"
 #include "framework/table.h"
 
 #include <foundation/hash.h>
 #include <foundation/array.h>
-
-#include <imgui/imgui.h>
 
 struct market_report_t
 {

@@ -3,11 +3,17 @@
  * License: https://infineis.com/LICENSE
  */
 
+#include "glfw.h"
 #include "session.h"
 #include "common.h"
 
-#include <GLFW/glfw3.h>
-#include "glfw_utils.h"
+#if FOUNDATION_PLATFORM_WINDOWS
+
+    #pragma comment( lib, "glfw3.lib" )
+
+#elif FOUNDATION_PLATFORM_MACOS
+
+#endif
 
 void glfw_set_window_center(GLFWwindow* window)
 {
@@ -88,10 +94,10 @@ GLFWwindow* glfw_create_window_geometry(const char* window_title)
         glfwWindowHint(GLFW_MAXIMIZED, main_window_maximized ? GLFW_TRUE : GLFW_FALSE);
 
     float scale_x = 1.0f, scale_y = 1.0f;
-    #if FOUNDATION_PLATFORM_WINDOWS
-        glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
-    #endif
-    
+#if FOUNDATION_PLATFORM_WINDOWS
+    glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
+#endif
+
     GLFWwindow* window = glfwCreateWindow((int)(window_width / scale_x), (int)(window_height / scale_y), window_title, nullptr, nullptr);
     if (window == nullptr)
         return nullptr;
@@ -168,11 +174,11 @@ GLFWmonitor* glfw_find_window_monitor(int window_x, int window_y)
 
 bool glfw_is_window_focused(GLFWwindow* window)
 {
-    #ifdef __EMSCRIPTEN__
-        return true;
-    #else
-        return glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
-    #endif
+#ifdef __EMSCRIPTEN__
+    return true;
+#else
+    return glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
+#endif
 }
 
 bool glfw_is_any_mouse_button_down(GLFWwindow* window)

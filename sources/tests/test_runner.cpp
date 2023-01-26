@@ -7,7 +7,7 @@
 #include <framework/service.h>
 #include <framework/session.h>
 #include <framework/table.h>
-#include <framework/imgui_utils.h>
+#include <framework/imgui.h>
 
 #include <foundation/path.h>
 #include <foundation/string.h>

@@ -7,12 +7,9 @@
   
 #include "title.h"
 
-#include "framework/imgui_utils.h"
+#include "framework/imgui.h"
 
 #include <foundation/random.h>
-
-#include <imgui/imgui.h>
-#include <imgui/implot.h>
 
 #include <time.h>
 #include <algorithm>

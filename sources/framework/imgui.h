@@ -13,6 +13,8 @@
 #define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui/imgui.h>
 #include <imgui/imgui_internal.h>
+#include <imgui/imgui_date_chooser.h>
+#include <imgui/implot.h>
 
 enum ImGuiSplitterOrientation
 {
@@ -77,8 +79,6 @@ float imgui_get_font_ui_scale(float value = 1.0f);
 void imgui_set_font_ui_scale(float scale);
 
 ImRect imgui_get_available_rect();
-
-void imgui_selectable_label(const char* text, size_t text_length);
 
 namespace ImGui 
 {

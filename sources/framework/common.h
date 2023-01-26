@@ -238,7 +238,7 @@ void array_sort(T* arr, const function<bool(const T& a, const T& b)>& less_compa
     });
 }
 #else
-#define array_sort(ARRAY, EXPRESSION) std::stable_sort(ARRAY, ARRAY + array_size(ARRAY), [=](const auto& a, const auto& b){ return EXPRESSION; });
+#define array_sort(ARRAY, EXPRESSION) std::sort(ARRAY, ARRAY + array_size(ARRAY), [=](const auto& a, const auto& b){ return EXPRESSION; });
 #endif
 
 template<typename T, typename U>

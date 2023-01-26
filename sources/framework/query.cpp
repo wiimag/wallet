@@ -58,7 +58,7 @@
 #define HASH_QUERY static_hash_string("query", 5, 0x3e5d5820a8a43840)
 
 #ifndef MAX_QUERY_THREADS
-#define MAX_QUERY_THREADS 16
+#define MAX_QUERY_THREADS 8
 #endif
 
 static bool _initialized = false;

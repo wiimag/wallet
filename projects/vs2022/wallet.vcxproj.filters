@@ -94,9 +94,6 @@
     <ClInclude Include="..\..\sources\framework\string_table.h">
       <Filter>framework</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sources\framework\glfw_utils.h">
-      <Filter>framework</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sources\framework\session.h">
       <Filter>framework</Filter>
     </ClInclude>
@@ -105,9 +102,6 @@
     </ClInclude>
     <ClInclude Include="..\..\sources\pattern.h">
       <Filter>app</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sources\framework\imgui_utils.h">
-      <Filter>framework</Filter>
     </ClInclude>
     <ClInclude Include="..\..\sources\framework\jobs.h">
       <Filter>framework</Filter>
@@ -160,20 +154,23 @@
     <ClInclude Include="..\..\sources\tests\test_utils.h">
       <Filter>tests</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sources\butils.h">
-      <Filter>app</Filter>
-    </ClInclude>
-    <ClInclude Include="..\..\sources\console.h">
-      <Filter>app</Filter>
-    </ClInclude>
     <ClInclude Include="..\..\sources\events.h">
       <Filter>app</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sources\expr.h">
-      <Filter>app</Filter>
+    <ClInclude Include="..\..\sources\framework\expr.h">
+      <Filter>framework</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sources\render_pad.h">
-      <Filter>app</Filter>
+    <ClInclude Include="..\..\sources\framework\math.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\framework\console.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\framework\imgui.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\framework\glfw.h">
+      <Filter>framework</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -207,9 +204,6 @@
     <ClCompile Include="..\..\sources\framework\string_table.cpp">
       <Filter>framework</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\sources\framework\glfw_utils.cpp">
-      <Filter>framework</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\sources\framework\session.cpp">
       <Filter>framework</Filter>
     </ClCompile>
@@ -218,9 +212,6 @@
     </ClCompile>
     <ClCompile Include="..\..\sources\pattern.cpp">
       <Filter>app</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\sources\framework\imgui_utils.cpp">
-      <Filter>framework</Filter>
     </ClCompile>
     <ClCompile Include="..\..\sources\framework\jobs.cpp">
       <Filter>framework</Filter>
@@ -285,23 +276,26 @@
     <ClCompile Include="..\..\sources\tests\test_utils.cpp">
       <Filter>tests</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\sources\butils.cpp">
-      <Filter>app</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\sources\console.cpp">
-      <Filter>app</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\sources\expr.cpp">
-      <Filter>app</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\sources\expr_math.cpp">
-      <Filter>app</Filter>
-    </ClCompile>
-    <ClCompile Include="..\..\sources\render_pad.cpp">
-      <Filter>app</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\sources\report_expr.cpp">
       <Filter>app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\expr_math.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\expr.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\console.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\imgui.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\math.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\glfw.cpp">
+      <Filter>framework</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

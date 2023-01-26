@@ -8,14 +8,12 @@
 #include "common.h"
 #include "session.h"
 #include "scoped_string.h"
-#include "imgui_utils.h"
+#include "imgui.h"
 
 #include <foundation/assert.h>
 #include <foundation/math.h>
 #include <foundation/array.h>
 #include <foundation/time.h>
-
-#include <imgui/imgui.h>
 
 #include <mnyfmt.h>
 #include <time.h>
@@ -232,12 +230,12 @@ FOUNDATION_STATIC int table_qsort_cells(void* pcontext, void const* va, void con
             }
         }
     }
-    
+
+    const column_format_t format = sorting_column->format;
     const cell_t& ca = sorting_column->fetch_value(a, sorting_column);
     const cell_t& cb = sorting_column->fetch_value(b, sorting_column);
-    const column_format_t format = ca.format;
 
-    if (format_is_numeric(format))
+    if (format_is_numeric(format) || (format_is_numeric(ca.format) && format_is_numeric(cb.format)))
     {
         double sa = ca.number;
         double sb = cb.number;
@@ -253,7 +251,7 @@ FOUNDATION_STATIC int table_qsort_cells(void* pcontext, void const* va, void con
         return sort_acsending ? 1 : -1;
     }
 
-    if (format == COLUMN_FORMAT_DATE)
+    if (format == COLUMN_FORMAT_DATE || (ca.format == COLUMN_FORMAT_DATE && cb.format == COLUMN_FORMAT_DATE))
     {
         time_t sa = ca.time;
         time_t sb = cb.time;
@@ -272,7 +270,7 @@ FOUNDATION_STATIC int table_qsort_cells(void* pcontext, void const* va, void con
     else if (ca.length > 0 && cb.length == 0)
         return -1;
 
-    if (ca.text == cb.text)
+    if (ca.text == cb.text || ca.format != COLUMN_FORMAT_TEXT || cb.format != COLUMN_FORMAT_TEXT)
         return 0;
 
     return strncmp(ca.text, cb.text, min(ca.length, cb.length)) * (sort_acsending ? 1 : -1);

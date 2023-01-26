@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 equals-forty-two.com All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * Copyright 2022 Infineis Inc. All rights reserved.
+ * License: https://infineis.com/LICENSE
  */
  
 #include "settings.h"
@@ -10,9 +10,7 @@
 
 #include "framework/common.h"
 #include "framework/session.h"
-#include "framework/imgui_utils.h"
-
-#include <imgui/imgui.h>
+#include "framework/imgui.h"
 
 #define SESSION_KEY_SEARCH_TERMS "search_terms"
 #define SESSION_KEY_SEARCH_FILTER "search_filter"
