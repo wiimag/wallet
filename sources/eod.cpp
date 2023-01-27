@@ -10,6 +10,7 @@
 #include "framework/config.h"
 #include "framework/session.h"
 #include "framework/scoped_string.h"
+#include "framework/imgui.h"
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>
@@ -18,6 +19,9 @@
 // "https://eodhistoricaldata.com/api/exchange-symbol-list/TO?api_token=XYZ&fmt=json"
 
 static char EOD_KEY[32] = { '\0' };
+static const ImColor green = ImColor::HSV(150 / 360.0f, 0.4f, 0.6f);
+static const ImColor red = ImColor::HSV(356 / 360.0f, 0.42f, 0.97f); // hsv(356, 42%, 97%)
+static const ImColor gray = ImColor::HSV(155 / 360.0f, 0.05f, 0.85f); // hsv(155, 6%, 84%)
 
 static const char* ensure_key_loaded()
 {
@@ -212,4 +216,81 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
     string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
     log_debugf(0, STRING_CONST("Built query %.*s"), STRING_FORMAT(url));
     return query_execute_async_json(url.str, format, json_callback, ignore_if_queue_more_than, invalid_cache_query_after_seconds);
+}
+
+void eod_main_menu_status(GLFWwindow* window)
+{
+    extern void app_update_window_title(GLFWwindow* window);
+    
+    static bool connected = false;
+    static char eod_status[128] = "";
+    static char eod_menu_title[64] = "EOD";
+    static tick_t eod_menu_title_last_update = 0;
+    if (time_elapsed(eod_menu_title_last_update) > 60)
+    {
+        eod_menu_title_last_update = time_current();
+        eod_fetch_async("user", "", FORMAT_JSON, [](const json_object_t& json)
+        {
+            connected = true;
+            double api_calls = json["apiRequests"].as_number();
+            double api_calls_limit = json["dailyRateLimit"].as_number();
+            string_format(STRING_CONST_CAPACITY(eod_menu_title), STRING_CONST("EOD [API USAGE %.2lf %%]"), api_calls * 100 / api_calls_limit);
+
+            string_const_t name = json["name"].as_string();
+            string_const_t email = json["email"].as_string();
+            string_const_t subtype = json["subscriptionType"].as_string();
+            string_format(STRING_CONST_CAPACITY(eod_status), STRING_CONST("Name: %.*s\nEmail: %.*s\nSubscription: %.*s\nRequest: %lg/%lg"),
+                STRING_FORMAT(name), STRING_FORMAT(email), STRING_FORMAT(subtype), api_calls, api_calls_limit);
+
+            eod_menu_title_last_update = time_current();
+        });
+    }
+
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const ImVec2 window_size = ImGui::GetWindowSize();
+    const float space = ImGui::GetContentRegionAvail().x;
+    const float content_width = ImGui::CalcTextSize(eod_menu_title).x + style.FramePadding.x * 2.0f;
+    const ImVec2 status_box_size(38.0f, 38.0f);
+
+    ImGui::MoveCursor(space - content_width - status_box_size.x - style.FramePadding.x * 2.0f, 0);
+    ImGui::BeginGroup();
+    if (ImGui::BeginMenu(eod_menu_title))
+    {
+        string_t eod_key = eod_get_key();
+
+        if (ImGui::MenuItem("Refresh"))
+        {
+            eod_menu_title_last_update = 0;
+            app_update_window_title(window);
+        }
+
+        ImGui::Separator();
+        ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com"));
+        if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length,
+            ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_Password))
+        {
+            eod_save_key(eod_key);
+        }
+
+        ImGui::EndMenu();
+    }
+
+    ImGui::Dummy(status_box_size);
+    if (ImGui::IsItemHovered())
+    {
+        if (ImGui::IsMouseClicked(ImGuiMouseButton_Left, false))
+        {
+            eod_menu_title_last_update = 0;
+            app_update_window_title(window);
+        }
+        else
+            ImGui::SetTooltip("%s", eod_status);
+    }
+
+    const ImRect status_box(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
+    const ImVec2 status_box_center = status_box.GetCenter() + ImVec2(-4.0f, 4.0f);
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    draw_list->AddCircleFilled(status_box_center, status_box_size.x / 2.0f, connected ? green : gray);
+
+    ImGui::EndGroup();
 }

@@ -278,6 +278,35 @@ FOUNDATION_STATIC void profiler_menu()
 }
 
 //
+// # PUBLIC API
+//
+
+void profiler_menu_timer()
+{
+    #if !BUILD_DEPLOY && BUILD_ENABLE_PROFILE
+    {
+        static tick_t last_frame_tick = time_current();
+        tick_t elapsed_ticks = time_diff(last_frame_tick, time_current());
+
+        static unsigned index = 0;
+        static double elapsed_times[30] = { 0.0 };
+        elapsed_times[index++ % ARRAY_COUNT(elapsed_times)] = time_ticks_to_milliseconds(elapsed_ticks);
+        const double smooth_elapsed_time = math_average(elapsed_times, ARRAY_COUNT(elapsed_times));
+        const double tick_elapsed_time = main_tick_elapsed_time_ms();
+
+        char frame_time[16];
+        if (tick_elapsed_time < smooth_elapsed_time - 1)
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms"), tick_elapsed_time, smooth_elapsed_time);
+        else
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms"), tick_elapsed_time);
+
+        ImGui::MenuItem(frame_time, nullptr, nullptr, false);
+        last_frame_tick = time_current();
+    }
+    #endif
+}
+
+//
 // # SYSTEM
 //
 
