@@ -21,7 +21,7 @@
 static exchange_t* _exchanges = nullptr;
 static const exchange_t** _selected_exchanges = nullptr;
 static time_t _fetch_date = time_work_day(time_now(), -0.7);
-static tm _fetch_date_tm = *_localtime64(&_fetch_date);
+static tm _fetch_date_tm = *localtime(&_fetch_date);
 
 static mutex_t* _symbols_lock;
 static bulk_t* _symbols = nullptr;
@@ -558,7 +558,7 @@ FOUNDATION_STATIC void bulk_render()
     ImGui::SetNextItemWidth(300.0f);
     if (ImGui::DateChooser("##Date", _fetch_date_tm, "%Y-%m-%d", true))
     {
-        _fetch_date = _mktime64(&_fetch_date_tm);
+        _fetch_date = mktime(&_fetch_date_tm);
         exchanges_updated = true;
     }
 

@@ -32,7 +32,7 @@ static void report_graph_timelapse(report_t* report)
     //  - Actual value (total value + accumulated gain)
 }
 
-static void report_graph_show_transactions(report_t* report)
+void report_graph_show_transactions(report_t* report)
 {
     string_const_t report_transaction_window_title = string_format_static(STRING_CONST(ICON_MD_AUTO_GRAPH " %s Transactions"), string_table_decode(report->name));
     if (ImGui::Begin(report_transaction_window_title.str, &report->show_order_graph, ImGuiWindowFlags_NoCollapse))

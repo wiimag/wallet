@@ -4,4 +4,8 @@ if [ $# -ne 0 ] && [ $1 == "tests" ]; then
     shift
 fi
 
-xcodebuild -workspace projects/xcode/infineis.xcworkspace -scheme "infineis Release" build SYMROOT="../../build" $@
+if [ $# -ne 0 ] && [ $1 == "start" ]; then
+    shift
+fi
+
+xcodebuild -workspace projects/xcode/wallet.xcworkspace -scheme "Release" build SYMROOT="../../build" $@

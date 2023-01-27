@@ -117,7 +117,7 @@ FOUNDATION_STATIC time_t pattern_date(const pattern_t* pattern, int days)
 {
     time_t pdate = time_add_days(pattern->date, days);
     tm tm;
-    if (_localtime64_s(&tm, &pdate) != 0)
+    if (time_to_local(pdate, &tm))
         return pdate;
 
     if (tm.tm_wday == 0)
@@ -160,7 +160,7 @@ FOUNDATION_STATIC void pattern_render_info(const char* field_name, double value,
 {
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::TextWrapped(field_name);
+    ImGui::TextWrapped("%s", field_name);
 
     ImGui::TableNextColumn();
     table_cell_right_aligned_label(STRING_ARGS(string_from_currency(value, fmt)));
@@ -304,7 +304,7 @@ FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const
 
     ImGui::TableNextColumn();
     char cid[32];
-    string_format(STRING_CONST_CAPACITY(cid), STRING_CONST("##CHECK_%x"), check);
+    string_format(STRING_CONST_CAPACITY(cid), STRING_CONST("##CHECK_%lu"), (uintptr_t)check);
     if (check && ImGui::Checkbox(cid, check))
         log_infof(0, STRING_CONST("Reason %d %s"), rank, *check ? "checked" : "unchecked");
 
@@ -312,7 +312,7 @@ FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const
     ImGui::Text("%d.", rank);
 
     ImGui::TableNextColumn();
-    ImGui::TextWrapped("%.*s", text_length, text);
+    ImGui::TextWrapped("%.*s", (int)text_length, text);
 }
 
 FOUNDATION_STATIC string_const_t pattern_price(const pattern_t* pattern)
@@ -609,7 +609,7 @@ FOUNDATION_STATIC void pattern_render_graph_change_acc(pattern_t* pattern, const
         plot_context_t* c = (plot_context_t*)user_data;
         const day_result_t* history = c->history;
 
-        size_t ed_index = max(0ULL, min(idx * c->stride, c->range - 1));
+        size_t ed_index = max((size_t)0, (size_t)min(idx * c->stride, c->range - 1));
         const day_result_t* ed = &history[c->range - ed_index - 1];
         if ((ed->date/ time_one_day()) >= (c->ref/time_one_day()))
             return ImPlotPoint(DNAN, DNAN);
@@ -672,7 +672,7 @@ FOUNDATION_STATIC void pattern_render_graph_trend(const char* label, double x1, 
     }
 
     const char* tag = string_format_static_const("%s %s", label, b > 0 ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
-    ImPlot::TagY(a + b * (x_axis_inverted ? x2 : x1), pc, tag);
+    ImPlot::TagY(a + b * (x_axis_inverted ? x2 : x1), pc, "%s", tag);
     ImPlot::PlotLine(tag, range, trend, ARRAY_COUNT(trend), ImPlotLineFlags_NoClip);
 
     ImPlot::Annotation(x_axis_inverted ? x1 : x2, x_axis_inverted ? trend[0] : trend[1], ImVec4(0.3f, 0.3f, 0.5f, 1.0f),
@@ -691,7 +691,7 @@ FOUNDATION_STATIC void pattern_render_trend(const char* label, const plot_contex
 
 FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool x_axis_inverted)
 {
-    plot_context_t c{ pattern->date, min(4096ULL, s->history_count), offset, s->history };
+    plot_context_t c{ pattern->date, min((size_t)4096, s->history_count), offset, s->history };
     c.acc = pattern->range;
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG(label, [](int idx, void* user_data)->ImPlotPoint
@@ -723,7 +723,7 @@ FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern
 
 FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stock_t* s, ImAxis y_axis, bool x_axis_inverted)
 {
-    plot_context_t c{ pattern->date, min(4096ULL, s->history_count), 1, s->history };
+    plot_context_t c{ pattern->date, min(size_t(4096), s->history_count), 1, s->history };
     c.acc = pattern->range;
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG("Price", [](int idx, void* user_data)->ImPlotPoint
@@ -1056,7 +1056,6 @@ FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
         double total_match = 0;
         static double average_match = 0;
 
-        int matches = 0;
         int ref_matches = 0;
         ImGuiListClipper clipper;
         clipper.Begin(symbol_count);

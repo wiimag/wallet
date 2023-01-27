@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-               BuildableName = "Infineis.app"
-               BlueprintName = "infineis"
-               ReferencedContainer = "container:infineis.xcodeproj">
+               BuildableName = "Wallet.app"
+               BlueprintName = "wallet"
+               ReferencedContainer = "container:wallet.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -31,9 +31,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-            BuildableName = "Infineis.app"
-            BlueprintName = "infineis"
-            ReferencedContainer = "container:infineis.xcodeproj">
+            BuildableName = "Wallet.app"
+            BlueprintName = "wallet"
+            ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-            BuildableName = "Infineis.app"
-            BlueprintName = "infineis"
-            ReferencedContainer = "container:infineis.xcodeproj">
+            BuildableName = "Wallet.app"
+            BlueprintName = "wallet"
+            ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -73,9 +73,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-            BuildableName = "Infineis.app"
-            BlueprintName = "infineis"
-            ReferencedContainer = "container:infineis.xcodeproj">
+            BuildableName = "Wallet.app"
+            BlueprintName = "wallet"
+            ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

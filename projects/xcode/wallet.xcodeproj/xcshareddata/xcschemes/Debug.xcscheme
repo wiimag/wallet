@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-               BuildableName = "Infineis.app"
-               BlueprintName = "infineis"
-               ReferencedContainer = "container:infineis.xcodeproj">
+               BuildableName = "Wallet.app"
+               BlueprintName = "wallet"
+               ReferencedContainer = "container:wallet.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -31,9 +31,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-            BuildableName = "Infineis.app"
-            BlueprintName = "infineis"
-            ReferencedContainer = "container:infineis.xcodeproj">
+            BuildableName = "Wallet.app"
+            BlueprintName = "wallet"
+            ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
@@ -45,7 +45,7 @@
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "/Users/jonathans/work/infineis/build"
+      customWorkingDirectory = "/Users/jonathans/work/wallet/build"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
@@ -57,9 +57,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-            BuildableName = "Infineis.app"
-            BlueprintName = "infineis"
-            ReferencedContainer = "container:infineis.xcodeproj">
+            BuildableName = "Wallet.app"
+            BlueprintName = "wallet"
+            ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -75,9 +75,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-            BuildableName = "Infineis.app"
-            BlueprintName = "infineis"
-            ReferencedContainer = "container:infineis.xcodeproj">
+            BuildableName = "Wallet.app"
+            BlueprintName = "wallet"
+            ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

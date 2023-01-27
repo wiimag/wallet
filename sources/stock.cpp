@@ -36,7 +36,7 @@ struct technical_descriptor_t
     uint8_t field_offsets[4];
 };
 
-static volatile size_t _db_capacity;
+static size_t _db_capacity;
 static mutex_t* _db_lock = nullptr;
 static day_result_t** _trashed_history = nullptr;
 static stock_t* _db_stocks = nullptr;
@@ -49,7 +49,7 @@ FOUNDATION_STATIC void stock_grow_db()
     hashtable64_t* old_table = _db_hashes;
     if (auto lock = scoped_mutex_t(_db_lock))
     {
-        _db_capacity *= 2;
+        _db_capacity *= size_t(2);
         hashtable64_t* new_hash_table = hashtable64_allocate(_db_capacity);
         for (int i = 1, end = array_size(_db_stocks); i < end; ++i)
             hashtable64_set(new_hash_table, _db_stocks[i].id, i);
@@ -587,7 +587,7 @@ double stock_exchange_rate(const char* from, size_t from_length, const char* to,
         return 1.0;
 
     char exchange_code[32];
-    string_t exg = string_format(exchange_code, sizeof(exchange_code), STRING_CONST("%.*s%.*s.FOREX"), from_length, from, to_length, to);
+    string_t exg = string_format(exchange_code, sizeof(exchange_code), STRING_CONST("%.*s%.*s.FOREX"), (int)from_length, from, (int)to_length, to);
     const hash_t exchange_hash = string_hash(STRING_ARGS(exg)) + at;
 
     double rate = 1;
