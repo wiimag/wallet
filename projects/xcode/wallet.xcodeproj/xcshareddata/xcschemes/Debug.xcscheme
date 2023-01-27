@@ -15,7 +15,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-               BuildableName = "Infineis.app"
+               BuildableName = "Wallet.app"
                BlueprintName = "wallet"
                ReferencedContainer = "container:wallet.xcodeproj">
             </BuildableReference>
@@ -31,7 +31,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-            BuildableName = "Infineis.app"
+            BuildableName = "Wallet.app"
             BlueprintName = "wallet"
             ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
@@ -57,7 +57,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-            BuildableName = "Infineis.app"
+            BuildableName = "Wallet.app"
             BlueprintName = "wallet"
             ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
@@ -75,7 +75,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
-            BuildableName = "Infineis.app"
+            BuildableName = "Wallet.app"
             BlueprintName = "wallet"
             ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
