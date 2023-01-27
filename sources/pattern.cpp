@@ -5,14 +5,15 @@
  
 #include "pattern.h"
  
-#include "settings.h"
 #include "eod.h"
+#include "settings.h"
 
 #include <framework/jobs.h>
 #include <framework/session.h>
 #include <framework/imgui.h>
 #include <framework/table.h>
 #include <framework/service.h>
+#include <framework/tabs.h>
 
 #include <algorithm>
 
@@ -2090,6 +2091,29 @@ FOUNDATION_STATIC void pattern_save(config_handle_t pattern_data, const pattern_
     }
 }
 
+FOUNDATION_STATIC void pattern_render_tabs()
+{
+    constexpr static const ImVec4 TAB_COLOR_PATTERN(0.2f, 0.4f, 0.5f, 1.0f);
+    
+    // Load all active patterns
+    tab_set_color(TAB_COLOR_PATTERN);
+    size_t pattern_count = ::pattern_count();
+    for (int handle = 0; handle < pattern_count; ++handle)
+    {
+        pattern_t* pattern = pattern_get(handle);
+        if (pattern->opened)
+        {
+            string_const_t code = string_table_decode_const(pattern->code);
+            string_const_t tab_id = string_format_static(STRING_CONST(ICON_MD_INSIGHTS " %.*s"), STRING_FORMAT(code));
+            tab_draw(tab_id.str, &(pattern->opened), L0(pattern_render(handle)), L0(pattern_menu(handle)));
+        }
+    }
+}
+
+//
+// # SYSTEM
+//
+
 FOUNDATION_STATIC void pattern_initialize()
 {
     if (_patterns == nullptr)
@@ -2108,6 +2132,8 @@ FOUNDATION_STATIC void pattern_initialize()
 
         config_deallocate(patterns_data);
     }
+
+    service_register_tabs(HASH_PATTERN, pattern_render_tabs);
 }
 
 FOUNDATION_STATIC void pattern_shutdown()

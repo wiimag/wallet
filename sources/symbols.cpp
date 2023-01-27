@@ -21,6 +21,7 @@
 #include <framework/scoped_mutex.h>
 #include <framework/table.h>
 #include <framework/service.h>
+#include <framework/tabs.h>
 
 #include <foundation/hash.h>
 #include <foundation/array.h>
@@ -631,6 +632,41 @@ void symbols_render_search(const function<void(string_const_t)>& selector /*= nu
         ImGui::TextUnformatted("No search query");
 }
 
+FOUNDATION_STATIC void symbols_render_menus()
+{
+    if (!ImGui::BeginMenuBar())
+        return;
+    
+    if (ImGui::BeginMenu("Symbols"))
+    {
+        ImGui::MenuItem("Indexes", nullptr, &SETTINGS.show_symbols_INDX);
+        ImGui::MenuItem("Last Day", nullptr, &SETTINGS.show_bulk_eod);
+
+        ImGui::Separator();
+        ImGui::MenuItem("TO Symbols", nullptr, &SETTINGS.show_symbols_TO);
+        ImGui::MenuItem("CVE Symbols", nullptr, &SETTINGS.show_symbols_CVE);
+        ImGui::MenuItem("NEO Symbols", nullptr, &SETTINGS.show_symbols_NEO);
+        ImGui::MenuItem("US Symbols", nullptr, &SETTINGS.show_symbols_US);
+        ImGui::EndMenu();
+    }
+
+    ImGui::EndMenuBar();
+}
+
+FOUNDATION_STATIC void symbols_render_tabs()
+{
+    static const ImVec4 TAB_COLOR_SYMBOLS(0.6f, 0.2f, 0.5f, 1.0f);
+    
+    tab_set_color(TAB_COLOR_SYMBOLS);
+    if (SETTINGS.show_symbols_TO) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (TO)", &SETTINGS.show_symbols_TO, L0(symbols_render("TO")));
+    if (SETTINGS.show_symbols_CVE) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (CVE)", &SETTINGS.show_symbols_CVE, L0(symbols_render("V")));
+    if (SETTINGS.show_symbols_NEO) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (NEO)", &SETTINGS.show_symbols_NEO, L0(symbols_render("NEO")));
+    if (SETTINGS.show_symbols_US) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (US)", &SETTINGS.show_symbols_US, L0(symbols_render("US")));
+    if (SETTINGS.show_symbols_INDX) tab_draw(ICON_MD_TRENDING_UP " Indexes", &SETTINGS.show_symbols_INDX, L0(symbols_render("INDX", false)));
+
+    tab_draw(ICON_MD_MANAGE_SEARCH " Search ", nullptr, ImGuiTabItemFlags_Trailing, []() { symbols_render_search(nullptr); }, nullptr);
+}
+
 //
 // # SYSTEM
 //
@@ -639,6 +675,9 @@ FOUNDATION_STATIC void symbols_initialize()
 {
     _symbols_lock = mutex_allocate(STRING_CONST("Symbols"));
     array_reserve(_markets, 1);
+
+    service_register_tabs(HASH_SYMBOLS, symbols_render_tabs);
+    service_register_menu(HASH_SYMBOLS, symbols_render_menus);
 }
 
 FOUNDATION_STATIC void symbols_shutdown()

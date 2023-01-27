@@ -2,7 +2,7 @@
  * Copyright 2022-2023 equals-forty-two.com All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
- 
+
 #include "bulk.h"
 
 #include "eod.h"
@@ -14,6 +14,7 @@
 #include <framework/scoped_mutex.h>
 #include <framework/table.h>
 #include <framework/service.h>
+#include <framework/tabs.h>
 
 #define HASH_BULK static_hash_string("bulk", 4, 0x9a6818bbbd28c09eULL)
 
@@ -54,15 +55,15 @@ FOUNDATION_STATIC void bulk_fetch_exchange_list(const json_object_t& json)
         exchanges = array_push(exchanges, ex);
     }
 
-    #if 0
+#if 0
     // Add some missing markets
     exchanges = array_push(exchanges, (exchange_t{
         string_table_encode("Toronto Venture"), // Name
         string_table_encode("V"),	            // Code
         string_table_encode("Canada"),          // Country
         string_table_encode("CAD"),             // Currency
-    }));
-    #endif
+        }));
+#endif
 
     if (_exchanges)
         array_deallocate(_exchanges);
@@ -151,7 +152,7 @@ FOUNDATION_STATIC void bulk_load_symbols()
     {
         const exchange_t* ex = _selected_exchanges[i];
         const char* code = string_table_decode(ex->code);
-        if (!eod_fetch_async("eod-bulk-last-day", code, FORMAT_JSON_CACHE, 
+        if (!eod_fetch_async("eod-bulk-last-day", code, FORMAT_JSON_CACHE,
             "date", string_from_date(_fetch_date).str,
             "filter", "extended", bulk_fetch_exchange_symbols, 12 * 60 * 60ULL))
         {
@@ -168,7 +169,7 @@ FOUNDATION_STATIC string_const_t bulk_get_symbol_code(const bulk_t* b)
 FOUNDATION_STATIC cell_t bulk_column_symbol_code(table_element_ptr_t element, const column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
-    return bulk_get_symbol_code(b); 
+    return bulk_get_symbol_code(b);
 }
 
 FOUNDATION_STATIC cell_t bulk_column_symbol_name(table_element_ptr_t element, const column_t* column)
@@ -541,11 +542,7 @@ FOUNDATION_STATIC bool bulk_render_exchange_selector()
     return updated;
 }
 
-//
-// # SYSTEM
-//
-
-void bulk_render()
+FOUNDATION_STATIC void bulk_render()
 {
     if (_exchanges == nullptr)
         bulk_initialize_exchanges();
@@ -554,9 +551,9 @@ void bulk_render()
     ImGui::BeginGroup();
     ImGui::MoveCursor(0, -2);
     ImGui::TextUnformatted("Exchanges");
-        
-    bool exchanges_updated = bulk_render_exchange_selector();	
-    
+
+    bool exchanges_updated = bulk_render_exchange_selector();
+
     ImGui::MoveCursor(0, -2, true);
     ImGui::SetNextItemWidth(300.0f);
     if (ImGui::DateChooser("##Date", _fetch_date_tm, "%Y-%m-%d", true))
@@ -595,6 +592,13 @@ void bulk_render()
     }
 }
 
+FOUNDATION_STATIC void bulk_render_tabs()
+{
+    tab_set_color(TAB_COLOR_OTHER);
+    if (SETTINGS.show_bulk_eod)
+        tab_draw(ICON_MD_BATCH_PREDICTION " Last Day", &SETTINGS.show_bulk_eod, bulk_render);
+}
+
 // 
 // # SYSTEM
 //
@@ -602,6 +606,8 @@ void bulk_render()
 FOUNDATION_STATIC void bulk_initialize()
 {
     _symbols_lock = mutex_allocate(STRING_CONST("BulkLock"));
+
+    service_register_tabs(HASH_BULK, bulk_render_tabs);
 }
 
 FOUNDATION_STATIC void bulk_shutdown()
@@ -610,15 +616,15 @@ FOUNDATION_STATIC void bulk_shutdown()
     {
         string_const_t selected_exchanges_file_path = session_get_user_file_path(STRING_CONST("exchanges.json"));
         config_write_file(selected_exchanges_file_path, [](config_handle_t selected_exchange_data)
-        {
-            const size_t selected_exchange_count = array_size(_selected_exchanges);
-            for (int i = 0; i < selected_exchange_count; ++i)
             {
-                const exchange_t* ex = _selected_exchanges[i];
-                config_array_push(selected_exchange_data, STRING_ARGS(string_table_decode_const(ex->code)));
-            }
-            return true;
-        }, CONFIG_VALUE_ARRAY);
+                const size_t selected_exchange_count = array_size(_selected_exchanges);
+                for (int i = 0; i < selected_exchange_count; ++i)
+                {
+                    const exchange_t* ex = _selected_exchanges[i];
+                    config_array_push(selected_exchange_data, STRING_ARGS(string_table_decode_const(ex->code)));
+                }
+                return true;
+            }, CONFIG_VALUE_ARRAY);
     }
 
     table_deallocate(_symbols_table);

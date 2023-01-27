@@ -15,6 +15,7 @@
 #include <framework/session.h>
 #include <framework/table.h>
 #include <framework/service.h>
+#include <framework/tabs.h>
 
 #include <foundation/fs.h>
 #include <foundation/uuid.h>
@@ -1602,6 +1603,82 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
     return report->id;
 }
 
+FOUNDATION_STATIC void report_render_windows()
+{
+    report_render_create_dialog(&SETTINGS.show_create_report_ui);
+}
+
+FOUNDATION_STATIC void report_render_menus()
+{
+    if (!ImGui::BeginMenuBar())
+        return;
+        
+    if (ImGui::BeginMenu("File"))
+    {
+        if (ImGui::BeginMenu("Create"))
+        {
+            if (ImGui::MenuItem("Report", "F2", &SETTINGS.show_create_report_ui))
+                SETTINGS.show_create_report_ui = true;
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::BeginMenu("Open"))
+        {
+            if (ImGui::MenuItem("Report...", nullptr, nullptr))
+                log_warnf(0, WARNING_UNSUPPORTED, STRING_CONST("TODO"));
+
+            bool first_report_that_can_be_opened = true;
+            size_t report_count = ::report_count();
+            for (int handle = 0; handle < report_count; ++handle)
+            {
+                report_t* report = report_get_at(handle);
+                if (!report->opened)
+                {
+                    if (first_report_that_can_be_opened)
+                    {
+                        ImGui::Separator();
+                        first_report_that_can_be_opened = false;
+                    }
+                    ImGui::MenuItem(
+                        string_format_static_const("%s", string_table_decode(report->name)),
+                        nullptr, &report->opened);
+                }
+            }
+
+            ImGui::EndMenu();
+        }
+            
+        ImGui::EndMenu();
+    }
+
+    ImGui::EndMenuBar();
+}
+
+FOUNDATION_STATIC void report_render_tabs()
+{
+    static const ImVec4 TAB_COLOR_REPORT(0.4f, 0.2f, 0.7f, 1.0f);
+
+    tab_set_color(TAB_COLOR_APP);
+    tab_draw(ICON_MD_WALLET " Wallet ", nullptr, ImGuiTabItemFlags_Leading, wallet_history_draw, nullptr);
+
+    tab_set_color(TAB_COLOR_REPORT);
+    size_t report_count = ::report_count();
+    for (int handle = 0; handle < report_count; ++handle)
+    {
+        report_t* report = report_get_at(handle);
+        if (report->opened)
+        {
+            string_const_t id = string_from_uuid_static(report->id);
+            string_const_t name = string_table_decode_const(report->name);
+            string_const_t report_tab_id = string_format_static(STRING_CONST(ICON_MD_WALLET " %.*s###%.*s"), STRING_FORMAT(name), STRING_FORMAT(id));
+            report->save_index = ImGui::GetTabItemVisibleIndex(report_tab_id.str);
+
+            tab_draw(report_tab_id.str, &report->opened, (report->dirty ? ImGuiTabItemFlags_UnsavedDocument : ImGuiTabItemFlags_None),
+                L0(report_render(report)), L0(report_menu(report)));
+        }
+    }
+}
+
 // 
 // # PUBLIC API
 //
@@ -2043,9 +2120,13 @@ FOUNDATION_STATIC void report_initialize()
         string_t report_path = path_concat(STRING_CONST_CAPACITY(report_path_buffer), STRING_ARGS(report_dir_path), STRING_ARGS(e));
         report_load(string_to_const(report_path));
     }
+    string_array_deallocate(paths);
 
     report_sort_order();
-    string_array_deallocate(paths);
+
+    service_register_tabs(HASH_REPORT, report_render_tabs);
+    service_register_menu(HASH_REPORT, report_render_menus);
+    service_register_window(HASH_REPORT, report_render_windows);
 }
 
 FOUNDATION_STATIC void report_shutdown()

@@ -47,5 +47,3 @@ struct bulk_t
     bool selected{ false };
     double_option_t today_cap{ NAN };
 };
-
-void bulk_render();
