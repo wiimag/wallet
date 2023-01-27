@@ -12,6 +12,10 @@
 *.txt   text
 *.vsc   text
 *.fsc   text
+*.h   text
+*.c   text
+*.cpp   text
+*.mm   text
 *.java  text diff=java
 *.xml   text diff=xml
 *.json text eol=lf
