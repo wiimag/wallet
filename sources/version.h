@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Copyright 2022-2023 Infineis Inc. All rights reserved.
  * License: https://infineis.com/LICENSE
  */
@@ -33,7 +33,7 @@
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR                   9
-#define VERSION_PATCH                   13
+#define VERSION_PATCH                   14
 #define VERSION_BUILD GIT_REVCOUNT
 
 #define PRODUCT_VERSION STRINGIZE(VERSION_MAJOR.VERSION_MINOR.VERSION_PATCH)
