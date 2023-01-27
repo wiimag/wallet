@@ -16,14 +16,14 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
                BuildableName = "Infineis.app"
-               BlueprintName = "infineis"
-               ReferencedContainer = "container:infineis.xcodeproj">
+               BlueprintName = "wallet"
+               ReferencedContainer = "container:wallet.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
    </BuildAction>
    <TestAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES">
@@ -32,23 +32,25 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
             BuildableName = "Infineis.app"
-            BlueprintName = "infineis"
-            ReferencedContainer = "container:infineis.xcodeproj">
+            BlueprintName = "wallet"
+            ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
       <Testables>
       </Testables>
    </TestAction>
    <LaunchAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       launchStyle = "0"
       useCustomWorkingDirectory = "YES"
-      customWorkingDirectory = "$PROJECT_DIR/../../build"
+      customWorkingDirectory = "/Users/jonathans/work/infineis/build"
       ignoresPersistentStateOnLaunch = "NO"
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
+      enableGPUFrameCaptureMode = "3"
+      enableGPUValidationMode = "1"
       allowLocationSimulation = "YES">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
@@ -56,13 +58,13 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
             BuildableName = "Infineis.app"
-            BlueprintName = "infineis"
-            ReferencedContainer = "container:infineis.xcodeproj">
+            BlueprintName = "wallet"
+            ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
    <ProfileAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       shouldUseLaunchSchemeArgsEnv = "YES"
       savedToolIdentifier = ""
       useCustomWorkingDirectory = "YES"
@@ -74,16 +76,16 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "22C6FE090E5588D3B7739CCE"
             BuildableName = "Infineis.app"
-            BlueprintName = "infineis"
-            ReferencedContainer = "container:infineis.xcodeproj">
+            BlueprintName = "wallet"
+            ReferencedContainer = "container:wallet.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
    <AnalyzeAction
-      buildConfiguration = "Release">
+      buildConfiguration = "Debug">
    </AnalyzeAction>
    <ArchiveAction
-      buildConfiguration = "Release"
+      buildConfiguration = "Debug"
       revealArchiveInOrganizer = "YES">
    </ArchiveAction>
 </Scheme>

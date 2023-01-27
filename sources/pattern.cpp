@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2022-2023 equals-forty-two.com All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
@@ -117,7 +117,7 @@ FOUNDATION_STATIC time_t pattern_date(const pattern_t* pattern, int days)
 {
     time_t pdate = time_add_days(pattern->date, days);
     tm tm;
-    if (_localtime64_s(&tm, &pdate) != 0)
+    if (time_to_local(pdate, &tm))
         return pdate;
 
     if (tm.tm_wday == 0)
@@ -160,7 +160,7 @@ FOUNDATION_STATIC void pattern_render_info(const char* field_name, double value,
 {
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::TextWrapped(field_name);
+    ImGui::TextWrapped("%s", field_name);
 
     ImGui::TableNextColumn();
     table_cell_right_aligned_label(STRING_ARGS(string_from_currency(value, fmt)));
@@ -304,7 +304,7 @@ FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const
 
     ImGui::TableNextColumn();
     char cid[32];
-    string_format(STRING_CONST_CAPACITY(cid), STRING_CONST("##CHECK_%x"), check);
+    string_format(STRING_CONST_CAPACITY(cid), STRING_CONST("##CHECK_%lu"), (uintptr_t)check);
     if (check && ImGui::Checkbox(cid, check))
         log_infof(0, STRING_CONST("Reason %d %s"), rank, *check ? "checked" : "unchecked");
 
@@ -312,7 +312,7 @@ FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const
     ImGui::Text("%d.", rank);
 
     ImGui::TableNextColumn();
-    ImGui::TextWrapped("%.*s", text_length, text);
+    ImGui::TextWrapped("%.*s", (int)text_length, text);
 }
 
 FOUNDATION_STATIC string_const_t pattern_price(const pattern_t* pattern)
@@ -609,7 +609,7 @@ FOUNDATION_STATIC void pattern_render_graph_change_acc(pattern_t* pattern, const
         plot_context_t* c = (plot_context_t*)user_data;
         const day_result_t* history = c->history;
 
-        size_t ed_index = max(0ULL, min(idx * c->stride, c->range - 1));
+        size_t ed_index = max(0UL, (size_t)min(idx * c->stride, c->range - 1));
         const day_result_t* ed = &history[c->range - ed_index - 1];
         if ((ed->date/ time_one_day()) >= (c->ref/time_one_day()))
             return ImPlotPoint(DNAN, DNAN);
@@ -691,7 +691,7 @@ FOUNDATION_STATIC void pattern_render_trend(const char* label, const plot_contex
 
 FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool x_axis_inverted)
 {
-    plot_context_t c{ pattern->date, min(4096ULL, s->history_count), offset, s->history };
+    plot_context_t c{ pattern->date, min(4096UL, s->history_count), offset, s->history };
     c.acc = pattern->range;
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG(label, [](int idx, void* user_data)->ImPlotPoint

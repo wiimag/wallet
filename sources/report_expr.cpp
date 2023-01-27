@@ -58,8 +58,8 @@ struct dynamic_report_t
 
 #define HASH_REPORT_EXPRESSION static_hash_string("report_expression", 17, 0x6eb03c48b763689fULL)
 
-#define IS_NOT_A_NUMBER L1(math_real_is_nan(_1.as_number()))
-#define EVAL_STOCK_FIELD(field_name) FOUNDATION_PREPROCESSOR_TOSTRING(field_name), L2(_2->field_name), IS_NOT_A_NUMBER, FetchLevel::FUNDAMENTALS
+#define IS_NOT_A_NUMBER SL1(math_real_is_nan(_1.as_number()))
+#define EVAL_STOCK_FIELD(field_name) FOUNDATION_PREPROCESSOR_TOSTRING(field_name), SL2(_2->field_name), IS_NOT_A_NUMBER, FetchLevel::FUNDAMENTALS
 
 static struct {
     const char* property_name;
@@ -67,52 +67,52 @@ static struct {
     function<bool(const expr_result_t& v)> filter_out;
     FetchLevel required_level{ FetchLevel::NONE };
 } report_field_property_evalutors[] = {
-    { "sold",  L2(_1->average_quantity ? false : true), L1(_1.as_number() == 0) },
-    { "active",  L2(_1->average_quantity ? true : false), L1(_1.as_number() == 0) },
-    { "qty",  L2(_1->average_quantity), L1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
-    { "buy",  L2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
-    { "day",  L2(title_get_day_change(_1, _2)), IS_NOT_A_NUMBER },
+    { "sold",  SL2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0) },
+    { "active",  SL2(_1->average_quantity ? true : false), SL1(_1.as_number() == 0) },
+    { "qty",  SL2(_1->average_quantity), SL1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
+    { "buy",  SL2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
+    { "day",  SL2(title_get_day_change(_1, _2)), IS_NOT_A_NUMBER },
 
-    { "title",  L2(_1->code), L1(_1.index == 0) },
-    { "ps",  L2(_1->ps.fetch()), IS_NOT_A_NUMBER },
-    { "ask",  L2(_1->ask_price.fetch()), nullptr },
+    { "title",  SL2(_1->code), SL1(_1.index == 0) },
+    { "ps",  SL2(_1->ps.fetch()), IS_NOT_A_NUMBER },
+    { "ask",  SL2(_1->ask_price.fetch()), nullptr },
 
-    { "price",  L2(_2->current.close), nullptr },
-    { "date",  L2((double)_2->current.date), nullptr },
-    { "gmt",  L2((double)_2->current.gmtoffset), nullptr},
-    { "open",  L2(_2->current.open), nullptr },
-    { "close",  L2(_2->current.close), nullptr },
-    { "previous_close",  L2(_2->current.previous_close), nullptr},
-    { "low",  L2(_2->current.low), nullptr },
-    { "high",  L2(_2->current.high), nullptr },
-    { "change",  L2(_2->current.change), IS_NOT_A_NUMBER },
-    { "change_p",  L2(_2->current.change_p), IS_NOT_A_NUMBER },
-    { "volume",  L2(_2->current.volume), nullptr },
+    { "price",  SL2(_2->current.close), nullptr },
+    { "date",  SL2((double)_2->current.date), nullptr },
+    { "gmt",  SL2((double)_2->current.gmtoffset), nullptr},
+    { "open",  SL2(_2->current.open), nullptr },
+    { "close",  SL2(_2->current.close), nullptr },
+    { "previous_close",  SL2(_2->current.previous_close), nullptr},
+    { "low",  SL2(_2->current.low), nullptr },
+    { "high",  SL2(_2->current.high), nullptr },
+    { "change",  SL2(_2->current.change), IS_NOT_A_NUMBER },
+    { "change_p",  SL2(_2->current.change_p), IS_NOT_A_NUMBER },
+    { "volume",  SL2(_2->current.volume), nullptr },
 
-    { "price_factor",  L2(_2->current.price_factor), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
-    { "change_p_high",  L2(_2->current.change_p_high), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
+    { "price_factor",  SL2(_2->current.price_factor), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
+    { "change_p_high",  SL2(_2->current.change_p_high), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
 
-    { "wma",  L2(_2->current.wma), nullptr, FetchLevel::TECHNICAL_WMA },
-    { "ema",  L2(_2->current.ema), nullptr, FetchLevel::TECHNICAL_EMA },
-    { "sma",  L2(_2->current.sma), nullptr, FetchLevel::TECHNICAL_SMA },
-    { "uband",  L2(_2->current.uband), nullptr, FetchLevel::TECHNICAL_BBANDS },
-    { "mband",  L2(_2->current.mband), nullptr, FetchLevel::TECHNICAL_BBANDS },
-    { "lband",  L2(_2->current.lband), nullptr, FetchLevel::TECHNICAL_BBANDS },
-    { "sar",  L2(_2->current.sar), nullptr, FetchLevel::TECHNICAL_SAR },
-    { "slope",  L2(_2->current.slope), nullptr, FetchLevel::TECHNICAL_SLOPE },
-    { "cci",  L2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
+    { "wma",  SL2(_2->current.wma), nullptr, FetchLevel::TECHNICAL_WMA },
+    { "ema",  SL2(_2->current.ema), nullptr, FetchLevel::TECHNICAL_EMA },
+    { "sma",  SL2(_2->current.sma), nullptr, FetchLevel::TECHNICAL_SMA },
+    { "uband",  SL2(_2->current.uband), nullptr, FetchLevel::TECHNICAL_BBANDS },
+    { "mband",  SL2(_2->current.mband), nullptr, FetchLevel::TECHNICAL_BBANDS },
+    { "lband",  SL2(_2->current.lband), nullptr, FetchLevel::TECHNICAL_BBANDS },
+    { "sar",  SL2(_2->current.sar), nullptr, FetchLevel::TECHNICAL_SAR },
+    { "slope",  SL2(_2->current.slope), nullptr, FetchLevel::TECHNICAL_SLOPE },
+    { "cci",  SL2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
 
-    { "dividends",  L2(_2->dividends_yield.fetch()), nullptr },
+    { "dividends",  SL2(_2->dividends_yield.fetch()), nullptr },
 
-    { "name",  L2(string_table_decode(_2->name)), L1(_1.index == 0)},
-    { "description",  L2(string_table_decode(_2->description.fetch())), nullptr},
-    { "country",  L2(string_table_decode(_2->country)), L1(_1.index == 0)},
-    { "type",  L2(string_table_decode(_2->type)), L1(_1.index == 0)},
-    { "currency",  L2(string_table_decode(_2->currency)), L1(_1.index == 0)},
-    { "url",  L2(string_table_decode(_2->url)), L1(_1.index == 0)},
-    { "updated_at",  L2(string_table_decode(_2->updated_at)), L1(_1.index == 0)},
-    { "exchange",  L2(string_table_decode(_2->exchange)), L1(_1.index == 0)},
-    { "symbol",  L2(string_table_decode(_2->symbol)), L1(_1.index == 0)},
+    { "name",  SL2(string_table_decode(_2->name)), SL1(_1.index == 0)},
+    { "description",  SL2(string_table_decode(_2->description.fetch())), nullptr},
+    { "country",  SL2(string_table_decode(_2->country)), SL1(_1.index == 0)},
+    { "type",  SL2(string_table_decode(_2->type)), SL1(_1.index == 0)},
+    { "currency",  SL2(string_table_decode(_2->currency)), SL1(_1.index == 0)},
+    { "url",  SL2(string_table_decode(_2->url)), SL1(_1.index == 0)},
+    { "updated_at",  SL2(string_table_decode(_2->updated_at)), SL1(_1.index == 0)},
+    { "exchange",  SL2(string_table_decode(_2->exchange)), SL1(_1.index == 0)},
+    { "symbol",  SL2(string_table_decode(_2->symbol)), SL1(_1.index == 0)},
 
     { EVAL_STOCK_FIELD(shares_count) },
     { EVAL_STOCK_FIELD(low_52) },
