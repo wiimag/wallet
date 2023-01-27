@@ -610,8 +610,8 @@ double stock_exchange_rate(const char* from, size_t from_length, const char* to,
             if (!string_is_null(from_date_str))
             {
                 string_const_t to_date_str = string_from_date(at);
-                string_const_t eod_url = eod_build_url("eod", exchange_code, FORMAT_JSON_CACHE, 3, "from", from_date_str.str, "to", to_date_str.str, "order", "d");
-                query_execute_json(eod_url.str, FORMAT_JSON_CACHE, [eod_url, &rate](const auto& json)
+                const char* eod_url = eod_build_url("eod", FORMAT_JSON_CACHE, "%s?from=%.*s&to=%.*s&order=d", exchange_code, STRING_FORMAT(from_date_str), STRING_FORMAT(to_date_str));
+                query_execute_json(eod_url, FORMAT_JSON_CACHE, [eod_url, &rate](const auto& json)
                 {
                     if (json.root == nullptr)
                         return;
@@ -623,7 +623,7 @@ double stock_exchange_rate(const char* from, size_t from_length, const char* to,
                     }
                     else
                     {
-                        log_warnf(HASH_STOCK, WARNING_SUSPICIOUS, STRING_CONST("Failed to get exchange rate with %.*s"), STRING_FORMAT(eod_url));
+                        log_warnf(HASH_STOCK, WARNING_SUSPICIOUS, STRING_CONST("Failed to get exchange rate with %s"), eod_url);
                     }
                 }, 48 * 60 * 60ULL);
             }

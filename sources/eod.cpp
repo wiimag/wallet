@@ -5,12 +5,12 @@
 
  #include "eod.h"
 
-#include "framework/common.h"
-#include "framework/query.h"
-#include "framework/config.h"
-#include "framework/session.h"
-#include "framework/scoped_string.h"
-#include "framework/imgui.h"
+#include <framework/common.h>
+#include <framework/query.h>
+#include <framework/config.h>
+#include <framework/session.h>
+#include <framework/scoped_string.h>
+#include <framework/imgui.h>
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>
@@ -23,7 +23,7 @@ static const ImColor green = ImColor::HSV(150 / 360.0f, 0.4f, 0.6f);
 static const ImColor red = ImColor::HSV(356 / 360.0f, 0.42f, 0.97f); // hsv(356, 42%, 97%)
 static const ImColor gray = ImColor::HSV(155 / 360.0f, 0.05f, 0.85f); // hsv(155, 6%, 84%)
 
-static const char* ensure_key_loaded()
+FOUNDATION_STATIC const char* ensure_key_loaded()
 {
     if (EOD_KEY[0] != '\0')
         return EOD_KEY;
@@ -133,56 +133,59 @@ string_const_t eod_build_url(const char* api, const char* ticker, query_format_t
     return string_const(STRING_ARGS(eod_url));
 }
 
-string_const_t eod_build_url(const char* api, const char* ticker, query_format_t format, size_t args_count, ...)
-{
-    va_list list;
-    va_start(list, args_count);
-    
-    string_t EOD_URL_BUFFER = string_static_buffer(2048);
-    const char* api_key = ensure_key_loaded();
+const char* eod_build_url(const char* api, query_format_t format, const char* uri_format, ...)
+{    
+    static thread_local char URL_BUFFER[2048];
 
-    string_const_t HOST_API = string_const(STRING_CONST("https://eodhistoricaldata.com/api/"));
-    string_t eod_url = string_copy(EOD_URL_BUFFER.str, EOD_URL_BUFFER.length, STRING_ARGS(HOST_API));
-    eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, api, string_length(api));
-    eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("/"));
-
-    if (ticker)
+    string_const_t HOST_API = CTEXT("https://eodhistoricaldata.com/api/");
+    string_t url = string_copy(STRING_CONST_CAPACITY(URL_BUFFER), STRING_ARGS(HOST_API));
+    if (url.str[url.length - 1] != '/')
+        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("/"));
+        
+    if (string_length(api) > 0)
     {
-        string_const_t escaped_ticker = url_encode(ticker);
-        eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_ARGS(escaped_ticker));
+        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), api, string_length(api));
+        if (url.str[url.length - 1] != '/')
+            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("/"));
     }
-    eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("?api_token="));
-    eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, api_key, string_length(api_key));
 
+    va_list list;
+    va_start(list, uri_format);
+    char uri_formatted_buffer[2048] = { '\0' };
+    string_t uri_formatted = string_vformat(STRING_CONST_CAPACITY(uri_formatted_buffer), uri_format, string_length(uri_format), list);
+    
+    url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_ARGS(uri_formatted));
+    va_end(list);
+    
+    const size_t qm_pos = string_rfind(STRING_ARGS(url), '?', STRING_NPOS);
     if (format != FORMAT_UNDEFINED)
     {
-        eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("&fmt="));
-        if (format == FORMAT_JSON || format == FORMAT_JSON_CACHE)
-            eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("json"));
+        if (qm_pos == STRING_NPOS)
+            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("?"));
         else
-            eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("csv"));
+            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("&"));
+
+        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("fmt="));
+        if (format == FORMAT_JSON || format == FORMAT_JSON_CACHE)
+            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("json"));
+        else
+            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("csv"));
     }
 
-    while (args_count--)
+    const char* api_key = ensure_key_loaded();
+    const size_t api_key_length = string_length(api_key);
+    if (api_key_length > 0)
     {
-        const char* param = va_arg(list, const char*);
-        if (param != nullptr)
-        {
-            eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("&"));
-            eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, param, string_length(param));
-        }
+        if (qm_pos == STRING_NPOS)
+            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("?"));
+        else
+            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("&"));
 
-        const char* value = va_arg(list, const char*);
-        if (value != nullptr)
-        {
-            string_const_t escaped_value = url_encode(value);
-            eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("="));
-            eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_ARGS(escaped_value));
-        }
+        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("api_token="));
+        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), api_key, api_key_length);
     }
-
-    va_end(list);
-    return string_const(STRING_ARGS(eod_url));
+    
+    return url.str;
 }
 
 bool eod_fetch(const char* api, const char* ticker, query_format_t format, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 15ULL * 60ULL*/)
@@ -222,16 +225,16 @@ void eod_main_menu_status(GLFWwindow* window)
 {
     extern void app_update_window_title(GLFWwindow* window);
     
-    static bool connected = false;
     static char eod_status[128] = "";
     static char eod_menu_title[64] = "EOD";
-    static tick_t eod_menu_title_last_update = 0;
+    static volatile bool eod_connected = false;
+    static volatile tick_t eod_menu_title_last_update = 0;
     if (time_elapsed(eod_menu_title_last_update) > 60)
     {
         eod_menu_title_last_update = time_current();
         eod_fetch_async("user", "", FORMAT_JSON, [](const json_object_t& json)
         {
-            connected = true;
+            eod_connected = true;
             double api_calls = json["apiRequests"].as_number();
             double api_calls_limit = json["dailyRateLimit"].as_number();
             string_format(STRING_CONST_CAPACITY(eod_menu_title), STRING_CONST("EOD [API USAGE %.2lf %%]"), api_calls * 100 / api_calls_limit);
@@ -290,7 +293,7 @@ void eod_main_menu_status(GLFWwindow* window)
     const ImRect status_box(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
     const ImVec2 status_box_center = status_box.GetCenter() + ImVec2(-4.0f, 4.0f);
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->AddCircleFilled(status_box_center, status_box_size.x / 2.0f, connected ? green : gray);
+    draw_list->AddCircleFilled(status_box_center, status_box_size.x / 2.0f, eod_connected ? green : gray);
 
     ImGui::EndGroup();
 }
