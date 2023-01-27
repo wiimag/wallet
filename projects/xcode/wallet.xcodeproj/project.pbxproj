@@ -974,6 +974,7 @@
 					"FOUNDATION_SIZE_REAL=8",
 					"BUILD_RELEASE=1",
 					IMGUI_ENABLE_TEST_ENGINE,
+					"BUILD_DEPLOY=1",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -983,8 +984,6 @@
 					../../external/bimg/include,
 					../../external/glfw/include,
 					../../external/bgfx/include,
-					../../external/libdicom/src,
-					../../external/diplib/include,
 					../../external,
 					../../sources,
 					../..,
@@ -1004,6 +1003,7 @@
 					"-fomit-frame-pointer",
 					"-Wshadow",
 					"-Wfatal-errors",
+					"-Wno-switch",
 				);
 				OTHER_LDFLAGS = (
 					"-framework",
@@ -1060,8 +1060,6 @@
 					../../external/bimg/include,
 					../../external/glfw/include,
 					../../external/bgfx/include,
-					../../external/libdicom/src,
-					../../external/diplib/include,
 					../../external,
 					../../sources,
 					../..,
@@ -1081,6 +1079,7 @@
 					"-fomit-frame-pointer",
 					"-Wshadow",
 					"-Wfatal-errors",
+					"-Wno-switch",
 				);
 				OTHER_LDFLAGS = (
 					"-framework",

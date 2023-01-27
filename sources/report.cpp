@@ -351,7 +351,7 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
         case REPORT_FORMULA_YESTERDAY_CHANGE:	return title_get_yesterday_change(title, stock_data);
 
         default:
-            FOUNDATION_ASSERT_FAILFORMAT("Cannot get %.*s value for %.*s (%u)", STRING_FORMAT(column->get_name()), title->code_length, title->code, formula);
+            FOUNDATION_ASSERT_FAILFORMAT("Cannot get %.*s value for %.*s (%u)", STRING_FORMAT(column->get_name()), (int)title->code_length, title->code, formula);
             break;
         }
     }
@@ -774,7 +774,7 @@ FOUNDATION_STATIC void report_render_summary_info(report_t* report, const char* 
 {
     ImGui::TableNextRow();
     ImGui::TableNextColumn(); 
-    ImGui::TextWrapped(field_name);
+    ImGui::TextWrapped("%s", field_name);
     
     ImGui::TableNextColumn(); 
     if (negative_parens && value < 0)
@@ -876,7 +876,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     {
         report_render_summary_info(report, "Enhanced earnings", report->wallet->enhanced_earnings, currency_fmt);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Minimal amount to sell titles if you want to increase your gain considerably.", report->wallet->total_sell_gain_if_kept);
+            ImGui::SetTooltip("Minimal amount (%.2lf) to sell titles if you want to increase your gain considerably.", report->wallet->total_sell_gain_if_kept);
 
         ImGui::TableNextRow();
         report_render_summary_info(report, "Sell Count", report->wallet->total_title_sell_count, integer_fmt);
@@ -1000,7 +1000,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
                 ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                 if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true))
                 {
-                    odate = _mktime64(&tm_date);
+                    odate = mktime(&tm_date);
                     date_str = string_from_date(odate);
                     config_set(order->data, STRING_CONST("date"), STRING_ARGS(date_str));
                     title_refresh(order->title);
@@ -1204,7 +1204,7 @@ FOUNDATION_STATIC void report_render_buy_lot_dialog(report_t* report, title_t* t
         ImGui::SetNextItemWidth(control_width);
         if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true, &reset_date))
         {
-            const day_result_t* e = stock_get_EOD(title->stock, _mktime64(&tm_date), true);
+            const day_result_t* e = stock_get_EOD(title->stock, mktime(&tm_date), true);
             if (e)
                 price = math_ifnan(e->close, price);
         }

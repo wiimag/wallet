@@ -49,7 +49,7 @@ FOUNDATION_STATIC void stock_grow_db()
     hashtable64_t* old_table = _db_hashes;
     if (auto lock = scoped_mutex_t(_db_lock))
     {
-        _db_capacity *= 2ULL;
+        _db_capacity *= size_t(2);
         hashtable64_t* new_hash_table = hashtable64_allocate(_db_capacity);
         for (int i = 1, end = array_size(_db_stocks); i < end; ++i)
             hashtable64_set(new_hash_table, _db_stocks[i].id, i);

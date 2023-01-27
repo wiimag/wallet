@@ -672,7 +672,7 @@ FOUNDATION_STATIC void pattern_render_graph_trend(const char* label, double x1, 
     }
 
     const char* tag = string_format_static_const("%s %s", label, b > 0 ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
-    ImPlot::TagY(a + b * (x_axis_inverted ? x2 : x1), pc, tag);
+    ImPlot::TagY(a + b * (x_axis_inverted ? x2 : x1), pc, "%s", tag);
     ImPlot::PlotLine(tag, range, trend, ARRAY_COUNT(trend), ImPlotLineFlags_NoClip);
 
     ImPlot::Annotation(x_axis_inverted ? x1 : x2, x_axis_inverted ? trend[0] : trend[1], ImVec4(0.3f, 0.3f, 0.5f, 1.0f),
@@ -723,7 +723,7 @@ FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern
 
 FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stock_t* s, ImAxis y_axis, bool x_axis_inverted)
 {
-    plot_context_t c{ pattern->date, min(4096ULL, s->history_count), 1, s->history };
+    plot_context_t c{ pattern->date, min(size_t(4096), s->history_count), 1, s->history };
     c.acc = pattern->range;
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG("Price", [](int idx, void* user_data)->ImPlotPoint
@@ -1056,7 +1056,6 @@ FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
         double total_match = 0;
         static double average_match = 0;
 
-        int matches = 0;
         int ref_matches = 0;
         ImGuiListClipper clipper;
         clipper.Begin(symbol_count);

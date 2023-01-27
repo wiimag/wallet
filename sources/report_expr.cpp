@@ -185,11 +185,11 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
             for (const auto& e : ref)
             {
                 string_const_t id = e.id();
-                string_const_t value = e.as_string();
+                string_const_t evalue = e.as_string();
 
                 char value_preview_buffer[64];
                 string_t value_preview = string_format(STRING_CONST_CAPACITY(value_preview_buffer), STRING_CONST("%.*s = %.*s"), 
-                    min(48, (int)id.length), id.str, STRING_FORMAT(value));
+                    min(48, (int)id.length), id.str, STRING_FORMAT(evalue));
                 string_table_symbol_t store_value_symbol = string_table_encode(value_preview);
                 
                 expr_result_t r { EXPR_RESULT_SYMBOL, store_value_symbol, value_preview.length };
@@ -336,7 +336,7 @@ FOUNDATION_STATIC void report_eval_read_object_fields(const json_object_t& json,
         char path[256];
         size_t path_length = 0;
         if (s && len > 0)
-            path_length = string_format(STRING_CONST_CAPACITY(path), STRING_CONST("%.*s.%.*s"), len, s, t->id_length, &json.buffer[t->id]).length;
+            path_length = string_format(STRING_CONST_CAPACITY(path), STRING_CONST("%.*s.%.*s"), len, s, (int)t->id_length, &json.buffer[t->id]).length;
         else
             path_length = string_copy(STRING_CONST_CAPACITY(path), &json.buffer[t->id], t->id_length).length;
 
@@ -344,10 +344,10 @@ FOUNDATION_STATIC void report_eval_read_object_fields(const json_object_t& json,
             report_eval_read_object_fields(json, t, field_names, path, path_length);
         else
         {
-            expr_result_t s;
-            s.type = EXPR_RESULT_SYMBOL;
-            s.value = string_table_encode(path, path_length);
-            array_push(*field_names, s);
+            expr_result_t ss;
+            ss.type = EXPR_RESULT_SYMBOL;
+            ss.value = string_table_encode(path, path_length);
+            array_push(*field_names, ss);
         }
     }
 }
