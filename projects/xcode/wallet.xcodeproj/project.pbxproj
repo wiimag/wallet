@@ -9,7 +9,7 @@
 /* Begin PBXBuildFile section */
 		8C4C079DF81264B9416EF21B /* libbx.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 9BDB7E8E87EE7EE730D85BD4 /* libbx.a */; };
 		962FE2720217CD680B05CFE4 /* libbimg.a in Frameworks */ = {isa = PBXBuildFile; fileRef = E5B72EF7D14B249F3A107E53 /* libbimg.a */; };
-		B90335D6291BE323003184CF /* wallet.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B90335D5291BE323003184CF /* wallet.xcassets */; };
+		B90335D6291BE323003184CF /* App.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B90335D5291BE323003184CF /* App.xcassets */; };
 		B90447D129476E3300CB6494 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B90447D029476E3300CB6494 /* libz.tbd */; };
 		B906776F2919C19200E5D8FF /* libimgui.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B906776C2919C17F00E5D8FF /* libimgui.a */; };
 		B9227E0B291A96900037FAE2 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B9227E00291A95390037FAE2 /* libglfw3.a */; };
@@ -177,7 +177,7 @@
 		42B8D81D2EF78299D7795FCB /* bgfx.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = bgfx.xcodeproj; sourceTree = SOURCE_ROOT; };
 		856853C47111BBF39AA7D672 /* bx.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = bx.xcodeproj; sourceTree = SOURCE_ROOT; };
 		8AD7BCA17616671D1F99434F /* bimg.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = bimg.xcodeproj; sourceTree = SOURCE_ROOT; };
-		B90335D5291BE323003184CF /* wallet.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = wallet.xcassets; sourceTree = "<group>"; };
+		B90335D5291BE323003184CF /* App.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = App.xcassets; sourceTree = "<group>"; };
 		B90447D029476E3300CB6494 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		B90677672919C17F00E5D8FF /* imgui.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = imgui.xcodeproj; sourceTree = SOURCE_ROOT; };
 		B9227DF8291A95390037FAE2 /* LICENSE.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = LICENSE.md; sourceTree = "<group>"; };
@@ -472,7 +472,7 @@
 				B9C6887129189FF200C585E1 /* JetBrainsMono-ExtraLight.ttf */,
 				B9C6887229189FF200C585E1 /* MaterialIcons-Regular.ttf */,
 				B9C6886F29189EF400C585E1 /* main.ico */,
-				B90335D5291BE323003184CF /* wallet.xcassets */,
+				B90335D5291BE323003184CF /* App.xcassets */,
 			);
 			name = resources;
 			path = ../../resources;
@@ -701,7 +701,7 @@
 				B99EB7572919AFE000003D30 /* JetBrainsMono-ExtraLight.ttf in Resources */,
 				B9C6887429189FF200C585E1 /* MaterialIcons-Regular.ttf in Resources */,
 				B94CBE9B297AFC3700575D12 /* varying.def.sc in Resources */,
-				B90335D6291BE323003184CF /* wallet.xcassets in Resources */,
+				B90335D6291BE323003184CF /* App.xcassets in Resources */,
 				B9C6887029189EF400C585E1 /* main.ico in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -820,7 +820,6 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
 				COPY_PHASE_STRIP = NO;
@@ -853,7 +852,7 @@
 					../..,
 				);
 				LIBRARY_SEARCH_PATHS = "../../external/glfw/lib-osx-universal";
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				OBJROOT = ../../artifacts;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -896,7 +895,6 @@
 				CLANG_WARN_INFINITE_RECURSION = YES;
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
-				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
 				CLANG_WARN_SUSPICIOUS_MOVE = YES;
 				CONFIGURATION_BUILD_DIR = "$(SYMROOT)";
 				COPY_PHASE_STRIP = NO;
@@ -929,7 +927,7 @@
 					../..,
 				);
 				LIBRARY_SEARCH_PATHS = "../../external/glfw/lib-osx-universal";
-				MACOSX_DEPLOYMENT_TARGET = 10.15;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				OBJROOT = ../../artifacts;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (

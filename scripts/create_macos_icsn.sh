@@ -4,7 +4,7 @@
 
 cd ./resources
 input_filepath=logo_v_square2.png
-output_iconset_name="Infineis.iconset"
+output_iconset_name="App.iconset"
 mkdir $output_iconset_name
 
 sips -z 16 16     $input_filepath --out "${output_iconset_name}/icon_16x16.png"
