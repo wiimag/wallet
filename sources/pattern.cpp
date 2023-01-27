@@ -609,7 +609,7 @@ FOUNDATION_STATIC void pattern_render_graph_change_acc(pattern_t* pattern, const
         plot_context_t* c = (plot_context_t*)user_data;
         const day_result_t* history = c->history;
 
-        size_t ed_index = max(0UL, (size_t)min(idx * c->stride, c->range - 1));
+        size_t ed_index = max((size_t)0, (size_t)min(idx * c->stride, c->range - 1));
         const day_result_t* ed = &history[c->range - ed_index - 1];
         if ((ed->date/ time_one_day()) >= (c->ref/time_one_day()))
             return ImPlotPoint(DNAN, DNAN);
@@ -691,7 +691,7 @@ FOUNDATION_STATIC void pattern_render_trend(const char* label, const plot_contex
 
 FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool x_axis_inverted)
 {
-    plot_context_t c{ pattern->date, min(4096UL, s->history_count), offset, s->history };
+    plot_context_t c{ pattern->date, min((size_t)4096, s->history_count), offset, s->history };
     c.acc = pattern->range;
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG(label, [](int idx, void* user_data)->ImPlotPoint

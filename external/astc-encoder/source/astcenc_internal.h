@@ -23,7 +23,7 @@
 #define ASTCENC_INTERNAL_INCLUDED
 
 #include <algorithm>
-#include <stddef.h>
+#include <cstddef>
 #include <cstdint>
 #if defined(ASTCENC_DIAGNOSTICS)
 	#include <cstdio>
