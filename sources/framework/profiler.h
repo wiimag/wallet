@@ -6,13 +6,13 @@
 #pragma once
 
 #include <foundation/platform.h>
+#include <foundation/hash.h>
+#include <foundation/memory.h>
 
 #if BUILD_ENABLE_PROFILE
 
-#include <foundation/hash.h>
 #include <foundation/string.h>
 #include <foundation/profile.h>
-#include <foundation/memory.h>
 
 struct TrackerScope
 {
@@ -52,9 +52,14 @@ struct TrackerScope
 #define PERFORMANCE_TRACKER_FORMAT_COUNTER(COUNTER, FMT, ...) PERFORMANCE_TRACKER_FORMAT_COUNTER_EXPAND(COUNTER, FMT, __VA_ARGS__)
 #define PERFORMANCE_TRACKER_FORMAT(FMT, ...) PERFORMANCE_TRACKER_FORMAT_COUNTER(__LINE__, FMT, __VA_ARGS__)
 
+void profiler_menu_timer();
+
 #else
 
 #define PERFORMANCE_TRACKER(NAME) (void)0;
+#define PERFORMANCE_TRACKER_FORMAT(FMT, ...) (void)0;
+
+FOUNDATION_FORCEINLINE void profiler_menu_timer() {}
 
 #endif
 
@@ -74,5 +79,3 @@ struct MemoryScope
 #define MEMORY_TRACKER_NAME_COUNTER_EXPAND(HASH, COUNTER) MemoryScope __var_memory_tracker__##COUNTER (HASH)
 #define MEMORY_TRACKER_NAME_COUNTER(HASH, COUNTER) MEMORY_TRACKER_NAME_COUNTER_EXPAND(HASH, COUNTER)
 #define MEMORY_TRACKER(HASH) MEMORY_TRACKER_NAME_COUNTER(HASH, __LINE__)
-
-void profiler_menu_timer();

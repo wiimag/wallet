@@ -32,16 +32,16 @@ if [ $# -ne 0 ] && [ $1 == "build" ]; then
         if [ $# -ne 0 ] && [ $1 == "debug" ]; then
             shift
             ./scripts/build_win_debug.bat
+        else
+            ./scripts/build_win_release.bat
         fi
-        
-        ./scripts/build_win_release.bat
     elif [ ${machine} == "Mac" ]; then
         if [ $# -ne 0 ] && [ $1 = "debug" ]; then
             shift
             ./scripts/build_osx_debug.sh $@
+        else
+            ./scripts/build_osx_release.sh $@
         fi
-        
-        ./scripts/build_osx_release.sh $@
     fi
 
     retval=$?
