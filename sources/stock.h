@@ -72,7 +72,7 @@ struct stock_t
     volatile tick_t last_update_time {0};
     volatile fetch_level_t fetch_level{ FetchLevel::NONE };
     volatile fetch_level_t resolved_level{ FetchLevel::NONE };
-    volatile unsigned int fetch_errors{ 0 };
+    unsigned int fetch_errors{ 0 };
 
     string_table_symbol_t code{};
     string_table_symbol_t symbol{};

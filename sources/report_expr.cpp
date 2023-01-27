@@ -336,7 +336,7 @@ FOUNDATION_STATIC void report_eval_read_object_fields(const json_object_t& json,
         char path[256];
         size_t path_length = 0;
         if (s && len > 0)
-            path_length = string_format(STRING_CONST_CAPACITY(path), STRING_CONST("%.*s.%.*s"), len, s, (int)t->id_length, &json.buffer[t->id]).length;
+            path_length = string_format(STRING_CONST_CAPACITY(path), STRING_CONST("%.*s.%.*s"), (int)len, s, (int)t->id_length, &json.buffer[t->id]).length;
         else
             path_length = string_copy(STRING_CONST_CAPACITY(path), &json.buffer[t->id], t->id_length).length;
 
@@ -475,7 +475,7 @@ FOUNDATION_STATIC void report_eval_add_record_values(dynamic_table_record_t& rec
     }
     else if (e.is_set())
     {
-        for (const auto& ee : e)
+        for (auto ee : e)
             report_eval_add_record_values(record, ee);
     }
 }
@@ -521,7 +521,7 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
     }
 
     dynamic_table_record_t* records = nullptr;
-    for (const auto& e : elements)
+    for (auto e : elements)
     {
         if (e.type == EXPR_RESULT_NULL)
             continue;

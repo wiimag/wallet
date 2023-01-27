@@ -83,7 +83,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_CONST_CAPACITY(currency), ImGuiInputTextFlags_AutoSelectAll))
         {
             char* old = wallet->preferred_currency.str;
-            wallet->preferred_currency = string_clone_string(string_const_t(currency, string_length(currency)));
+            wallet->preferred_currency = string_clone(currency, string_length(currency));
             string_deallocate(old);
             updated |= true;
         }
@@ -558,7 +558,7 @@ static int wallet_history_format_date_monthly(double value, char* buff, int size
     if (day_space <= 5)
         return (int)string_copy(buff, size, date_str.str + 5, 5).length;
 
-    return (int)string_copy(buff, size, date_str.str, min(date_str.length, 7ULL)).length;
+    return (int)string_copy(buff, size, date_str.str, min(date_str.length, (size_t)7)).length;
 }
 
 static void wallet_history_draw_graph(report_t* report, wallet_t* wallet)
@@ -741,7 +741,7 @@ wallet_t* wallet_allocate(config_handle_t wallet_data)
     wallet->preferred_currency = string_clone_string(wallet_data["currency"].as_string(STRING_ARGS(string_const(SETTINGS.preferred_currency))));
     wallet->track_history = wallet_data["track_history"].as_boolean();
 
-    for (const auto& c : wallet_data["history"])
+    for (const auto c : wallet_data["history"])
     {
         history_t h{};
         h.date = string_to_date(STRING_ARGS(c["date"].as_string()));

@@ -159,7 +159,7 @@
 #ifndef ASTCENC_INCLUDED
 #define ASTCENC_INCLUDED
 
-#include <cstddef>
+#include <stddef.h>
 #include <cstdint>
 
 #if defined(ASTCENC_DYNAMIC_LIBRARY)

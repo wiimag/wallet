@@ -14,6 +14,7 @@
 		B906776F2919C19200E5D8FF /* libimgui.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B906776C2919C17F00E5D8FF /* libimgui.a */; };
 		B9227E0B291A96900037FAE2 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B9227E00291A95390037FAE2 /* libglfw3.a */; };
 		B929C1332939136E00AEE333 /* libcurl.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B929C1322939136E00AEE333 /* libcurl.tbd */; };
+		B93AD6D829846616005F2016 /* wallet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B93AD6D729846604005F2016 /* wallet.cpp */; };
 		B94CBE9B297AFC3700575D12 /* varying.def.sc in Resources */ = {isa = PBXBuildFile; fileRef = B94CBE93297AFC3700575D12 /* varying.def.sc */; };
 		B96DB0C7297AD0BC00374F96 /* test_runner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B96DB0C6297AD0BC00374F96 /* test_runner.cpp */; };
 		B9953AD2297AFB81006A8390 /* shared_mutex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B9953AA9297AFB81006A8390 /* shared_mutex.cpp */; };
@@ -225,6 +226,8 @@
 		B9227E02291A95390037FAE2 /* glfw3.lib */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; path = glfw3.lib; sourceTree = "<group>"; };
 		B924852A29475ECC00901B43 /* libdiplib.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; path = libdiplib.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		B929C1322939136E00AEE333 /* libcurl.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcurl.tbd; path = usr/lib/libcurl.tbd; sourceTree = SDKROOT; };
+		B93AD6D629846604005F2016 /* wallet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wallet.h; sourceTree = "<group>"; };
+		B93AD6D729846604005F2016 /* wallet.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wallet.cpp; sourceTree = "<group>"; };
 		B94CBE93297AFC3700575D12 /* varying.def.sc */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = varying.def.sc; sourceTree = "<group>"; };
 		B96DB0C6297AD0BC00374F96 /* test_runner.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test_runner.cpp; sourceTree = "<group>"; };
 		B97274B829476A03003592FA /* diplib.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = diplib.xcodeproj; sourceTree = SOURCE_ROOT; };
@@ -315,7 +318,7 @@
 		B9FF98F8296C56E800F966DD /* test_utils.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test_utils.cpp; sourceTree = "<group>"; };
 		B9FF98F9296C56E800F966DD /* boot_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = boot_tests.cpp; sourceTree = "<group>"; };
 		B9FF9900296C571B00F966DD /* doctest.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = doctest.h; sourceTree = "<group>"; };
-		BC9D5E3D280A1A38F1FDB195 /* Infineis.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Infineis.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		BC9D5E3D280A1A38F1FDB195 /* Wallet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Wallet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -341,7 +344,7 @@
 		095E7A507595C2E77E9F260B /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				BC9D5E3D280A1A38F1FDB195 /* Infineis.app */,
+				BC9D5E3D280A1A38F1FDB195 /* Wallet.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -560,29 +563,31 @@
 		B9C688FC2918A7CA00C585E1 /* app */ = {
 			isa = PBXGroup;
 			children = (
+				B9C689322918A7E300C585E1 /* app.cpp */,
 				B9CF9DAB29845BF4006AF271 /* bulk.cpp */,
-				B9CF9DB629845BF4006AF271 /* bulk.h */,
 				B9CF9DB229845BF4006AF271 /* eod.cpp */,
-				B9CF9DAD29845BF4006AF271 /* eod.h */,
 				B9CF9DB429845BF4006AF271 /* pattern.cpp */,
-				B9CF9DB329845BF4006AF271 /* pattern.h */,
 				B9CF9DAF29845BF4006AF271 /* report_expr.cpp */,
 				B9CF9DAE29845BF4006AF271 /* report.cpp */,
-				B9CF9DB529845BF4006AF271 /* report.h */,
 				B9CF9DB029845BF4006AF271 /* reportgraph.cpp */,
-				B9CF9DB129845BF4006AF271 /* stock.cpp */,
-				B9CF9DB729845BF4006AF271 /* stock.h */,
-				B9CF9DB829845BF4006AF271 /* symbols.cpp */,
-				B9CF9DB929845BF4006AF271 /* symbols.h */,
-				B9CF9DBA29845BF4006AF271 /* title.cpp */,
-				B9CF9DAC29845BF4006AF271 /* title.h */,
-				B9C689322918A7E300C585E1 /* app.cpp */,
 				B9C689312918A7E300C585E1 /* settings.cpp */,
+				B9CF9DB129845BF4006AF271 /* stock.cpp */,
+				B9CF9DB829845BF4006AF271 /* symbols.cpp */,
+				B9CF9DBA29845BF4006AF271 /* title.cpp */,
+				B93AD6D729846604005F2016 /* wallet.cpp */,
 				B9F99B5D29770B49004DB76A /* app.h */,
+				B9CF9DB629845BF4006AF271 /* bulk.h */,
+				B9CF9DAD29845BF4006AF271 /* eod.h */,
 				B9F99B5C29770B49004DB76A /* events.h */,
+				B9CF9DB329845BF4006AF271 /* pattern.h */,
+				B9CF9DB529845BF4006AF271 /* report.h */,
 				B9C689262918A7E300C585E1 /* resource.h */,
 				B9C689012918A7E300C585E1 /* settings.h */,
+				B9CF9DB729845BF4006AF271 /* stock.h */,
+				B9CF9DB929845BF4006AF271 /* symbols.h */,
+				B9CF9DAC29845BF4006AF271 /* title.h */,
 				B9C688FF2918A7E300C585E1 /* version.h */,
+				B93AD6D629846604005F2016 /* wallet.h */,
 			);
 			name = app;
 			path = ../../sources;
@@ -687,7 +692,7 @@
 			name = wallet;
 			productInstallPath = "$(HOME)/Applications";
 			productName = examples;
-			productReference = BC9D5E3D280A1A38F1FDB195 /* Infineis.app */;
+			productReference = BC9D5E3D280A1A38F1FDB195 /* Wallet.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -900,6 +905,7 @@
 				B9953ADA297AFB81006A8390 /* jobs.cpp in Sources */,
 				B9953ADE297AFB81006A8390 /* service.cpp in Sources */,
 				B9CF9DA929845B93006AF271 /* glfw.cpp in Sources */,
+				B93AD6D829846616005F2016 /* wallet.cpp in Sources */,
 				B9CF9DBE29845BF4006AF271 /* reportgraph.cpp in Sources */,
 				B9953AE1297AFB81006A8390 /* config.cpp in Sources */,
 				B9953ADF297AFB81006A8390 /* query_json.cpp in Sources */,
@@ -1001,7 +1007,7 @@
 				OTHER_CPLUSPLUSFLAGS = (
 					"-ffast-math",
 					"-fomit-frame-pointer",
-					"-Wshadow",
+					"-Wno-shadow",
 					"-Wfatal-errors",
 					"-Wno-switch",
 				);
@@ -1077,7 +1083,7 @@
 				OTHER_CPLUSPLUSFLAGS = (
 					"-ffast-math",
 					"-fomit-frame-pointer",
-					"-Wshadow",
+					"-Wno-shadow",
 					"-Wfatal-errors",
 					"-Wno-switch",
 				);
@@ -1111,7 +1117,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Wallet;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_NAME = Infineis;
+				PRODUCT_NAME = Wallet;
 			};
 			name = Release;
 		};
@@ -1127,7 +1133,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Wallet;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_NAME = Infineis;
+				PRODUCT_NAME = Wallet;
 			};
 			name = Debug;
 		};
