@@ -1029,6 +1029,11 @@ extern int main_initialize()
     return app_initialize(window);
 }
 
+extern GLFWwindow* main_window()
+{
+    return _glfw_window;
+}
+
 extern bool main_is_running_tests()
 {
     return _run_tests;

@@ -1610,6 +1610,9 @@ FOUNDATION_STATIC void report_render_windows()
 
 FOUNDATION_STATIC void report_render_menus()
 {
+    if (shortcut_executed(ImGuiKey_F2))
+        SETTINGS.show_create_report_ui = true;
+
     if (!ImGui::BeginMenuBar())
         return;
         

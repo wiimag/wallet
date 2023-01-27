@@ -22,8 +22,8 @@ typedef function<void()> service_invoke_handler_t;
 #define SERVICE_PRIORITY_SYSTEM      -1
 #define SERVICE_PRIORITY_BASE         0
 #define SERVICE_PRIORITY_HIGH         1
-#define SERVICE_PRIORITY_LOW          2
-#define SERVICE_PRIORITY_MODULE       3
+#define SERVICE_PRIORITY_MODULE       2
+#define SERVICE_PRIORITY_LOW          3
 #define SERVICE_PRIORITY_UI           5
 #define SERVICE_PRIORITY_TESTS       10
 
@@ -52,10 +52,12 @@ void service_shutdown();
 
 void service_register_handler(hash_t service_key, hash_t handler_key, const service_invoke_handler_t& handler);
 void service_register_menu(hash_t service_key, const service_invoke_handler_t& menu_handler);
+void service_register_menu_status(hash_t service_key, const service_invoke_handler_t& menu_status_handler);
 void service_register_tabs(hash_t service_key, const service_invoke_handler_t& tabs_handler);
 void service_register_window(hash_t service_key, const service_invoke_handler_t& window_handler);
 
 void service_foreach(hash_t handler_key);
 void service_foreach_menu();
+void service_foreach_menu_status();
 void service_foreach_tabs();
 void service_foreach_window();

@@ -3,18 +3,24 @@
  * License: https://equals-forty-two.com/LICENSE
  */
 
- #include "eod.h"
+#include "eod.h"
+#include "version.h"
 
+#include <framework/glfw.h>
+#include <framework/imgui.h>
 #include <framework/common.h>
 #include <framework/query.h>
 #include <framework/config.h>
 #include <framework/session.h>
 #include <framework/scoped_string.h>
-#include <framework/imgui.h>
+#include <framework/service.h>
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>
 #include <foundation/hashtable.h>
+#include <foundation/version.h>
+
+#define HASH_EOD static_hash_string("eod", 3, 0x35f39422e491f3e1ULL)
 
 // "https://eodhistoricaldata.com/api/exchange-symbol-list/TO?api_token=XYZ&fmt=json"
 
@@ -221,9 +227,38 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
     return query_execute_async_json(url.str, format, json_callback, ignore_if_queue_more_than, invalid_cache_query_after_seconds);
 }
 
-void eod_main_menu_status(GLFWwindow* window)
+FOUNDATION_STATIC void eod_update_window_title()
 {
-    extern void app_update_window_title(GLFWwindow* window);
+    GLFWwindow* window = main_window();
+    FOUNDATION_ASSERT(window);
+
+    extern const char* app_title();
+
+    eod_fetch_async("user", "", FORMAT_JSON, [window](const json_object_t& json)
+    {
+        const bool is_main_branch = string_equal(STRING_CONST(GIT_BRANCH), STRING_CONST("main")) ||
+            string_equal(STRING_CONST(GIT_BRANCH), STRING_CONST("master"));
+
+        string_const_t subscription = json["subscriptionType"].as_string();
+        string_const_t branch_name{ subscription.str, subscription.length };
+        if (!is_main_branch)
+            branch_name = string_to_const(GIT_BRANCH);
+
+        string_const_t license_name = json["name"].as_string();
+        string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
+
+        char title[128] = PRODUCT_NAME;
+        string_format(STRING_CONST_CAPACITY(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
+            app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
+
+        glfwSetWindowTitle(window, title);
+    });
+}
+
+FOUNDATION_STATIC void eod_main_menu_status()
+{
+    GLFWwindow* window = main_window();
+    FOUNDATION_ASSERT(window);
     
     static char eod_status[128] = "";
     static char eod_menu_title[64] = "EOD";
@@ -264,7 +299,7 @@ void eod_main_menu_status(GLFWwindow* window)
         if (ImGui::MenuItem("Refresh"))
         {
             eod_menu_title_last_update = 0;
-            app_update_window_title(window);
+            eod_update_window_title();
         }
 
         ImGui::Separator();
@@ -284,7 +319,7 @@ void eod_main_menu_status(GLFWwindow* window)
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left, false))
         {
             eod_menu_title_last_update = 0;
-            app_update_window_title(window);
+            eod_update_window_title();
         }
         else
             ImGui::SetTooltip("%s", eod_status);
@@ -297,3 +332,16 @@ void eod_main_menu_status(GLFWwindow* window)
 
     ImGui::EndGroup();
 }
+
+//
+// # SYSTEM
+//
+
+FOUNDATION_STATIC void eod_initialize()
+{
+    dispatch(eod_update_window_title);
+    
+    service_register_menu_status(HASH_EOD, eod_main_menu_status);
+}
+
+DEFINE_SERVICE(EOD, eod_initialize, nullptr, SERVICE_PRIORITY_HIGH);

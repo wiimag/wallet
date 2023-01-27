@@ -214,4 +214,4 @@ FOUNDATION_STATIC void test_utils_shutdown()
     TEST_CLEAR_FRAME();
 }
 
-DEFINE_SERVICE(TEST, test_utils_initialize, test_utils_shutdown, 100);
+DEFINE_SERVICE(TEST, test_utils_initialize, test_utils_shutdown, SERVICE_PRIORITY_TESTS-1);

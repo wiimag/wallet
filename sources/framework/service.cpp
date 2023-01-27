@@ -15,6 +15,7 @@
 #define HASH_SERVICE_TABS (static_hash_string("service_tabs", 12, 0xeee279126075ccf8ULL))
 #define HASH_SERVICE_MENU (static_hash_string("service_menu", 12, 0x597ea6b5d910db56ULL))
 #define HASH_SERVICE_WINDOW (static_hash_string("service_window", 14, 0x576d11d2f45d4892ULL))
+#define HASH_SERVICE_MENU_STATUS (static_hash_string("service_menu_status", 19, 0x200f262941438cb4ULL))
 
 struct service_handler_t
 {
@@ -154,6 +155,11 @@ void service_register_window(hash_t service_key, const service_invoke_handler_t&
     service_register_handler(service_key, HASH_SERVICE_WINDOW, window_handler);
 }
 
+void service_register_menu_status(hash_t service_key, const service_invoke_handler_t& menu_status_handler)
+{
+    service_register_handler(service_key, HASH_SERVICE_MENU_STATUS, menu_status_handler);
+}
+
 void service_foreach(hash_t handler_key)
 {
     for (size_t i = 0, end = _service_count; i != end; ++i)
@@ -172,6 +178,11 @@ void service_foreach(hash_t handler_key)
 void service_foreach_menu()
 {
     service_foreach(HASH_SERVICE_MENU);
+}
+
+void service_foreach_menu_status()
+{
+    service_foreach(HASH_SERVICE_MENU_STATUS);
 }
 
 void service_foreach_tabs()

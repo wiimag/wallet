@@ -37,6 +37,8 @@
 #define GLFW_HAS_GAMEPAD_API            (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetGamepadState() new api
 #define GLFW_HAS_GETKEYNAME             (GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
 
+extern GLFWwindow* main_window();
+
 void glfw_set_window_center(GLFWwindow* window);
 
 GLFWwindow* glfw_create_window_geometry(const char* window_title);

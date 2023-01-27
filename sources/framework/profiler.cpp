@@ -357,6 +357,6 @@ FOUNDATION_STATIC void profiler_shutdown()
     array_deallocate(_trackers);
 }
 
-DEFINE_SERVICE(PROFILER, profiler_initialize, profiler_shutdown, -2);
+DEFINE_SERVICE(PROFILER, profiler_initialize, profiler_shutdown, SERVICE_PRIORITY_SYSTEM);
 
 #endif
