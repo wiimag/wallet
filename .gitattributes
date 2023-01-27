@@ -12,10 +12,10 @@
 *.txt   text
 *.vsc   text
 *.fsc   text
-*.h   text
-*.c   text
-*.cpp   text
-*.mm   text
+*.h   text diff
+*.c   text diff
+*.cpp   text diff
+*.mm   text diff
 *.java  text diff=java
 *.xml   text diff=xml
 *.json text eol=lf
@@ -25,8 +25,8 @@
 *.sc    text eol=lf
 
 # Shell scripts require LF
-run     text eol=lf
-*.sh    text eol=lf
+run     text diff eol=lf
+*.sh    text diff eol=lf
 
 # Batch scripts require CRLF
 *.bat   text eol=crlf
