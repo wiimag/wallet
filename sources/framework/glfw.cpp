@@ -4,6 +4,7 @@
  */
 
 #include "glfw.h"
+
 #include "session.h"
 #include "common.h"
 

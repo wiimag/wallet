@@ -127,11 +127,11 @@ struct double_option_t
     typedef double_option_t O;
     typedef function<bool(T& out_value)> fetcher_handler_t;
 
-    mutable T value{ DNAN };
+    mutable T value{ __builtin_nan("0") };
     mutable bool initialized{ false };
     fetcher_handler_t fetcher;
 
-    double_option_t(T d = DNAN)
+    double_option_t(T d = __builtin_nan("0"))
         : value(d)
         , initialized(false)
         , fetcher(nullptr)
@@ -150,7 +150,7 @@ struct double_option_t
         , initialized(o.initialized)
     {
         fetcher = std::move(o.fetcher);
-        o.value = DNAN;
+        o.value = __builtin_nan("0");
         o.initialized = false;
     }
 
@@ -192,13 +192,13 @@ struct double_option_t
         initialized = o.initialized;
         fetcher = std::move(o.fetcher);
 
-        o.value = DNAN;
+        o.value = __builtin_nan("0");
         o.initialized = false;
         o.fetcher = nullptr;
         return *this;
     }
 
-    T get_or_default(T dv = DNAN) const
+    T get_or_default(T dv = __builtin_nan("0")) const
     {
         if (initialized)
             return value;
@@ -214,7 +214,7 @@ struct double_option_t
             return get_or_default(value);
 
         if (!fetcher(value))
-            return DNAN;
+            return __builtin_nan("0");
 
         initialized = true;
         return value;

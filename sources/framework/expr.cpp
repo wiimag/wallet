@@ -6,6 +6,7 @@
 #include "expr.h"
 
 #include <framework/imgui.h>
+#include <framework/common.h>
 #include <framework/session.h>
 #include <framework/service.h>
 
@@ -249,7 +250,7 @@ expr_result_t expr_eval_merge(const expr_result_t& key, const expr_result_t& val
     expr_result_t* kvp = nullptr;
     if (key.type == EXPR_RESULT_ARRAY)
     {
-        for (const auto& e : key)
+        for (auto e : key)
         {
             if (keep_nulls || !e.is_null())
                 array_push(kvp, e);
@@ -260,7 +261,7 @@ expr_result_t expr_eval_merge(const expr_result_t& key, const expr_result_t& val
 
     if (value.type == EXPR_RESULT_ARRAY)
     {
-        for (const auto& e : value)
+        for (auto e : value)
         {
             if (keep_nulls || !e.is_null())
                 array_push(kvp, e);
@@ -318,7 +319,7 @@ template<typename T> T min_range(const T* ptr, unsigned count)
 {
     T m = std::numeric_limits<T>::max();
     for (unsigned i = 0; i < count; ++i, ++ptr)
-        m = std::min(*ptr, m);
+        m = min(*ptr, m);
     return m;
 }
 
@@ -326,7 +327,7 @@ template<typename T> T max_range(const T* ptr, unsigned count)
 {
     T m = std::numeric_limits<T>::min();
     for (unsigned i = 0; i < count; ++i, ++ptr)
-        m = std::max(*ptr, m);
+        m = max(*ptr, m);
     return m;
 }
 
@@ -836,8 +837,8 @@ FOUNDATION_STATIC expr_result_t expr_eval_repeat(const expr_func_t* f, vec_expr_
 
     for (int i = 0; i < repeat_count; ++i)
     {
-        expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$i"));
-        v->value = expr_result_t((double)i);
+        expr_var_t* vi = eval_get_or_create_global_var(STRING_CONST("$i"));
+        vi->value = expr_result_t((double)i);
 
         expr_result_t r = expr_eval(&args->buf[0]);
         array_push_memcpy(results, &r);
@@ -900,7 +901,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a result set");
 
     expr_result_t* results = nullptr;
-    for (const auto& e : elements)
+    for (auto e : elements)
     {
         expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$1"));
         v->value = e;
@@ -927,7 +928,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a result set");
 
     expr_result_t* results = nullptr;
-    for (const auto& e : elements)
+    for (auto e : elements)
     {
         expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$1"));
         v->value = e;

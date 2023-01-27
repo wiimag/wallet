@@ -720,7 +720,7 @@ struct expr_result_t
         }
     };
 
-    iterator begin(size_t index = 0) const
+    iterator begin() const
     {
         FOUNDATION_ASSERT(is_set());
         return iterator{ 0, this };

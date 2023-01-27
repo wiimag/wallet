@@ -3,14 +3,14 @@
  * License: https://infineis.com/LICENSE
  */
 
+#include <framework/glfw.h>
 #include <framework/common.h>
 #include <framework/session.h>
 #include <framework/dispatcher.h>
 #include <framework/profiler.h>
-#include <framework/glfw.h>
- 
+
 #include <foundation/foundation.h>
-  
+
 #include <imgui/imgui.h>
 #include <imgui/implot.h>
 #include <imgui/fs_imgui.bin.h>
@@ -30,6 +30,8 @@
     void* _window_handle = nullptr;
 
 #endif
+
+#include <GLFW/glfw3native.h>
 
 // GLFW data
 static double       _time = 0.0;

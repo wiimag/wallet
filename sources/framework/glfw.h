@@ -25,7 +25,6 @@
 #endif
 
 #include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
 
 // We gather version tests as define in order to easily see which features are version-dependent.
 #define GLFW_VERSION_COMBINED           (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 + GLFW_VERSION_REVISION)

@@ -303,6 +303,6 @@ FOUNDATION_FORCEINLINE mat4 inverse(const mat4& m) { mat4 r; bx::mtxInverse(r, m
 /// <returns>True if they are equivalent</returns>
 FOUNDATION_FORCEINLINE bool operator== (const vec3& a, const vec3& b)
 {
-    return math_float_eq(a.x, b.x, 50) && math_float_eq(a.y, b.y, 50) && math_float_eq(a.z, b.z, 50);
+    return math_float_eq(a.x, b.x, 100) && math_float_eq(a.y, b.y, 100) && math_float_eq(a.z, b.z, 100);
 }
 

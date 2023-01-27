@@ -5,9 +5,10 @@
 
 #pragma once
 
-#include <foundation/string.h>
+#include <stddef.h>
 
 typedef struct GLFWwindow GLFWwindow;
+typedef struct string_const_t string_const_t;
 
 /// Setup the user session around the specified file path
 void session_setup(const char* root_path = nullptr);
