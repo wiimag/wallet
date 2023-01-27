@@ -339,8 +339,7 @@ FOUNDATION_STATIC void eod_main_menu_status()
 
 FOUNDATION_STATIC void eod_initialize()
 {
-    dispatch(eod_update_window_title);
-    
+    eod_update_window_title();    
     service_register_menu_status(HASH_EOD, eod_main_menu_status);
 }
 
