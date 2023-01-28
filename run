@@ -7,10 +7,15 @@
 # Run script to execute most common operations used when working on the Infineis Framework.
 #
 
+APP_NAME=Wallet
 SHORT_NAME=wallet
-SOLUTION_NAME=Wallet
 
+bold=$(tput bold)
+normal=$(tput sgr0)
+progname=$(basename $0)
 unameOut="$(uname -s)"
+
+# Determine running platform
 case "${unameOut}" in
     Linux*)     machine=Linux;;
     Darwin*)    machine=Mac;;
@@ -20,27 +25,135 @@ case "${unameOut}" in
 esac
 #echo ${machine}
 
-# Indicate if the default build should be run at the end
-RUN=1
+#
+# Parse common command line arguments
+#
+
+RUN=1 # Indicate if the default build should be run at the end
+BUILD=0
+BUILD_DEBUG=0
+BUID_RELEASE=1
+TESTS=0
+OPEN=0
+OPEN_WORKSPACE=0
+START=0
+HELP=0
+VERBOSE=0
+POSITIONAL_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+  #echo "\$1:\"$1\" \$2:\"$2\""
+  case $1 in
+    -h|--help)
+      HELP=1
+      shift # past argument
+      ;;
+    --verbose)
+      VERBOSE=1
+      shift # past argument
+      ;;
+    -n|--name)
+      SHORT_NAME="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -a|--app-name)
+      APP_NAME="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    b|build)
+      BUILD=1
+      shift # past argument
+
+      # The release argument is the default, but remove it if it was specified
+      if [ $# -ne 0 ] && [ $1 = "release" ]; then
+        BUILD_RELEASE=1
+        shift
+      fi
+
+      if [ $# -ne 0 ] && [ $1 = "debug" ]; then
+        BUILD_DEBUG=1
+        shift
+      fi
+      ;;
+    o|open)
+      OPEN=1
+      shift # past argument
+
+      # The release argument is the default, but remove it if it was specified
+      if [ $# -ne 0 ] && ([ $1 == "workspace" ] || [ $1 == "w" ]); then
+        OPEN_WORKSPACE=1
+        shift
+      fi
+      ;;
+    t|tests)
+      TESTS=1
+      shift # past argument
+      ;;
+    s|start)
+      RUN=1
+      START=1
+      shift # past argument
+      ;;
+    *)
+      POSITIONAL_ARGS+=("$1") # save positional arg
+      shift # past argument
+      ;;
+  esac
+done
+
+#
+# Check if help was requested
+#
+if [ $HELP -eq 1 ]; then
+
+    echo "  Usage: $progname [${bold}b${normal}uild [debug|release]] "
+    echo "             [${bold}t${normal}ests] " 
+    echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
+    echo "             [${bold}s${normal}tart] [--option=<value>] ...additional arguments passed to last command"
+    echo ""
+    echo "  Commands:"
+    echo "    ${bold}b${normal}uild [debug|release] Build the solution in debug or release (release if used by default)"
+    echo "    ${bold}t${normal}ests                 Run application tests (i.e. using --run-tests)"
+    echo "    ${bold}o${normal}pen [workspace]      Open the application solution workspace (i.e. Visual Studio or Xcode IDE)"
+    echo "    ${bold}s${normal}tart                 Launch the application after running other commands "
+    echo ""
+    echo "    If no commands are specified, we start the application by default, i.e. './run')"
+    echo ""
+    echo "    Commands can be chained one after the other, i.e. './run build tests --success=true --verbose'"
+    echo ""
+    echo "  Optional arguments:"
+    echo "   -h, --help            Show this help message and exit"
+    echo "   -n, --name <name>     Specify the solution name (used to open the workspace are launch the exe on Windows)"
+    echo "   -a, --app-name <name> Specify the App name to launch application on MacOS"
+    echo "   --verbose             Increase the verbosity of the bash script"
+    echo ""
+    echo "  Examples:"
+    echo "    ./run build                         Build the solution"
+    echo "    ./run build tests start             Build then run tests and finally lanch the application"
+    echo "    ./run build tests --success=true    Build then run tests passing the --success=true argument to test framework"
+    echo ""
+    exit 0
+
+fi
 
 #
 # Build solution
 #
-if [ $# -ne 0 ] && [ $1 == "build" ]; then
-    shift
+if [ $BUILD -eq 1 ]; then
+
     if [ $machine == "MinGw" ]; then
-        if [ $# -ne 0 ] && [ $1 == "debug" ]; then
-            shift
-            ./scripts/build_win_debug.bat
+        if [ $BUILD_DEBUG -eq 1 ]; then
+            ./scripts/build_win_debug.bat $POSITIONAL_ARGS
         else
-            ./scripts/build_win_release.bat
+            ./scripts/build_win_release.bat $POSITIONAL_ARGS
         fi
     elif [ ${machine} == "Mac" ]; then
-        if [ $# -ne 0 ] && [ $1 = "debug" ]; then
-            shift
-            ./scripts/build_osx_debug.sh $@
+        if [ $BUILD_DEBUG -eq 1 ]; then
+            ./scripts/build_osx_debug.sh $POSITIONAL_ARGS
         else
-            ./scripts/build_osx_release.sh $@
+            ./scripts/build_osx_release.sh $POSITIONAL_ARGS
         fi
     fi
 
@@ -58,11 +171,10 @@ fi
 #
 # Open IDE
 #
-if [ $# -ne 0 ] && [ $1 == "open" ]; then
-    shift
+if [ $OPEN -eq 1 ]; then
 
-    if [ $# -ne 0 ] && [ $1 == "workspace" ]; then
-        shift
+    if [ $OPEN_WORKSPACE -eq 1 ]; then
+
         if [ $machine == "MinGw" ]; then
             start projects/vs2022/${SHORT_NAME}.sln
         elif [ ${machine} == "Mac" ]; then
@@ -84,12 +196,12 @@ fi
 #
 # Run tests
 #
-if [ $# -ne 0 ] && [ $1 == "tests" ]; then
-    shift
+if [ $TESTS -eq 1 ]; then
+
     if [ ${machine} == "MinGw" ]; then
-        ./build/${SHORT_NAME}.exe --run-tests $@
+        ./build/${SHORT_NAME}.exe --run-tests $POSITIONAL_ARGS
     elif [ ${machine} == "Mac" ]; then
-        ./build/${SOLUTION_NAME}.app/Contents/MacOS/${SOLUTION_NAME} --run-tests $@
+        ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} --run-tests $POSITIONAL_ARGS
     fi
 
     retval=$?
@@ -104,22 +216,25 @@ if [ $# -ne 0 ] && [ $1 == "tests" ]; then
     echo
     echo "===TESTS SUCCESSED==="
     echo
+
+    # Print test results
     cat artifacts/tests.log
 
     RUN=0
 fi
 
-
-if [ $# -ne 0 ] && [ $1 == "start" ]; then
-    shift
+# Check if we have an explicit command to run/start the application
+if [ $START -eq 1 ]; then
     RUN=1
 fi
 
+# Finally run the application if requested.
 if [ $RUN -eq 1 ]; then
+
     if [ ${machine} == "MinGw" ]; then
-        ./build/${SHORT_NAME}.exe $@
+        ./build/${SHORT_NAME}.exe $POSITIONAL_ARGS
     elif [ ${machine} == "Mac" ]; then
-        ./build/${SOLUTION_NAME}.app/Contents/MacOS/${SOLUTION_NAME} $@
+        ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} $POSITIONAL_ARGS
     fi
 
     retval=$?
