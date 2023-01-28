@@ -427,3 +427,62 @@ extern bool open_file_dialog(
 bool environment_command_line_arg(const char* name, string_const_t* value = nullptr);
 bool environment_command_line_arg(const char* name, size_t name_length, string_const_t* value = nullptr);
 bool environment_command_line_arg(string_const_t name, string_const_t* value = nullptr);
+
+#if BUILD_DEBUG
+struct ElapsedTimeLoggerScope
+{
+    char label[128];
+    hash_t context;
+    tick_t start_time;
+    FOUNDATION_FORCEINLINE ElapsedTimeLoggerScope(hash_t _context, const char* fmt, ...)
+        : context(_context)
+    {
+        va_list list;
+        va_start(list, fmt);
+        string_vformat(STRING_CONST_CAPACITY(label), fmt, string_length(fmt), list);
+        va_end(list);   
+        
+        start_time = time_current();
+    }
+
+    FOUNDATION_FORCEINLINE ElapsedTimeLoggerScope(const char* fmt, ...)
+        : context(memory_context())
+    {
+        va_list list;
+        va_start(list, fmt);
+        string_vformat(STRING_CONST_CAPACITY(label), fmt, string_length(fmt), list);
+        va_end(list);
+
+        start_time = time_current();
+    }
+
+    template <size_t N> FOUNDATION_FORCEINLINE
+        ElapsedTimeLoggerScope(const char(&name)[N])
+        : context(memory_context())
+    {
+        string_copy(STRING_CONST_CAPACITY(label), name, N);
+        start_time = time_current();
+    }
+
+    FOUNDATION_FORCEINLINE ~ElapsedTimeLoggerScope()
+    {
+        const double elapsed_time = time_elapsed(start_time);
+        if (elapsed_time > 0.0009)
+        {
+            if (elapsed_time < 1.0)
+                log_infof(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
+            else
+                log_warnf(context, WARNING_PERFORMANCE, STRING_CONST("%s took %.3lg seconds <<<"), label, elapsed_time);
+        }
+    }
+};
+
+#define TIME_TRACKER_NAME_COUNTER_EXPAND(COUNTER, ...) ElapsedTimeLoggerScope __var_time_tracker__##COUNTER (__VA_ARGS__)
+#define TIME_TRACKER_NAME_COUNTER(COUNTER, ...) TIME_TRACKER_NAME_COUNTER_EXPAND(COUNTER, __VA_ARGS__)
+#define TIME_TRACKER(...) TIME_TRACKER_NAME_COUNTER(__LINE__, __VA_ARGS__)
+
+#else
+
+#define TIME_TRACKER(NAME) (void);
+
+#endif

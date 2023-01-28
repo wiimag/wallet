@@ -24,6 +24,7 @@ struct json_object_t
     const json_token_t* root;
     long status_code{ 0 };
     long error_code{ 0 };
+    string_const_t query;
 
     json_object_t()
         : buffer(nullptr)
@@ -65,6 +66,9 @@ struct json_object_t
         , token_count(json.token_count)
         , tokens(json.tokens)
         , root(obj ? obj : json.root)
+        , status_code(json.status_code)
+        , error_code(json.error_code)
+        , query(json.query)
     {
     }
 
@@ -74,12 +78,16 @@ struct json_object_t
         , token_count(src.token_count)
         , tokens(src.tokens)
         , root(src.root)
+        , status_code(src.status_code)
+        , error_code(src.error_code)
+        , query(src.query)
     {
         src.child = true;
         src.buffer = nullptr;
         src.token_count = 0;
         src.tokens = nullptr;
         src.root = nullptr;
+        src.query = {};
     }
 
     json_object_t& operator=(const json_object_t& src) noexcept
@@ -89,6 +97,9 @@ struct json_object_t
         tokens = src.tokens;
         root = src.root;
         child = true;
+        status_code = src.status_code;
+        error_code = src.error_code;
+        query = src.query;
         return *this;
     }
 
@@ -98,11 +109,15 @@ struct json_object_t
         token_count = src.token_count;
         tokens = src.tokens;
         root = src.root;
+        status_code = src.status_code;
+        error_code = src.error_code;
+        query = src.query;
 
         src.buffer = nullptr;
         src.token_count = 0;
         src.tokens = nullptr;
         src.root = nullptr;
+        query = {};
 
         return *this;
     }

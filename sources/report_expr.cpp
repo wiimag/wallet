@@ -218,7 +218,7 @@ FOUNDATION_STATIC bool report_eval_report_field_resolve_level(title_t* t, FetchL
             const double timeout_expired = 2.0f;
             const tick_t timeout = time_current();
             while (!s->has_resolve(request_level) && time_elapsed(timeout) < timeout_expired)
-                thread_try_wait(timeout_expired * 100);
+                dispatcher_wait_for_wakeup_main_thread(timeout_expired * 100);
 
             if (time_elapsed(timeout) >= timeout_expired)
             {
@@ -299,7 +299,7 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     {
         if (time_elapsed(s) > 30.0f)
             throw ExprError(EXPR_ERROR_EVALUATION_TIMEOUT, "Sync timeout, retry later...", STRING_FORMAT(report_name));
-        thread_try_wait(100);
+        dispatcher_wait_for_wakeup_main_thread(100);
     }
 
     expr_result_t* results = nullptr;

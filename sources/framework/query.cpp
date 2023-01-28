@@ -65,7 +65,6 @@ static bool _initialized = false;
 static thread_t* _fetcher_threads[MAX_QUERY_THREADS] { nullptr };
 static thread_local CURL* _req = nullptr;
 static thread_local struct curl_slist* _req_json_header_chunk = nullptr;
-static thread_t* _main_thread = nullptr;
 
 struct json_query_request_t
 {
@@ -408,6 +407,9 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
     if (callback)
     {
         json_object_t json = json_parse(req.json);
+        static thread_local char query_copy_buffer[2048];
+        string_t query_copy = string_copy(STRING_CONST_CAPACITY(query_copy_buffer), query, string_length(query));
+        json.query = string_to_const(query_copy);
         json.status_code = req.response_code;
         json.error_code = req.response_code < 400 ? req.status : CURL_LAST;
         callback(json);
@@ -418,7 +420,11 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
 
 bool query_execute_json(const char* query, query_format_t format, string_t body, const query_callback_t& callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
+    //TIME_TRACKER("query_execute_json(%s)", query);
     MEMORY_TRACKER(HASH_QUERY);
+
+    static thread_local char query_copy_buffer[2048];
+    string_t query_copy = string_copy(STRING_CONST_CAPACITY(query_copy_buffer), query, string_length(query));
 
     bool warning_logged = false;
     const bool has_body_content = !string_is_null(body);
@@ -430,13 +436,16 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
             stream_t* cache_file_stream = fs_open_file(STRING_ARGS(cache_file_path), STREAM_IN | STREAM_BINARY);
             if (cache_file_stream != nullptr)
             {
+                //TIME_TRACKER("ready stream query_execute_json(%s)", query);
+
                 const size_t json_buffer_size = stream_size(cache_file_stream);
                 log_debugf(HASH_QUERY, STRING_CONST("Fetch from cache query %s at %.*s"), query, STRING_FORMAT(cache_file_path));
 
                 string_t json_buffer = string_allocate(json_buffer_size + 1, json_buffer_size + 2);
                 scoped_string_t json_string = stream_read_string_buffer(cache_file_stream, json_buffer.str, json_buffer.length);
 
-                const json_object_t& json = json_parse(json_string);
+                json_object_t json = json_parse(json_string);
+                json.query = string_to_const(query_copy);
                 stream_deallocate(cache_file_stream);
 
                 if (json.root != nullptr)
@@ -473,6 +482,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
     if ((has_body_content ? req.post(query, body) : req.execute(query)) || format == FORMAT_JSON_WITH_ERROR)
     {
         json_object_t json = json_parse(req.json);
+        json.query = string_to_const(query_copy);
         json.status_code = req.response_code;
         json.error_code = req.status > 0 ? req.status : (json.status_code >= 400 ? CURL_LAST : CURLE_OK);
 
@@ -545,7 +555,7 @@ bool query_execute_async_json(const char* query, const config_handle_t& body, co
 bool query_execute_async_json(const char* query, query_format_t format, const query_callback_t& json_callback, int ignore_if_queue_more_than /*= 0*/, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
     if (_fetcher_requests.size() > ignore_if_queue_more_than)
-        thread_try_wait(60);
+        dispatcher_wait_for_wakeup_main_thread(10);
 
     if (!query_is_cache_file_valid(query, format, invalid_cache_query_after_seconds) && ignore_if_queue_more_than != 0 && _fetcher_requests.size() >= ignore_if_queue_more_than)
         return false;
@@ -615,8 +625,7 @@ FOUNDATION_STATIC void* fetcher_thread_fn(void* arg)
 
             string_deallocate(req.body.str);
             string_deallocate(req.query.str);
-            if (_main_thread)
-                thread_signal(_main_thread);
+            dispatcher_wakeup_main_thread();
             
             signal_thread();
             progress_set(min(_fetcher_requests.size(), ARRAY_COUNT(_fetcher_threads)), ARRAY_COUNT(_fetcher_threads));
@@ -641,6 +650,7 @@ bool query_post_json(const char* url, const config_handle_t& post_data, const qu
     if (req.post(url, post_data))
     {
         json_object_t response = json_parse(req.json);
+        response.query = string_const(url, string_length(url));
         response.status_code = req.response_code;
         response.error_code = req.status > 0 ? req.status : (response.status_code >= 400 ? CURL_LAST : CURLE_OK);
 
@@ -716,8 +726,6 @@ void query_initialize()
     if (_initialized)
         return;
 
-    _main_thread = thread_self();
-
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK)
     {
@@ -775,6 +783,4 @@ void query_shutdown()
 
     query_curl_cleanup();
     curl_global_cleanup();
-
-    _main_thread = nullptr;
 }

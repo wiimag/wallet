@@ -105,9 +105,9 @@ thread_signal(thread_t* thread);
 FOUNDATION_API bool
 thread_wait(void);
 
-/*! Wait for calling thread to be signalled for the given amount of time
+/*! Wait for calling thread to be signaled for the given amount of time
 \param milliseconds Time in milliseconds to wait, 0 means no wait
-\return true if signalled, false if not */
+\return true if signaled, false if not */
 FOUNDATION_API bool
 thread_try_wait(unsigned int milliseconds);
 

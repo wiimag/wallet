@@ -260,3 +260,7 @@ bool dispatcher_post_event_config(const char(&name)[N], Args&&... args)
 
     return dispatcher_post_event(name, N-1, &cv, sizeof(config_handle_t), DISPATCHER_EVENT_OPTION_CONFIG_DATA | DISPATCHER_EVENT_OPTION_COPY_DATA);
 }
+
+void dispatcher_wakeup_main_thread();
+
+bool dispatcher_wait_for_wakeup_main_thread(int timeout_ms = 100);

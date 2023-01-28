@@ -82,6 +82,8 @@ FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string
 
 FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, uint64_t index)
 {
+    //TIME_TRACKER(HASH_STOCK, "stock_read_real_time_results(%.*s)", STRING_FORMAT(json.query));
+    
     day_result_t dresult{};
     dresult.date = (time_t)json_read_number(json, STRING_CONST("timestamp"));
     dresult.gmtoffset = (uint8_t)json_read_number(json, STRING_CONST("gmtoffset"));
@@ -113,6 +115,8 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
 
     auto lock = scoped_mutex_t(_db_lock);
     stock_t& entry = _db_stocks[index];
+
+    //TIME_TRACKER(HASH_STOCK, "stock_read_fundamentals_results(%s)", string_table_decode(entry.code));
 
     const json_object_t& general = json["General"];
     entry.symbol = string_table_encode(general["Code"].as_string());
@@ -199,6 +203,9 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
     technical_descriptor_t desc)
 {
     stock_t* entry = &_db_stocks[index];
+
+    //TIME_TRACKER(HASH_STOCK, "stock_fetch_technical_results(%s)", string_table_decode(entry->code));
+
     if ((fetch_levels & access_level) && ((entry->fetch_level | entry->resolved_level) & access_level) == 0)
     {
         if (entry->has_resolve(FetchLevel::TECHNICAL_EOD) || entry->has_resolve(FetchLevel::EOD))
@@ -235,6 +242,9 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
 {
     auto lock = scoped_mutex_t(_db_lock);
     stock_t* s = &_db_stocks[index];
+
+    //TIME_TRACKER(HASH_STOCK, "stock_read_eod_indexed_prices(%s)", string_table_decode(s->code));
+
     day_result_t* history = s->history;
     int h = 0, h_end = array_size(history);
     for (size_t i = 0; i < json.root->value_length; ++i)
@@ -274,6 +284,8 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
 
 FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_index_t index, FetchLevel eod_fetch_level)
 {
+    //TIME_TRACKER("stock_read_eod_results(%s)", string_table_decode(_db_stocks[index].code));
+    
     day_result_t* history = nullptr;
     array_reserve(history, json.root->value_length + 1);
 
@@ -457,7 +469,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
     if ((fetch_levels & FetchLevel::FUNDAMENTALS) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::FUNDAMENTALS) == 0)
     {
         if (eod_fetch_async("fundamentals", ticker, FORMAT_JSON_CACHE,
-            E21(stock_read_fundamentals_results, _1, index), 8, 3 * 24ULL * 3600ULL))
+            E21(stock_read_fundamentals_results, _1, index), 16, 3 * 24ULL * 3600ULL))
         {
             entry->mark_fetched(FetchLevel::FUNDAMENTALS);
             status = STATUS_RESOLVING;
@@ -721,8 +733,8 @@ bool stock_update(stock_handle_t& handle, fetch_level_t fetch_level, double time
 
 bool stock_update(const char* code, size_t code_length, stock_handle_t& handle, fetch_level_t fetch_level, double timeout /*= 5.0*/)
 {
-    stock_t* stock_data = (stock_t*)(const stock_t*)handle;
-    if (stock_data == nullptr)
+    stock_t* s = (stock_t*)(const stock_t*)handle;
+    if (s == nullptr)
     {
         handle = stock_request(code, code_length, fetch_level);
         return (handle->resolved_level & fetch_level) == fetch_level;

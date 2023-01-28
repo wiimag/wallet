@@ -279,6 +279,19 @@ bool dispatcher_unregister_event_listener(
     return dispatcher_unregister_event_listener(string_hash(event_name, event_name_length), callback);
 }
 
+static event_handle _main_thread_wake_up_event;
+void dispatcher_wakeup_main_thread()
+{
+    _main_thread_wake_up_event.signal();
+}
+
+bool dispatcher_wait_for_wakeup_main_thread(int timeout_ms)
+{
+    //TIME_TRACKER("dispatcher_wait_for_wakeup_main_thread(%d)", timeout_ms);
+    thread_yield();
+    return _main_thread_wake_up_event.wait(timeout_ms) == 0;
+}
+
 //
 // # SYSTEM
 //

@@ -162,7 +162,7 @@ FOUNDATION_STATIC bool report_table_update(table_element_ptr_t element)
     if (title == nullptr)
         return false;
 
-    return title_update(title, 10.0);
+    return title_update(title, 0.0);
 }
 
 FOUNDATION_STATIC bool report_table_search(table_element_ptr_const_t element, const char* search_filter, size_t search_filter_length)
@@ -948,7 +948,7 @@ FOUNDATION_STATIC void report_render_add_title_dialog(report_t* report)
 FOUNDATION_STATIC void report_trigger_update(report_t* report)
 {
     report->dirty = true;
-    report->fully_resolved = false;
+    report->fully_resolved = 0;
 }
 
 FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* title)
@@ -1435,34 +1435,39 @@ FOUNDATION_STATIC void report_render_dialogs(report_t* report)
 
 FOUNDATION_STATIC bool report_initial_sync(report_t* report)
 {
-    if (report->fully_resolved)
+    if (report->fully_resolved == 1)
         return true;
 
+    // No need to retry syncing right away
+    if (time_elapsed(report->fully_resolved) < 1.0)
+        return false;
+
+    TIME_TRACKER("report_initial_sync");
+
     bool fully_resolved = true;
-    for (const auto& title : generics::fixed_array(report->titles))
+    const int title_count = array_size(report->titles);
+    for (const auto& t : generics::fixed_array(report->titles))
     {
-        if (title_is_index(title))
+        if (title_is_index(t))
             continue;
 
-        const bool stock_resolved = title->stock->has_resolve(REPORT_FETCH_LEVELS);
+        const bool stock_resolved = t->stock && t->stock->has_resolve(REPORT_FETCH_LEVELS);
         fully_resolved &= stock_resolved;
 
         if (!stock_resolved)
         {
-            if (time_elapsed(title->stock->last_update_time) < 3.0)
-                continue;
-
-            if (!stock_update(title->code, title->code_length, title->stock, REPORT_FETCH_LEVELS, 10.0))
+            bool first_init = !t->stock;                
+            if (!stock_update(t->code, t->code_length, t->stock, REPORT_FETCH_LEVELS, 60.0) && !first_init &&
+                !dispatcher_wait_for_wakeup_main_thread(1000 / title_count) &&
+                !t->stock->has_resolve(REPORT_FETCH_LEVELS))
             {
-                if (!thread_try_wait(250))
-                {
-                    log_debugf(0, STRING_CONST("Refreshing %s is taking longer than expected"), title->code);
-                    break;
-                }
+                log_debugf(0, STRING_CONST("Refreshing %s is taking longer than expected"), t->code);
+                break;
             }
         }
     }
 
+    report->fully_resolved = time_current();
     if (!fully_resolved)
         return false;
 
@@ -1473,7 +1478,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     if (report->table)
         report->table->needs_sorting = true;
 
-    report->fully_resolved = fully_resolved;
+    report->fully_resolved = 1;
     return fully_resolved;
 }
 
@@ -1819,13 +1824,13 @@ bool report_refresh(report_t* report)
         t->stock->fetch_errors = 0;
         t->stock->resolved_level &= ~FetchLevel::REALTIME;
         if (!stock_resolve(t->stock, FetchLevel::REALTIME))
-            thread_try_wait(32);
+            dispatcher_wait_for_wakeup_main_thread(50);
     }
 
     if (report_sync_titles(report))
         return true;
 
-    report->fully_resolved = false;
+    report->fully_resolved = 0;
     return false;
 }
 
@@ -1981,7 +1986,7 @@ void report_render(report_t* report)
         report_refresh(report);
     }
 
-    if (!report->fully_resolved)
+    if (report->fully_resolved != 1)
         report_initial_sync(report);
 
     imgui_frame_render_callback_t summary_frame = nullptr;
@@ -2010,7 +2015,7 @@ void report_sort_order()
     std::sort(_reports, _reports + array_size(_reports), [](const report_t& a, const report_t& b)
     {
         if (a.save_index == b.save_index)
-            return a.name < b.name;
+            return string_compare_less(string_table_decode(a.name), string_table_decode(b.name));
         return a.save_index < b.save_index;
     });
 }
@@ -2090,7 +2095,7 @@ bool report_sync_titles(report_t* report)
             continue;
         if (!t->stock->is_resolving(REPORT_FETCH_LEVELS))
         {
-            if (!title_update(t, 3.5) && !thread_try_wait(100))
+            if (!title_update(t, 3.5) && !dispatcher_wait_for_wakeup_main_thread(100))
                 break;
         }
     }

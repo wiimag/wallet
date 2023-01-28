@@ -62,7 +62,7 @@ struct report_t
     double total_investment { 0 };
     double total_day_gain { 0 };
     double total_daily_average_p{ 0 };
-    bool fully_resolved{ false };
+    tick_t fully_resolved{ 0 };
 
     // UI data
     table_t* table;

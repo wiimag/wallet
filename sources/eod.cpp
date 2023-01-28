@@ -223,7 +223,6 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
 bool eod_fetch_async(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2, const query_callback_t& json_callback, int ignore_if_queue_more_than /*= 0*/, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
     string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
-    log_debugf(0, STRING_CONST("Built query %.*s"), STRING_FORMAT(url));
     return query_execute_async_json(url.str, format, json_callback, ignore_if_queue_more_than, invalid_cache_query_after_seconds);
 }
 
