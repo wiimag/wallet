@@ -824,6 +824,7 @@ bool eval_set_global_var(const char* name, void* ptr, size_t size = 0);
 void eval_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t cleanup = nullptr, size_t context_size = 0);
 bool eval_unregister_function(const char* name, exprfn_t fn = nullptr);
 expr_var_t* eval_get_or_create_global_var(const char* name, size_t name_length = 0ULL);
+expr_var_t* eval_set_or_create_global_var(const char* name, size_t name_length, const expr_result_t& value);
 
 void eval_register_vec_mat_functions(expr_func_t*& funcs);
 

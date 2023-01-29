@@ -420,7 +420,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
 
 bool query_execute_json(const char* query, query_format_t format, string_t body, const query_callback_t& callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
-    //TIME_TRACKER("query_execute_json(%s)", query);
+    TIME_TRACKER(500.0, "query_execute_json(%s)", query);
     MEMORY_TRACKER(HASH_QUERY);
 
     static thread_local char query_copy_buffer[2048];
@@ -436,8 +436,6 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
             stream_t* cache_file_stream = fs_open_file(STRING_ARGS(cache_file_path), STREAM_IN | STREAM_BINARY);
             if (cache_file_stream != nullptr)
             {
-                //TIME_TRACKER("ready stream query_execute_json(%s)", query);
-
                 const size_t json_buffer_size = stream_size(cache_file_stream);
                 log_debugf(HASH_QUERY, STRING_CONST("Fetch from cache query %s at %.*s"), query, STRING_FORMAT(cache_file_path));
 

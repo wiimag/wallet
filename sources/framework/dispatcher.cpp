@@ -287,8 +287,6 @@ void dispatcher_wakeup_main_thread()
 
 bool dispatcher_wait_for_wakeup_main_thread(int timeout_ms)
 {
-    //TIME_TRACKER("dispatcher_wait_for_wakeup_main_thread(%d)", timeout_ms);
-    thread_yield();
     return _main_thread_wake_up_event.wait(timeout_ms) == 0;
 }
 

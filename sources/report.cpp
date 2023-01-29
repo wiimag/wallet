@@ -1477,7 +1477,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     if (time_elapsed(report->fully_resolved) < 1.0)
         return false;
 
-    TIME_TRACKER("report_initial_sync");
+    TIME_TRACKER(50.0, "report_initial_sync");
 
     bool fully_resolved = true;
     const int title_count = array_size(report->titles);
@@ -2160,7 +2160,7 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
 
         if (!t->stock || !t->stock->has_resolve(REPORT_FETCH_LEVELS))
         {
-            log_infof(HASH_REPORT, STRING_CONST("Syncing title %s"), t->code);
+            log_debugf(HASH_REPORT, STRING_CONST("Syncing title %s"), t->code);
             title_update(t, 0);
         }
     }
@@ -2182,7 +2182,7 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
             dispatcher_wait_for_wakeup_main_thread(50);
         }
 
-        log_infof(HASH_REPORT, STRING_CONST(">>> Title %s synced"), t->code);
+        log_debugf(HASH_REPORT, STRING_CONST(">>> Title %s synced"), t->code);
     }
 
     report_summary_update(report);
@@ -2192,7 +2192,7 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
     if (report->table)
         report->table->needs_sorting = true;
 
-    log_infof(HASH_REPORT, STRING_CONST("<<< Report %s synced completed in %.3g seconds"), SYMBOL_CSTR(report->name), time_elapsed(timer));
+    log_infof(HASH_REPORT, STRING_CONST("Report %s synced completed in %.3g seconds"), SYMBOL_CSTR(report->name), time_elapsed(timer));
     return true;
 }
 

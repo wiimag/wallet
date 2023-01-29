@@ -15,6 +15,8 @@
 #include <foundation/posix.h>
 #endif
 
+#include <foundation/thread.h>
+
 class shared_mutex 
 {
 public:
@@ -105,33 +107,47 @@ private:
 
 struct shared_mutex_read_lock
 {
+    const bool locked;
     shared_mutex& _mutex;
 
     FOUNDATION_FORCEINLINE shared_mutex_read_lock(shared_mutex& mutex)
         : _mutex(mutex)
+        , locked(mutex.shared_lock())
     {
-        _mutex.shared_lock();
     }
 
     FOUNDATION_FORCEINLINE ~shared_mutex_read_lock()
     {
-        _mutex.shared_unlock();
+        if (locked)
+            _mutex.shared_unlock();
+    }
+
+    FOUNDATION_FORCEINLINE operator bool() const
+    {
+        return locked;
     }
 };
 
 struct shared_mutex_write_lock
 {
+    const bool locked;
     shared_mutex& _mutex;
 
     FOUNDATION_FORCEINLINE shared_mutex_write_lock(shared_mutex& mutex)
         : _mutex(mutex)
+        , locked(mutex.exclusive_lock())
     {
-        _mutex.exclusive_lock();
     }
 
     FOUNDATION_FORCEINLINE ~shared_mutex_write_lock()
     {
-        _mutex.exclusive_unlock();
+        if (locked)
+            _mutex.exclusive_unlock();
+    }
+
+    FOUNDATION_FORCEINLINE operator bool() const
+    {
+        return locked;
     }
 };
 
@@ -216,10 +232,14 @@ public:
         #else 
         #error Unknown platform.
         #endif
+
+        thread_yield();
     }
 
     int wait(int timeout_ms = 0)
     {
+        thread_yield();
+        
         #if FOUNDATION_PLATFORM_WINDOWS
 
         #if _WIN32_WINNT >= 0x0600

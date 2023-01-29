@@ -131,6 +131,8 @@ typedef enum {
 	WARNING_CLOUD,
     /*! Used for UI warnings */
     WARNING_UI,
+    /*! Timeout */
+    WARNING_TIMEOUT,
 	/*! Marker, last reserved internal warning identifier */
 	WARNING_LAST_BUILTIN = 0x0fff,
 } warning_t;

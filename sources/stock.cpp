@@ -38,7 +38,6 @@ struct technical_descriptor_t
 };
 
 static size_t _db_capacity;
-//static mutex_t* _db_lock = nullptr;
 static shared_mutex _db_lock;
 static day_result_t** _trashed_history = nullptr;
 static stock_t* _db_stocks = nullptr;
@@ -49,20 +48,16 @@ FOUNDATION_STATIC void stock_grow_db()
 {
     // TODO: Dispose of old stocks (outdated)?
     hashtable64_t* old_table = _db_hashes;
-    //if (auto lock = scoped_mutex_t(_db_lock))
-    {
-        SHARED_WRITE_LOCK(_db_lock);
-        _db_capacity *= size_t(2);
-        hashtable64_t* new_hash_table = hashtable64_allocate(_db_capacity);
-        for (int i = 1, end = array_size(_db_stocks); i < end; ++i)
-            hashtable64_set(new_hash_table, _db_stocks[i].id, i);
+    _db_capacity *= size_t(2);
+    hashtable64_t* new_hash_table = hashtable64_allocate(_db_capacity);
+    for (int i = 1, end = array_size(_db_stocks); i < end; ++i)
+        hashtable64_set(new_hash_table, _db_stocks[i].id, i);
 
-        _db_hashes = new_hash_table;
+    _db_hashes = new_hash_table;
 
-        for (size_t i = 0; i < array_size(_trashed_history); ++i)
-            array_deallocate(_trashed_history[i]);
-        array_clear(_trashed_history);
-    }
+    for (size_t i = 0; i < array_size(_trashed_history); ++i)
+        array_deallocate(_trashed_history[i]);
+    array_clear(_trashed_history);
 
     hashtable64_deallocate(old_table);
 }
@@ -85,8 +80,6 @@ FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string
 
 FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, uint64_t index)
 {
-    //TIME_TRACKER(HASH_STOCK, "stock_read_real_time_results(%.*s)", STRING_FORMAT(json.query));
-    
     day_result_t dresult{};
     dresult.date = (time_t)json_read_number(json, STRING_CONST("timestamp"));
     dresult.gmtoffset = (uint8_t)json_read_number(json, STRING_CONST("gmtoffset"));
@@ -113,16 +106,9 @@ FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, u
 }
 
 FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json, uint64_t index)
-{	
-    if (_db_stocks == nullptr)
-        return;
-
-        
-    //auto lock = scoped_mutex_t(_db_lock);
+{	        
     SHARED_READ_LOCK(_db_lock);
     stock_t& entry = _db_stocks[index];
-
-    //TIME_TRACKER(HASH_STOCK, "stock_read_fundamentals_results(%s)", string_table_decode(entry.code));
 
     const json_object_t& general = json["General"];
     entry.symbol = string_table_encode(general["Code"].as_string());
@@ -168,7 +154,7 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
 FOUNDATION_STATIC void stock_read_technical_results(const json_object_t& json, stock_index_t index, FetchLevel level, const technical_descriptor_t& desc)
 {
     SHARED_READ_LOCK(_db_lock);
-    //auto lock = scoped_mutex_t(_db_lock);
+    
     stock_t* s = &_db_stocks[index];
     day_result_t* history = s->history;
     int h = 0, h_end = array_size(history);
@@ -211,8 +197,6 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
 {
     stock_t* entry = &_db_stocks[index];
 
-    //TIME_TRACKER(HASH_STOCK, "stock_fetch_technical_results(%s)", string_table_decode(entry->code));
-
     if ((fetch_levels & access_level) && ((entry->fetch_level | entry->resolved_level) & access_level) == 0)
     {
         if (entry->has_resolve(FetchLevel::TECHNICAL_EOD) || entry->has_resolve(FetchLevel::EOD))
@@ -251,7 +235,7 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
     {
         {
             SHARED_READ_LOCK(_db_lock);
-            //auto lock = scoped_mutex_t(_db_lock);
+            
             stock_t* s = &_db_stocks[index];
             if (s->has_resolve(FetchLevel::TECHNICAL_EOD) || s->has_resolve(FetchLevel::EOD))
                 break;
@@ -263,7 +247,7 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
     day_result_t* history = nullptr;
     {
         SHARED_READ_LOCK(_db_lock);
-        //auto lock = scoped_mutex_t(_db_lock);
+        
         stock_t* s = &_db_stocks[index];
         if (!s->has_resolve(FetchLevel::TECHNICAL_EOD) && !s->has_resolve(FetchLevel::EOD))
             return log_warnf(HASH_STOCK, WARNING_NETWORK, STRING_CONST("Missing EOD results to resolve indexed price for %s"), SYMBOL_CSTR(s->code));
@@ -307,8 +291,6 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
 
 FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_index_t index, FetchLevel eod_fetch_level)
 {
-    //TIME_TRACKER("stock_read_eod_results(%s)", string_table_decode(_db_stocks[index].code));
-    
     day_result_t* history = nullptr;
     array_reserve(history, json.root->value_length + 1);
 
@@ -449,10 +431,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         entry->id = handle.id;
         entry->code = handle.code;
 
-        entry->description.reset([index](string_table_symbol_t& value)
-        { 
-            return stock_fetch_description(index, value); 
-        });
+        entry->description.reset([index](string_table_symbol_t& value) {  return stock_fetch_description(index, value); });
 
         FOUNDATION_ASSERT(handle.id != 0);
         if (!hashtable64_set(_db_hashes, handle.id, index))
@@ -467,8 +446,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         entry->resolved_level = FetchLevel::NONE;
         _db_lock.exclusive_unlock();
     }
-
-
+    
     SHARED_READ_LOCK(_db_lock);
     // Fetch stock data
     char ticker[64] { 0 };
@@ -724,29 +702,31 @@ bool stock_update(stock_handle_t& handle, fetch_level_t fetch_level, double time
     if (!s)
         return false;
 
-    SHARED_WRITE_LOCK(_db_lock);
-    bool fully_resolved = (s->resolved_level & fetch_level) == fetch_level;
-    if (fully_resolved)
-        return true;
-        
-    fetch_level = (fetch_level & ~s->resolved_level);
-    const deltatime_t since = time_elapsed(s->last_update_time);
-    if (timeout > 0 && since > timeout)
     {
-        s->fetch_errors = 0;
-        s->fetch_level = s->fetch_level & ~fetch_level;
+        SHARED_WRITE_LOCK(_db_lock);
+        bool fully_resolved = (s->resolved_level & fetch_level) == fetch_level;
+        if (fully_resolved)
+            return true;
 
-        log_warnf(HASH_STOCK, WARNING_PERFORMANCE, STRING_CONST("Refreshing stock data %s [%u,%u,%u] (%.4g > %.4g)"),
-            string_table_decode(s->code), s->fetch_level, fetch_level, s->resolved_level, since, timeout);
+        fetch_level = (fetch_level & ~s->resolved_level);
+        const deltatime_t since = time_elapsed(s->last_update_time);
+        if (timeout > 0 && since > timeout)
+        {
+            s->fetch_errors = 0;
+            s->fetch_level = s->fetch_level & ~fetch_level;
+
+            log_warnf(HASH_STOCK, WARNING_PERFORMANCE, STRING_CONST("Refreshing stock data %s [%u,%u,%u] (%.4g > %.4g)"),
+                string_table_decode(s->code), s->fetch_level, fetch_level, s->resolved_level, since, timeout);
+        }
+        else
+            fetch_level = (fetch_level & ~s->fetch_level);
+
+        if (s->fetch_errors >= 20)
+            return false;
+
+        if (fetch_level == FetchLevel::NONE)
+            return true;
     }
-    else
-        fetch_level = (fetch_level & ~s->fetch_level);
-
-    if (s->fetch_errors >= 20)
-        return false;
-
-    if (fetch_level == FetchLevel::NONE)
-        return true;
 
     if (stock_resolve(handle, fetch_level) != STATUS_OK)
         s->last_update_time = time_current();

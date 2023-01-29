@@ -2289,6 +2289,13 @@ expr_var_t* eval_get_or_create_global_var(const char* name, size_t name_length /
     return v;
 }
 
+expr_var_t* eval_set_or_create_global_var(const char* name, size_t name_length, const expr_result_t& value)
+{
+    expr_var_t* ev = eval_get_or_create_global_var(name, name_length);
+    ev->value = value;
+    return ev;
+}
+
 bool eval_set_global_var(const char* name, void* ptr, size_t size /*= 0*/)
 {
     expr_var_t* v = eval_get_or_create_global_var(name);

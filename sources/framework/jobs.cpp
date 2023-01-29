@@ -11,7 +11,11 @@
 #include <foundation/thread.h>
 #include <foundation/semaphore.h>
 
-static thread_t* _job_threads[8]{ nullptr };
+#ifndef MAX_JOB_THREADS
+#define MAX_JOB_THREADS 8
+#endif
+
+static thread_t* _job_threads[MAX_JOB_THREADS]{ nullptr };
 static concurrent_queue<job_t*> _scheduled_jobs{};
 
 static void* job_thread_fn(void* arg)

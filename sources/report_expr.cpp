@@ -22,6 +22,7 @@ struct dynamic_table_column_t
     string_t expression;
     expr_t* ee;
     int value_index;
+    column_format_t format{ COLUMN_FORMAT_TEXT };
 };
 
 typedef enum DynamicTableValueType {
@@ -31,6 +32,7 @@ typedef enum DynamicTableValueType {
     DYNAMIC_TABLE_VALUE_NUMBER = 3,
     DYNAMIC_TABLE_VALUE_TEXT = 4
 } dynamic_table_record_value_type_t;
+
 
 struct dynamic_table_record_value_t
 {
@@ -43,9 +45,8 @@ struct dynamic_table_record_value_t
 
 struct dynamic_table_record_t
 {
-    dynamic_table_record_value_t* values{ nullptr };
+    expr_result_t* values{ nullptr };
     dynamic_table_record_value_t* resolved{ nullptr };
-    //string_t cached_value{};
 };
 
 struct dynamic_report_t
@@ -67,52 +68,57 @@ static struct {
     function<bool(const expr_result_t& v)> filter_out;
     FetchLevel required_level{ FetchLevel::NONE };
 } report_field_property_evalutors[] = {
-    { "sold",  SL2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0) },
-    { "active",  SL2(_1->average_quantity ? true : false), SL1(_1.as_number() == 0) },
-    { "qty",  SL2(_1->average_quantity), SL1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
-    { "buy",  SL2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
-    { "day",  SL2(title_get_day_change(_1, _2)), IS_NOT_A_NUMBER },
+    
+    // Title & Stocks
+
+    { "sold",   SL2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0) },
+    { "active", SL2(_1->average_quantity ? true : false), SL1(_1.as_number() == 0) },
+    { "qty",    SL2(_1->average_quantity), SL1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
+    { "buy",    SL2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
+    { "day",    SL2(title_get_day_change(_1, _2)), IS_NOT_A_NUMBER },
 
     { "title",  SL2(_1->code), SL1(_1.index == 0) },
-    { "ps",  SL2(_1->ps.fetch()), IS_NOT_A_NUMBER },
-    { "ask",  SL2(_1->ask_price.fetch()), nullptr },
+    { "ps",     SL2(_1->ps.fetch()), IS_NOT_A_NUMBER },
+    { "ask",    SL2(_1->ask_price.fetch()), nullptr },
 
-    { "price",  SL2(_2->current.close), nullptr },
-    { "date",  SL2((double)_2->current.date), nullptr },
-    { "gmt",  SL2((double)_2->current.gmtoffset), nullptr},
-    { "open",  SL2(_2->current.open), nullptr },
-    { "close",  SL2(_2->current.close), nullptr },
-    { "previous_close",  SL2(_2->current.previous_close), nullptr},
-    { "low",  SL2(_2->current.low), nullptr },
-    { "high",  SL2(_2->current.high), nullptr },
-    { "change",  SL2(_2->current.change), IS_NOT_A_NUMBER },
-    { "change_p",  SL2(_2->current.change_p), IS_NOT_A_NUMBER },
-    { "volume",  SL2(_2->current.volume), nullptr },
+    // Stock only (Start at index 8 <== !!!UPDATE INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
 
-    { "price_factor",  SL2(_2->current.price_factor), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
+    { "price",      SL2(_2->current.close), nullptr },
+    { "date",       SL2((double)_2->current.date), nullptr },
+    { "gmt",        SL2((double)_2->current.gmtoffset), nullptr},
+    { "open",       SL2(_2->current.open), nullptr },
+    { "close",      SL2(_2->current.close), nullptr },
+    { "yesterday",  SL2(_2->current.previous_close), nullptr},
+    { "low",        SL2(_2->current.low), nullptr },
+    { "high",       SL2(_2->current.high), nullptr },
+    { "change",     SL2(_2->current.change), IS_NOT_A_NUMBER },
+    { "change_p",   SL2(_2->current.change_p), IS_NOT_A_NUMBER },
+    { "volume",     SL2(_2->current.volume), nullptr },
+
+    { "price_factor",   SL2(_2->current.price_factor), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
     { "change_p_high",  SL2(_2->current.change_p_high), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
 
-    { "wma",  SL2(_2->current.wma), nullptr, FetchLevel::TECHNICAL_WMA },
-    { "ema",  SL2(_2->current.ema), nullptr, FetchLevel::TECHNICAL_EMA },
-    { "sma",  SL2(_2->current.sma), nullptr, FetchLevel::TECHNICAL_SMA },
+    { "wma",    SL2(_2->current.wma), nullptr, FetchLevel::TECHNICAL_WMA },
+    { "ema",    SL2(_2->current.ema), nullptr, FetchLevel::TECHNICAL_EMA },
+    { "sma",    SL2(_2->current.sma), nullptr, FetchLevel::TECHNICAL_SMA },
     { "uband",  SL2(_2->current.uband), nullptr, FetchLevel::TECHNICAL_BBANDS },
     { "mband",  SL2(_2->current.mband), nullptr, FetchLevel::TECHNICAL_BBANDS },
     { "lband",  SL2(_2->current.lband), nullptr, FetchLevel::TECHNICAL_BBANDS },
-    { "sar",  SL2(_2->current.sar), nullptr, FetchLevel::TECHNICAL_SAR },
+    { "sar",    SL2(_2->current.sar), nullptr, FetchLevel::TECHNICAL_SAR },
     { "slope",  SL2(_2->current.slope), nullptr, FetchLevel::TECHNICAL_SLOPE },
-    { "cci",  SL2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
+    { "cci",    SL2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
 
     { "dividends",  SL2(_2->dividends_yield.fetch()), nullptr },
 
-    { "name",  SL2(string_table_decode(_2->name)), SL1(_1.index == 0)},
-    { "description",  SL2(string_table_decode(_2->description.fetch())), nullptr},
-    { "country",  SL2(string_table_decode(_2->country)), SL1(_1.index == 0)},
-    { "type",  SL2(string_table_decode(_2->type)), SL1(_1.index == 0)},
-    { "currency",  SL2(string_table_decode(_2->currency)), SL1(_1.index == 0)},
-    { "url",  SL2(string_table_decode(_2->url)), SL1(_1.index == 0)},
-    { "updated_at",  SL2(string_table_decode(_2->updated_at)), SL1(_1.index == 0)},
-    { "exchange",  SL2(string_table_decode(_2->exchange)), SL1(_1.index == 0)},
-    { "symbol",  SL2(string_table_decode(_2->symbol)), SL1(_1.index == 0)},
+    { "name",           SL2(string_table_decode(_2->name)), SL1(_1.index == 0)},
+    { "description",    SL2(string_table_decode(_2->description.fetch())), nullptr},
+    { "country",        SL2(string_table_decode(_2->country)), SL1(_1.index == 0)},
+    { "type",           SL2(string_table_decode(_2->type)), SL1(_1.index == 0)},
+    { "currency",       SL2(string_table_decode(_2->currency)), SL1(_1.index == 0)},
+    { "url",            SL2(string_table_decode(_2->url)), SL1(_1.index == 0)},
+    { "updated_at",     SL2(string_table_decode(_2->updated_at)), SL1(_1.index == 0)},
+    { "exchange",       SL2(string_table_decode(_2->exchange)), SL1(_1.index == 0)},
+    { "symbol",         SL2(string_table_decode(_2->symbol)), SL1(_1.index == 0)},
 
     { EVAL_STOCK_FIELD(shares_count) },
     { EVAL_STOCK_FIELD(low_52) },
@@ -136,24 +142,130 @@ static struct {
 // # PRIVATE
 //
 
+FOUNDATION_STATIC bool report_eval_report_field_resolve_level(stock_handle_t& stock_handle, FetchLevel request_level, const double timeout_expired = 2.0)
+{
+    const stock_t* s = stock_handle;
+    if (s == nullptr)
+        return false;
+
+    if (!s->has_resolve(request_level))
+    {
+        if (stock_resolve(stock_handle, request_level))
+        {
+            const tick_t timeout = time_current();
+            while (!s->has_resolve(request_level) && time_elapsed(timeout) < timeout_expired)
+                dispatcher_wait_for_wakeup_main_thread(timeout_expired * 100);
+
+            if (time_elapsed(timeout) >= timeout_expired)
+                log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Failed to resolve %d for %s in time"), request_level, SYMBOL_CSTR(s->code));
+        }
+    }
+
+    return s->has_resolve(request_level);
+}
+
+FOUNDATION_STATIC bool report_eval_report_field_resolve_level(title_t* t, FetchLevel request_level)
+{
+    return report_eval_report_field_resolve_level(t->stock, request_level);
+}
+
+FOUNDATION_STATIC bool report_eval_report_field_test(
+    const char* property_name, stock_handle_t& stock_handle, string_const_t field_name,
+    const function<expr_result_t(title_t* t, const stock_t* s)>& property_evalutor,
+    const function<bool(const expr_result_t& v)>& property_filter_out,
+    expr_result_t** results, FetchLevel required_level)
+{
+    if (!string_equal_nocase(property_name, string_length(property_name), STRING_ARGS(field_name)))
+        return false;
+        
+    const stock_t* s = stock_handle;
+    if (!s || !s->has_resolve(FetchLevel::REALTIME))
+        return false;
+            
+    if (required_level != FetchLevel::NONE)
+        report_eval_report_field_resolve_level(stock_handle, required_level);
+
+    s = stock_handle;
+    expr_result_t value = property_evalutor(nullptr, s);
+    if (!property_filter_out || !property_filter_out(value))
+    {
+        const expr_result_t& kvp = expr_eval_pair(expr_eval_symbol(s->code), value);
+        array_push(*results, kvp);
+    }
+
+    return true;
+}
+
+FOUNDATION_STATIC bool report_eval_report_field_test(
+    const char* property_name, report_t* report,
+    string_const_t title_filter, string_const_t field_name,
+    const function<expr_result_t(title_t* t, const stock_t* s)>& property_evalutor,
+    const function<bool(const expr_result_t& v)>& property_filter_out,
+    expr_result_t** results, FetchLevel required_level)
+{
+    if (!string_equal_nocase(property_name, string_length(property_name), STRING_ARGS(field_name)))
+        return false;
+        
+    for (auto t : generics::fixed_array(report->titles))
+    {
+        const stock_t* s = t->stock;
+        if (!s || !s->has_resolve(FetchLevel::REALTIME))
+            continue;
+
+        if (title_filter.length && !string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
+            continue;
+
+        if (required_level != FetchLevel::NONE)
+            report_eval_report_field_resolve_level(t, required_level);
+
+        expr_result_t value = property_evalutor(t, s);
+        if (title_filter.length || !property_filter_out || !property_filter_out(value))
+        {
+            const expr_result_t& kvp = expr_eval_pair(expr_eval_symbol(s->code), value);
+            array_push(*results, kvp);
+        }
+
+        if (title_filter.length && string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
+            return true;
+    }
+
+    return true;
+}
+
 FOUNDATION_STATIC expr_result_t report_expr_eval_stock(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Examples: S(GLF.TO, open)
     //           S(GFL.TO, close) - S(GFL.TO, open)
 
-    if (args->len < 2)
+    if (args->len != 2)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
 
     string_const_t code = expr_eval(args->get(0)).as_string();
-    string_const_t field = expr_eval(args->get(1)).as_string();
-
-    double value = NAN;
-    eod_fetch("real-time", code.str, FORMAT_JSON, [field, &value](const json_object_t& json)
+    string_const_t field_name = expr_eval(args->get(1)).as_string();
+    
+    stock_handle_t stock_handle = stock_request(STRING_ARGS(code), FetchLevel::REALTIME);
+    if (!stock_handle)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Failed to resolve stock %.*s", STRING_FORMAT(code));
+        
+    expr_result_t* results = nullptr;
+    for (int i = 8; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
     {
-        value = json[field].as_number();
-    }, 10ULL * 60ULL);
+        const auto& pe = report_field_property_evalutors[i];
+        if (report_eval_report_field_test(pe.property_name, stock_handle, field_name, pe.handler, pe.filter_out, &results, pe.required_level))
+            break;
+    }
 
-    return value;
+    if (results == nullptr)
+        return nullptr;
+
+    if (array_size(results) == 1)
+    {
+        expr_result_t single_value = results[0];
+        array_deallocate(results);
+        return single_value.list[1];
+    }
+
+    return expr_eval_list(results);
 }
 
 FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_func_t* f, vec_expr_t* args, void* c)
@@ -205,67 +317,6 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
     return value;
 }
 
-FOUNDATION_STATIC bool report_eval_report_field_resolve_level(title_t* t, FetchLevel request_level)
-{
-    const stock_t* s = t->stock;
-    if (s == nullptr)
-        return false;
-
-    if (!s->has_resolve(request_level))
-    {
-        if (stock_resolve(t->stock, request_level))
-        {
-            const double timeout_expired = 2.0f;
-            const tick_t timeout = time_current();
-            while (!s->has_resolve(request_level) && time_elapsed(timeout) < timeout_expired)
-                dispatcher_wait_for_wakeup_main_thread(timeout_expired * 100);
-
-            if (time_elapsed(timeout) >= timeout_expired)
-            {
-                log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Failed to resolving %d for %.*s in time"), request_level, (int)t->code_length, t->code);
-            }
-        }
-    }
-
-    return s->has_resolve(request_level);
-}
-
-FOUNDATION_STATIC bool report_eval_report_field_test(
-    const char* property_name, report_t* report, 
-    string_const_t title_filter, string_const_t field_name, 
-    const function<expr_result_t(title_t* t, const stock_t* s)> property_evalutor,
-    const function<bool(const expr_result_t& v)> property_filter_out,
-    expr_result_t** results, FetchLevel required_level)
-{
-    if (!string_equal_nocase(property_name, string_length(property_name), STRING_ARGS(field_name)))
-        return false;
-
-    for (auto t : generics::fixed_array(report->titles))
-    {
-        const stock_t* s = t->stock;
-        if (!s || s->has_resolve(FetchLevel::EOD | FetchLevel::REALTIME))
-            continue;
-
-        if (title_filter.length && !string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
-            continue;
-
-        if (required_level != FetchLevel::NONE)
-            report_eval_report_field_resolve_level(t, required_level);
-
-        expr_result_t value = property_evalutor(t, s);
-        if (title_filter.length || !property_filter_out || !property_filter_out(value))
-        {
-            const expr_result_t& kvp = expr_eval_pair(expr_eval_symbol(s->code), value);
-            array_push(*results, kvp);
-        }
-
-        if (title_filter.length && string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
-            return true;
-    }
-
-    return true;
-}
-
 FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Examples: R('FLEX', 'ps')
@@ -283,7 +334,7 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     if (!report_handle_is_valid(report_handle))
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Cannot find report %.*s", STRING_FORMAT(report_name));
 
-    size_t field_name_index = 1;
+    int field_name_index = 1;
     string_const_t title_filter{};
     if (args->len >= 3)
     {
@@ -292,7 +343,10 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     }
 
     report_t* report = report_get(report_handle);
-    const auto& field_name = expr_eval_get_string_arg(args, field_name_index, "Invalid field name");
+    
+    char field_name_buffer[64];
+    string_const_t field_name_temp = expr_eval(args->get(field_name_index)).as_string();
+    string_const_t field_name = string_to_const(string_copy(STRING_CONST_CAPACITY(field_name_buffer), STRING_ARGS(field_name_temp)));
 
     tick_t s = time_current();
     while (!report_sync_titles(report))
@@ -394,20 +448,13 @@ FOUNDATION_STATIC void report_eval_dynamic_table_deallocate(dynamic_report_t* re
     report_eval_cleanup_columns(report->columns);
     foreach(r, report->records)
     {
-        foreach(v, r->values)
-        {
-            if (v->type == DYNAMIC_TABLE_VALUE_TEXT)
-                string_deallocate(v->text.str);
-        }
-        array_deallocate(r->values);
-
         foreach(vr, r->resolved)
         {
             if (vr->type == DYNAMIC_TABLE_VALUE_TEXT)
                 string_deallocate(vr->text.str);
         }
         array_deallocate(r->resolved);
-        //string_deallocate(r->cached_value.str);
+        array_deallocate(r->values);
     }
     array_deallocate(report->records);
     string_deallocate(report->name.str);
@@ -442,7 +489,7 @@ FOUNDATION_STATIC bool report_eval_table_dialog(dynamic_report_t* report)
                     return cell_t(v->number);
 
                 return cell_t();
-            }, COLUMN_FORMAT_TEXT, COLUMN_SORTABLE);
+            }, c->format, COLUMN_SORTABLE);
         }
     }
 
@@ -452,31 +499,14 @@ FOUNDATION_STATIC bool report_eval_table_dialog(dynamic_report_t* report)
 
 FOUNDATION_STATIC void report_eval_add_record_values(dynamic_table_record_t& record, const expr_result_t& e)
 {
-    if (e.type == EXPR_RESULT_TRUE)
-    {
-        array_push(record.values, dynamic_table_record_value_t{ DYNAMIC_TABLE_VALUE_TRUE });
-    }
-    else if (e.type == EXPR_RESULT_FALSE)
-    {
-        array_push(record.values, dynamic_table_record_value_t{ DYNAMIC_TABLE_VALUE_FALSE });
-    }
-    else if (e.type == EXPR_RESULT_NUMBER)
-    {
-        dynamic_table_record_value_t v{ DYNAMIC_TABLE_VALUE_NUMBER };
-        v.number = e.as_number();
-        array_push(record.values, v);
-    }
-    else if (e.type == EXPR_RESULT_SYMBOL)
-    {
-        dynamic_table_record_value_t v{ DYNAMIC_TABLE_VALUE_TEXT };
-        string_const_t e_text = e.as_string();
-        v.text = string_clone(STRING_ARGS(e_text));
-        array_push(record.values, v);
-    }
-    else if (e.is_set())
+    if (e.is_set())
     {
         for (auto ee : e)
             report_eval_add_record_values(record, ee);
+    }
+    else
+    {
+        array_push(record.values, e);
     }
 }
 
@@ -487,6 +517,8 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
 
     if (args->len < 2)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Requires at least two arguments");
+
+    TIME_TRACKER("report_eval_table");
 
     // Get the data set
     expr_result_t elements = expr_eval(args->get(1));
@@ -499,16 +531,30 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
     {
         dynamic_table_column_t col;
         col.ee = args->get(i);
+        col.format = COLUMN_FORMAT_TEXT;
         if (col.ee->type == OP_SET && col.ee->args.len >= 2)
         {
             // Get the column name
             string_const_t col_name = expr_eval((expr_t*)col.ee->args.get(0)).as_string(string_format_static_const("col %d", i - 2));
+
+            if (col.ee->args.len >= 3)
+            {
+                string_const_t format_string = expr_eval((expr_t*)col.ee->args.get(2)).as_string();
+                if (!string_is_null(format_string))
+                {
+                    if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("currency")))
+                    {
+                        col.format = COLUMN_FORMAT_CURRENCY;
+                    }
+                }
+            }
             
             col.ee = col.ee->args.get(1);
             string_const_t col_expression = col.ee->token;
 
             col.name = string_clone(STRING_ARGS(col_name));
             col.expression = string_clone(STRING_ARGS(col_expression));
+            
             col.value_index = col_index;
 
             array_push_memcpy(columns, &col);
@@ -529,23 +575,17 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
         dynamic_table_record_t record{};
         report_eval_add_record_values(record, e);
 
-        foreach(c, columns)
+        for(unsigned ic = 0, endc = array_size(columns); ic < endc; ++ic)
         {
+            dynamic_table_column_t* c = &columns[ic];
+            
             foreach(v, record.values)
             {
                 string_const_t arg_macro = string_format_static(STRING_CONST("$%u"), i + 1);
-                expr_var_t* ev = eval_get_or_create_global_var(STRING_ARGS(arg_macro));
-                if (v->type == DYNAMIC_TABLE_VALUE_NULL)
-                    ev->value = {};
-                else if (v->type == DYNAMIC_TABLE_VALUE_TRUE)
-                    ev->value = expr_result_t(true);
-                else if (v->type == DYNAMIC_TABLE_VALUE_FALSE)
-                    ev->value = expr_result_t(false);
-                else if (v->type == DYNAMIC_TABLE_VALUE_TEXT)
-                    ev->value = expr_result_t(v->text.str);
-                else if (v->type == DYNAMIC_TABLE_VALUE_NUMBER)
-                    ev->value = expr_result_t(v->number);
+                eval_set_or_create_global_var(STRING_ARGS(arg_macro), *v);
             }
+
+            TIME_TRACKER("report_eval_table_ELEMENT(%.*s)", STRING_FORMAT(c->name));
 
             expr_result_t cv = expr_eval(c->ee);
             if (cv.type == EXPR_RESULT_TRUE)

@@ -428,12 +428,13 @@ bool environment_command_line_arg(const char* name, size_t name_length, string_c
 bool environment_command_line_arg(string_const_t name, string_const_t* value = nullptr);
 
 #if BUILD_DEBUG
-struct ElapsedTimeLoggerScope
+struct TimeMarkerScope
 {
     char label[128];
     hash_t context;
     tick_t start_time;
-    FOUNDATION_FORCEINLINE ElapsedTimeLoggerScope(hash_t _context, const char* fmt, ...)
+    const double less_ignored_elapsed_time = 0.0009;
+    FOUNDATION_FORCEINLINE TimeMarkerScope(hash_t _context, const char* fmt, ...)
         : context(_context)
     {
         va_list list;
@@ -444,7 +445,15 @@ struct ElapsedTimeLoggerScope
         start_time = time_current();
     }
 
-    FOUNDATION_FORCEINLINE ElapsedTimeLoggerScope(const char* fmt, ...)
+    template <size_t N> FOUNDATION_FORCEINLINE
+        TimeMarkerScope(const char(&name)[N])
+        : context(memory_context())
+    {
+        string_copy(STRING_CONST_CAPACITY(label), name, N);
+        start_time = time_current();
+    }
+
+    FOUNDATION_FORCEINLINE TimeMarkerScope(const char* FOUNDATION_RESTRICT fmt, ...)
         : context(memory_context())
     {
         va_list list;
@@ -455,18 +464,22 @@ struct ElapsedTimeLoggerScope
         start_time = time_current();
     }
 
-    template <size_t N> FOUNDATION_FORCEINLINE
-        ElapsedTimeLoggerScope(const char(&name)[N])
+    FOUNDATION_FORCEINLINE TimeMarkerScope(double max_time, const char* FOUNDATION_RESTRICT fmt, ...)
         : context(memory_context())
+        , less_ignored_elapsed_time(max_time)
     {
-        string_copy(STRING_CONST_CAPACITY(label), name, N);
+        va_list list;
+        va_start(list, fmt);
+        string_vformat(STRING_CONST_CAPACITY(label), fmt, string_length(fmt), list);
+        va_end(list);
+
         start_time = time_current();
     }
 
-    FOUNDATION_FORCEINLINE ~ElapsedTimeLoggerScope()
+    FOUNDATION_FORCEINLINE ~TimeMarkerScope()
     {
         const double elapsed_time = time_elapsed(start_time);
-        if (elapsed_time > 0.0009)
+        if (elapsed_time > less_ignored_elapsed_time)
         {
             if (elapsed_time < 1.0)
                 log_infof(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
@@ -476,7 +489,7 @@ struct ElapsedTimeLoggerScope
     }
 };
 
-#define TIME_TRACKER_NAME_COUNTER_EXPAND(COUNTER, ...) ElapsedTimeLoggerScope __var_time_tracker__##COUNTER (__VA_ARGS__)
+#define TIME_TRACKER_NAME_COUNTER_EXPAND(COUNTER, ...) TimeMarkerScope __var_time_tracker__##COUNTER (__VA_ARGS__)
 #define TIME_TRACKER_NAME_COUNTER(COUNTER, ...) TIME_TRACKER_NAME_COUNTER_EXPAND(COUNTER, __VA_ARGS__)
 #define TIME_TRACKER(...) TIME_TRACKER_NAME_COUNTER(__LINE__, __VA_ARGS__)
 
