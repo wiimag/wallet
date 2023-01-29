@@ -158,7 +158,7 @@ bool report_is_loading(report_t* report);
 /// <summary>
 /// Run a single pass on all titles to synchronize them.
 /// </summary>
-bool report_sync_titles(report_t* report);
+bool report_sync_titles(report_t* report, double timeout_seconds = 60.0);
 
 /// <summary>
 /// Sort reports based on their save index (i.e. how they are ordered with tabs)

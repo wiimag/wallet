@@ -297,7 +297,7 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
 
     //if (auto lock = scoped_mutex_t(_db_lock))
     {
-        SHARED_READ_LOCK(_db_lock);
+        SHARED_WRITE_LOCK(_db_lock);
         stock_t* s = &_db_stocks[index];
         if (math_real_is_nan(s->current.price_factor) && !math_real_is_nan(first_price_factor))
             s->current.price_factor = first_price_factor;
@@ -432,9 +432,8 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         }
         _db_lock.shared_unlock();
     }
-    else if (index == 0 && _db_lock.shared_unlock() && _db_lock.exclusive_lock())
+    else if (_db_lock.shared_unlock() && index == 0 && _db_lock.exclusive_lock())
     {
-        
         // Create stock slot and trigger async resolution.
         if (array_size(_db_stocks) >= _db_capacity)
             stock_grow_db();
@@ -724,6 +723,8 @@ bool stock_update(stock_handle_t& handle, fetch_level_t fetch_level, double time
     stock_t* s = (stock_t*)(const stock_t*)handle;
     if (!s)
         return false;
+
+    SHARED_WRITE_LOCK(_db_lock);
     bool fully_resolved = (s->resolved_level & fetch_level) == fetch_level;
     if (fully_resolved)
         return true;

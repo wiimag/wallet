@@ -26,6 +26,7 @@ typedef function<void(const ImRect& rect)> imgui_frame_render_callback_t;
 
 static const ImU32 TEXT_GOOD_COLOR = ImColor::HSV(140 / 360.0f, 0.83f, 0.95f);
 static const ImU32 TEXT_WARN_COLOR = ImColor::HSV(65 / 360.0f, 0.50f, 0.98f);
+static const ImU32 TEXT_WARN2_COLOR = ImColor::HSV(5 / 360.0f, 0.55f, 0.95f); //hsv(0, 100%, 85%)
 static const ImU32 TEXT_BAD_COLOR = ImColor::HSV(355 / 360.0f, 0.85f, 0.95f);
 static const ImU32 TEXT_COLOR_LIGHT = ImColor::HSV(0 / 360.0f, 0.00f, 1.00f);
 static const ImU32 TEXT_COLOR_DARK = ImColor::HSV(0 / 360.0f, 0.00f, 0.00f);

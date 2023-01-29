@@ -115,7 +115,7 @@ static void wallet_history_sort(wallet_t* wallet)
 static void wallet_history_update_entry(report_t* report, wallet_t* wallet, history_t& entry)
 {
     while (!report_sync_titles(report))
-        dispatcher_wait_for_wakeup_main_thread(100);
+        dispatcher_wait_for_wakeup_main_thread(50);
     report->dirty = true;
 
     entry.date = time_now();

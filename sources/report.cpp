@@ -194,8 +194,8 @@ FOUNDATION_STATIC bool report_table_search(table_element_ptr_const_t element, co
 
 FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_element_ptr_t element)
 {
-    title_t* title = *(title_t**)element;
-    if (title == nullptr)
+    title_t* t = *(title_t**)element;
+    if (t == nullptr)
         return false;
 
     double real_time_elapsed_seconds = 0;
@@ -205,15 +205,15 @@ FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_
 
     row->background_color = 0;
 
-    if (row && title_is_index(title))
+    if (row && title_is_index(t))
     {
         return (row->background_color = BACKGROUND_INDX_COLOR);
     }
-    else if (title->average_quantity == 0 && title->sell_total_quantity > 0)
+    else if (t->average_quantity == 0 && t->sell_total_quantity > 0)
     {
         return (row->background_color = BACKGROUND_SOLD_COLOR);
     }
-    else if (title_has_increased(title, nullptr, increase_timelapse, &real_time_elapsed_seconds))
+    else if (title_has_increased(t, nullptr, increase_timelapse, &real_time_elapsed_seconds))
     {
         ImVec4 hsv = ImGui::ColorConvertU32ToFloat4(BACKGROUND_GOOD_COLOR);
         hsv.w = (increase_timelapse - (float)real_time_elapsed_seconds) / increase_timelapse;
@@ -223,7 +223,7 @@ FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_
             return true;
         }
     }
-    else if (title_has_decreased(title, nullptr, decrease_timelapse, &real_time_elapsed_seconds))
+    else if (title_has_decreased(t, nullptr, decrease_timelapse, &real_time_elapsed_seconds))
     {
         ImVec4 hsv = ImGui::ColorConvertU32ToFloat4(BACKGROUND_BAD_COLOR);
         hsv.w = (decrease_timelapse - (float)real_time_elapsed_seconds) / decrease_timelapse;
@@ -260,78 +260,134 @@ FOUNDATION_STATIC void report_table_setup(report_handle_t report_handle, table_t
 
 FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element, const column_t* column)
 {
-    title_t* title = *(title_t**)element;
-    if (title == nullptr)
+    title_t* t = *(title_t**)element;
+    if (t == nullptr || title_is_index(t))
         return nullptr;
 
     // If all titles are sold, return the sold average price.
-    if (title->sell_total_quantity > 0 && title->average_quantity == 0)
-        return title->sell_total_price / title->sell_total_quantity;
+    if (t->sell_total_quantity > 0 && t->average_quantity == 0)
+        return math_ifnan(t->sell_adjusted_price, t->sell_total_price / t->sell_total_quantity);
 
-    if (title->average_ask_price > 0)
+    if (t->average_ask_price > 0)
     {
-        cell_t ask_price_cell(title->average_ask_price);
+        cell_t ask_price_cell(t->average_ask_price);
         ask_price_cell.style.types |= COLUMN_COLOR_TEXT;
         ask_price_cell.style.text_color = TEXT_WARN_COLOR;
         return ask_price_cell;
     }
 
-    if (title_is_index(title))
-        return NAN;
+    const double ask_price = t->ask_price.fetch();
+    const double avg = math_ifzero(t->average_price, t->stock->current.close);
+    const double c_avg = t->stock->current.close;
+    const double average_fg = (t->average_price + t->stock->current.close) / 2.0;
+    const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (t->elapsed_days - t->wallet->average_days) / 20.0 / 100.0);
 
-    return title->ask_price.fetch();
+    if (!math_real_is_nan(ask_price) && ask_price < t->average_price)
+    {
+        cell_t ask_price_cell(ask_price);
+        ask_price_cell.style.types |= COLUMN_COLOR_TEXT;
+
+        const double p = (ask_price - if_gain_price) / if_gain_price * 100.0;
+        if (ask_price < average_fg || (p < 0.0 && math_abs(p) > (t->wallet->target_ask * 100.0)))
+            ask_price_cell.style.text_color = TEXT_WARN2_COLOR;
+        else
+            ask_price_cell.style.text_color = TEXT_WARN_COLOR;
+        return ask_price_cell;
+    }
+
+    return ask_price;
+}
+
+FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    title_t* t = *(title_t**)element;
+    if (t == nullptr || title_is_index(t) || !t->stock || math_real_is_nan(cell->number))
+    {
+        ImGui::CloseCurrentPopup();
+        return;
+    }
+
+    const double avg = math_ifzero(t->average_price, t->stock->current.close);
+    const double c_avg = t->stock->current.close;
+    const double average_fg = (t->average_price + t->stock->current.close) / 2.0;
+    const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (t->elapsed_days - t->wallet->average_days) / 20.0 / 100.0);
+    if (!math_real_is_nan(avg))
+    {
+        if (t->average_quantity == 0 && math_ifnan(t->sell_adjusted_quantity, 0) > 0)
+        {
+            const double sell_gain_diff = (t->sell_adjusted_price - t->stock->current.close) * t->sell_adjusted_quantity;
+            ImGui::TextColored(ImColor(sell_gain_diff < 0 ? TEXT_BAD_COLOR : TOOLTIP_TEXT_COLOR), " %s %.*s ",
+                sell_gain_diff > 0 ? "Saved" : "Lost", STRING_FORMAT(string_from_currency(math_abs(sell_gain_diff), "999 999 999 $")));
+        }
+        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
+            " Bought Price Gain: %.3g %% \n"
+            " Current Price Gain: %.3g %% (" ICON_MD_EXPOSURE " %.2lf $) \n"
+            " Ask Safe Price Gain: %.2lf $ (" ICON_MD_EXPOSURE " %.3g %%) \n",
+            (cell->number - avg) / avg * 100.0,
+            (cell->number - c_avg) / c_avg * 100.0, (cell->number - c_avg),
+            if_gain_price, (cell->number - if_gain_price) / if_gain_price * -100.0);
+    }
+    else
+    {
+        ImGui::TextUnformatted("Data not available");
+    }
 }
 
 FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, const column_t* column, report_column_formula_t formula)
 {
-    title_t* title = *(title_t**)element;
+    title_t* t = *(title_t**)element;
 
-    if ((column->flags & COLUMN_COMPUTE_SUMMARY) && title_is_index(title))
+    if ((column->flags & COLUMN_COMPUTE_SUMMARY) && title_is_index(t))
         return nullptr;
 
-    if (title == nullptr)
+    if (t == nullptr)
         return nullptr;
 
     switch (formula)
     {
     case REPORT_FORMULA_TITLE:
-        return title->code;
+        return t->code;
 
     case REPORT_FORMULA_TITLE_DATE:
-        return title->date_average;
+        return t->date_average;
 
     case REPORT_FORMULA_BUY_QUANTITY:
-        return title->average_quantity;
+        return t->buy_total_quantity - t->sell_total_quantity;
 
     case REPORT_FORMULA_BUY_PRICE:
     {
         double adjusted_price = !ImGui::IsKeyDown(ImGuiKey_LeftCtrl) ?
-            (math_ifzero(title->buy_adjusted_price, math_ifzero(title->average_price, title->buy_total_price / title->buy_total_quantity))) :
-            title->average_price_rated;
+            (math_ifzero(t->buy_adjusted_price, math_ifzero(t->average_price, t->buy_total_price / t->buy_total_quantity))) :
+            t->average_price_rated;
         cell_t buy_price_cell(adjusted_price);
-        if (title->average_quantity == 0 || (title->average_price * max(title->exchange_rate.fetch(), title->today_exchange_rate.fetch())) < title->average_price_rated)
+        if (t->average_quantity == 0 || (t->average_price * max(t->exchange_rate.fetch(), t->today_exchange_rate.fetch())) < t->average_price_rated)
         {
             buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
             buy_price_cell.style.text_color = TEXT_WARN_COLOR;
+        }
+        else if ((t->buy_total_price / t->buy_total_quantity) > (t->buy_adjusted_price * (1.0 + math_abs(t->stock->current.change_p) / 100.0)))
+        {
+            buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
+            buy_price_cell.style.text_color = TEXT_GOOD_COLOR;
         }
         return buy_price_cell;
     }
 
     case REPORT_FORMULA_ELAPSED_DAYS:
-        return title->elapsed_days;
+        return t->elapsed_days;
 
     case REPORT_FORMULA_TOTAL_INVESTMENT:
-        return title_get_total_investment(title);
+        return title_get_total_investment(t);
 
     case REPORT_FORMULA_PS:
-        return title->ps.fetch();
+        return t->ps.fetch();
 
     case REPORT_FORMULA_EXCHANGE_RATE:
-        return title->exchange_rate.fetch();
+        return t->exchange_rate.fetch();
     }
 
     // Stock accessors
-    const stock_t* stock_data = title->stock;
+    const stock_t* stock_data = t->stock;
     if (stock_data)
     {
         switch (formula)
@@ -339,19 +395,19 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
         case REPORT_FORMULA_CURRENCY:	return stock_data->currency;
         case REPORT_FORMULA_TYPE:		return stock_data->type;
         case REPORT_FORMULA_PRICE:
-            if (title_is_index(title) && title->average_quantity == 0)
+            if (title_is_index(t) && t->average_quantity == 0)
                 return NAN;
             return stock_data->current.close;
         case REPORT_FORMULA_DAY_CHANGE:	return stock_data->current.change_p;
 
-        case REPORT_FORMULA_DAY_GAIN:			return title_get_day_change(title, stock_data);
-        case REPORT_FORMULA_TOTAL_VALUE:		return title_get_total_value(title, stock_data);
-        case REPORT_FORMULA_TOTAL_GAIN:			return title_get_total_gain(title, stock_data);
-        case REPORT_FORMULA_TOTAL_GAIN_P:		return title_get_total_gain_p(title, stock_data);
-        case REPORT_FORMULA_YESTERDAY_CHANGE:	return title_get_yesterday_change(title, stock_data);
+        case REPORT_FORMULA_DAY_GAIN:			return title_get_day_change(t, stock_data);
+        case REPORT_FORMULA_TOTAL_VALUE:		return title_get_total_value(t, stock_data);
+        case REPORT_FORMULA_TOTAL_GAIN:			return title_get_total_gain(t, stock_data);
+        case REPORT_FORMULA_TOTAL_GAIN_P:		return title_get_total_gain_p(t, stock_data);
+        case REPORT_FORMULA_YESTERDAY_CHANGE:	return title_get_yesterday_change(t, stock_data);
 
         default:
-            FOUNDATION_ASSERT_FAILFORMAT("Cannot get %.*s value for %.*s (%u)", STRING_FORMAT(column->get_name()), (int)title->code_length, title->code, formula);
+            FOUNDATION_ASSERT_FAILFORMAT("Cannot get %.*s value for %.*s (%u)", STRING_FORMAT(column->get_name()), (int)t->code_length, t->code, formula);
             break;
         }
     }
@@ -665,29 +721,6 @@ FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_co
     ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), "Total Dividends %.2lf $", title->total_dividends);
 }
 
-FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
-{
-    title_t* title = *(title_t**)element;
-    if (title == nullptr)
-        return;
-
-    const double avg = math_ifzero(title->average_price, title->stock->current.close);
-    if (!math_real_is_nan(avg))
-    {
-        if (title->average_quantity == 0 && math_ifnan(title->sell_adjusted_quantity, 0) > 0)
-        {
-            const double sell_gain_diff = (title->sell_adjusted_price - title->stock->current.close) * title->sell_adjusted_quantity;
-            ImGui::TextColored(ImColor(sell_gain_diff < 0 ? TEXT_BAD_COLOR : TOOLTIP_TEXT_COLOR), " %s %.*s ",
-                sell_gain_diff > 0 ? "Saved" : "Lost", STRING_FORMAT(string_from_currency(math_abs(sell_gain_diff), "999 999 999 $")));
-        }
-        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), " %.4g %% ", (cell->number - avg) / avg * 100.0);
-    }
-    else
-    {
-        ImGui::TextUnformatted("Data not available");
-    }
-}
-
 FOUNDATION_STATIC void report_title_open_buy_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
@@ -826,7 +859,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     if (wallet_draw(report->wallet, space.x))
     {
         report->dirty = true;
-        report_summary_update(report);
+        report_refresh(report);
     }    
 
     ImGui::TableNextRow();
@@ -1486,61 +1519,87 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
 
 FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_handle, table_t* table)
 {
-    auto& ctitle = table_add_column(table, STRING_CONST("Title"), report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
+    auto& ctitle = table_add_column(table, STRING_CONST("Title"), 
+        report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
         .set_context_menu_callback(L3(report_column_title_context_menu(report_handle, _1, _2, _3)));
 
-    table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"), report_column_get_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"), 
+        report_column_get_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
 
-    table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), L2(report_column_get_value(_1, _2, REPORT_FORMULA_TITLE_DATE)), COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
+    table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), 
+        L2(report_column_get_value(_1, _2, REPORT_FORMULA_TITLE_DATE)), COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
         .set_selected_callback(report_title_open_details_view);
 
-    table_add_column(table, STRING_CONST("  " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE)
+    table_add_column(table, STRING_CONST("  " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE)
         .set_selected_callback(report_title_open_details_view);
 
-    table_add_column(table, STRING_CONST("   Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE)
+    table_add_column(table, STRING_CONST("   Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE)
         .set_selected_callback(report_title_open_buy_view)
         .set_tooltip_callback(report_title_adjusted_price_tooltip);
 
-    table_add_column(table, STRING_CONST(" Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
+    table_add_column(table, STRING_CONST(" Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
         .set_selected_callback(report_title_open_details_view)
         .set_tooltip_callback(report_title_live_price_tooltip)
         .set_style_formatter(report_title_price_alerts_formatter);
 
-    table_add_column(table, STRING_CONST("   Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"), report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
+    table_add_column(table, STRING_CONST("   Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"), 
+        report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
         .set_selected_callback(report_title_open_sell_view)
         .set_tooltip_callback(report_title_ask_price_gain_tooltip);
 
-    table_add_column(table, STRING_CONST("   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. "), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
 
-    table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
 
-    table_add_column(table, STRING_CONST("  Y. " ICON_MD_CALENDAR_VIEW_DAY "||" ICON_MD_CALENDAR_VIEW_DAY " Yesterday % "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_YESTERDAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week"), E32(report_column_get_change_value, _1, _2, -7), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"), E32(report_column_get_change_value, _1, _2, -31), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("  3M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 3 months"), E32(report_column_get_change_value, _1, _2, -90), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"), E32(report_column_get_change_value, _1, _2, -365), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
-    table_add_column(table, STRING_CONST("10Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 10 years"), E32(report_column_get_change_value, _1, _2, -365 * 10), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
+    table_add_column(table, STRING_CONST("  Y. " ICON_MD_CALENDAR_VIEW_DAY "||" ICON_MD_CALENDAR_VIEW_DAY " Yesterday % "), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_YESTERDAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week"), 
+        E32(report_column_get_change_value, _1, _2, -7), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"), 
+        E32(report_column_get_change_value, _1, _2, -31), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("  3M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 3 months"), 
+        E32(report_column_get_change_value, _1, _2, -90), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"), 
+        E32(report_column_get_change_value, _1, _2, -365), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
+    table_add_column(table, STRING_CONST("10Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 10 years"), 
+        E32(report_column_get_change_value, _1, _2, -365 * 10), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
 
-    table_add_column(table, STRING_CONST(ICON_MD_FLAG "||" ICON_MD_FLAG " Currency"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_CURRENCY), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CENTER_ALIGN);
-    table_add_column(table, STRING_CONST("   " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_EXCHANGE_RATE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE);
+    table_add_column(table, STRING_CONST(ICON_MD_FLAG "||" ICON_MD_FLAG " Currency"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_CURRENCY), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CENTER_ALIGN);
+    table_add_column(table, STRING_CONST("   " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_EXCHANGE_RATE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE);
 
-    table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"), E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("Highlights.DividendYield")), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ZERO_USE_DASH)
+    table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"), 
+        E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("Highlights.DividendYield")), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ZERO_USE_DASH)
         .set_tooltip_callback(report_title_dividends_total_tooltip);
 
-    table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_INVESTMENT), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-    table_add_column(table, STRING_CONST("      V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_VALUE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_INVESTMENT), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(table, STRING_CONST("      V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_VALUE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
 
-    table_add_column(table, STRING_CONST("   Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE)
+    table_add_column(table, STRING_CONST("   Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE)
         .set_style_formatter(report_title_total_gain_alerts_formatter);
-    table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
+    table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
         .set_style_formatter(report_title_total_gain_p_alerts_formatter);
 
-    table_add_column(table, STRING_CONST(ICON_MD_INVENTORY " Type    "), E32(report_column_get_value, _1, _2, REPORT_FORMULA_TYPE), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST(ICON_MD_STORE " Sector"), E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_TEXT_WRAPPING | COLUMN_SEARCHABLE)
+    table_add_column(table, STRING_CONST(ICON_MD_INVENTORY " Type    "), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TYPE), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST(ICON_MD_STORE " Sector"), 
+        E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_TEXT_WRAPPING | COLUMN_SEARCHABLE)
         .width = 200.0f;
 
-    table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"), E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER);
+    table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"), 
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER);
 }
 
 FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_length, const config_handle_t& data)
@@ -1715,30 +1774,31 @@ void report_summary_update(report_t* report)
     const size_t title_count = array_size(report->titles);
     for (size_t i = 0; i < title_count; ++i)
     {
-        title_t& t = *report->titles[i];
+        const title_t* t = report->titles[i];
+        FOUNDATION_ASSERT(t);
 
-        if (t.average_quantity > 0)
+        if (t->average_quantity > 0)
         {
-            total_days += t.elapsed_days;
+            total_days += t->elapsed_days;
             total_active_titles++;
         }
 
-        total_investment += math_ifnan(title_get_total_investment(&t), 0);
+        total_investment += math_ifnan(title_get_total_investment(t), 0);
 
-        const stock_t* s = t.stock;
+        const stock_t* s = t->stock;
         const bool stock_valid = s && !math_real_is_nan(s->current.change_p);
         // Make sure the stock is still valid today, it might have been delisted.
         if (stock_valid)
         {
-            total_value += title_get_total_value(&t, s);
+            total_value += title_get_total_value(t, s);
             average_nq += s->current.change_p / 100.0;
             average_nq_count++;
 
-            average_nq += title_get_yesterday_change(&t, s) / 100.0;
+            average_nq += title_get_yesterday_change(t, s) / 100.0;
             average_nq_count++;
 
             if (!math_real_is_nan(s->current.change))
-                total_day_gain += math_ifnan(title_get_day_change(&t, s), 0);
+                total_day_gain += math_ifnan(title_get_day_change(t, s), 0);
 
             total_daily_average_p += s->current.change_p;
 
@@ -1746,23 +1806,23 @@ void report_summary_update(report_t* report)
         }
         else
         {
-            total_value += t.average_quantity * t.average_price;
+            total_value += t->average_quantity * t->average_price;
         }
 
-        total_buy_rated += t.buy_total_price_rated;
-        total_sell_rated += t.sell_total_price_rated;
-        total_dividends += t.total_dividends;
+        total_buy_rated += t->buy_total_price_rated;
+        total_sell_rated += t->sell_total_price_rated;
+        total_dividends += t->total_dividends;
 
-        if (stock_valid && t.sell_total_quantity > 0)
+        if (stock_valid && t->sell_total_quantity > 0)
         {
-            const double sell_gain_if_kept = (s->current.close - t.sell_adjusted_price) * t.sell_adjusted_quantity;
-            const double sell_p = (s->current.close - t.sell_adjusted_price) / t.sell_adjusted_price;
+            const double sell_gain_if_kept = (s->current.close - t->sell_adjusted_price) * t->sell_adjusted_quantity;
+            const double sell_p = (s->current.close - t->sell_adjusted_price) / t->sell_adjusted_price;
             if (!math_real_is_nan(sell_p))
             {
                 total_sell_gain_if_kept_p += sell_p;
                 total_sell_gain_if_kept += sell_gain_if_kept;
                 total_title_sell_count++;
-                total_sell_gain_rated += t.sell_total_price_rated - ((t.buy_total_price_rated / t.buy_total_quantity) * t.sell_total_quantity);
+                total_sell_gain_rated += t->sell_total_price_rated - ((t->buy_total_price_rated / t->buy_total_quantity) * t->sell_total_quantity);
             }
         }
     }
@@ -1797,7 +1857,10 @@ void report_summary_update(report_t* report)
     report->wallet->sell_gain_average = total_sell_gain_rated / total_title_sell_count;
     report->wallet->total_sell_gain_if_kept_p = total_sell_gain_if_kept_p;
     report->wallet->target_ask = report->wallet->main_target + report->total_gain_p;
-    report->wallet->profit_ask = max(report->wallet->target_ask + total_sell_gain_if_kept_p + math_abs(average_nq), 0.03);
+    report->wallet->profit_ask = 
+        max(report->wallet->target_ask + 
+            min(total_sell_gain_if_kept_p, report->wallet->target_ask * total_title_sell_count) +
+            math_abs(average_nq), 0.03);
     report->wallet->enhanced_earnings = math_abs(report->wallet->sell_gain_average) * (1.0 + report->wallet->main_target);
     report->wallet->total_dividends = total_dividends;
 }
@@ -1828,9 +1891,6 @@ bool report_refresh(report_t* report)
         if (!stock_resolve(t->stock, FetchLevel::REALTIME))
             dispatcher_wait_for_wakeup_main_thread(50);
     }
-
-    if (report_sync_titles(report))
-        return true;
 
     report->fully_resolved = 0;
     return false;
@@ -2087,30 +2147,52 @@ bool report_handle_is_valid(report_handle_t handle)
     return !uuid_is_null(handle);
 }
 
-bool report_sync_titles(report_t* report)
+bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
 {
     const size_t title_count = array_size(report->titles);
+
+    // Trigger updates
     for (size_t i = 0; i < title_count; ++i)
     {
         title_t* t = report->titles[i];
         if (title_is_index(t))
             continue;
-        if (!t->stock->is_resolving(REPORT_FETCH_LEVELS))
+
+        if (!t->stock || !t->stock->has_resolve(REPORT_FETCH_LEVELS))
         {
-            if (!title_update(t, 3.5) && !dispatcher_wait_for_wakeup_main_thread(100))
-                break;
+            log_infof(HASH_REPORT, STRING_CONST("Syncing title %s"), t->code);
+            title_update(t, 0);
         }
     }
 
-    report_summary_update(report);
-    if (report_is_loading(report))
-        return false;
+    // Wait for title resolution
+    tick_t timer = time_current();
+    for (size_t i = 0; i < title_count; ++i)
+    {
+        title_t* t = report->titles[i];
+        if (title_is_index(t))
+            continue;
 
+        FOUNDATION_ASSERT(!!t->stock);
+        while (!t->stock->has_resolve(REPORT_FETCH_LEVELS))
+        {
+            if (time_elapsed(timer) > timeout_seconds)
+                return false;
+
+            dispatcher_wait_for_wakeup_main_thread(50);
+        }
+
+        log_infof(HASH_REPORT, STRING_CONST(">>> Title %s synced"), t->code);
+    }
+
+    report_summary_update(report);
     for (size_t i = 0; i < title_count; ++i)
         title_refresh(report->titles[i]);
     report_summary_update(report);
     if (report->table)
         report->table->needs_sorting = true;
+
+    log_infof(HASH_REPORT, STRING_CONST("<<< Report %s synced completed in %.3g seconds"), SYMBOL_CSTR(report->name), time_elapsed(timer));
     return true;
 }
 

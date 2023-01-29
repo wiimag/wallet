@@ -110,13 +110,13 @@ struct stock_t
     double_option_t dividends_yield { DNAN };
     string_option_t description { STRING_TABLE_NULL_SYMBOL };
 
-    bool is_resolving(fetch_level_t required_level, double since_seconds = 5.0) const
+    bool is_resolving(fetch_level_t required_level, double timeout = 5.0) const
     {
         if (has_resolve(required_level))
             return true;
 
-        if (time_elapsed(last_update_time) < since_seconds && (fetch_level & required_level) != 0)
-            return true;
+        if (time_elapsed(last_update_time) > timeout)
+            return false;
             
         return ((this->resolved_level | this->fetch_level) & required_level) == required_level;
     }

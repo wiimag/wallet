@@ -16,7 +16,11 @@
 
 double title_get_total_value(const title_t* t, const stock_t* s)
 {
-    const double total_value = t->average_quantity * math_ifnan(s->current.close, s->current.previous_close) * math_ifnan(t->today_exchange_rate.fetch(), 1.0)
+    const double adjusted_quantity = math_ifnan(t->buy_adjusted_quantity - t->sell_adjusted_quantity, t->average_quantity);
+    const double total_value = 
+        adjusted_quantity *
+        math_ifnan(s->current.close, s->current.previous_close) * 
+        math_ifnan(t->today_exchange_rate.fetch(), 1.0)
         + t->total_dividends;
     return math_ifnan(total_value, 0.0);
 }
@@ -145,7 +149,21 @@ static bool title_fetch_ps(const title_t* t, double& value)
     if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::FUNDAMENTALS) )
         return false;
 
-    value = title_compute_ps(t, s);
+    // Handle cases where the stock has been dismissed from the market.
+    if (math_real_is_nan(s->current.close))
+    {
+        value = DNAN;
+        return true;
+    }
+
+    if (t->average_quantity == 0 && t->sell_total_quantity > 0)
+    {
+        // Return the prediction in case the stock was kept (when sold)
+        value = ((t->sell_adjusted_price - s->current.close) / s->current.close) * 100.0;
+    }
+    else
+        value = title_compute_ps(t, s);
+
     return !math_real_is_nan(value);
 }
 
@@ -180,16 +198,39 @@ static bool title_fetch_ask_price(const title_t* t, double& value)
     const double profit_ask = t->wallet->profit_ask;
     const double average_days = t->wallet->average_days;
     const double target_ask = t->wallet->target_ask;
-
+    
     const double average_fg = (t->average_price + s->current.close) / 2.0;
     if (t->elapsed_days > 30)
     {
-        value = max(t->average_price, average_fg) * (1.0 + profit_ask - (t->elapsed_days - average_days) / 20.0 / 100.0);
+        unsigned samples = 0;
+        double sampling_average_fg = 0.0f;
+        unsigned max_samping_days = math_floor(t->elapsed_days / 2.0f);
+        for (unsigned i = 2, end = array_size(s->history); i < end && samples < max_samping_days; ++i)
+        {
+            if (s->history[i].date > t->date_average)
+            {
+                sampling_average_fg += s->history[i].close;
+                samples++;
+            }
+        }
+        
+        if (samples > 0)
+        {
+            sampling_average_fg /= samples;
+            sampling_average_fg = (t->average_price + s->current.close + sampling_average_fg) / 3.0;
+        }
+        else
+        {
+            sampling_average_fg = max(t->average_price, average_fg);
+        }
+
+        value = sampling_average_fg * (1.0 + profit_ask - (t->elapsed_days - average_days) / 20.0 / 100.0);
     }
     else
     {
         value = max(t->average_price, average_fg) * max(1 + max(t->wallet->main_target, profit_ask), 1 + target_ask);
     }
+    
     return !math_real_is_nan(value);
 }
 
@@ -223,10 +264,10 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
     double buy_single_count = 0;
     double buy_single_total = 0;
 
-    double buy_adjusted_qty = 0;
-    double buy_adjusted_price = 0;
-    double sell_adjusted_qty = 0;
-    double sell_adjusted_price = 0;
+    double buy_total_adjusted_qty = 0;
+    double buy_total_adjusted_price = 0;
+    double sell_total_adjusted_qty = 0;
+    double sell_total_adjusted_price = 0;
 
     int valid_dates = 0;
     const stock_t* s = t->stock;
@@ -280,8 +321,8 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
             if (order_day_results)
             {
                 double factor = math_ifnan(order_day_results->price_factor, 1.0);
-                buy_adjusted_qty += qty / factor;
-                buy_adjusted_price += (qty / factor) * price * factor;
+                buy_total_adjusted_qty += qty / factor;
+                buy_total_adjusted_price += (qty / factor) * price * factor;
             }
 
             // FIXME: Change how dividends are computed over time
@@ -296,8 +337,8 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
             if (order_day_results)
             {
                 double factor = math_ifnan(order_day_results->price_factor, 1.0);
-                sell_adjusted_qty += qty / factor;
-                sell_adjusted_price += (qty / factor) * price * factor;
+                sell_total_adjusted_qty += qty / factor;
+                sell_total_adjusted_price += (qty / factor) * price * factor;
             }
 
             t->total_dividends -= (qty * price) * time_elapsed_days(order_date, time_now()) / 365.0 * dividends_yield * exchange_rate;
@@ -306,18 +347,30 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
         }
     }
 
-    if (buy_adjusted_qty > 0)
+    if (sell_total_adjusted_price > 0)
     {
-        t->buy_adjusted_quantity = (double)math_ceil(buy_adjusted_qty);
-        t->buy_adjusted_price = buy_adjusted_price / buy_adjusted_qty;
+        t->sell_adjusted_quantity = (double)math_ceil(sell_total_adjusted_qty);
+        t->sell_adjusted_price = sell_total_adjusted_price / sell_total_adjusted_qty;
     }
-    if (sell_adjusted_price > 0)
+    else if (buy_total_adjusted_qty > 0)
     {
-        t->sell_adjusted_quantity = (double)math_ceil(sell_adjusted_qty);
-        t->sell_adjusted_price = sell_adjusted_price / sell_adjusted_qty;
+        t->sell_adjusted_price = 0;
+        t->sell_adjusted_quantity = 0;
     }
 
-    if ((t->buy_total_quantity - t->sell_total_quantity) > 0)
+    if (buy_total_adjusted_qty > 0)
+    {
+        t->buy_adjusted_quantity = (double)math_ceil(buy_total_adjusted_qty);
+        t->buy_adjusted_price = buy_total_adjusted_price / buy_total_adjusted_qty;
+    }
+
+    if ((buy_total_adjusted_qty - sell_total_adjusted_qty) > 0)
+    {
+        double total_average_price = buy_total_adjusted_price / buy_total_adjusted_qty;
+        t->average_quantity = buy_total_adjusted_qty - sell_total_adjusted_qty;
+        t->average_price = (buy_total_adjusted_price - (sell_total_adjusted_qty * total_average_price)) / t->average_quantity;
+    }
+    else if ((t->buy_total_quantity - t->sell_total_quantity) > 0)
     {
         double total_average_price = t->buy_total_price / t->buy_total_quantity;
         t->average_quantity = t->buy_total_quantity - t->sell_total_quantity;
@@ -327,6 +380,9 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
     {
         t->average_price = buy_single_total / buy_single_count;
     }
+
+    if ((t->buy_total_quantity - t->sell_total_quantity) <= 0)
+        t->average_quantity = 0;
 
     if (valid_dates > 0)
     {

@@ -242,7 +242,10 @@ string_table_t* string_table_grow(string_table_t** out_st, int bytes /*= 0*/)
     bytes = max<int>(st->allocated_bytes * HASH_FACTOR, bytes);
     FOUNDATION_ASSERT(bytes >= st->allocated_bytes);
 
+    size_t old_string_bytes = st->string_bytes;
+    st->string_bytes = 0;
     *out_st = st = (string_table_t*)memory_reallocate(*out_st, bytes, 4, st->allocated_bytes, MEMORY_PERSISTENT);
+    st->string_bytes = old_string_bytes;
     string_table_grow(st, bytes);
 
     return st;
@@ -348,6 +351,8 @@ const char* string_table_to_string(string_table_t* st, string_table_symbol_t sym
 
 string_const_t string_table_to_string_const(string_table_t* st, string_table_symbol_t symbol)
 {
+    if (st->string_bytes == 0)
+        return {};
     const char* str = st->strings(symbol);
     return string_const(str, string_length(str));
 }
