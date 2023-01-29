@@ -103,6 +103,46 @@ private:
     #endif
 };
 
+struct shared_mutex_read_lock
+{
+    shared_mutex& _mutex;
+
+    FOUNDATION_FORCEINLINE shared_mutex_read_lock(shared_mutex& mutex)
+        : _mutex(mutex)
+    {
+        _mutex.shared_lock();
+    }
+
+    FOUNDATION_FORCEINLINE ~shared_mutex_read_lock()
+    {
+        _mutex.shared_unlock();
+    }
+};
+
+struct shared_mutex_write_lock
+{
+    shared_mutex& _mutex;
+
+    FOUNDATION_FORCEINLINE shared_mutex_write_lock(shared_mutex& mutex)
+        : _mutex(mutex)
+    {
+        _mutex.exclusive_lock();
+    }
+
+    FOUNDATION_FORCEINLINE ~shared_mutex_write_lock()
+    {
+        _mutex.exclusive_unlock();
+    }
+};
+
+#define SHARED_READ_LOCK_COUNTER_EXPAND(COUNTER, mutex) shared_mutex_read_lock __var_shared_read_lock__##COUNTER(mutex)
+#define SHARED_READ_LOCK_COUNTER(COUNTER, mutex) SHARED_READ_LOCK_COUNTER_EXPAND(COUNTER, mutex)
+#define SHARED_READ_LOCK(mutex) SHARED_READ_LOCK_COUNTER(__LINE__, mutex)
+
+#define SHARED_WRITE_LOCK_COUNTER_EXPAND(COUNTER, mutex) shared_mutex_write_lock __var_shared_write_lock__##COUNTER(mutex)
+#define SHARED_WRITE_LOCK_COUNTER(COUNTER, mutex) SHARED_WRITE_LOCK_COUNTER_EXPAND(COUNTER, mutex)
+#define SHARED_WRITE_LOCK(mutex) SHARED_WRITE_LOCK_COUNTER(__LINE__, mutex)
+
 class event_handle
 {
 public:

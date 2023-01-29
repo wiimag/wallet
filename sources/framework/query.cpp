@@ -552,14 +552,8 @@ bool query_execute_async_json(const char* query, const config_handle_t& body, co
     return true;
 }
 
-bool query_execute_async_json(const char* query, query_format_t format, const query_callback_t& json_callback, int ignore_if_queue_more_than /*= 0*/, uint64_t invalid_cache_query_after_seconds /*= 0*/)
+bool query_execute_async_json(const char* query, query_format_t format, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
-    if (_fetcher_requests.size() > ignore_if_queue_more_than)
-        dispatcher_wait_for_wakeup_main_thread(10);
-
-    if (!query_is_cache_file_valid(query, format, invalid_cache_query_after_seconds) && ignore_if_queue_more_than != 0 && _fetcher_requests.size() >= ignore_if_queue_more_than)
-        return false;
-
     FOUNDATION_ASSERT(string_equal(query, 4, STRING_CONST("http")));
     const size_t query_length = string_length(query);
     log_debugf(HASH_QUERY, STRING_CONST("Queueing GET query [%zu] %.*s"), _fetcher_requests.size(), (int)query_length, query);

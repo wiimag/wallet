@@ -11,6 +11,7 @@
 #define STRING_TABLE_NOT_FOUND (-2)
 #define STRING_TABLE_NULL_SYMBOL (0)
 
+#define SYMBOL_CSTR(s) string_table_decode(s)
 #define SYMBOL_CONST(s) string_table_decode_const(s)
 #define SYMBOL_ARGS(s) STRING_ARGS(string_table_decode_const(s))
 #define SYMBOL_CAPACITY(s) STRING_ARGS_CAPACITY(string_table_decode_const(s))

@@ -223,7 +223,7 @@ FOUNDATION_STATIC void symbols_search(symbol_t** symbols, string_const_t search_
         [loading_symbols_id, symbols, search_filter](const json_object_t& data)
         {
             symbols_read_search_results(loading_symbols_id, data, symbols, search_filter);
-        }, 0, 6 * 60 * 60ULL))
+        }, 6 * 60 * 60ULL))
     {
         log_warnf(HASH_SYMBOLS, WARNING_RESOURCE, STRING_CONST("Failed to execute search"));
     }
@@ -474,7 +474,7 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
         };
     }
 
-    auto symbol_column = table_add_column(table, STRING_CONST("Symbol"), symbol_get_code, COLUMN_FORMAT_TEXT, /*COLUMN_FREEZE | */COLUMN_SORTABLE)
+    auto& symbol_column = table_add_column(table, STRING_CONST("Symbol"), symbol_get_code, COLUMN_FORMAT_TEXT, COLUMN_FREEZE | COLUMN_SORTABLE)
         .set_style_formatter(symbol_code_color);
 
     if (!selector)

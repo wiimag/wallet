@@ -359,6 +359,8 @@ FOUNDATION_STATIC void table_render_columns(table_t* table, int column_count)
         }
         if ((column.flags & COLUMN_SORTABLE) == 0)
             table_column_flags |= ImGuiTableColumnFlags_NoSort;
+        if ((column.flags & COLUMN_DEFAULT_SORT) != 0)
+            table_column_flags |= ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_PreferSortDescending;
         if ((column.flags & COLUMN_HIDE_HEADER_TEXT))
             table_column_flags |= ImGuiTableColumnFlags_NoHeaderLabel;
         if (column.flags & COLUMN_FREEZE)

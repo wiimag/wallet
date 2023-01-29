@@ -1008,7 +1008,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
             }
 
             return odate;
-        }, COLUMN_FORMAT_DATE, COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE).set_width(imgui_get_font_ui_scale(220.0f));
+        }, COLUMN_FORMAT_DATE, COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE | COLUMN_DEFAULT_SORT).set_width(imgui_get_font_ui_scale(220.0f));
 
         table_add_column(table, STRING_CONST("Quantity " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Order Quantity"), [](table_element_ptr_t element, const column_t* column)
         {
@@ -1132,8 +1132,10 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
         for (auto corder : title->data["orders"])
         {
             report_details_view_order_t o{ report, title, corder };
-            orders = array_push(orders, o);
+            array_push(orders, o);
         }
+
+        array_sort(orders, a.data["date"].as_number() > b.data["date"].as_number());
     }
 
     ImGui::PushStyleCompact();
@@ -1457,7 +1459,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
         if (!stock_resolved)
         {
             bool first_init = !t->stock;                
-            if (!stock_update(t->code, t->code_length, t->stock, REPORT_FETCH_LEVELS, 60.0) && !first_init &&
+            if (!stock_update(t->code, t->code_length, t->stock, REPORT_FETCH_LEVELS, 10.0) && !first_init &&
                 !dispatcher_wait_for_wakeup_main_thread(1000 / title_count) &&
                 !t->stock->has_resolve(REPORT_FETCH_LEVELS))
             {

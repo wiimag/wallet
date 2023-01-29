@@ -11,6 +11,7 @@
 #include <framework/query.h>
 #include <framework/scoped_string.h>
 #include <framework/scoped_mutex.h>
+#include <framework/shared_mutex.h>
 #include <framework/jobs.h>
 #include <framework/query.h>
 #include <framework/service.h>
@@ -37,7 +38,8 @@ struct technical_descriptor_t
 };
 
 static size_t _db_capacity;
-static mutex_t* _db_lock = nullptr;
+//static mutex_t* _db_lock = nullptr;
+static shared_mutex _db_lock;
 static day_result_t** _trashed_history = nullptr;
 static stock_t* _db_stocks = nullptr;
 static hashtable64_t* _db_hashes = nullptr;
@@ -47,8 +49,9 @@ FOUNDATION_STATIC void stock_grow_db()
 {
     // TODO: Dispose of old stocks (outdated)?
     hashtable64_t* old_table = _db_hashes;
-    if (auto lock = scoped_mutex_t(_db_lock))
+    //if (auto lock = scoped_mutex_t(_db_lock))
     {
+        SHARED_WRITE_LOCK(_db_lock);
         _db_capacity *= size_t(2);
         hashtable64_t* new_hash_table = hashtable64_allocate(_db_capacity);
         for (int i = 1, end = array_size(_db_stocks); i < end; ++i)
@@ -77,7 +80,7 @@ FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string
             return;
         stock_t* stock_data = &_db_stocks[stock_index];
         stock_data->description = string_table_encode_unescape(json_token_value(json.buffer, json.root));
-    }, 0, 7 * 24 * 60 * 60ULL);
+    }, 7 * 24 * 60 * 60ULL);
 }
 
 FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, uint64_t index)
@@ -96,8 +99,9 @@ FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, u
     dresult.change_p = json_read_number(json, STRING_CONST("change_p"));
     dresult.volume = json_read_number(json, STRING_CONST("volume"));
 
-    if (auto lock = scoped_mutex_t(_db_lock))
+    //if (auto lock = scoped_mutex_t(_db_lock))
     {
+        SHARED_READ_LOCK(_db_lock);
         stock_t* entry = &_db_stocks[index];
 
         if (entry->current.date != 0 && entry->current.date != dresult.date)
@@ -113,7 +117,9 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     if (_db_stocks == nullptr)
         return;
 
-    auto lock = scoped_mutex_t(_db_lock);
+        
+    //auto lock = scoped_mutex_t(_db_lock);
+    SHARED_READ_LOCK(_db_lock);
     stock_t& entry = _db_stocks[index];
 
     //TIME_TRACKER(HASH_STOCK, "stock_read_fundamentals_results(%s)", string_table_decode(entry.code));
@@ -161,7 +167,8 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
 
 FOUNDATION_STATIC void stock_read_technical_results(const json_object_t& json, stock_index_t index, FetchLevel level, const technical_descriptor_t& desc)
 {
-    auto lock = scoped_mutex_t(_db_lock);
+    SHARED_READ_LOCK(_db_lock);
+    //auto lock = scoped_mutex_t(_db_lock);
     stock_t* s = &_db_stocks[index];
     day_result_t* history = s->history;
     int h = 0, h_end = array_size(history);
@@ -213,9 +220,8 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
             if (eod_fetch_async("technical", ticker, FORMAT_JSON_CACHE, "order", "d", "function", fn_name,
                 [index, access_level, desc](const json_object_t& json)
                 {
-                    if (auto lock = scoped_mutex_t(_db_lock))
-                        stock_read_technical_results(json, index, access_level, desc);
-                }, 16, 12ULL * 3600ULL))
+                    stock_read_technical_results(json, index, access_level, desc);
+                }, 12ULL * 3600ULL))
             {
                 entry->mark_fetched(access_level);
                 status = STATUS_RESOLVING;
@@ -240,24 +246,46 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
 
 FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, stock_index_t index)
 {
-    auto lock = scoped_mutex_t(_db_lock);
-    stock_t* s = &_db_stocks[index];
-
-    //TIME_TRACKER(HASH_STOCK, "stock_read_eod_indexed_prices(%s)", string_table_decode(s->code));
-
-    day_result_t* history = s->history;
+    tick_t timeout = time_current();
+    do
+    {
+        {
+            SHARED_READ_LOCK(_db_lock);
+            //auto lock = scoped_mutex_t(_db_lock);
+            stock_t* s = &_db_stocks[index];
+            if (s->has_resolve(FetchLevel::TECHNICAL_EOD) || s->has_resolve(FetchLevel::EOD))
+                break;
+        }
+        
+        thread_sleep(10);
+    } while (time_elapsed(timeout) < 60.0);
+    
+    day_result_t* history = nullptr;
+    {
+        SHARED_READ_LOCK(_db_lock);
+        //auto lock = scoped_mutex_t(_db_lock);
+        stock_t* s = &_db_stocks[index];
+        if (!s->has_resolve(FetchLevel::TECHNICAL_EOD) && !s->has_resolve(FetchLevel::EOD))
+            return log_warnf(HASH_STOCK, WARNING_NETWORK, STRING_CONST("Missing EOD results to resolve indexed price for %s"), SYMBOL_CSTR(s->code));
+        history = s->history;
+    }
+    
+    double first_price_factor = DNAN;
     int h = 0, h_end = array_size(history);
     for (size_t i = 0; i < json.root->value_length; ++i)
     {
         const auto& e = json[i];
         const time_t date = string_to_date(STRING_ARGS(e["date"].as_string()));
-
+        const double ed_price_factor = e["adjusted_close"].as_number() / e["close"].as_number();
+        
         for (; h != h_end;)
         {
             day_result_t* ed = &history[h];
             if (time_date_equal(ed->date, date))
             {
-                ed->price_factor = e["adjusted_close"].as_number() / e["close"].as_number();
+                ed->price_factor = ed_price_factor;
+                if (!math_real_is_nan(ed->price_factor))
+                    first_price_factor = ed->price_factor;
                 break;
             }
             else if (ed->date < date)
@@ -267,19 +295,14 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
         }
     }
 
-    if (math_real_is_nan(s->current.price_factor))
+    //if (auto lock = scoped_mutex_t(_db_lock))
     {
-        foreach(h, history)
-        {
-            if (!math_real_is_nan(h->price_factor))
-            {
-                s->current.price_factor = h->price_factor;
-                break;
-            }
-        }
+        SHARED_READ_LOCK(_db_lock);
+        stock_t* s = &_db_stocks[index];
+        if (math_real_is_nan(s->current.price_factor) && !math_real_is_nan(first_price_factor))
+            s->current.price_factor = first_price_factor;
+        s->mark_resolved(FetchLevel::TECHNICAL_INDEXED_PRICE);
     }
-
-    s->mark_resolved(FetchLevel::TECHNICAL_INDEXED_PRICE);
 }
 
 FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_index_t index, FetchLevel eod_fetch_level)
@@ -289,6 +312,7 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
     day_result_t* history = nullptr;
     array_reserve(history, json.root->value_length + 1);
 
+    double first_change_p_high = DNAN, first_price_factor = DNAN;
     int element_count = json.root->value_length;
     const json_token_t* e = &json.tokens[json.root->child];
     for (int i = 0; i < element_count; ++i)
@@ -308,6 +332,9 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
             {
                 d.close = jday["adjusted_close"].as_number();
                 d.price_factor = d.close / jday["close"].as_number();
+
+                if (!math_real_is_nan(d.price_factor))
+                    first_price_factor = d.price_factor;
             }
             else 
                 d.close = jday["close"].as_number();
@@ -329,6 +356,9 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
             d.change_p_high = (max(d.close, d.high) - min(d.open, d.low)) * 100.0 / math_ifnan(d.previous_close, d.close);
             d.volume = volume;
 
+            if (!math_real_is_nan(d.change_p_high))
+                first_change_p_high = d.change_p_high;
+
             history = array_push(history, d);
         }
 
@@ -337,47 +367,29 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
         e = &json.tokens[e->sibling];
     }
 
-    if (auto lock = scoped_mutex_t(_db_lock))
+    //if (auto lock = scoped_mutex_t(_db_lock))
     {
+        SHARED_READ_LOCK(_db_lock);
         stock_t& entry = _db_stocks[index];
         if (entry.history != nullptr)
             array_push(_trashed_history, entry.history);
         entry.history = history;
         entry.history_count = array_size(history);
 
-        if (math_real_is_nan(entry.current.change_p_high))
-        {
-            foreach(h, history)
-            {
-                if (!math_real_is_nan(h->change_p_high))
-                {
-                    entry.current.change_p_high = h->change_p_high;
-                    break;
-                }
-            }
-        }
+        if (math_real_is_nan(entry.current.change_p_high) && !math_real_is_nan(first_change_p_high))
+            entry.current.change_p_high = first_change_p_high;
 
-        if (math_real_is_nan(entry.current.price_factor))
-        {
-            foreach(h, history)
-            {
-                if (!math_real_is_nan(h->price_factor))
-                {
-                    entry.current.price_factor = h->price_factor;
-                    break;
-                }
-            }
-        }
-
+        if (math_real_is_nan(entry.current.price_factor) && !math_real_is_nan(first_price_factor))
+            entry.current.price_factor = first_price_factor;
 
         if (eod_fetch_level == FetchLevel::EOD)
             eod_fetch_level |= FetchLevel::TECHNICAL_INDEXED_PRICE;
 
         entry.mark_resolved(eod_fetch_level);
     }
-    else
+    //else
     {
-        array_deallocate(history);
+      //  array_deallocate(history);
     }
 }
 
@@ -391,8 +403,8 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         return STATUS_ERROR_INVALID_HANDLE;
 
     // Check if we have a slot index for that stock
-    auto lock = scoped_mutex_t(_db_lock);
-    if (!lock)
+    //auto lock = scoped_mutex_t(_db_lock);
+    if (!_db_lock.shared_lock())
         return STATUS_ERROR_DB_ACCESS;
 
     stock_t* entry = nullptr;
@@ -406,17 +418,23 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         FOUNDATION_ASSERT(entry->id == handle.id);
 
         if (((entry->fetch_level | entry->resolved_level) & fetch_levels) == fetch_levels)
+        {
+            _db_lock.shared_unlock();
             return STATUS_OK;
+        }
 
         if (entry->fetch_errors >= 20)
         {
             if (entry->fetch_errors == 20)
                 log_errorf(HASH_STOCK, ERROR_EXCEPTION, STRING_CONST("Too many fetch failures %s"), string_table_decode(entry->code));
+            _db_lock.shared_unlock();
             return STATUS_ERROR_INVALID_REQUEST;
         }
+        _db_lock.shared_unlock();
     }
-    else if (index == 0)
+    else if (index == 0 && _db_lock.shared_unlock() && _db_lock.exclusive_lock())
     {
+        
         // Create stock slot and trigger async resolution.
         if (array_size(_db_stocks) >= _db_capacity)
             stock_grow_db();
@@ -439,14 +457,20 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 
         FOUNDATION_ASSERT(handle.id != 0);
         if (!hashtable64_set(_db_hashes, handle.id, index))
+        {
+            _db_lock.exclusive_unlock();
             return STATUS_ERROR_HASH_TABLE_NOT_LARGE_ENOUGH;
+        }
 
         // Initialize a minimal set of data, the rest will be initialized asynchronously.
         entry->last_update_time = time_current();
         entry->fetch_level = FetchLevel::NONE;
         entry->resolved_level = FetchLevel::NONE;
+        _db_lock.exclusive_unlock();
     }
 
+
+    SHARED_READ_LOCK(_db_lock);
     // Fetch stock data
     char ticker[64] { 0 };
     string_copy(STRING_CONST_CAPACITY(ticker), STRING_ARGS(string_table_decode_const(handle.code)));
@@ -454,7 +478,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
     status_t status = STATUS_OK;
     if ((fetch_levels & FetchLevel::REALTIME) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::REALTIME) == 0)
     {
-        if (eod_fetch_async("real-time", ticker, FORMAT_JSON_CACHE, E21(stock_read_real_time_results, _1, index), 256, 5 * 60ULL))
+        if (eod_fetch_async("real-time", ticker, FORMAT_JSON_CACHE, E21(stock_read_real_time_results, _1, index), 5 * 60ULL))
         {
             entry->mark_fetched(FetchLevel::REALTIME);
             status = STATUS_RESOLVING;
@@ -469,7 +493,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
     if ((fetch_levels & FetchLevel::FUNDAMENTALS) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::FUNDAMENTALS) == 0)
     {
         if (eod_fetch_async("fundamentals", ticker, FORMAT_JSON_CACHE,
-            E21(stock_read_fundamentals_results, _1, index), 16, 3 * 24ULL * 3600ULL))
+            E21(stock_read_fundamentals_results, _1, index), 3 * 24ULL * 3600ULL))
         {
             entry->mark_fetched(FetchLevel::FUNDAMENTALS);
             status = STATUS_RESOLVING;
@@ -483,7 +507,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 
     if ((fetch_levels & FetchLevel::EOD) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::EOD) == 0)
     {
-        if (eod_fetch_async("eod", ticker, FORMAT_JSON_CACHE, "order", "d", E31(stock_read_eod_results, _1, index, FetchLevel::EOD), 32, 12ULL * 3600ULL))
+        if (eod_fetch_async("eod", ticker, FORMAT_JSON_CACHE, "order", "d", E31(stock_read_eod_results, _1, index, FetchLevel::EOD), 12ULL * 3600ULL))
         {
             entry->mark_fetched(FetchLevel::EOD | FetchLevel::TECHNICAL_INDEXED_PRICE);
             status = STATUS_RESOLVING;
@@ -514,7 +538,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         }
 
         if (eod_fetch_async("technical", ticker, FORMAT_JSON_CACHE, "order", "d", "function", "splitadjusted",
-            E31(stock_read_eod_results, _1, index, FetchLevel::TECHNICAL_EOD), 16, 12ULL * 3600ULL))
+            E31(stock_read_eod_results, _1, index, FetchLevel::TECHNICAL_EOD), 12ULL * 3600ULL))
         {
             entry->mark_fetched(FetchLevel::TECHNICAL_EOD);
             status = STATUS_RESOLVING;
@@ -528,18 +552,15 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 
     if ((fetch_levels & FetchLevel::TECHNICAL_INDEXED_PRICE) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::TECHNICAL_INDEXED_PRICE) == 0)
     {
-        if (entry->has_resolve(FetchLevel::TECHNICAL_EOD) || entry->has_resolve(FetchLevel::EOD))
+        if (eod_fetch_async("eod", ticker, FORMAT_JSON_CACHE, "order", "d", E21(stock_read_eod_indexed_prices, _1, index), 24ULL * 3600ULL))
         {
-            if (eod_fetch_async("eod", ticker, FORMAT_JSON_CACHE, "order", "d", E21(stock_read_eod_indexed_prices, _1, index), 32, 24ULL * 3600ULL))
-            {
-                entry->mark_fetched(FetchLevel::TECHNICAL_INDEXED_PRICE);
-                status = STATUS_RESOLVING;
-            }
-            else
-            {
-                entry->fetch_errors++;
-                log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Failed to fetch EOD indexed prices for %s"), entry->fetch_errors, ticker);
-            }
+            entry->mark_fetched(FetchLevel::TECHNICAL_INDEXED_PRICE);
+            status = STATUS_RESOLVING;
+        }
+        else
+        {
+            entry->fetch_errors++;
+            log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Failed to fetch EOD indexed prices for %s"), entry->fetch_errors, ticker);
         }
     }
 
@@ -750,7 +771,7 @@ bool stock_update(const char* code, size_t code_length, stock_handle_t& handle, 
 FOUNDATION_STATIC void stock_initialize()
 {
     _db_capacity = 256;
-    _db_lock = mutex_allocate(STRING_CONST("Stock_DB_Lock"));
+    //_db_lock = mutex_allocate(STRING_CONST("Stock_DB_Lock"));
     _db_hashes = hashtable64_allocate(_db_capacity);
     array_push(_db_stocks, stock_t{});
 }
@@ -760,8 +781,9 @@ FOUNDATION_STATIC void stock_shutdown()
     hashtable64_deallocate(_exchange_rates);
     _exchange_rates = nullptr;
 
-    if (auto lock = scoped_mutex_t(_db_lock))
+    //if (auto lock = scoped_mutex_t(_db_lock))
     {
+        SHARED_WRITE_LOCK(_db_lock);
         for (size_t i = 0; i < array_size(_trashed_history); ++i)
             array_deallocate(_trashed_history[i]);
         array_deallocate(_trashed_history);
@@ -781,8 +803,8 @@ FOUNDATION_STATIC void stock_shutdown()
         _db_hashes = nullptr;
     }
 
-    mutex_deallocate(_db_lock);
-    _db_lock = nullptr;
+    //mutex_deallocate(_db_lock);
+    //_db_lock = nullptr;
 }
 
 DEFINE_SERVICE(STOCK, stock_initialize, stock_shutdown, SERVICE_PRIORITY_BASE);

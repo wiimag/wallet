@@ -92,10 +92,9 @@ bool query_execute_json(const char* query, query_format_t format, void(*callback
 /// </summary>
 /// <param name="query">GET URL</param>
 /// <param name="callback">Callback executed when the server returns the response.</param>
-/// <param name="ignore_if_queue_more_than">The query will be ignored if the asynchronous query queue is full.</param>
 /// /// <param name="invalid_cache_query_after_seconds">If @FORMAT_JSON_CACHE is used, then the query cache will be ignored if older than @invalid_cache_query_after_seconds.</param>
 /// <returns></returns>
-bool query_execute_async_json(const char* query, query_format_t format, const query_callback_t& callback, int ignore_if_queue_more_than = 0, uint64_t invalid_cache_query_after_seconds = 0);
+bool query_execute_async_json(const char* query, query_format_t format, const query_callback_t& callback, uint64_t invalid_cache_query_after_seconds = 0);
 
 /// <summary>
 /// 

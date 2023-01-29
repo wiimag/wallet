@@ -99,7 +99,6 @@ FOUNDATION_FORCEINLINE bool is_whitespace(char c)
     return false;
 }
 
-
 template <size_t N> FOUNDATION_FORCEINLINE constexpr string_const_t string_const(const char(&s)[N]) 
 { 
     return string_const(s, min(N-1, string_length(s)));
@@ -483,6 +482,9 @@ struct ElapsedTimeLoggerScope
 
 #else
 
-#define TIME_TRACKER(NAME) (void);
+#define TIME_TRACKER(...)                       \
+	do {                                        \
+		FOUNDATION_UNUSED_VARARGS(__VA_ARGS__); \
+	} while (0)
 
 #endif

@@ -96,7 +96,7 @@ config_handle_t title_get_fundamental_config_value(title_t* title, const char* f
                 // No match
                 config_set(filter_value, STRING_CONST("-"));
             }
-        }, 5, 3 * 24ULL * 3600ULL))
+        }, 3 * 24ULL * 3600ULL))
     {
         return filter_value;
     }
@@ -362,7 +362,11 @@ bool title_refresh(title_t* title)
 
 bool title_update(title_t* t, double timeout /*= 3.0*/)
 {	
-    const fetch_level_t REQUIRED_FETCH_LEVEL = FetchLevel::REALTIME | FetchLevel::FUNDAMENTALS | FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE;
+    const fetch_level_t REQUIRED_FETCH_LEVEL = 
+        FetchLevel::REALTIME | 
+        FetchLevel::FUNDAMENTALS | 
+        FetchLevel::TECHNICAL_EOD | 
+        FetchLevel::TECHNICAL_INDEXED_PRICE;
     
     bool resolved = stock_update(t->code, t->code_length, t->stock, REQUIRED_FETCH_LEVEL, timeout);
     if (!resolved)
