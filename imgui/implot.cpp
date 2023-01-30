@@ -2669,7 +2669,8 @@ void SetupFinish() {
         }
         if (ax.HasTickLabels()) {
 			// BEGIN PATCH 2023-01-24 - Prevent text label overlapping
-            float text_end_pos_limit = -FLT_MAX;
+            const bool inverted = ax.IsInverted();
+            float text_end_pos_limit = inverted ? FLT_MAX : -FLT_MAX;
 			// END PATH 2023-01-24
             for (int j = 0; j < tkr.TickCount(); ++j) {
                 const ImPlotTick& tk = tkr.Ticks[j];
@@ -2678,7 +2679,7 @@ void SetupFinish() {
                 if (tk.ShowLabel && tk.PixelPos >= plot.PlotRect.Min.x - 1 && tk.PixelPos <= plot.PlotRect.Max.x + 1) {
                     ImVec2 start(tk.PixelPos - 0.5f * tk.LabelSize.x, datum);
 					// BEGIN PATCH 2023-01-24 - Prevent text label overlapping
-                    if (start.x > text_end_pos_limit)
+                    if (inverted ? (start.x < text_end_pos_limit) : (start.x > text_end_pos_limit))
                     {
                         const char* label_text = tkr.GetText(j);
                         const float label_text_width = ImGui::CalcTextSize(label_text).x;
