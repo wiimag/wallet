@@ -310,6 +310,34 @@ string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx,
     return string_to_const(string_copy(STRING_ARGS(arg_buffer), STRING_ARGS(arg_string)));
 }
 
+FOUNDATION_STATIC expr_result_t expr_eval_date_to_string(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    if (args->len != 1)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments: DATESTR(<unix time stamp>)");
+
+    time_t time = (time_t)expr_eval(args->get(0)).as_number(0);
+    return string_from_date(time);
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_create_date(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    if (args->len != 3)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid argument count for DATE");
+
+    const int year = (int)expr_eval(args->get(0)).as_number(0);
+    if (year < 1970)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid year argument, must be >=1970");
+    const int month = (int)expr_eval(args->get(1)).as_number(0);
+    if (month <= 0 || month > 12)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid month argument, must be between 1 and 12");
+    const int day = (int)expr_eval(args->get(2)).as_number(0);
+    if (day <= 0 || day > 31)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid day argument, must be between 1 and 31");
+
+    return (double)time_make(year, month, day, 0, 0, 0, 0);
+}
+
+
 FOUNDATION_STATIC expr_result_t expr_eval_time_now(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     return (double)time_now();
@@ -890,8 +918,8 @@ FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_
 {
     // Examples: FILTER([1, 2, 3], EVAL($1 >= 3)) == [3]
     //           FILTER([2, 1, 4, 5, 0, 55, 6], $1 > 3) == [4, 5, 55, 6]
-    //           SUM(INDEX(FILTER(R(_300K, day), INDEX($1, 1) > 0), 1))
-    //           SUM(MAP(FILTER(R(_300K, day), INDEX($1, 1) > 0), INDEX($1, 1)))
+    //           SUM(INDEX(FILTER(R(_300K, day), INDEX($0, 1) > 0), 1))
+    //           SUM(MAP(FILTER(R(_300K, day), INDEX($0, 1) > 0), INDEX($0, 1)))
 
     if (args == nullptr || args->len != 2)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
@@ -903,11 +931,26 @@ FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_
     expr_result_t* results = nullptr;
     for (auto e : elements)
     {
-        expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$1"));
-        v->value = e;
+        if (!e.is_set())
+        {
+            eval_set_or_create_global_var(STRING_CONST("$1"), e);
+        }
+        else
+        {
+            char varname[4];
+            int i = 1;
+            for (auto m : e)
+            {
+                string_t macro = string_format(STRING_CONST_CAPACITY(varname), STRING_CONST("$%d"), i);
+                eval_set_or_create_global_var(STRING_ARGS(macro), m);
+                i++;
+            }
+        }
 
         expr_result_t r = expr_eval(&args->buf[1]);
-        if (r.as_number() != 0)
+        if (r.type == EXPR_RESULT_FALSE)
+            continue;
+        if (r.type == EXPR_RESULT_TRUE || r.as_number() != 0)
             array_push_memcpy(results, &e);
     }
 
@@ -916,9 +959,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_
 
 FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* args, void* c)
 {
-    // Examples: MAP([[a, 1], [b, 2], [c, 3]], INDEX($1, 1)) == [1, 2, 3]
-    //           MAP([[a, 1], [b, 2], [c, 3]], ADD(INDEX($1, 1), $0)) == [2, 4, 6]
-    //           SUM(MAP(R(_300K, day), INDEX($1, 1)))
+    // Examples: MAP([[a, 1], [b, 2], [c, 3]], $2) == [1, 2, 3]
+    //           MAP([[a, 1], [b, 2], [c, 3]], ADD($0, $2)) == [1, 3, 6]
+    //           SUM(MAP(R("300K", day), $1))
+    //           MAP(FILTER(S(U.US, close, ALL), $2 > 60), [DATESTR($1), $2])
 
     if (args == nullptr || args->len != 2)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
@@ -930,8 +974,21 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
     expr_result_t* results = nullptr;
     for (auto e : elements)
     {
-        expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$1"));
-        v->value = e;
+        if (!e.is_set())
+        {
+            eval_set_or_create_global_var(STRING_CONST("$1"), e);
+        }
+        else
+        {
+            char varname[4];
+            int i = 1;
+            for (auto m : e)
+            {
+                string_t macro = string_format(STRING_CONST_CAPACITY(varname), STRING_CONST("$%d"), i);
+                eval_set_or_create_global_var(STRING_ARGS(macro), m);
+                i++;
+            }
+        }
 
         expr_result_t r = expr_eval(&args->buf[1]);
         array_push_memcpy(results, &r);
@@ -1130,15 +1187,15 @@ static expr_var_t* expr_var(expr_var_list_t* vars, const char* s, size_t len)
 {
     expr_var_t* v = NULL;
 
-    if ((*s == '"' && s[len - 1] == '"') || (*s == '\'' && s[len - 1] == '\''))
+    if (len > 2 && ((*s == '"' && s[len - 1] == '"') || (*s == '\'' && s[len - 1] == '\'')))
     {
         s++;
         len -= 2;
     }
-
-    if (len == 0 || !isfirstvarchr(*s)) {
+    else if (len == 0 || !isfirstvarchr(*s)) {
         return NULL;
     }
+
     for (v = vars->head; v; v = v->next)
     {
         if (string_equal(STRING_ARGS(v->name), s, len))
@@ -1264,6 +1321,9 @@ expr_result_t expr_eval(expr_t* e)
         return n;
     case OP_COMMA:
         n = expr_eval(&e->args.buf[0]);
+        // Exclude some patterns from returning a result set.
+        if (e->args.buf[0].type == OP_ASSIGN && (e->args.buf[0].token.length == 0 || e->args.buf[0].args.buf[0].type == OP_VAR))
+            return expr_eval(&e->args.buf[1]);
         return expr_eval_merge(n, expr_eval(&e->args.buf[1]), false);
     case OP_CONST:
         return e->param.result.value;
@@ -1354,9 +1414,11 @@ static int expr_next_token(const char* s, size_t len, int& flags)
         {
             i++;
             c = s[i];
+            if (i > len)
+                return EXPR_ERROR_STRING_LITERAL_NOT_CLOSED; // unexpected word
         }
         i++;
-        if (i >= len)
+        if (i > len)
             return EXPR_ERROR_STRING_LITERAL_NOT_CLOSED; // unexpected word
         flags = EXPR_TWORD | EXPR_TOP | EXPR_TCLOSE;
         return i;
@@ -1888,6 +1950,8 @@ expr_result_t eval(string_const_t expression)
         return NIL;
     }
 
+    eval_set_or_create_global_var(STRING_CONST("$0"), nullptr);
+
     expr_result_t result;
     try
     {
@@ -2348,6 +2412,9 @@ FOUNDATION_STATIC void eval_initialize()
 
     // Time functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("NOW"), expr_eval_time_now, NULL, 0 })); // // ELAPSED_DAYS(TO_DATE(F(SSE.V, General.UpdatedAt)), NOW())
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATE"), expr_eval_create_date, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATESTR"), expr_eval_date_to_string, NULL, 0 }));
+    
 
     // Must always be last
     array_push(_expr_user_funcs, (expr_func_t{ NULL, 0, NULL, NULL, 0 }));

@@ -914,3 +914,15 @@ string_t string_remove_line_returns(const char* str, size_t length)
     return result;
 }
 
+time_t time_make(int year, int month, int day, int hour, int minute, int second, int millisecond)
+{
+    struct tm t;
+    t.tm_year = year - 1900;
+    t.tm_mon = month - 1;
+    t.tm_mday = day;
+    t.tm_hour = hour;
+    t.tm_min = minute;
+    t.tm_sec = second;
+    t.tm_isdst = -1;
+    return mktime(&t);
+}

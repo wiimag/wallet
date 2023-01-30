@@ -220,6 +220,13 @@ struct expr_result_t
     {
     }
 
+    expr_result_t(string_const_t str)
+        : type(str.length ? EXPR_RESULT_SYMBOL : EXPR_RESULT_NULL)
+        , index(str.length)
+        , value(string_table_encode(str))
+    {
+    }
+
     expr_result_t(const expr_result_t* list, size_t index = NO_INDEX)
         : type(list ? EXPR_RESULT_ARRAY : EXPR_RESULT_NULL)
         , list(list)
@@ -269,7 +276,7 @@ struct expr_result_t
             return 0.0;
 
         if (type == EXPR_RESULT_SYMBOL)
-            return math_trunc(value);
+            return (double)math_trunc(value);
 
         if (type == EXPR_RESULT_POINTER)
         {
@@ -461,6 +468,13 @@ struct expr_result_t
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value * rhs.as_number(0.0));
 
+        if (type == EXPR_RESULT_SYMBOL)
+        {
+            string_const_t symbol = string_table_decode_const((string_table_symbol_t)value);
+            const double n = string_to_real(STRING_ARGS(symbol));
+            return expr_result_t(n * rhs.as_number(0.0));
+        }
+
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
     }
@@ -570,6 +584,10 @@ struct expr_result_t
     {
         if (type == EXPR_RESULT_NULL && rhs.type == EXPR_RESULT_NULL)
             return true;
+
+        if (type == EXPR_RESULT_NULL && rhs.type == EXPR_RESULT_NUMBER)
+            return rhs.as_number(0) == 0;
+
         if (type == EXPR_RESULT_TRUE && rhs.type == EXPR_RESULT_TRUE)
             return true;
         if (type == EXPR_RESULT_FALSE && rhs.type == EXPR_RESULT_FALSE)

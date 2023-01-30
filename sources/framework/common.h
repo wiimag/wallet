@@ -150,6 +150,47 @@ FOUNDATION_FORCEINLINE uint8_t hex_value(char c)
         return 15 - ('F' - c);
     return -1;
 }
+//decltype(declval<typename Iter>().operator*())
+template<typename Iter>
+string_const_t string_join(Iter begin, Iter end, const function<string_const_t(const typename Iter::type& e)>& iter,
+    string_const_t sep = { ", ", 2 },
+    string_const_t open_token = { nullptr, 0 },
+    string_const_t close_token = { nullptr, 0 })
+{
+    string_t b_list{ nullptr, 0 };
+    string_t join_list_string = { nullptr, 0 };
+
+    if (!string_is_null(open_token))
+        join_list_string = string_allocate_concat(nullptr, 0, STRING_ARGS(open_token));
+
+    for (Iter it = begin; it != end; ++it)
+    {
+        b_list = join_list_string;
+
+        if (it != begin)
+        {
+            join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(sep));
+            string_deallocate(b_list.str);
+        }
+
+        string_const_t e_str = iter(*it);
+        b_list = join_list_string;
+        join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(e_str));
+        string_deallocate(b_list.str);
+    }
+
+    if (!string_is_null(close_token))
+    {
+        b_list = join_list_string;
+        join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(close_token));
+        string_deallocate(b_list.str);
+    }
+
+    string_t static_buf = string_static_buffer(min(16384ULL, join_list_string.length + 1ULL));
+    string_const_t res = string_to_const(string_copy(static_buf.str, static_buf.length, STRING_ARGS(join_list_string)));
+    string_deallocate(join_list_string.str);
+    return res;
+}
 
 template<typename T>
 string_const_t string_join(T* const list, size_t count, const function<string_const_t(T& e)>& iter,
@@ -308,6 +349,7 @@ double time_elapsed_days_round(time_t from, time_t to);
 time_t time_work_day(time_t date, double rel);
 bool time_date_equal(time_t da, time_t db);
 bool time_to_local(time_t t, tm* out_tm);
+time_t time_make(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int millisecond = 0);
 
 FOUNDATION_FORCEINLINE constexpr time_t const time_one_day()
 {

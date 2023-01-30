@@ -96,6 +96,11 @@ FOUNDATION_FORCEINLINE bool operator== (const string_const_t& a, const string_co
     return string_equal_ignore_whitespace(STRING_ARGS(a), STRING_ARGS(b));
 }
 
+FOUNDATION_FORCEINLINE bool operator== (const string_t& a, const string_const_t& b)
+{
+    return string_equal_ignore_whitespace(STRING_ARGS(a), STRING_ARGS(b));
+}
+
 /// <summary>
 /// Compare a const string with a constant string literal.
 /// </summary>

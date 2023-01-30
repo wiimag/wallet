@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <framework/function.h>
+
 #include <foundation/array.h>
 #include <foundation/mutex.h>
 #include <foundation/beacon.h>
@@ -17,52 +19,18 @@ namespace generics {
         const T* b{ nullptr };
         const T* e{ nullptr };
 
-        fixed_array(const T* ptr, size_t length = -1)
+        FOUNDATION_FORCEINLINE fixed_array(const T* ptr, size_t length = -1)
             : b(ptr)
             , e(ptr + (length != (size_t)-1 ? length : array_size(ptr)))
         {
         }
 
-        struct iterator
-        {
-            size_t index{ SIZE_MAX };
-            T* e{ nullptr };
+        FOUNDATION_FORCEINLINE size_t size() const { return pointer_diff(e, b); }
+        FOUNDATION_FORCEINLINE T* begin() { return (T*)b; }
+        FOUNDATION_FORCEINLINE T* end() { return (T*)e; }
 
-            iterator(T* e, size_t i)
-                : index(i)
-                , e(e)
-            {
-            }
-
-            bool operator!=(const iterator& other) const
-            {
-                return index != other.index;
-            }
-
-            bool operator==(const iterator& other) const
-            {
-                return !operator!=(other);
-            }
-
-            iterator& operator++()
-            {
-                ++index;
-                e += 1;
-                return *this;
-            }
-
-            T& operator*() const
-            {
-                return *e;
-            }
-        };
-
-        size_t size() const { return pointer_diff(e, b); }
-        T* begin() { return (T*)b; }
-        T* end() { return (T*)e; }
-
-        const T* begin() const { return b; }
-        const T* end() const { return e; }
+        FOUNDATION_FORCEINLINE const T* begin() const { return b; }
+        FOUNDATION_FORCEINLINE const T* end() const { return e; }
     };
 
     template<typename T>
@@ -485,6 +453,196 @@ namespace generics {
                     return true;
             }
             return false;
+        }
+    };
+
+    template<typename T, const int N, void(*DEALLOCATE)(T& o) = nullptr>
+    struct fixed_loop
+    {
+        int index{ 0 };
+        int count{ 0 };
+        T elements[N];
+
+        const int capacity{ N };
+
+        typedef T type;
+        typedef const T const_type;
+        typedef fixed_loop<T, N, DEALLOCATE> this_type;
+
+        FOUNDATION_FORCEINLINE fixed_loop()
+            : index(-1)
+            , count(0)
+        {
+            FOUNDATION_ASSERT(N > 1);
+        }
+
+        FOUNDATION_FORCEINLINE void clear()
+        {
+            if (DEALLOCATE)
+            {
+                for (int i = 0; i < count; ++i)
+                    DEALLOCATE(elements[i]);
+            }
+            index = -1;
+            count = 0;
+        }
+
+        FOUNDATION_FORCEINLINE bool empty() const
+        {
+            return count == 0;
+        }
+
+        FOUNDATION_FORCEINLINE void push(const T& v)
+        {
+            int new_count = std::min(count + 1, N);
+            index = (index + 1) % new_count;
+            if (DEALLOCATE && index < count)
+                DEALLOCATE(elements[index]);
+            elements[index] = v;      
+            count = new_count;
+        }
+
+        FOUNDATION_FORCEINLINE int size() const
+        {
+            return count;
+        }
+
+        FOUNDATION_FORCEINLINE int wrap(int i) const
+        {
+            int wrapped_index = (index + i) % count;
+            if (wrapped_index >= 0)
+                return wrapped_index;
+            return count + wrapped_index;
+        }
+
+        FOUNDATION_FORCEINLINE const T& move(int i) const
+        {
+            index = wrap(i);
+            return elements[index];
+        }
+
+        FOUNDATION_FORCEINLINE T& move(int i)
+        {
+            index = wrap(i);
+            return elements[index];
+        }
+
+        FOUNDATION_FORCEINLINE const T& operator[](int i) const
+        {
+            return elements[wrap(i)];
+        }
+
+        FOUNDATION_FORCEINLINE T& operator[](int i)
+        {
+            return elements[wrap(i)];
+        }
+
+        FOUNDATION_FORCEINLINE const T& raw(int i) const
+        {
+            FOUNDATION_ASSERT(i < count);
+            return elements[i];
+        }
+
+        FOUNDATION_FORCEINLINE T& raw(int i)
+        {
+            FOUNDATION_ASSERT(i < count);
+            return elements[i];
+        }
+
+        FOUNDATION_FORCEINLINE const T& current() const
+        {
+            FOUNDATION_ASSERT(count > 0);
+            return elements[index];
+        }
+
+        FOUNDATION_FORCEINLINE T& current()
+        {
+            FOUNDATION_ASSERT(count > 0);
+            return elements[index];
+        }
+
+        bool contains(const T& v) const
+        {
+            for (int i = 0; i < count; ++i)
+            {
+                if (elements[i] == v)
+                    return true;
+            }
+            return false;
+        }
+        
+        bool includes(const function<bool(const T& v)>& predicate) const
+        {
+            FOUNDATION_ASSERT(predicate);
+            for (int i = 0; i < count; ++i)
+            {
+                if (predicate(elements[i]))
+                    return true;
+            }
+            return false;
+        }
+
+        template<typename U>
+        bool includes(const function<bool(const T& a, const U& b)>& predicate, const U& v) const
+        {
+            FOUNDATION_ASSERT(predicate);
+            for (int i = 0; i < count; ++i)
+            {
+                if (predicate(elements[i], v))
+                    return true;
+            }
+            return false;
+        }
+
+        struct iterator
+        {
+            int index;
+            const this_type& loop;
+
+            typedef T type;
+            typedef const T const_type;
+
+            FOUNDATION_FORCEINLINE iterator(const this_type& loop, const int index)
+                : index(index)
+                , loop(loop)
+            {
+                FOUNDATION_ASSERT(index <= loop.size());
+            }
+
+            FOUNDATION_FORCEINLINE bool operator!=(const iterator& other) const
+            {
+                if (&loop != &other.loop)
+                    return true;
+                return (index != other.index);
+            }
+
+            FOUNDATION_FORCEINLINE bool operator==(const iterator& other) const
+            {
+                if (&loop != &other.loop)
+                    return false;
+                return (index == other.index);
+            }
+
+            FOUNDATION_FORCEINLINE iterator& operator++()
+            {
+                index++;
+                return *this;
+            }
+
+            FOUNDATION_FORCEINLINE const T& operator*() const
+            {
+                return loop[loop.index - index];
+            }
+        };
+
+        FOUNDATION_FORCEINLINE iterator begin() const
+        {
+            return iterator{ *this, 0 };
+        }
+
+        FOUNDATION_FORCEINLINE iterator end() const
+        {
+            return iterator{ *this, this->size() };
         }
     };
 }

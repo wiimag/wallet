@@ -454,19 +454,19 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
                 }
                 else
                 {
-                    log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Failed to parse JSON from cache file for %s at %.*s"), query, STRING_FORMAT(cache_file_path));
+                    log_warnf(HASH_QUERY, WARNING_PERFORMANCE, STRING_CONST("Failed to parse JSON from cache file for %s at %.*s"), query, STRING_FORMAT(cache_file_path));
                     warning_logged = true;
                 }
             }
             else
             {
-                log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Failed to open cache file for %s at %.*s"), query, STRING_FORMAT(cache_file_path));
+                log_warnf(HASH_QUERY, WARNING_PERFORMANCE, STRING_CONST("Failed to open cache file for %s at %.*s"), query, STRING_FORMAT(cache_file_path));
                 warning_logged = true;
             }
         }
         else
         {
-            log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Updating query %s"), query);
+            log_debugf(HASH_QUERY, STRING_CONST("Updating query %s"), query);
             warning_logged = true;
         }
     }

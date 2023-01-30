@@ -83,17 +83,17 @@ static struct {
 
     // Stock only (Start at index 8 <== !!!UPDATE INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
 
-    { "price",      SL2(_2->current.close), nullptr },
-    { "date",       SL2((double)_2->current.date), nullptr },
-    { "gmt",        SL2((double)_2->current.gmtoffset), nullptr},
-    { "open",       SL2(_2->current.open), nullptr },
-    { "close",      SL2(_2->current.close), nullptr },
-    { "yesterday",  SL2(_2->current.previous_close), nullptr},
-    { "low",        SL2(_2->current.low), nullptr },
-    { "high",       SL2(_2->current.high), nullptr },
-    { "change",     SL2(_2->current.change), IS_NOT_A_NUMBER },
-    { "change_p",   SL2(_2->current.change_p), IS_NOT_A_NUMBER },
-    { "volume",     SL2(_2->current.volume), nullptr },
+    { "price",      SL2(_2->current.close), nullptr, FetchLevel::REALTIME },
+    { "date",       SL2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
+    { "gmt",        SL2((double)_2->current.gmtoffset), nullptr, FetchLevel::REALTIME },
+    { "open",       SL2(_2->current.open), nullptr, FetchLevel::REALTIME },
+    { "close",      SL2(_2->current.close), nullptr, FetchLevel::REALTIME },
+    { "yesterday",  SL2(_2->current.previous_close), nullptr, FetchLevel::REALTIME },
+    { "low",        SL2(_2->current.low), nullptr, FetchLevel::REALTIME },
+    { "high",       SL2(_2->current.high), nullptr, FetchLevel::REALTIME },
+    { "change",     SL2(_2->current.change), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "change_p",   SL2(_2->current.change_p), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "volume",     SL2(_2->current.volume), nullptr, FetchLevel::REALTIME },
 
     { "price_factor",   SL2(_2->current.price_factor), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
     { "change_p_high",  SL2(_2->current.change_p_high), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
@@ -108,17 +108,17 @@ static struct {
     { "slope",  SL2(_2->current.slope), nullptr, FetchLevel::TECHNICAL_SLOPE },
     { "cci",    SL2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
 
-    { "dividends",  SL2(_2->dividends_yield.fetch()), nullptr },
+    { "dividends",  SL2(_2->dividends_yield.fetch()), nullptr, FetchLevel::FUNDAMENTALS },
 
-    { "name",           SL2(string_table_decode(_2->name)), SL1(_1.index == 0)},
-    { "description",    SL2(string_table_decode(_2->description.fetch())), nullptr},
-    { "country",        SL2(string_table_decode(_2->country)), SL1(_1.index == 0)},
-    { "type",           SL2(string_table_decode(_2->type)), SL1(_1.index == 0)},
-    { "currency",       SL2(string_table_decode(_2->currency)), SL1(_1.index == 0)},
-    { "url",            SL2(string_table_decode(_2->url)), SL1(_1.index == 0)},
-    { "updated_at",     SL2(string_table_decode(_2->updated_at)), SL1(_1.index == 0)},
-    { "exchange",       SL2(string_table_decode(_2->exchange)), SL1(_1.index == 0)},
-    { "symbol",         SL2(string_table_decode(_2->symbol)), SL1(_1.index == 0)},
+    { "name",           SL2(string_table_decode(_2->name)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "description",    SL2(string_table_decode(_2->description.fetch())), nullptr, FetchLevel::FUNDAMENTALS },
+    { "country",        SL2(string_table_decode(_2->country)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "type",           SL2(string_table_decode(_2->type)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "currency",       SL2(string_table_decode(_2->currency)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "url",            SL2(string_table_decode(_2->url)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "updated_at",     SL2(string_table_decode(_2->updated_at)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "exchange",       SL2(string_table_decode(_2->exchange)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "symbol",         SL2(string_table_decode(_2->symbol)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
 
     { EVAL_STOCK_FIELD(shares_count) },
     { EVAL_STOCK_FIELD(low_52) },
@@ -138,6 +138,35 @@ static struct {
     { EVAL_STOCK_FIELD(diluted_eps_ttm) }
 };
 
+static struct {
+    string_const_t property_name;
+    function<expr_result_t(const stock_t* s, const day_result_t* ed)> handler;
+    FetchLevel required_level{ FetchLevel::NONE };
+} stock_end_of_day_property_evalutors[] = {
+
+    { CTEXT("date"),           SL2((double)_2->date), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("gmtoffset"),      SL2((double)_2->gmtoffset), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("open"),           SL2(_2->open), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("close"),          SL2(_2->close), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("previous_close"), SL2(_2->previous_close), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("price_factor"),   SL2(_2->price_factor), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("low"),            SL2(_2->low), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("high"),           SL2(_2->high), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("change"),         SL2(_2->change), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("change_p"),       SL2(_2->change_p), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("change_p_high"),  SL2(_2->change_p_high), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("volume"),         SL2(_2->volume), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("wma"),            SL2(_2->wma), FetchLevel::REALTIME | FetchLevel::TECHNICAL_WMA },
+    { CTEXT("ema"),            SL2(_2->ema), FetchLevel::REALTIME | FetchLevel::TECHNICAL_EMA },
+    { CTEXT("sma"),            SL2(_2->sma), FetchLevel::REALTIME | FetchLevel::TECHNICAL_SMA },
+    { CTEXT("uband"),          SL2(_2->uband), FetchLevel::REALTIME | FetchLevel::TECHNICAL_BBANDS },
+    { CTEXT("mband"),          SL2(_2->mband), FetchLevel::REALTIME | FetchLevel::TECHNICAL_BBANDS },
+    { CTEXT("lband"),          SL2(_2->lband), FetchLevel::REALTIME | FetchLevel::TECHNICAL_BBANDS },
+    { CTEXT("sar"),            SL2(_2->sar), FetchLevel::REALTIME | FetchLevel::TECHNICAL_SAR },
+    { CTEXT("slope"),          SL2(_2->slope), FetchLevel::REALTIME | FetchLevel::TECHNICAL_SLOPE },
+    { CTEXT("cci"),            SL2(_2->cci), FetchLevel::REALTIME | FetchLevel::TECHNICAL_CCI }
+};
+
 // 
 // # PRIVATE
 //
@@ -150,7 +179,7 @@ FOUNDATION_STATIC bool report_eval_report_field_resolve_level(stock_handle_t& st
 
     if (!s->has_resolve(request_level))
     {
-        if (stock_resolve(stock_handle, request_level))
+        if (stock_resolve(stock_handle, request_level) >= 0)
         {
             const tick_t timeout = time_current();
             while (!s->has_resolve(request_level) && time_elapsed(timeout) < timeout_expired)
@@ -177,15 +206,11 @@ FOUNDATION_STATIC bool report_eval_report_field_test(
 {
     if (!string_equal_nocase(property_name, string_length(property_name), STRING_ARGS(field_name)))
         return false;
-        
-    const stock_t* s = stock_handle;
-    if (!s || !s->has_resolve(FetchLevel::REALTIME))
-        return false;
-            
+                    
     if (required_level != FetchLevel::NONE)
         report_eval_report_field_resolve_level(stock_handle, required_level);
 
-    s = stock_handle;
+    const stock_t* s = stock_handle;
     expr_result_t value = property_evalutor(nullptr, s);
     if (!property_filter_out || !property_filter_out(value))
     {
@@ -236,8 +261,11 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock(const expr_func_t* f, vec
 {
     // Examples: S(GLF.TO, open)
     //           S(GFL.TO, close) - S(GFL.TO, open)
+    //           S(GFL.TO, high, '2022-10-12')
+    //           S(GFL.TO, high, 1643327732)
+    //           S(U.US, close, ALL)
 
-    if (args->len != 2)
+    if (args->len < 2 || args->len > 3)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
 
     string_const_t code = expr_eval(args->get(0)).as_string();
@@ -246,26 +274,108 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock(const expr_func_t* f, vec
     stock_handle_t stock_handle = stock_request(STRING_ARGS(code), FetchLevel::REALTIME);
     if (!stock_handle)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Failed to resolve stock %.*s", STRING_FORMAT(code));
-        
+
     expr_result_t* results = nullptr;
-    for (int i = 8; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
+
+    if (args->len == 2)
     {
-        const auto& pe = report_field_property_evalutors[i];
-        if (report_eval_report_field_test(pe.property_name, stock_handle, field_name, pe.handler, pe.filter_out, &results, pe.required_level))
-            break;
+        // Handle default case getting latest information
+        for (int i = 8; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
+        {
+            const auto& pe = report_field_property_evalutors[i];
+            if (report_eval_report_field_test(pe.property_name, stock_handle, field_name, pe.handler, pe.filter_out, &results, pe.required_level))
+                break;
+        }
+
+        if (results == nullptr)
+            return NIL;
+
+        if (array_size(results) == 1)
+        {
+            expr_result_t single_value = results[0];
+            array_deallocate(results);
+            return single_value.list[1];
+        }
+
+        return expr_eval_list(results);
+    }
+    else
+    {
+        string_const_t check_all = expr_eval(args->get(2)).as_string();
+        if (string_equal_nocase(STRING_ARGS(check_all), STRING_CONST("ALL")))
+        {
+            // Return all end of day results for the requested field name.
+            expr_result_t* results = nullptr;
+            const stock_t* s = stock_handle;
+            for (int i = 0; i < ARRAY_COUNT(stock_end_of_day_property_evalutors); ++i)
+            {
+                const auto& se = stock_end_of_day_property_evalutors[i];
+
+                if (!string_equal_nocase(STRING_ARGS(field_name), STRING_ARGS(se.property_name)))
+                    continue;
+
+                if (!report_eval_report_field_resolve_level(stock_handle, se.required_level))
+                    throw ExprError(EXPR_ERROR_EVALUATION_TIMEOUT, "Failed to resolve %s stock history data", SYMBOL_CSTR(stock_handle->code));
+
+                array_push(results, expr_eval_pair((double)s->current.date, se.handler(s, &s->current)));
+                
+                // Find the closest date in the stock history
+                const day_result_t* history = s->history;
+                foreach(d, history)
+                {
+                    array_push(results, expr_eval_pair((double)d->date, se.handler(s, d)));
+                }
+
+                return expr_eval_list(results);
+            }
+        }
+        else
+        {
+            // Query the stock data at a given date.        
+            // First, get the date either as a string or a unix time stamp
+            time_t time = 0;
+            expr_result_t date_arg = expr_eval(args->get(2));
+            if (date_arg.type == EXPR_RESULT_SYMBOL)
+            {
+                string_const_t date_string = date_arg.as_string();
+                time = string_to_date(STRING_ARGS(date_string));
+            }
+            else
+            {
+                time = (time_t)date_arg.as_number(0);
+            }
+
+            if (time == 0)
+                throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Failed to parse date argument `%.*s`", STRING_FORMAT(args->get(2)->token));
+
+            const stock_t* s = stock_handle;
+            for (int i = 0; i < ARRAY_COUNT(stock_end_of_day_property_evalutors); ++i)
+            {
+                const auto& se = stock_end_of_day_property_evalutors[i];
+
+                if (!string_equal_nocase(STRING_ARGS(field_name), STRING_ARGS(se.property_name)))
+                    continue;
+
+                if (!report_eval_report_field_resolve_level(stock_handle, se.required_level))
+                    throw ExprError(EXPR_ERROR_EVALUATION_TIMEOUT, "Failed to resolve %s stock history data", SYMBOL_CSTR(stock_handle->code));
+
+                if (time >= s->current.date)
+                    return se.handler(s, &s->current);
+
+                // Find the closest date in the stock history
+                const day_result_t* history = s->history;
+                foreach(d, history)
+                {
+                    if (d->date <= time)
+                        return se.handler(s, d);
+                }
+
+                throw ExprError(EXPR_ERROR_EVALUATION_TIMEOUT, "Failed to resolve date %ull for %s", time, SYMBOL_CSTR(stock_handle->code));
+            }
+        }
     }
 
-    if (results == nullptr)
-        return nullptr;
-
-    if (array_size(results) == 1)
-    {
-        expr_result_t single_value = results[0];
-        array_deallocate(results);
-        return single_value.list[1];
-    }
-
-    return expr_eval_list(results);
+    throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid field name %.*s", STRING_FORMAT(field_name));
 }
 
 FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_func_t* f, vec_expr_t* args, void* c)
@@ -514,8 +624,14 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
 {
     // Examples: TABLE(test, R(_300K, name), ['name', $2], ['col 1', S($1, open)], ['col 2', S($1, close)])
     //           TABLE(test, R(favorites, name), ['title', $1], ['name', $2], ['open', S($1, open)], ['close', S($1, close)])
+    //           TABLE('Test', [U.US, GFL.TO], ['Title', $1], ['Price', S($1, close), currency])
+    //           TABLE('Unity Best Days', FILTER(S(U.US, close, ALL), $2 > 60), ['Date', DATESTR($1)], ['Price', $2, currency])
+    //           T=U.US, TABLE('Unity Best Days', FILTER(S(T, close, ALL), $2 > 60), 
+    //              ['Date', DATESTR($1)],
+    //              ['Price', $2, currency],
+    //              ['%', S(T, change_p, $1), percentage])
 
-    if (args->len < 2)
+    if (args->len < 3)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Requires at least two arguments");
 
     TIME_TRACKER("report_eval_table");
@@ -543,9 +659,13 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
                 if (!string_is_null(format_string))
                 {
                     if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("currency")))
-                    {
                         col.format = COLUMN_FORMAT_CURRENCY;
-                    }
+                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("percentage")))
+                        col.format = COLUMN_FORMAT_PERCENTAGE;
+                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("date")))
+                        col.format = COLUMN_FORMAT_DATE;
+                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("number")))
+                        col.format = COLUMN_FORMAT_NUMBER;
                 }
             }
             

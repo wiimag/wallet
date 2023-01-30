@@ -11,6 +11,7 @@
 #include <framework/service.h>
 #include <framework/imgui.h>
 #include <framework/scoped_mutex.h>
+#include <framework/generics.h>
 
 #include <foundation/log.h>
 #include <foundation/array.h>
@@ -25,6 +26,7 @@ static char _log_search_filter[256]{ 0 };
 static int _filtered_message_count = -1;
 static size_t _next_log_message_id = 1;
 static string_t _selected_msg;
+static generics::fixed_loop<string_t, 20, [](string_t& s){ string_deallocate(s.str); }> _saved_expressions;
 
 struct log_message_t
 {
@@ -256,35 +258,63 @@ FOUNDATION_STATIC void console_render_evaluator()
     static bool focus_text_field = true;
     static char expression_buffer[4096]{ "" };
 
+    if (ImGui::IsWindowAppearing())
+    {
+        if (_saved_expressions.size())
+        {
+            const string_t last_expression = _saved_expressions.current();
+            string_copy(STRING_CONST_CAPACITY(expression_buffer), STRING_ARGS(last_expression));
+        }
+    }
+
+    static char input_id[32] = "##Expression";
+    if (_saved_expressions.size() > 2 && ImGui::IsWindowFocused())
+    {
+        if (ImGui::Shortcut(ImGuiKey_UpArrow | ImGuiMod_Alt))
+        {
+            const string_t& last_expression = _saved_expressions.move(-1);
+            string_t ec = string_copy(STRING_CONST_CAPACITY(expression_buffer), STRING_ARGS(last_expression));
+            string_format(STRING_CONST_CAPACITY(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
+            focus_text_field = true;
+        }
+        else if (ImGui::Shortcut(ImGuiKey_DownArrow | ImGuiMod_Alt))
+        {
+            const string_t& last_expression = _saved_expressions.move(+1);
+            string_t ec = string_copy(STRING_CONST_CAPACITY(expression_buffer), STRING_ARGS(last_expression));
+            string_format(STRING_CONST_CAPACITY(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
+            focus_text_field = true;
+        }
+    }
+
     if (focus_text_field)
     {
         ImGui::SetKeyboardFocusHere();
-        focus_text_field = false;
     }
-
-    if (ImGui::IsWindowAppearing())
-    {
-        string_copy(STRING_CONST_CAPACITY(expression_buffer),
-            STRING_ARGS(session_get_string("console_expression", "")));
-    }
-
-    const float control_height = ImGui::GetContentRegionAvail().y;
+    
     bool evaluate = false;
-    if (ImGui::InputTextMultiline("##Expression", STRING_CONST_CAPACITY(expression_buffer),
-        ImVec2(imgui_get_font_ui_scale(-98.0f), control_height), 
-        ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine | ImGuiInputTextFlags_AllowTabInput))
+    if (ImGui::InputTextMultiline(input_id, STRING_CONST_CAPACITY(expression_buffer),
+        ImVec2(imgui_get_font_ui_scale(-98.0f), -1), 
+        ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine | ImGuiInputTextFlags_AllowTabInput |
+        (focus_text_field ? ImGuiInputTextFlags_AutoSelectAll : ImGuiInputTextFlags_None)))
     {
         evaluate = true;
     }
 
+    if (focus_text_field)
+    {
+        ImGui::SetItemDefaultFocus();
+        focus_text_field = false;
+    }
+
     ImGui::SameLine();
-    if (ImGui::Button("Eval", ImVec2(-1, control_height)))
+    if (ImGui::Button("Eval", ImVec2(-1, -1)))
         evaluate = true;
 
     if (evaluate)
     {
         string_const_t expression_string = string_const(expression_buffer, string_length(expression_buffer));
-        session_set_string("console_expression", STRING_ARGS(expression_string));
+        if (!_saved_expressions.includes<string_const_t>(L2(string_equal_ignore_whitespace(STRING_ARGS(_1), STRING_ARGS(_2))), expression_string))
+            _saved_expressions.push(string_clone(STRING_ARGS(expression_string)));
 
         expr_result_t result = eval(expression_string);
         if (EXPR_ERROR_CODE == 0)
@@ -318,15 +348,15 @@ FOUNDATION_STATIC void console_render_window()
         ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0, 0));
         imgui_draw_splitter("ConsoleSplitter2", [](const auto& rect)
-            {
-                ImVec2 space = ImGui::GetContentRegionAvail();
-                if (ImGui::BeginChild("Messages"))
-                    console_render_messages();
-                ImGui::EndChild();
-            }, [](const auto& rect)
-            {
-                console_render_evaluator();
-            }, IMGUI_SPLITTER_VERTICAL, ImGuiWindowFlags_None, 0.85f, true);
+        {
+            ImVec2 space = ImGui::GetContentRegionAvail();
+            if (ImGui::BeginChild("Messages"))
+                console_render_messages();
+            ImGui::EndChild();
+        }, [](const auto& rect)
+        {
+            console_render_evaluator();
+        }, IMGUI_SPLITTER_VERTICAL, ImGuiWindowFlags_None, 0.85f, true);
         ImGui::PopStyleVar(2);
     }
 
@@ -376,6 +406,18 @@ FOUNDATION_STATIC void console_initialize()
         _console_window_opened = environment_command_line_arg("console") || session_get_bool("show_console", _console_window_opened);
         service_register_menu(HASH_CONSOLE, console_menu);
     }
+
+    string_const_t joined_expressions = session_get_string("console_expressions", "");
+    if (joined_expressions.length)
+    {
+        string_const_t expression, r = joined_expressions;
+        do
+        {
+            string_split(STRING_ARGS(r), STRING_CONST(";;"), &expression, &r, false);
+            if (expression.length)
+                _saved_expressions.push(string_clone(STRING_ARGS(expression)));
+        } while (r.length > 0); 
+    }
 }
 
 FOUNDATION_STATIC void console_shutdown()
@@ -384,6 +426,13 @@ FOUNDATION_STATIC void console_shutdown()
     console_clear_all();
     mutex_deallocate(_message_lock);
     session_set_bool("show_console", _console_window_opened);
+
+    if (_saved_expressions.size() > 0)
+    {
+        string_const_t joined_expressions = string_join(_saved_expressions.begin(), _saved_expressions.end(), LC1(string_to_const(_1)), CTEXT(";;"));
+        session_set_string("console_expressions", STRING_ARGS(joined_expressions));
+        _saved_expressions.clear();
+    }
 }
 
-DEFINE_SERVICE(CONSOLE, console_initialize, console_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_SERVICE(CONSOLE, console_initialize, console_shutdown, SERVICE_PRIORITY_BASE);
