@@ -57,7 +57,7 @@ struct dynamic_report_t
     table_t* table;
 };
 
-#define HASH_REPORT_EXPRESSION static_hash_string("report_expression", 17, 0x6eb03c48b763689fULL)
+#define HASH_REPORT_EXPRESSION static_hash_string("report_expr", 11, 0x44456b54e62624e0ULL)
 
 #define IS_NOT_A_NUMBER SL1(math_real_is_nan(_1.as_number()))
 #define EVAL_STOCK_FIELD(field_name) FOUNDATION_PREPROCESSOR_TOSTRING(field_name), SL2(_2->field_name), IS_NOT_A_NUMBER, FetchLevel::FUNDAMENTALS

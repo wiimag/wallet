@@ -15,6 +15,7 @@
 
 #include <foundation/log.h>
 #include <foundation/array.h>
+#include <foundation/hashstrings.h>
 
 #include <algorithm>
 
@@ -27,34 +28,56 @@ static int _filtered_message_count = -1;
 static size_t _next_log_message_id = 1;
 static string_t _selected_msg;
 static generics::fixed_loop<string_t, 20, [](string_t& s){ string_deallocate(s.str); }> _saved_expressions;
+static string_table_t* _console_string_table = nullptr;
+static bool _console_concat_messages = false;
 
 struct log_message_t
 {
     size_t id{ 0 };
     hash_t key;
     error_level_t severity;
-    string_t msg{ nullptr, 0 };
-    string_t preview{ nullptr, 0 };
+    string_table_symbol_t msg_symbol{ STRING_TABLE_NULL_SYMBOL };
+    string_table_symbol_t preview_symbol{ STRING_TABLE_NULL_SYMBOL };
     size_t occurence{ 1 };
     bool selectable{ false };
+    hash_t context;
 };
 
 static mutex_t* _message_lock = nullptr;
 static log_message_t* _messages = nullptr;
 
+FOUNDATION_STATIC string_table_symbol_t console_string_encode(const char* s, size_t length /* = 0*/)
+{
+    if (length == 0)
+        length = string_length(s);
+
+    if (length == 0)
+        return STRING_TABLE_NULL_SYMBOL;
+
+    string_table_symbol_t symbol = string_table_to_symbol(_console_string_table, s, length);
+    while (symbol == STRING_TABLE_FULL)
+    {
+        string_table_grow(&_console_string_table, (int)(_console_string_table->allocated_bytes * 2.0f));
+        symbol = string_table_to_symbol(_console_string_table, s, length);
+    }
+
+    return symbol;
+}
+
 FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char* msg, size_t length)
 {
     memory_context_push(HASH_CONSOLE);
 
-    if (!log_is_prefix_enabled())
+    if (_console_concat_messages)
     {
         scoped_mutex_t lock(_message_lock);
         log_message_t* last_message = array_last(_messages);
         if (last_message)
         {
-            string_t prev = last_message->msg;
-            last_message->msg = string_allocate_concat(STRING_ARGS(prev), msg, length);
-            string_deallocate(prev.str);
+            string_const_t prev = string_table_to_string_const(_console_string_table, last_message->msg_symbol);
+            string_t new_msg = string_allocate_concat(STRING_ARGS(prev), msg, length);
+            last_message->msg_symbol = console_string_encode(new_msg.str, new_msg.length);
+            string_deallocate(new_msg.str);
             return;
         }
     }
@@ -62,8 +85,33 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
     {
         scoped_mutex_t lock(_message_lock);
         log_message_t m{ _next_log_message_id++, string_hash(msg, length), severity };
-        m.msg = string_clone(msg, length);
-        m.preview = string_remove_line_returns(msg, length);
+        m.context = context;
+
+        #if BUILD_ENABLE_STATIC_HASH_DEBUG
+        context = context ? context : HASH_DEFAULT;
+        string_const_t context_name = hash_to_string(context);
+        const size_t hash_code_start = string_find(msg, length, '<', 12);
+        const size_t hash_code_end = string_find(msg, length, '>', hash_code_start);
+        if (context_name.length != 0 && hash_code_start != STRING_NPOS && hash_code_end != STRING_NPOS)
+        {
+            string_t formatted_msg = string_allocate_format(STRING_CONST("%.*s %11.*s : %.*s"), 
+                (int)hash_code_start, msg,
+                STRING_FORMAT(context_name),
+                (int)(length - hash_code_end - 1), msg + hash_code_end + 2);
+            m.msg_symbol = console_string_encode(formatted_msg.str, formatted_msg.length);
+            string_deallocate(formatted_msg.str);
+        }
+        else
+        #endif
+        {
+            string_t formatted_msg = string_allocate_format(STRING_CONST("%.*s"), (int)length, msg);
+            m.msg_symbol = console_string_encode(formatted_msg.str, formatted_msg.length);
+            string_deallocate(formatted_msg.str);
+        }
+
+        char preview_buffer[256];
+        string_const_t preview = string_remove_line_returns(STRING_CONST_CAPACITY(preview_buffer), msg, length);
+        m.preview_symbol = console_string_encode(STRING_ARGS(preview));
         array_push(_messages, m);
     }
 
@@ -97,19 +145,20 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
                     ImGui::PushStyleColor(ImGuiCol_Text, TEXT_WARN_COLOR);
 
                 ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.0f, 0.0f));
-                const char* msg_str = log.preview.length ? log.preview.str : log.msg.str;
-                if (ImGui::Selectable(msg_str, &log.selectable, ImGuiSelectableFlags_DontClosePopups, row_size))
+                string_const_t msg_str = log.preview_symbol != STRING_TABLE_NULL_SYMBOL ? 
+                    string_table_to_string_const(_console_string_table,log.preview_symbol) :
+                    string_table_to_string_const(_console_string_table, log.msg_symbol);
+                if (ImGui::Selectable(msg_str.str, &log.selectable, ImGuiSelectableFlags_DontClosePopups, row_size))
                 {
-                    if (_selected_msg.str != log.msg.str)
-                        _selected_msg = log.msg;
-                    else
-                        _selected_msg = {};
+                    string_deallocate(_selected_msg.str);
+                    string_const_t csmm = string_table_to_string_const(_console_string_table, log.msg_symbol);
+                    _selected_msg = string_clone(STRING_ARGS(csmm));
                 }
                 ImGui::PopStyleVar();
 
                 if (log.severity == ERRORLEVEL_ERROR && ImGui::IsItemHovered())
                 {
-                    ImGui::SetTooltip("%.*s", STRING_FORMAT(log.msg));
+                    ImGui::SetTooltip("%s", string_table_to_string(_console_string_table, log.msg_symbol));
                 }
 
                 if (log.severity == ERRORLEVEL_ERROR || log.severity == ERRORLEVEL_WARNING)
@@ -155,20 +204,20 @@ FOUNDATION_STATIC void console_render_messages()
 
 FOUNDATION_STATIC void console_clear_all()
 {
+    string_deallocate(_selected_msg.str);
     _selected_msg = {};
+    
     if (!mutex_lock(_message_lock))
         return;
 
     _filtered_message_count = -1;
     _log_search_filter[0] = '\0';
-    const size_t log_count = array_size(_messages);
-    for (size_t i = 0; i != log_count; ++i)
-    {
-        string_deallocate(_messages[i].msg.str);
-        string_deallocate(_messages[i].preview.str);
-    }
     array_deallocate(_messages);
 
+    int new_size = to_int(_console_string_table->allocated_bytes);
+    string_table_deallocate(_console_string_table);
+    _console_string_table = string_table_allocate(new_size, 64);
+    
     mutex_unlock(_message_lock);
 }
 
@@ -186,7 +235,8 @@ FOUNDATION_STATIC void console_render_toolbar()
             for (_filtered_message_count = 0; _filtered_message_count < log_count;)
             {
                 const log_message_t& log = _messages[_filtered_message_count];
-                if (string_contains_nocase(STRING_ARGS(log.msg), _log_search_filter, filter_length))
+                string_const_t log_msg = string_table_to_string_const(_console_string_table, log.msg_symbol);
+                if (string_contains_nocase(STRING_ARGS(log_msg), _log_search_filter, filter_length))
                 {
                     _filtered_message_count++;
                 }
@@ -215,10 +265,10 @@ FOUNDATION_STATIC void console_log_evaluation_result(string_const_t expression_s
     {
         if (expression_string.length)
             log_infof(HASH_EXPR, STRING_CONST("%.*s\n"), STRING_FORMAT(expression_string));
-        log_enable_prefix(false);
+        _console_concat_messages = true;
         for (unsigned i = 0; i < result.element_count(); ++i)
             console_log_evaluation_result({ nullptr, 0 }, result.element_at(i));
-        log_enable_prefix(true);
+        _console_concat_messages = false;
     }
     else if (result.type == EXPR_RESULT_POINTER && result.element_count() == 16 && result.element_size() == sizeof(float))
     {
@@ -392,6 +442,11 @@ void console_clear()
     console_clear_all();
 }
 
+void console_show()
+{
+    _console_window_opened = true;
+}
+
 //
 // # SYSTEM
 //
@@ -399,6 +454,8 @@ void console_clear()
 FOUNDATION_STATIC void console_initialize()
 {
     _message_lock = mutex_allocate(STRING_CONST("console_lock"));
+
+    _console_string_table = string_table_allocate(64 * 1024, 64);
 
     if (!main_is_running_tests())
     {
@@ -426,6 +483,7 @@ FOUNDATION_STATIC void console_shutdown()
     console_clear_all();
     mutex_deallocate(_message_lock);
     session_set_bool("show_console", _console_window_opened);
+    string_deallocate(_selected_msg.str);
 
     if (_saved_expressions.size() > 0)
     {
@@ -433,6 +491,8 @@ FOUNDATION_STATIC void console_shutdown()
         session_set_string("console_expressions", STRING_ARGS(joined_expressions));
         _saved_expressions.clear();
     }
+
+    string_table_deallocate(_console_string_table);
 }
 
 DEFINE_SERVICE(CONSOLE, console_initialize, console_shutdown, SERVICE_PRIORITY_BASE);

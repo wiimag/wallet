@@ -136,10 +136,14 @@ regex_emit(regex_t** target, bool allow_grow, size_t ops, ...) {
 		if (!allow_grow)
 			return REGEXERR_TOO_LONG;
 
+        memory_context_push(HASH_STRING);
+
 		new_allocated = ((*target)->code_allocated << 1) + ops;
 		*target = memory_reallocate(*target, sizeof(regex_t) + new_allocated, 0,
 		                            sizeof(regex_t) + (*target)->code_allocated, 0);
 		(*target)->code_allocated = new_allocated;
+
+        memory_context_pop();
 	}
 
 	va_start(arglist, ops);
@@ -165,10 +169,14 @@ regex_emit_buffer(regex_t** target, bool allow_grow, size_t ops, const uint8_t* 
 		if (!allow_grow)
 			return REGEXERR_TOO_LONG;
 
+        memory_context_push(HASH_STRING);
+
 		new_allocated = ((*target)->code_allocated << 1) + ops;
 		*target = memory_reallocate(*target, sizeof(regex_t) + new_allocated, 0,
 		                            sizeof(regex_t) + (*target)->code_allocated, 0);
 		(*target)->code_allocated = new_allocated;
+
+        memory_context_pop();
 	}
 
 	for (iop = 0; iop < ops; ++iop)

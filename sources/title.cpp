@@ -14,6 +14,174 @@
 
 #define FIELD_FILTERS_INTERNAL "::filters"
 
+//
+// # PRIVATE
+//
+
+template<typename T = double>
+FOUNDATION_STATIC FOUNDATION_FORCEINLINE T title_get_compute_value(
+    const title_t* title_compute_data,
+    size_t field_offset,
+    const function<T(const title_t*)>& get_value_fn = nullptr)
+{
+    T res = 0;
+    if (get_value_fn)
+        res = get_value_fn(title_compute_data);
+    else
+        res = field_offset != -1 ? *(T*)(((uint8_t*)title_compute_data) + field_offset) : T{};
+    return res;
+}
+
+FOUNDATION_STATIC bool title_recently_changed(const title_t* t, double* out_delta, double since_seconds, double* out_elapsed_seconds)
+{
+    const stock_t* s = t->stock;
+    if (s == nullptr)
+        return false;
+
+    const day_result_t* last_results = array_last(s->previous);
+    if (last_results == nullptr)
+        return false;
+
+    double elapsed_seconds = time_elapsed_days(last_results->date, s->current.date) * 86400.0;
+    if (out_elapsed_seconds)
+        *out_elapsed_seconds = time_elapsed_days(s->current.date, time_now()) * 86400.0;
+    if (elapsed_seconds > since_seconds)
+        return false;
+
+    if (out_delta)
+        *out_delta = s->current.close - last_results->close;
+    return true;
+}
+
+FOUNDATION_STATIC double title_compute_ps(const title_t* t, const stock_t* s)
+{
+    if (t->average_price == 0)
+        return NAN;
+
+    const double profit_ask = t->wallet->profit_ask;
+    const double average_days = t->wallet->average_days;
+    const double target_ask = t->wallet->target_ask;
+
+    double M = 0;
+    double average_fg = (t->average_price + s->current.close) / 2.0;
+    if (t->elapsed_days >= 30)
+        M = max(t->average_price, average_fg) * (1.0 + profit_ask - ((t->elapsed_days - average_days) / 20 / 100));
+    else
+        M = max(t->average_price, average_fg) * max(1.2, 1 + target_ask);
+    double K = M / t->average_price - 1.0;
+    double N = s->current.change_p;
+    double O = title_get_yesterday_change(t, s);
+    double P = title_get_range_change_p(t, s, -7, true);
+    double Q = title_get_range_change_p(t, s, -31, true);
+
+    int average_nq_count = 0;
+    double average_nq = 0.0;
+    if (!math_real_is_nan(N)) { average_nq_count++; average_nq += N; }
+    if (!math_real_is_nan(O)) { average_nq_count++; average_nq += O; }
+    if (!math_real_is_nan(P)) { average_nq_count++; average_nq += P; }
+    if (!math_real_is_nan(Q)) { average_nq_count++; average_nq += Q; }
+    if (average_nq_count > 0)
+        average_nq = average_nq / average_nq_count;
+    double R = s->dividends_yield.get_or_default(0);
+
+    return title_get_total_gain_p(t, s) * (1.0 + K) - average_nq + N + R;
+}
+
+FOUNDATION_STATIC bool title_fetch_ps(const title_t* t, double& value)
+{
+    const stock_t* s = t->stock;
+    if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::FUNDAMENTALS))
+        return false;
+
+    // Handle cases where the stock has been dismissed from the market.
+    if (math_real_is_nan(s->current.close))
+    {
+        value = DNAN;
+        return true;
+    }
+
+    if (t->average_quantity == 0 && t->sell_total_quantity > 0)
+    {
+        // Return the prediction in case the stock was kept (when sold)
+        value = ((t->sell_adjusted_price - s->current.close) / s->current.close) * 100.0;
+    }
+    else
+        value = title_compute_ps(t, s);
+
+    return !math_real_is_nan(value);
+}
+
+FOUNDATION_STATIC bool title_fetch_buy_exchange_rate(const title_t* t, double& value)
+{
+    const stock_t* s = t->stock;
+    if (s == nullptr || s->currency == 0)
+        return false;
+
+    string_const_t title_currency = string_table_decode_const(s->currency);
+    value = math_ifnan(stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(t->wallet->preferred_currency), t->date_average), s->current.previous_close);
+    return true;
+}
+
+FOUNDATION_STATIC bool title_fetch_today_exchange_rate(const title_t* t, double& value)
+{
+    const stock_t* s = t->stock;
+    if (s == nullptr || s->currency == 0)
+        return false;
+
+    string_const_t title_currency = string_table_decode_const(s->currency);
+    value = math_ifnan(stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(t->wallet->preferred_currency)), s->current.close);
+    return true;
+}
+
+FOUNDATION_STATIC bool title_fetch_ask_price(const title_t* t, double& value)
+{
+    const stock_t* s = t->stock;
+    if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::FUNDAMENTALS))
+        return false;
+
+    const double profit_ask = t->wallet->profit_ask;
+    const double average_days = t->wallet->average_days;
+    const double target_ask = t->wallet->target_ask;
+
+    const double average_fg = (t->average_price + s->current.close) / 2.0;
+    if (t->elapsed_days > 30)
+    {
+        unsigned samples = 0;
+        double sampling_average_fg = 0.0f;
+        unsigned max_samping_days = math_floor(t->elapsed_days / 2.0f);
+        for (unsigned i = 2, end = array_size(s->history); i < end && samples < max_samping_days; ++i)
+        {
+            if (s->history[i].date > t->date_average)
+            {
+                sampling_average_fg += s->history[i].close;
+                samples++;
+            }
+        }
+
+        if (samples > 0)
+        {
+            sampling_average_fg /= samples;
+            sampling_average_fg = (t->average_price + s->current.close + sampling_average_fg) / 3.0;
+        }
+        else
+        {
+            sampling_average_fg = max(t->average_price, average_fg);
+        }
+
+        value = sampling_average_fg * (1.0 + profit_ask - (t->elapsed_days - average_days) / 20.0 / 100.0);
+    }
+    else
+    {
+        value = max(t->average_price, average_fg) * max(1 + max(t->wallet->main_target, profit_ask), 1 + target_ask);
+    }
+
+    return !math_real_is_nan(value);
+}
+
+//
+// # PUBLIC API
+//
+
 double title_get_total_value(const title_t* t, const stock_t* s)
 {
     const double adjusted_quantity = math_ifnan(t->buy_adjusted_quantity - t->sell_adjusted_quantity, t->average_quantity);
@@ -107,131 +275,6 @@ config_handle_t title_get_fundamental_config_value(title_t* title, const char* f
 
     config_remove(filters, STRING_ARGS(filter_string));
     return config_null();
-}
-
-static double title_compute_ps(const title_t* t, const stock_t* s)
-{
-    if (t->average_price == 0)
-        return NAN;
-
-    const double profit_ask = t->wallet->profit_ask;
-    const double average_days = t->wallet->average_days;
-    const double target_ask = t->wallet->target_ask;
-
-    double M = 0;
-    double average_fg = (t->average_price + s->current.close) / 2.0;
-    if (t->elapsed_days >= 30)
-        M = max(t->average_price, average_fg) * (1.0 + profit_ask - ((t->elapsed_days - average_days) / 20 / 100));
-    else
-        M = max(t->average_price, average_fg) * max(1.2, 1 + target_ask);
-    double K = M / t->average_price - 1.0;
-    double N = s->current.change_p;
-    double O = title_get_yesterday_change(t, s);
-    double P = title_get_range_change_p(t, s, -7, true);
-    double Q = title_get_range_change_p(t, s, -31, true);
-
-    int average_nq_count = 0;
-    double average_nq = 0.0;
-    if (!math_real_is_nan(N)) { average_nq_count++; average_nq += N; }
-    if (!math_real_is_nan(O)) { average_nq_count++; average_nq += O; }
-    if (!math_real_is_nan(P)) { average_nq_count++; average_nq += P; }
-    if (!math_real_is_nan(Q)) { average_nq_count++; average_nq += Q; }
-    if (average_nq_count > 0)
-        average_nq = average_nq / average_nq_count;
-    double R = s->dividends_yield.get_or_default(0);
-
-    return title_get_total_gain_p(t, s) * (1.0 + K) - average_nq + N + R;
-}
-
-static bool title_fetch_ps(const title_t* t, double& value)
-{
-    const stock_t* s = t->stock;
-    if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::FUNDAMENTALS) )
-        return false;
-
-    // Handle cases where the stock has been dismissed from the market.
-    if (math_real_is_nan(s->current.close))
-    {
-        value = DNAN;
-        return true;
-    }
-
-    if (t->average_quantity == 0 && t->sell_total_quantity > 0)
-    {
-        // Return the prediction in case the stock was kept (when sold)
-        value = ((t->sell_adjusted_price - s->current.close) / s->current.close) * 100.0;
-    }
-    else
-        value = title_compute_ps(t, s);
-
-    return !math_real_is_nan(value);
-}
-
-static bool title_fetch_buy_exchange_rate(const title_t* t, double& value)
-{
-    const stock_t* s = t->stock;
-    if (s == nullptr || s->currency == 0)
-        return false;
-
-    string_const_t title_currency = string_table_decode_const(s->currency);
-    value = math_ifnan(stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(t->wallet->preferred_currency), t->date_average), s->current.previous_close);
-    return true;
-}
-
-static bool title_fetch_today_exchange_rate(const title_t* t, double& value)
-{
-    const stock_t* s = t->stock;
-    if (s == nullptr || s->currency == 0)
-        return false;
-
-    string_const_t title_currency = string_table_decode_const(s->currency);
-    value = math_ifnan(stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(t->wallet->preferred_currency)), s->current.close);
-    return true;
-}
-
-static bool title_fetch_ask_price(const title_t* t, double& value)
-{
-    const stock_t* s = t->stock;
-    if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::FUNDAMENTALS))
-        return false;
-
-    const double profit_ask = t->wallet->profit_ask;
-    const double average_days = t->wallet->average_days;
-    const double target_ask = t->wallet->target_ask;
-    
-    const double average_fg = (t->average_price + s->current.close) / 2.0;
-    if (t->elapsed_days > 30)
-    {
-        unsigned samples = 0;
-        double sampling_average_fg = 0.0f;
-        unsigned max_samping_days = math_floor(t->elapsed_days / 2.0f);
-        for (unsigned i = 2, end = array_size(s->history); i < end && samples < max_samping_days; ++i)
-        {
-            if (s->history[i].date > t->date_average)
-            {
-                sampling_average_fg += s->history[i].close;
-                samples++;
-            }
-        }
-        
-        if (samples > 0)
-        {
-            sampling_average_fg /= samples;
-            sampling_average_fg = (t->average_price + s->current.close + sampling_average_fg) / 3.0;
-        }
-        else
-        {
-            sampling_average_fg = max(t->average_price, average_fg);
-        }
-
-        value = sampling_average_fg * (1.0 + profit_ask - (t->elapsed_days - average_days) / 20.0 / 100.0);
-    }
-    else
-    {
-        value = max(t->average_price, average_fg) * max(1 + max(t->wallet->main_target, profit_ask), 1 + target_ask);
-    }
-    
-    return !math_real_is_nan(value);
 }
 
 void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
@@ -408,8 +451,8 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
 
 bool title_refresh(title_t* title)
 {
-    stock_t* stock_data = (stock_t*)(const stock_t*)title->stock;
-    if (stock_data == nullptr)
+    const stock_t* s = title->stock;
+    if (s == nullptr)
         return false;
 
     title_init(title->wallet, title, title->data);
@@ -435,17 +478,6 @@ bool title_update(title_t* t, double timeout /*= 3.0*/)
     return true;
 }
 
-template<typename T = double>
-static FOUNDATION_FORCEINLINE T title_get_compute_value(const title_t* title_compute_data, size_t field_offset, function<T(const title_t*)> get_value_fn = nullptr)
-{
-    T res = 0;
-    if (get_value_fn)
-        res = get_value_fn(title_compute_data);
-    else
-        res = field_offset != -1 ? *(T*)(((uint8_t*)title_compute_data) + field_offset) : T{};
-    return res;
-}
-
 bool title_is_index(const title_t* t)
 {
     if (t == nullptr)
@@ -458,26 +490,7 @@ bool title_is_index(const title_t* t)
     return string_equal(STRING_ARGS(exchange), STRING_CONST("INDX"));
 }
 
-static bool title_recently_changed(const title_t* t, double* out_delta, double since_seconds, double* out_elapsed_seconds)
-{
-    const stock_t* s = t->stock;
-    if (s == nullptr)
-        return false;
 
-    const day_result_t* last_results = array_last(s->previous);
-    if (last_results == nullptr)
-        return false;
-
-    double elapsed_seconds = time_elapsed_days(last_results->date, s->current.date) * 86400.0;
-    if (out_elapsed_seconds)
-        *out_elapsed_seconds = time_elapsed_days(s->current.date, time_now()) * 86400.0;
-    if (elapsed_seconds > since_seconds)
-        return false;
-
-    if (out_delta)
-        *out_delta = s->current.close - last_results->close;
-    return true;
-}
 
 bool title_has_increased(const title_t* t, double* out_delta /*= nullptr*/, double since_seconds /*= 15.0 * 60.0*/, double* elapsed_seconds /*= nullptr*/)
 {
@@ -493,4 +506,14 @@ bool title_has_decreased(const title_t* t, double* out_delta /*= nullptr*/, doub
     if (!title_recently_changed(t, &delta, since_seconds, elapsed_seconds))
         return false;
     return delta < 0;
+}
+
+title_t* title_allocate()
+{
+    return MEM_NEW(HASH_REPORT, title_t);
+}
+
+void title_deallocate(title_t*& title)
+{
+    MEM_DELETE(title);
 }

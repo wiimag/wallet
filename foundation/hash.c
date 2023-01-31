@@ -242,9 +242,18 @@ hash_to_string(hash_t value) {
 	return string_const(val, string_length(val));
 }
 
+size_t
+hash_context_count()
+{
+	if (hash_lookup == nullptr)
+        return 0;
+	return hashtable64_size(hash_lookup);
+}
+
 #else
 
 #undef hash_to_string
+#undef hash_context_count
 
 int
 internal_static_hash_initialize(void) {
@@ -259,6 +268,11 @@ string_const_t
 hash_to_string(hash_t value) {
 	FOUNDATION_UNUSED(value);
 	return string_empty();
+}
+
+size_t
+hash_context_count() {
+    return 0;
 }
 
 #endif

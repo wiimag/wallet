@@ -66,6 +66,8 @@ static profile_tracker_t* _trackers = nullptr;
 static bool _profiler_window_opened = false;
 static table_t* _profiler_table = nullptr;
 
+static uint8_t* _profile_buffer = nullptr;
+
 //
 // # PRIVATE
 //
@@ -293,12 +295,19 @@ void profiler_menu_timer()
         elapsed_times[index++ % ARRAY_COUNT(elapsed_times)] = time_ticks_to_milliseconds(elapsed_ticks);
         const double smooth_elapsed_time = math_average(elapsed_times, ARRAY_COUNT(elapsed_times));
         const double tick_elapsed_time = main_tick_elapsed_time_ms();
+        const auto& mem_stats = memory_statistics();
 
-        char frame_time[16];
+        char frame_time[32];
         if (tick_elapsed_time < smooth_elapsed_time - 1)
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms"), tick_elapsed_time, smooth_elapsed_time);
+        {
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms (%.3lg/%.4lg mb)"), tick_elapsed_time, smooth_elapsed_time,
+                mem_stats.allocated_current / 1024.0 / 1024.0, mem_stats.allocated_total / 1024.0 / 1024.0);
+        }
         else
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms"), tick_elapsed_time);
+        {
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms (%.3lg/%.4lg mb)"), tick_elapsed_time,
+                mem_stats.allocated_current / 1024.0 / 1024.0, mem_stats.allocated_total / 1024.0 / 1024.0);
+        }
 
         ImGui::MenuItem(frame_time, nullptr, nullptr, false);
         last_frame_tick = time_current();
@@ -314,10 +323,10 @@ FOUNDATION_STATIC void profiler_initialize()
 {
     if (!environment_command_line_arg("profile"))
         return;
-
-    static uint8_t profile_buffer[256 * 1024];
         
-    profile_initialize(S("Infineis"), profile_buffer, ARRAY_COUNT(profile_buffer));
+    const size_t profile_buffer_size = 512 * 1024;
+    _profile_buffer = (uint8_t*)memory_allocate(HASH_PROFILER, profile_buffer_size, 0, MEMORY_PERSISTENT);
+    profile_initialize(S("Infineis"), _profile_buffer, profile_buffer_size);
     profile_enable(true);
 
     string_const_t session_profile_file_path;
@@ -354,6 +363,7 @@ FOUNDATION_STATIC void profiler_shutdown()
     if (_profiler_initialized)
         profile_finalize();
 
+    memory_deallocate(_profile_buffer);
     array_deallocate(_trackers);
 }
 

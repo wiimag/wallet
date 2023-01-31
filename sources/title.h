@@ -13,7 +13,7 @@
 
 struct wallet_t;
 
-struct title_t
+FOUNDATION_ALIGNED_STRUCT(title_t, 8) 
 {
     char code[64]{ "" };
     size_t code_length{ 0 };
@@ -55,6 +55,10 @@ struct title_t
     bool show_sell_ui{ false };
     bool show_details_ui{ false };
 };
+
+title_t* title_allocate();
+
+void title_deallocate(title_t*& title);
 
 double title_get_total_investment(const title_t* t);
 

@@ -65,15 +65,16 @@ static memory_tracker_t memory_tracker_current;
 static memory_tracker_t memory_tracker_preinit;
 
 static void
-memory_track(void* addr, size_t size);
+memory_track(hash_t context, void* addr, size_t size);
 
 static void
 memory_untrack(void* addr);
 
 #else
 
-#define memory_track(addr, size) \
+#define memory_track(context, addr, size) \
 	do {                         \
+		(void)sizeof((context)); \
 		(void)sizeof((addr));    \
 		(void)sizeof((size));    \
 	} while (0)
@@ -156,8 +157,10 @@ memory_guard_verify(void* memory) {
 
 void*
 memory_allocate(hash_t context, size_t size, unsigned int align, unsigned int hint) {
-	void* p = memory_system_current.allocate(context ? context : memory_context(), size, align, hint);
-	memory_track(p, size);
+	if (context == 0)
+		context = memory_context();
+	void* p = memory_system_current.allocate(context, size, align, hint);
+	memory_track(context, p, size);
 	return p;
 }
 
@@ -165,7 +168,7 @@ void*
 memory_reallocate(void* p, size_t size, unsigned int align, size_t oldsize, unsigned int hint) {
 	memory_untrack(p);
 	p = memory_system_current.reallocate(p, size, align, oldsize, hint);
-	memory_track(p, size);
+	memory_track(memory_context(), p, size);
 	return p;
 }
 
@@ -503,9 +506,9 @@ memory_set_tracker(memory_tracker_t tracker) {
 }
 
 static void
-memory_track(void* addr, size_t size) {
+memory_track(hash_t context, void* addr, size_t size) {
 	if (addr && memory_tracker_current.track)
-		memory_tracker_current.track(addr, size);
+		memory_tracker_current.track(context, addr, size);
 }
 
 static void
@@ -524,6 +527,7 @@ FOUNDATION_ALIGNED_STRUCT(memory_tag_t, 8) {
 	void* address;
 	size_t size;
 	uint64_t counter;
+	hash_t context;
 	void* trace[14];
 };
 
@@ -608,7 +612,7 @@ memory_tracker_dump_impl(memory_tracker_handler_fn handler) {
 		for (size_t itag = 0; tag && (itag < bucket->size); ++itag, ++tag) {
 			void* addr = tag->address;
 			if (addr) {
-				if (handler(addr, tag->size, tag->trace, sizeof(tag->trace) / sizeof(tag->trace[0])))
+				if (handler(tag->context, addr, tag->size, tag->trace, sizeof(tag->trace) / sizeof(tag->trace[0])))
 					break;
 			}
 		}
@@ -616,7 +620,7 @@ memory_tracker_dump_impl(memory_tracker_handler_fn handler) {
 }
 
 static void
-memory_tracker_track(void* addr, size_t size) {
+memory_tracker_track(hash_t context, void* addr, size_t size) {
 	if (!addr || !memory_tracker_initialized || !memory_tag_map)
 		return;
 
@@ -635,6 +639,7 @@ memory_tracker_track(void* addr, size_t size) {
 	memory_tag_t* tag = bucket->tags + bucket->size;
 	tag->address = addr;
 	tag->size = size;
+	tag->context = context;
 	tag->counter = (uint64_t)atomic_incr64(&memory_stats.allocations_total, memory_order_relaxed);
 	stacktrace_capture(tag->trace, sizeof(tag->trace) / sizeof(tag->trace[0]), 3);
 

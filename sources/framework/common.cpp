@@ -885,6 +885,35 @@ bool process_release_console()
 #endif
 }
 
+string_const_t string_remove_line_returns(char* buffer, size_t capacity, const char* str, size_t length)
+{
+    if (string_find(str, length, '\n', 0) == STRING_NPOS)
+        return {};
+
+    bool space_injected = false;
+    string_t result = {buffer, 0};
+    for (size_t i = 0; i < length && result.length < capacity-1; ++i)
+    {
+        const char tok = str[i];
+        if (tok <= ' ')
+        {
+            if (!space_injected)
+            {
+                result.str[result.length++] = ' ';
+                space_injected = true;
+            }
+        }
+        else
+        {
+            result.str[result.length++] = tok;
+            space_injected = false;
+        }
+    }
+
+    result.str[result.length] = '\0';
+    return string_to_const(result);
+}
+
 string_t string_remove_line_returns(const char* str, size_t length)
 {
     if (string_find(str, length, '\n', 0) == STRING_NPOS)

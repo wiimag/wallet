@@ -8,6 +8,7 @@
 #include "common.h"
 #include "scoped_mutex.h"
 #include "scoped_string.h"
+#include "profiler.h"
 
 #include <foundation/hash.h>
 #include <foundation/memory.h>
@@ -238,6 +239,8 @@ void string_table_grow(string_table_t* st, int bytes)
 
 string_table_t* string_table_grow(string_table_t** out_st, int bytes /*= 0*/)
 {
+    MEMORY_TRACKER(HASH_STRING_TABLE);
+
     string_table_t* st = *out_st;
     bytes = max<int>(st->allocated_bytes * HASH_FACTOR, bytes);
     FOUNDATION_ASSERT(bytes >= st->allocated_bytes);
@@ -253,6 +256,8 @@ string_table_t* string_table_grow(string_table_t** out_st, int bytes /*= 0*/)
 
 string_table_t* string_table_pack(string_table_t** out_st)
 {
+    MEMORY_TRACKER(HASH_STRING_TABLE);
+
     string_table_t* st = *out_st;
     size_t old_size = st->allocated_bytes;
     size_t new_size = string_table_pack(st);

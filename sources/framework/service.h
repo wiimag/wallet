@@ -27,8 +27,12 @@ typedef function<void()> service_invoke_handler_t;
 #define SERVICE_PRIORITY_UI           5
 #define SERVICE_PRIORITY_TESTS       10
 
-#define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, ...) \
-    static Service __##NAME##_service(#NAME, HASH_##NAME, initialize_fn, shutdown_fn, __VA_ARGS__)
+#define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, ...)   \
+    static Service __##NAME##_service(#NAME, HASH_##NAME, [](){ \
+        memory_context_push(HASH_##NAME);                       \
+        initialize_fn();                                        \
+        memory_context_pop();                                   \
+    }, shutdown_fn, __VA_ARGS__)
 
 class Service
 {

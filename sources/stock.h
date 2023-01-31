@@ -34,7 +34,7 @@ typedef enum class FetchLevel /*: unsigned int*/ {
 } fetch_level_t;
 DEFINE_VOLATILE_ENUM_FLAGS(FetchLevel);
 
-struct day_result_t
+FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
 {
     time_t date{ 0 };
     uint8_t gmtoffset;
@@ -66,7 +66,7 @@ struct day_result_t
     double cci{ NAN };
 };
 
-struct stock_t
+FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
 {
     hash_t id;
     volatile tick_t last_update_time {0};

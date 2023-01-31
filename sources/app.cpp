@@ -18,11 +18,15 @@
 #include <framework/progress.h>
 #include <framework/jobs.h>
 #include <framework/query.h>
+#include <framework/console.h>
 
 #include <foundation/version.h>
 #include <foundation/hashstrings.h>
 #include <foundation/stacktrace.h>
 #include <foundation/process.h>
+#include <foundation/hashtable.h>
+
+#include <algorithm>
 
 struct app_dialog_t
 {
@@ -79,6 +83,7 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
                 {
                     if (show_debug_log)
                     {
+                        console_show();
                         log_set_suppress(0, ERRORLEVEL_NONE);
                         log_set_suppress(HASH_DEBUG, ERRORLEVEL_NONE);
                     }
@@ -91,24 +96,80 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
 
                 if (ImGui::MenuItem("Show Memory Stats"))
                 {
+                    MEMORY_TRACKER(HASH_MEMORY);
+                    console_show();
                     auto mem_stats = memory_statistics();
                     log_infof(HASH_MEMORY, STRING_CONST("Memory stats: \n"
                         "\t Current: %.3g mb (%llu)\n"
                         "\t Total: %.3g mb (%llu)"),
                         mem_stats.allocated_current / 1024.0f / 1024.0f, mem_stats.allocations_current,
                         mem_stats.allocated_total / 1024.0f / 1024.0f, mem_stats.allocations_total);
+
+                    struct memory_context_stats_t {
+                        hash_t context;
+                        uint64_t allocated_mem;
+                    };
+                    static memory_context_stats_t* memory_contexts = nullptr;
+                    memory_tracker_dump([](hash_t context, const void* addr, size_t size, void* const* trace, size_t depth)->int
+                    {
+                        context = context ? context : HASH_DEFAULT;
+                        foreach(c, memory_contexts)
+                        {
+                            if (c->context == context)
+                            { 
+                                c->allocated_mem += size;
+                                return 0;
+                            }
+                        }
+
+                        memory_context_stats_t mc{ context, size };
+                        array_push(memory_contexts, mc);
+                        return 0;
+                    });
+
+                    array_sort(memory_contexts, a.allocated_mem > b.allocated_mem);
+
+                    foreach(c, memory_contexts)
+                    {
+                        string_const_t context_name = hash_to_string(c->context);
+                        if (context_name.length == 0)
+                            context_name = CTEXT("other");
+                        if (c->allocated_mem > 512 * 1024)
+                            log_warnf(HASH_MEMORY, WARNING_MEMORY, STRING_CONST("%16.*s : %5.3g mb"), STRING_FORMAT(context_name), c->allocated_mem / 1024.0f / 1024.0f);
+                        else 
+                            log_infof(HASH_MEMORY, STRING_CONST("%34.*s : %5.3g kb"), STRING_FORMAT(context_name), c->allocated_mem / 1024.0f);
+                    }
+
+                    array_deallocate(memory_contexts);
                 }
 
                 if (ImGui::MenuItem("Show Memory Usages"))
                 {
-                    memory_tracker_dump([](const void* addr, size_t size, void* const* trace, size_t depth)->int
+                    console_show();
+                    const bool prefix_enaled = log_is_prefix_enabled();
+                    log_enable_prefix(false);
+                    log_enable_auto_newline(true);
+                    memory_tracker_dump([](hash_t context, const void* addr, size_t size, void* const* trace, size_t depth)->int
                     {
+                        context = context ? context : HASH_DEFAULT;
+                        string_const_t context_name = hash_to_string(context);
+                        if (context_name.length == 0)
+                            context_name = CTEXT("other");
                         char current_frame_stack_buffer[512];
                         string_t stf = stacktrace_resolve(STRING_CONST_CAPACITY(current_frame_stack_buffer), trace, min((size_t)3, depth), 0);
-                        log_infof(HASH_MEMORY, STRING_CONST("0x%p, %.3g kb [%.*s]\n%.*s"), addr, size / 1024.0f,
-                            min(32, (int)size), (const char*)addr, STRING_FORMAT(stf));
+                        if (size > 256 * 1024)
+                        {
+                            log_warnf(HASH_MEMORY, WARNING_MEMORY, STRING_CONST("%.*s: 0x%p, %.3g mb [%.*s]\n%.*s"), STRING_FORMAT(context_name), addr, size / 1024.0f / 1024.0f,
+                                min(32, (int)size), (const char*)addr, STRING_FORMAT(stf));
+                        }
+                        else
+                        {
+                            log_infof(HASH_MEMORY, STRING_CONST("%.*s: 0x%p, %.4g kb [%.*s]\n%.*s"), STRING_FORMAT(context_name), addr, size / 1024.0f,
+                                min(32, (int)size), (const char*)addr, STRING_FORMAT(stf));
+                        }
                         return 0;
                     });
+                    log_enable_prefix(prefix_enaled);
                 }
             #endif
 
@@ -263,6 +324,7 @@ extern void app_exception_handler(const char* dump_file, size_t length)
 
 extern void app_configure(foundation_config_t& config, application_t& application)
 {
+    config.hash_store_size = 256;
     application.name = string_const(PRODUCT_NAME, string_length(PRODUCT_NAME));
     application.short_name = string_const(PRODUCT_CODE_NAME, string_length(PRODUCT_CODE_NAME));
     application.company = string_const(STRING_CONST(PRODUCT_COMPANY));

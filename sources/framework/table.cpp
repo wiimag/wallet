@@ -69,8 +69,7 @@ FOUNDATION_STATIC string_const_t cell_number_value_to_string(const cell_t& cell,
         else if (abs_value >= 1e3)
             return string_format_static(STRING_CONST("%.0lf K"), value / 1e3);
     }
-
-    string_t label_text = string_static_buffer(64);
+    
     string_const_t format_string = CTEXT("%3.2lf");
     if (format == COLUMN_FORMAT_CURRENCY)
     {
@@ -95,6 +94,7 @@ FOUNDATION_STATIC string_const_t cell_number_value_to_string(const cell_t& cell,
     else if (format == COLUMN_FORMAT_DATE)
         format_string = CTEXT("%x");
 
+    string_t label_text = string_static_buffer(64);
     string_t formatted_value = string_format(STRING_ARGS(label_text), STRING_ARGS(format_string), value);
 
     if (format == COLUMN_FORMAT_NUMBER)
@@ -185,7 +185,6 @@ void table_cell_right_aligned_label(const char* label, size_t label_length, cons
         ImGui::TextUnformatted(label, text_display_end);
 }
 
-// git difftool -d cc89cc7^!
 void table_cell_right_aligned_column_label(const char* label, void* payload)
 {
     FOUNDATION_UNUSED(payload);
@@ -297,7 +296,8 @@ FOUNDATION_STATIC bool table_default_sorter(table_t* table, column_t* sorting_co
 
 table_t* table_allocate(const char* name)
 {
-    table_t* new_table = new table_t();
+    void* table_mem = memory_allocate(0, sizeof(table_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+    table_t* new_table = new (table_mem) table_t();
     new_table->name = string_allocate_format(STRING_CONST("Table_%s_1"), name);
     new_table->sort = &table_default_sorter;
     return new_table;
@@ -309,7 +309,8 @@ void table_deallocate(table_t* table)
     {
         string_deallocate(table->name.str);
         array_deallocate(table->rows);
-        delete table;
+        table->~table_t();
+        memory_deallocate(table);
     }
 }
 
@@ -615,6 +616,8 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
 {
     const auto font_height = ImGui::GetFontSize() - imgui_get_font_ui_scale(4.0f);
     const ImGuiStyle& ims = ImGui::GetStyle();
+
+    TIME_TRACKER(0.005, "Render table %.*s", STRING_FORMAT(table->name));
 
     ImGuiListClipper clipper;
     bool has_wrapping_text = false;

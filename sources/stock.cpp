@@ -15,6 +15,7 @@
 #include <framework/jobs.h>
 #include <framework/query.h>
 #include <framework/service.h>
+#include <framework/profiler.h>
 
 #include <foundation/log.h>
 #include <foundation/array.h>
@@ -92,7 +93,6 @@ FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, u
     dresult.change_p = json_read_number(json, STRING_CONST("change_p"));
     dresult.volume = json_read_number(json, STRING_CONST("volume"));
 
-    //if (auto lock = scoped_mutex_t(_db_lock))
     {
         SHARED_READ_LOCK(_db_lock);
         stock_t* entry = &_db_stocks[index];
@@ -279,7 +279,6 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
         }
     }
 
-    //if (auto lock = scoped_mutex_t(_db_lock))
     {
         SHARED_WRITE_LOCK(_db_lock);
         stock_t* s = &_db_stocks[index];
@@ -291,6 +290,8 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
 
 FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_index_t index, FetchLevel eod_fetch_level)
 {
+    MEMORY_TRACKER(HASH_STOCK);
+
     day_result_t* history = nullptr;
     array_reserve(history, json.root->value_length + 1);
 
@@ -349,7 +350,6 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
         e = &json.tokens[e->sibling];
     }
 
-    //if (auto lock = scoped_mutex_t(_db_lock))
     {
         SHARED_READ_LOCK(_db_lock);
         stock_t& entry = _db_stocks[index];
@@ -369,10 +369,6 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
 
         entry.mark_resolved(eod_fetch_level);
     }
-    //else
-    {
-      //  array_deallocate(history);
-    }
 }
 
 //
@@ -385,7 +381,6 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         return STATUS_ERROR_INVALID_HANDLE;
 
     // Check if we have a slot index for that stock
-    //auto lock = scoped_mutex_t(_db_lock);
     if (!_db_lock.shared_lock())
         return STATUS_ERROR_DB_ACCESS;
 
@@ -752,7 +747,6 @@ bool stock_update(const char* code, size_t code_length, stock_handle_t& handle, 
 FOUNDATION_STATIC void stock_initialize()
 {
     _db_capacity = 256;
-    //_db_lock = mutex_allocate(STRING_CONST("Stock_DB_Lock"));
     _db_hashes = hashtable64_allocate(_db_capacity);
     array_push(_db_stocks, stock_t{});
 }
@@ -762,7 +756,6 @@ FOUNDATION_STATIC void stock_shutdown()
     hashtable64_deallocate(_exchange_rates);
     _exchange_rates = nullptr;
 
-    //if (auto lock = scoped_mutex_t(_db_lock))
     {
         SHARED_WRITE_LOCK(_db_lock);
         for (size_t i = 0; i < array_size(_trashed_history); ++i)
@@ -783,9 +776,6 @@ FOUNDATION_STATIC void stock_shutdown()
         hashtable64_deallocate(_db_hashes);
         _db_hashes = nullptr;
     }
-
-    //mutex_deallocate(_db_lock);
-    //_db_lock = nullptr;
 }
 
 DEFINE_SERVICE(STOCK, stock_initialize, stock_shutdown, SERVICE_PRIORITY_BASE);

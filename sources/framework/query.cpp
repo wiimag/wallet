@@ -13,6 +13,7 @@
 #include "generics.h"
 #include "concurrent_queue.h"
 #include "profiler.h"
+#include "string_table.h"
 
 #include <foundation/log.h>
 #include <foundation/hashstrings.h>
@@ -55,7 +56,7 @@
 
 #include <curl/curl.h>
 
-#define HASH_QUERY static_hash_string("query", 5, 0x3e5d5820a8a43840)
+#define HASH_CURL static_hash_string("curl", 4, 0xd360ee708fc69da7ULL)
 
 #ifndef MAX_QUERY_THREADS
 #define MAX_QUERY_THREADS 8
@@ -713,10 +714,46 @@ stream_t* query_execute_download_file(const char* query)
 // # SYSTEM
 //
 
+FOUNDATION_STATIC void* curl_malloc_cb(size_t size)
+{
+    return memory_allocate(HASH_CURL, size, 0, MEMORY_PERSISTENT);
+}
+
+FOUNDATION_STATIC void curl_free_cb(void* ptr)
+{
+    memory_deallocate(ptr);
+}
+
+FOUNDATION_STATIC void* curl_realloc_cb(void* ptr, size_t size)
+{
+    memory_context_push(HASH_CURL);
+    size_t oldsize = memory_size(ptr);
+    void* curl_mem = memory_reallocate(ptr, size, 0, oldsize, MEMORY_PERSISTENT);
+    memory_context_pop();
+    return curl_mem;
+}
+
+FOUNDATION_STATIC char* curl_strdup_cb(const char* str)
+{
+    const size_t len = string_length(str);
+    const size_t capacity = len + 1;
+    char* curl_str = (char*)memory_allocate(HASH_CURL, capacity, 0, MEMORY_PERSISTENT);
+    return string_copy(curl_str, capacity, str, len).str;
+}
+
+FOUNDATION_STATIC void* curl_calloc_cb(size_t nmemb, size_t size)
+{
+    return memory_allocate(HASH_CURL, nmemb * size, min(8U, to_unsigned(nmemb)), MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+}
+
 void query_initialize()
 {
     if (_initialized)
         return;
+        
+    curl_global_init_mem(CURL_GLOBAL_DEFAULT, curl_malloc_cb,
+        curl_free_cb, curl_realloc_cb,
+        curl_strdup_cb, curl_calloc_cb);
 
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK)

@@ -9,6 +9,7 @@
 #include <framework/common.h>
 #include <framework/session.h>
 #include <framework/service.h>
+#include <framework/profiler.h>
 
 #include <foundation/random.h>
 
@@ -112,6 +113,8 @@ FOUNDATION_FORCEINLINE bool isvarchr(char c)
  */
 FOUNDATION_STATIC int expr_vec_expand(char** buf, int* length, int* cap, int memsz)
 {
+    MEMORY_TRACKER(HASH_EXPR);
+
     if (*length + 1 > *cap)
     {
         void* ptr;

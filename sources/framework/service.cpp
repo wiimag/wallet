@@ -99,13 +99,11 @@ void service_initialize()
     for (size_t i = 0, end = _service_count; i != end; ++i)
     {
         service_t& s = _services[i];
-        memory_context_push(s.key);
         {
             PERFORMANCE_TRACKER_FORMAT("service::%s", s.name);
             s.initialize();
         }
         log_infof(s.key, STRING_CONST("Service %s initialized"), s.name);
-        memory_context_pop();
     }
 
     _services_initialize = true;

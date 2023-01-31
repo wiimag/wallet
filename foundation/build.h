@@ -17,7 +17,7 @@
 
 Build setup. This header contains all the compile time build setup for the foundation library.
 This header unifies the debug/release build macros across platforms, build systems and compiler
-and provides the following macro idenfiers, usable with <i>\#if BUILD_[type]</i> conditionals.
+and provides the following macro identifiers, usable with <i>\#if BUILD_[type]</i> conditionals.
 
 <ul>
 <li>BUILD_DEBUG   - Debug build
@@ -93,7 +93,7 @@ See memory.h documentation for more information on memory context tracking.
 \def BUILD_ENABLE_MEMORY_TRACKER
 Control if memory tracking is enabled. Default value is enabled in debug and release
 builds, and disabled in profile and deploy builds. If memory tracking is enabled, each
-memoruy allocation and deallocation will incur a slight overhead to track the origin of
+memory allocation and deallocation will incur a slight overhead to track the origin of
 the call and enable memory leak detection. For more information on memory tracking, check
 the memory.h documentation.
 
@@ -147,7 +147,7 @@ and disabled in all other configurations.
 #endif
 #endif
 
-// Configurable choises
+// Configurable choices
 #ifndef BUILD_ENABLE_ASSERT
 #if BUILD_DEBUG || BUILD_RELEASE
 #define BUILD_ENABLE_ASSERT 1
@@ -189,8 +189,8 @@ and disabled in all other configurations.
 #endif
 
 #ifndef BUILD_ENABLE_MEMORY_CONTEXT
-#if BUILD_DEBUG || BUILD_RELEASE
-#define BUILD_ENABLE_MEMORY_CONTEXT 0
+#if BUILD_DEBUG /*|| BUILD_RELEASE*/
+#define BUILD_ENABLE_MEMORY_CONTEXT 1
 #else
 #define BUILD_ENABLE_MEMORY_CONTEXT 0
 #endif

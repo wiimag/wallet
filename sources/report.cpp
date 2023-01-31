@@ -103,8 +103,8 @@ FOUNDATION_STATIC title_t* report_title_add(report_t* report, string_const_t cod
     auto titles_data = config_set_object(report->data, STRING_CONST("titles"));
     auto title_data = config_set_object(titles_data, STRING_ARGS(code));
     config_set_array(title_data, STRING_CONST("orders"));
-
-    title = new title_t();
+    
+    title = title_allocate();
     title_init(report->wallet, title, title_data);
 
     report->titles = array_insert(report->titles, report->active_titles, title);
@@ -123,8 +123,7 @@ FOUNDATION_STATIC void report_title_remove(report_handle_t report_handle, const 
         {
             if (title == report->titles[i])
             {
-                delete title;
-                report->titles[i] = nullptr;
+                title_deallocate(report->titles[i]);
                 array_erase(report->titles, i);
                 report->active_titles--;
                 break;
@@ -500,6 +499,19 @@ FOUNDATION_STATIC cell_t report_column_get_change_value(table_element_ptr_t elem
 FOUNDATION_STATIC bool report_column_is_numeric(column_format_t format)
 {
     return format == COLUMN_FORMAT_CURRENCY || format == COLUMN_FORMAT_NUMBER || format == COLUMN_FORMAT_PERCENTAGE;
+}
+
+FOUNDATION_STATIC cell_t report_column_get_dividends_yield(table_element_ptr_t element, const column_t* column)
+{
+    title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return DNAN;
+
+    const stock_t* s = title->stock;
+    if (s == nullptr)
+        return DNAN;
+        
+    return s->dividends_yield.fetch() * 100.0f;
 }
 
 FOUNDATION_STATIC cell_t report_column_get_fundamental_value(table_element_ptr_t element, const column_t* column, const char* filter_name, size_t filter_name_length)
@@ -1496,7 +1508,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
                 !dispatcher_wait_for_wakeup_main_thread(1000 / title_count) &&
                 !t->stock->has_resolve(REPORT_FETCH_LEVELS))
             {
-                log_debugf(0, STRING_CONST("Refreshing %s is taking longer than expected"), t->code);
+                log_debugf(HASH_REPORT, STRING_CONST("Refreshing %s is taking longer than expected"), t->code);
                 break;
             }
         }
@@ -1509,7 +1521,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     for (const auto& title : generics::fixed_array(report->titles))
         title_refresh(title);
     report_summary_update(report);
-    log_infof(0, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
+    log_infof(HASH_REPORT, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
     if (report->table)
         report->table->needs_sorting = true;
 
@@ -1577,7 +1589,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_EXCHANGE_RATE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE);
 
     table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"), 
-        E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("Highlights.DividendYield")), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ZERO_USE_DASH)
+        L2(report_column_get_dividends_yield(_1, _2)), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ZERO_USE_DASH)
         .set_tooltip_callback(report_title_dividends_total_tooltip);
 
     table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"), 
@@ -1651,7 +1663,7 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
     for (auto title_data : ctitles)
     {
         string_const_t code = config_name(title_data);
-        title_t* title = new title_t();
+        title_t* title = title_allocate();
         title_init(report->wallet, title, title_data);
         titles = array_push(titles, title);
     }
@@ -1694,7 +1706,7 @@ FOUNDATION_STATIC void report_render_menus()
         if (ImGui::BeginMenu("Open"))
         {
             if (ImGui::MenuItem("Report...", nullptr, nullptr))
-                log_warnf(0, WARNING_UNSUPPORTED, STRING_CONST("TODO"));
+                log_warnf(HASH_REPORT, WARNING_UNSUPPORTED, STRING_CONST("TODO"));
 
             bool first_report_that_can_be_opened = true;
             size_t report_count = ::report_count();
@@ -2044,7 +2056,7 @@ void report_render(report_t* report)
 
     if (shortcut_executed(ImGuiKey_F5))
     {
-        log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Refreshing report %s"), string_table_decode(report->name));
+        log_warnf(HASH_REPORT, WARNING_PERFORMANCE, STRING_CONST("Refreshing report %s"), string_table_decode(report->name));
         report_refresh(report);
     }
 
@@ -2185,6 +2197,7 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
         log_debugf(HASH_REPORT, STRING_CONST(">>> Title %s synced"), t->code);
     }
 
+    // Update report summary
     report_summary_update(report);
     for (size_t i = 0; i < title_count; ++i)
         title_refresh(report->titles[i]);
@@ -2229,10 +2242,10 @@ FOUNDATION_STATIC void report_shutdown()
         if (r.save)
             report_save(&r);
 
-        for (auto title : generics::fixed_array(r.titles))
-            delete title;
-
         table_deallocate(r.table);
+
+        for (auto title : generics::fixed_array(r.titles))
+            title_deallocate(title);
         array_deallocate(r.titles);
         array_deallocate(r.transactions);
         wallet_deallocate(r.wallet);

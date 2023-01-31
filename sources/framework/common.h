@@ -90,6 +90,7 @@ string_const_t string_to_const(const char* str);
 string_const_t string_trim(string_const_t str, char c = ' ');
 bool string_compare_less(const char* str1, const char* str2);
 bool string_compare_less(const char* str1, size_t str1_length, const char* str2, size_t str2_length);
+string_const_t string_remove_line_returns(char* buffer, size_t capacity, const char* str, size_t length);
 string_t string_remove_line_returns(const char* str, size_t length);
 
 FOUNDATION_FORCEINLINE bool is_whitespace(char c)
@@ -543,3 +544,24 @@ struct TimeMarkerScope
 	} while (0)
 
 #endif
+
+template<typename T> using alias = T;
+#define MEM_NEW(context, type, ...) new (memory_allocate(context, sizeof(type), alignof(type), MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED)) type(__VA_ARGS__);
+#define MEM_DELETE(ptr) {   \
+    ptr->~alias<std::remove_reference<decltype(*ptr)>::type>(); \
+    memory_deallocate(ptr); \
+    ptr = nullptr;          \
+}
+
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr int to_int(size_t v)
+{
+    FOUNDATION_ASSERT(v <= INT_MAX);
+    return (int)v;
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr unsigned to_unsigned(size_t v)
+{
+    FOUNDATION_ASSERT(v <= UINT_MAX);
+    return (unsigned)v;
+}

@@ -17,6 +17,7 @@
 #include <imgui/vs_imgui.bin.h>
 
 #include <bx/math.h>
+#include <bx/allocator.h>
 #include <bgfx/bgfx.h>
 #include <bgfx/platform.h>
 #include <bgfx/embedded_shader.h>
@@ -32,6 +33,9 @@
 #endif
 
 #include <GLFW/glfw3native.h>
+
+#define HASH_BGFX static_hash_string("bgfx", 4, 0x14900654424ff61bULL)
+#define HASH_IMGUI static_hash_string("imgui", 5, 0x9803803300f77bbfULL)
 
 // GLFW data
 static double       _time = 0.0;
@@ -54,17 +58,17 @@ static bool _run_tests = false;
 static bool _show_stats = false;
 static double _smooth_elapsed_time_ms = 0.0f;
 
-static const char* glfw_get_clipboard_text(void* user_data)
+FOUNDATION_STATIC const char* glfw_get_clipboard_text(void* user_data)
 {
     return glfwGetClipboardString((GLFWwindow*)user_data);
 }
 
-static void glfw_set_clipboard_text(void* user_data, const char* text)
+FOUNDATION_STATIC void glfw_set_clipboard_text(void* user_data, const char* text)
 {
     glfwSetClipboardString((GLFWwindow*)user_data, text);
 }
 
-static void glfw_update_key_modifiers(int mods)
+FOUNDATION_STATIC void glfw_update_key_modifiers(int mods)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.AddKeyEvent(ImGuiMod_Ctrl, (mods & GLFW_MOD_CONTROL) != 0);
@@ -73,7 +77,7 @@ static void glfw_update_key_modifiers(int mods)
     io.AddKeyEvent(ImGuiMod_Super, (mods & GLFW_MOD_SUPER) != 0);
 }
 
-static void glfw_mouse_button_callback(GLFWwindow*, int button, int action, int mods)
+FOUNDATION_STATIC void glfw_mouse_button_callback(GLFWwindow*, int button, int action, int mods)
 {
     glfw_update_key_modifiers(mods);
 
@@ -84,14 +88,14 @@ static void glfw_mouse_button_callback(GLFWwindow*, int button, int action, int 
     signal_thread();
 }
 
-static void glfw_scroll_callback(GLFWwindow*, double xoffset, double yoffset)
+FOUNDATION_STATIC void glfw_scroll_callback(GLFWwindow*, double xoffset, double yoffset)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.AddMouseWheelEvent((float)xoffset, (float)yoffset);
     signal_thread();
 }
 
-static int glfw_key_to_modifier(int key)
+FOUNDATION_STATIC int glfw_key_to_modifier(int key)
 {
     if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
         return GLFW_MOD_CONTROL;
@@ -104,7 +108,7 @@ static int glfw_key_to_modifier(int key)
     return 0;
 }
 
-static int glfw_translate_untranslated_key(int key, int scancode)
+FOUNDATION_STATIC int glfw_translate_untranslated_key(int key, int scancode)
 {
     #if GLFW_HAS_GETKEYNAME && !defined(__EMSCRIPTEN__)
         // GLFW 3.1+ attempts to "untranslated" keys, which goes the opposite of what every other framework does, making using lettered shortcuts difficult.
@@ -131,7 +135,8 @@ static int glfw_translate_untranslated_key(int key, int scancode)
     #endif
     return key;
 }
-static ImGuiKey glfw_key_to_imgui_key(int key)
+
+FOUNDATION_STATIC ImGuiKey glfw_key_to_imgui_key(int key)
 {
     switch (key)
     {
@@ -246,7 +251,7 @@ static ImGuiKey glfw_key_to_imgui_key(int key)
     }
 }
 
-static void glfw_key_callback(GLFWwindow*, int keycode, int scancode, int action, int mods)
+FOUNDATION_STATIC void glfw_key_callback(GLFWwindow*, int keycode, int scancode, int action, int mods)
 {
     signal_thread();
 
@@ -272,7 +277,7 @@ static void glfw_key_callback(GLFWwindow*, int keycode, int scancode, int action
         _show_stats = !_show_stats;
 }
 
-static void glfw_char_callback(GLFWwindow*, unsigned int c)
+FOUNDATION_STATIC void glfw_char_callback(GLFWwindow*, unsigned int c)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (c > 0 && c < 0x10000)
@@ -281,7 +286,7 @@ static void glfw_char_callback(GLFWwindow*, unsigned int c)
     signal_thread();
 }
 
-static void glfw_window_focus_callback(GLFWwindow* window, int focused)
+FOUNDATION_STATIC void glfw_window_focus_callback(GLFWwindow* window, int focused)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.AddFocusEvent(focused != 0);
@@ -290,7 +295,7 @@ static void glfw_window_focus_callback(GLFWwindow* window, int focused)
     log_debugf(0, STRING_CONST("Application %s (%d)"), focused == 0 ? "unfocused" : "focused", focused);
 }
 
-static void glfw_update_cursor_pos(GLFWwindow* window, double& x, double& y)
+FOUNDATION_STATIC void glfw_update_cursor_pos(GLFWwindow* window, double& x, double& y)
 {
     if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         return;
@@ -304,13 +309,13 @@ static void glfw_update_cursor_pos(GLFWwindow* window, double& x, double& y)
     io.AddMousePosEvent((float)x, (float)y);
 }
 
-static void glfw_set_cursor_pos_callback(GLFWwindow* window, double x, double y)
+FOUNDATION_STATIC void glfw_set_cursor_pos_callback(GLFWwindow* window, double x, double y)
 {
     glfw_update_cursor_pos(window, x, y);
     signal_thread();
 }
 
-void glfw_cursor_enter_callback(GLFWwindow* window, int entered)
+FOUNDATION_STATIC void glfw_cursor_enter_callback(GLFWwindow* window, int entered)
 {
     if (glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         return;
@@ -332,7 +337,7 @@ void glfw_cursor_enter_callback(GLFWwindow* window, int entered)
     signal_thread();
 }
 
-static void glfw_install_callbacks(GLFWwindow* window)
+FOUNDATION_STATIC void glfw_install_callbacks(GLFWwindow* window)
 {
     glfwSetMouseButtonCallback(window, glfw_mouse_button_callback);
     glfwSetScrollCallback(window, glfw_scroll_callback);
@@ -343,7 +348,7 @@ static void glfw_install_callbacks(GLFWwindow* window)
     glfwSetCursorEnterCallback(window, glfw_cursor_enter_callback);
 }
 
-static void glfw_shutdown()
+FOUNDATION_STATIC void glfw_shutdown()
 {
     // Destroy GLFW mouse cursors
     for (auto& g_MouseCursor : _mouse_cursors)
@@ -356,7 +361,7 @@ static void glfw_shutdown()
     _glfw_window = nullptr;
 }
 
-static bool imgui_glfw_init(GLFWwindow* window, bool install_callbacks)
+FOUNDATION_STATIC bool imgui_glfw_init(GLFWwindow* window, bool install_callbacks)
 {
     _time = 0.0;
     _glfw_window = window;
@@ -420,7 +425,17 @@ static bool imgui_glfw_init(GLFWwindow* window, bool install_callbacks)
     return true;
 }
 
-static bool imgui_load_font(unsigned int font_res_id, const char* res_type, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL)
+FOUNDATION_STATIC void* imgui_allocate(size_t sz, void* user_data)
+{
+    return memory_allocate(HASH_IMGUI, sz, sizeof(float), MEMORY_PERSISTENT);
+}
+
+FOUNDATION_STATIC void imgui_deallocate(void* ptr, void* user_data)
+{
+    memory_deallocate(ptr);
+}
+
+FOUNDATION_STATIC bool imgui_load_font(unsigned int font_res_id, const char* res_type, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL)
 {
     ImGuiIO& io = ImGui::GetIO();
     #if FOUNDATION_PLATFORM_WINDOWS
@@ -432,7 +447,7 @@ static bool imgui_load_font(unsigned int font_res_id, const char* res_type, floa
             DWORD dwSize = SizeofResource(hModule, hResource);
             LPVOID lpAddress = LockResource(hMemory);
 
-            char* bytes = new char[dwSize];
+            char* bytes = (char*)imgui_allocate(dwSize, nullptr);
             memcpy(bytes, lpAddress, dwSize);
 
             io.Fonts->AddFontFromMemoryTTF(
@@ -452,7 +467,7 @@ static bool imgui_load_font(unsigned int font_res_id, const char* res_type, floa
         long file_size = ftell(file);
         fseek(file, 0, SEEK_SET);
 
-        char* bytes = new char[file_size];
+        char* bytes = (char*)imgui_allocate(file_size, nullptr);
         fread(bytes, 1, file_size, file);
         fclose(file);
         
@@ -471,7 +486,7 @@ static bool imgui_load_font(unsigned int font_res_id, const char* res_type, floa
     return false;
 }
 
-static void imgui_update_mouse_cursor(GLFWwindow* window)
+FOUNDATION_STATIC void imgui_update_mouse_cursor(GLFWwindow* window)
 {
     ImGuiIO& io = ImGui::GetIO();
     if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
@@ -492,7 +507,7 @@ static void imgui_update_mouse_cursor(GLFWwindow* window)
     }
 }
 
-static void imgui_update_mouse_data(GLFWwindow* window)
+FOUNDATION_STATIC void imgui_update_mouse_data(GLFWwindow* window)
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -525,7 +540,7 @@ static void imgui_update_mouse_data(GLFWwindow* window)
     }
 }
 
-static void imgui_new_frame(GLFWwindow* window, int width, int height)
+FOUNDATION_STATIC void imgui_new_frame(GLFWwindow* window, int width, int height)
 {
     PERFORMANCE_TRACKER("imgui_new_frame");
 
@@ -546,7 +561,7 @@ static void imgui_new_frame(GLFWwindow* window, int width, int height)
     ImGui::NewFrame();
 }
 
-bool imgui_load_main_font(float xscale = 1.0f)
+FOUNDATION_STATIC bool imgui_load_main_font(float xscale = 1.0f)
 {
     #if FOUNDATION_PLATFORM_WINDOWS
         return imgui_load_font(IDR_MAIN_FONT, MAKEINTRESOURCEA(8), 16.0f * xscale);
@@ -558,7 +573,7 @@ bool imgui_load_main_font(float xscale = 1.0f)
     #endif
 }
 
-bool imgui_load_material_design_font(float xscale = 1.0f)
+FOUNDATION_STATIC bool imgui_load_material_design_font(float xscale = 1.0f)
 {
     static const ImWchar icons_ranges[] = { ICON_MIN_MD, ICON_MAX_16_MD, 0 };
     ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true; icons_config.GlyphOffset.y += 4.0f;
@@ -572,7 +587,7 @@ bool imgui_load_material_design_font(float xscale = 1.0f)
     #endif
 }
 
-static void imgui_shutdown()
+FOUNDATION_STATIC void imgui_shutdown()
 {
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
@@ -583,7 +598,7 @@ static void imgui_shutdown()
 // Note: If text or lines are blurry when integrating ImGui into your engine,
 // in your Render function, try translating your projection matrix by
 // (0.5f,0.5f) or (0.375f,0.375f)
-void bgfx_render_draw_lists(ImDrawData* draw_data, int fb_width, int fb_height)
+FOUNDATION_STATIC void bgfx_render_draw_lists(ImDrawData* draw_data, int fb_width, int fb_height)
 {
     if (fb_width <= 0 || fb_height <= 0)
         return;
@@ -663,7 +678,7 @@ void bgfx_render_draw_lists(ImDrawData* draw_data, int fb_width, int fb_height)
     }
 }
 
-bool bgfx_create_fonts_texture(GLFWwindow* window)
+FOUNDATION_STATIC bool bgfx_create_fonts_texture(GLFWwindow* window)
 {
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
@@ -702,7 +717,7 @@ bool bgfx_create_fonts_texture(GLFWwindow* window)
     return true;
 }
 
-bool bgfx_create_device_objects(GLFWwindow* window)
+FOUNDATION_STATIC bool bgfx_create_device_objects(GLFWwindow* window)
 {
     bgfx::RendererType::Enum type = bgfx::getRendererType();
     _bgfx_imgui_shader_handle = bgfx::createProgram(
@@ -722,7 +737,7 @@ bool bgfx_create_device_objects(GLFWwindow* window)
     return bgfx_create_fonts_texture(window);
 }
 
-void bgfx_invalidate_device_objects()
+FOUNDATION_STATIC void bgfx_invalidate_device_objects()
 {
     if (bgfx::isValid(_bgfx_imgui_attrib_location_tex))
         bgfx::destroy(_bgfx_imgui_attrib_location_tex);
@@ -737,7 +752,7 @@ void bgfx_invalidate_device_objects()
     }
 }
 
-void bgfx_init_view(int imgui_view)
+FOUNDATION_STATIC void bgfx_init_view(int imgui_view)
 {
     _bgfx_imgui_view = (uint8_t)(imgui_view & 0xff);
 
@@ -747,13 +762,13 @@ void bgfx_init_view(int imgui_view)
     bgfx::setViewRect(kClearView, 0, 0, bgfx::BackbufferRatio::Equal);
 }
 
-void bgfx_shutdown()
+FOUNDATION_STATIC void bgfx_shutdown()
 {
     bgfx_invalidate_device_objects();
     bgfx::shutdown();
 }
 
-void bgfx_new_frame(GLFWwindow* window, int width, int height)
+FOUNDATION_STATIC void bgfx_new_frame(GLFWwindow* window, int width, int height)
 {
     PERFORMANCE_TRACKER("bgfx_new_frame");
     if (!isValid(_bgfx_imgui_font_texture)) {
@@ -781,8 +796,53 @@ void bgfx_new_frame(GLFWwindow* window, int width, int height)
     }
 }
 
-static void setup_bgfx(GLFWwindow* window)
+FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
 {
+    if (!environment_command_line_arg("render-thread"))
+    {
+        // Call bgfx::renderFrame before bgfx::init to signal to bgfx not to create a render thread.
+        // Most graphics APIs must be used on the same thread that created the window.
+        bgfx::renderFrame();
+    }
+    
+    bgfx::Init bgfxInit;
+    bgfxInit.type = bgfx::RendererType::Count; // Automatically choose a renderer.
+    
+    #if !BUILD_DEPLOY
+    struct BgfxAllocatorkHandler : bx::AllocatorI
+    {
+        BgfxAllocatorkHandler()
+        {
+        }
+        
+        virtual ~BgfxAllocatorkHandler() {};
+
+        virtual void* realloc(void* _ptr, size_t _size, size_t _align, const char* _file, uint32_t _line) override
+        {
+            if (_ptr)
+            {
+                if (_size != 0)
+                {
+                    memory_context_push(HASH_BGFX);
+                    size_t oldsize = memory_size(_ptr);
+                    void* bgfx_mem = memory_reallocate(_ptr, _size, to_unsigned(_align), oldsize, MEMORY_PERSISTENT);
+                    memory_context_pop();
+                    return bgfx_mem;
+                }
+                else
+                {
+                    memory_deallocate(_ptr);
+                    return nullptr;
+                }
+            }
+
+            if (_size == 0)
+                return nullptr;
+            
+            return memory_allocate(HASH_BGFX, _size, to_unsigned(_align), MEMORY_PERSISTENT);
+        }
+    };
+    
     struct BgfxCallbackHandler : bgfx::CallbackI
     {
         bool ignore_logs = false;
@@ -794,7 +854,7 @@ static void setup_bgfx(GLFWwindow* window)
 
         virtual void fatal(const char* _filePath, uint16_t _line, bgfx::Fatal::Enum _code, const char* _str) override
         {
-            log_errorf(0, ERROR_INTERNAL_FAILURE, STRING_CONST("BGFX Failure (%d): %s\n\t%s(%hu)"), _code, _str, _filePath, _line);
+            log_errorf(HASH_BGFX, ERROR_INTERNAL_FAILURE, STRING_CONST("BGFX Failure (%d): %s\n\t%s(%hu)"), _code, _str, _filePath, _line);
             FOUNDATION_ASSERT_FAIL(_str);
             process_exit(_code);
         }
@@ -804,7 +864,7 @@ static void setup_bgfx(GLFWwindow* window)
             if (ignore_logs)
                 return;
             string_t trace_msg = string_allocate_vformat(_format, string_length(_format), _argList);
-            log_infof(0, STRING_CONST("%.*s"), (int)trace_msg.length-1, trace_msg.str);
+            log_infof(HASH_BGFX, STRING_CONST("%.*s"), (int)trace_msg.length-1, trace_msg.str);
             string_deallocate(trace_msg.str);
         }
 
@@ -861,16 +921,11 @@ static void setup_bgfx(GLFWwindow* window)
         }
     };
     static BgfxCallbackHandler bgfx_callback_handler{};
+    static BgfxAllocatorkHandler bgfx_allocator_handler{};
 
-    if (!environment_command_line_arg("render-thread"))
-    {
-        // Call bgfx::renderFrame before bgfx::init to signal to bgfx not to create a render thread.
-        // Most graphics APIs must be used on the same thread that created the window.
-        bgfx::renderFrame();
-    }
-
-    bgfx::Init bgfxInit;
-    bgfxInit.type = bgfx::RendererType::Count; // Automatically choose a renderer.
+    bgfxInit.callback = &bgfx_callback_handler;
+    bgfxInit.allocator = &bgfx_allocator_handler;
+    #endif
 
     #if FOUNDATION_PLATFORM_LINUX
         bgfxInit.platformData.ndt = glfwGetX11Display();
@@ -888,17 +943,19 @@ static void setup_bgfx(GLFWwindow* window)
     bgfxInit.resolution.height = (uint32_t)height;
     bgfxInit.resolution.reset = _run_tests ? BGFX_RESET_NONE : (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI);
 
-    bgfxInit.callback = &bgfx_callback_handler;
-    log_infof(0, STRING_CONST("Initializing BGFX (%d)..."), (int)bgfxInit.type);
+    
+    log_infof(HASH_BGFX, STRING_CONST("Initializing BGFX (%d)..."), (int)bgfxInit.type);
     if (!bgfx::init(bgfxInit))
-        log_errorf(0, ERROR_EXCEPTION, STRING_CONST("Failed to initialize BGFX"));
+        log_errorf(HASH_BGFX, ERROR_EXCEPTION, STRING_CONST("Failed to initialize BGFX"));
 
     bgfx_init_view(1);
 }
 
-static void setup_imgui(GLFWwindow* window)
+FOUNDATION_STATIC void setup_imgui(GLFWwindow* window)
 {
-    log_info(0, STRING_CONST("Initializing IMGUI..."));
+    log_info(HASH_IMGUI, STRING_CONST("Initializing IMGUI..."));
+
+    ImGui::SetAllocatorFunctions(imgui_allocate, imgui_deallocate, nullptr);
 
     // Setup Dear ImGui binding
     IMGUI_CHECKVERSION();
@@ -931,12 +988,12 @@ static void setup_imgui(GLFWwindow* window)
     #endif
 }
 
-static void glfw_log_error(int error, const char* description)
+FOUNDATION_STATIC void glfw_log_error(int error, const char* description)
 {
     log_errorf(0, ERROR_EXCEPTION, STRING_CONST("GLFW Error %d: %s"), error, description);
 }
 
-static GLFWwindow* setup_main_window()
+FOUNDATION_STATIC GLFWwindow* setup_main_window()
 {
     extern const char* app_title();
 
@@ -965,7 +1022,7 @@ static GLFWwindow* setup_main_window()
     return window;
 }
 
-static void setup_main_window_icon(GLFWwindow* window)
+FOUNDATION_STATIC void setup_main_window_icon(GLFWwindow* window)
 {
     #if FOUNDATION_PLATFORM_WINDOWS
         HWND window_handle = glfwGetWin32Window(window);

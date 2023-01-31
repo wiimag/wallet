@@ -303,6 +303,7 @@ stream_read_line(stream_t* stream, char delimiter) {
 	if (stream_is_sequential(stream))
 		want_read = 1;
 
+    memory_context_push(HASH_STREAM);
 	while (!stream_eos(stream)) {
 		read = stream->vtable->read(stream, buffer, want_read);
 		if (!read)
@@ -336,6 +337,7 @@ stream_read_line(stream_t* stream, char delimiter) {
 			break;
 		}
 	}
+    memory_context_pop();
 
 	if (outbuffer)
 		outbuffer[cursize] = 0;
@@ -649,6 +651,8 @@ stream_read_string(stream_t* stream) {
 	if (!(stream->mode & STREAM_IN))
 		return (string_t){0, 0};
 
+    memory_context_push(HASH_STREAM);
+
 	if (stream_is_sequential(stream)) {
 		// Single byte reading since we can't seek backwards (and don't want to block on network
 		// sockets)
@@ -746,10 +750,12 @@ stream_read_string(stream_t* stream) {
 		outbuffer[cursize] = 0;
 	}
 
+    memory_context_pop();
+
 	if (outbuffer == buffer) {
 		if (cursize == 0)
 			return (string_t){0, 0};
-		outbuffer = memory_allocate(0, cursize + 1, 0, MEMORY_PERSISTENT);
+		outbuffer = memory_allocate(HASH_STREAM, cursize + 1, 0, MEMORY_PERSISTENT);
 		memcpy(outbuffer, buffer, cursize);
 		outbuffer[cursize] = 0;
 	}

@@ -35,7 +35,7 @@ void jobs_shutdown();
 
 job_t* job_allocate();
 
-void job_deallocate(job_t* job);
+void job_deallocate(job_t*& job);
 
 job_t* job_execute(job_handler_t handler, void* payload = nullptr, job_flags_t flags = JOB_FLAGS_NONE);
 

@@ -82,16 +82,21 @@ void jobs_shutdown()
 
 job_t* job_allocate()
 {
-    job_t* j = new job_t();
+    void* job_mem = memory_allocate(0, sizeof(job_t), 8, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+    job_t* j = new (job_mem) job_t();
     return j;
 }
 
-void job_deallocate(job_t* job)
+void job_deallocate(job_t*& job)
 {
     if (job == nullptr)
         return;
     if ((job->completed || !job->scheduled))
-        delete job;
+    {   
+        job->~job_t();
+        memory_deallocate(job);
+        job = nullptr;
+    }
     else
         job->flags |= JOB_DEALLOCATE_AFTER_EXECUTION;
 }
