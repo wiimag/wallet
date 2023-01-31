@@ -495,4 +495,4 @@ FOUNDATION_STATIC void console_shutdown()
     string_table_deallocate(_console_string_table);
 }
 
-DEFINE_SERVICE(CONSOLE, console_initialize, console_shutdown, SERVICE_PRIORITY_BASE);
+DEFINE_SERVICE(CONSOLE, console_initialize, console_shutdown, SERVICE_PRIORITY_UI);

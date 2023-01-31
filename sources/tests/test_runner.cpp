@@ -12,7 +12,7 @@
 #include <foundation/path.h>
 #include <foundation/string.h>
 
-#if !BUILD_DEPLOY
+#if BUILD_DEVELOPMENT
 
 #include <doctest/doctest.h>
 

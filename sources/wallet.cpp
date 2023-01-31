@@ -115,8 +115,11 @@ static void wallet_history_sort(wallet_t* wallet)
 static void wallet_history_update_entry(report_t* report, wallet_t* wallet, history_t& entry)
 {
     if (!report_sync_titles(report))
-        return log_warnf(HASH_REPORT, WARNING_TIMEOUT,
+    {
+        log_warnf(HASH_REPORT, WARNING_TIMEOUT,
             STRING_CONST("Failed to sync %s report titles, cannot update wallet history. Please retry later..."), SYMBOL_CSTR(report->name));
+        return;
+    }
     
     report->dirty = true;
     entry.date = time_now();

@@ -3,6 +3,10 @@
  * License: https://infineis.com/LICENSE
  */
 
+#include <foundation/platform.h>
+
+#if BUILD_DEVELOPMENT
+
 #include "test_utils.h"
 
 #include <framework/imgui.h>
@@ -215,3 +219,26 @@ FOUNDATION_STATIC void test_utils_shutdown()
 }
 
 DEFINE_SERVICE(TEST, test_utils_initialize, test_utils_shutdown, SERVICE_PRIORITY_TESTS-1);
+
+#else
+
+#include <framework/imgui.h>
+
+extern void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id)
+{
+}
+
+extern void ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id, const char* label, ImGuiItemStatusFlags flags)
+{
+}
+
+extern void ImGuiTestEngineHook_Log(ImGuiContext* ctx, const char* fmt, ...)
+{
+}
+
+extern const char* ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiID id)
+{
+    return nullptr;
+}
+
+#endif

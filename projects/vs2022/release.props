@@ -21,7 +21,7 @@
       <RuntimeTypeInfo>false</RuntimeTypeInfo>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
       <TreatWarningAsError>true</TreatWarningAsError>
-      <PreprocessorDefinitions>BUILD_RELEASE=1;BUILD_ENABLE_DEBUG_LOG=0;BX_CONFIG_DEBUG=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>BUILD_RELEASE=1;BUILD_ENABLE_ASSERT=0;BX_CONFIG_DEBUG=0;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <Optimization>Full</Optimization>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -34,6 +34,27 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(BUILD_DEPLOY)'=='TRUE'">
+    <ClCompile>
+      <PreprocessorDefinitions>
+        BUILD_DEPLOY=1;
+        BUILD_RELEASE=0;
+        BUILD_DEVELOPMENT=0;
+        BUILD_ENABLE_LOG=1;
+        BUILD_ENABLE_DEBUG_LOG=0;
+        BUILD_ENABLE_ASSERT=0;
+        BUILD_ENABLE_ERROR_CONTEXT=0;
+        BUILD_ENABLE_PROFILE=0;
+        BUILD_ENABLE_MEMORY_CONTEXT=0;
+        BUILD_ENABLE_MEMORY_TRACKER=0;
+        BUILD_ENABLE_MEMORY_GUARD=0;
+        BUILD_ENABLE_MEMORY_STATISTICS=0;
+        BUILD_ENABLE_STATIC_HASH_DEBUG=0;
+        %(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <Link />
+    <ProjectReference />
   </ItemDefinitionGroup>
   <ItemGroup />
 </Project>

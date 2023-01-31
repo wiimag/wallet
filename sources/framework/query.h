@@ -11,7 +11,7 @@
 #include <foundation/hash.h>
 
 #if !defined(ENABLE_QUERY_MOCKING)
-#if !BUILD_DEPLOY
+#if BUILD_DEVELOPMENT
 #define ENABLE_QUERY_MOCKING (1)
 #else
 #define ENABLE_QUERY_MOCKING (0)

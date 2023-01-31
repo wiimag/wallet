@@ -54,9 +54,13 @@ static const bgfx::EmbeddedShader _bgfx_imgui_embedded_shaders[] = {
     BGFX_EMBEDDED_SHADER(fs_ocornut_imgui), BGFX_EMBEDDED_SHADER_END() 
 };
 
+#if BUILD_DEVELOPMENT
 static bool _run_tests = false;
 static bool _show_stats = false;
+#endif
+#if BUILD_ENABLE_PROFILE
 static double _smooth_elapsed_time_ms = 0.0f;
+#endif
 
 FOUNDATION_STATIC const char* glfw_get_clipboard_text(void* user_data)
 {
@@ -273,8 +277,10 @@ FOUNDATION_STATIC void glfw_key_callback(GLFWwindow*, int keycode, int scancode,
     io.AddKeyEvent(imgui_key, (action == GLFW_PRESS));
     io.SetKeyEventNativeData(imgui_key, keycode, scancode); // To support legacy indexing (<1.87 user code)
 
+    #if BUILD_DEVELOPMENT
     if (keycode == GLFW_KEY_F1 && action == GLFW_RELEASE)
         _show_stats = !_show_stats;
+    #endif
 }
 
 FOUNDATION_STATIC void glfw_char_callback(GLFWwindow*, unsigned int c)
@@ -780,7 +786,11 @@ FOUNDATION_STATIC void bgfx_new_frame(GLFWwindow* window, int width, int height)
     if (width != bWidth || height != bHeight)
     {
         bWidth = width; bHeight = height;
-        bgfx::reset(bWidth, bHeight, _run_tests ? BGFX_RESET_NONE : (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI));
+        bgfx::reset(bWidth, bHeight, 
+        #if BUILD_DEVELOPMENT
+            _run_tests ? BGFX_RESET_NONE : 
+        #endif
+            (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI));
     }
 
     bgfx::setViewClear(kClearView, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH);
@@ -789,11 +799,13 @@ FOUNDATION_STATIC void bgfx_new_frame(GLFWwindow* window, int width, int height)
     bgfx::touch(kClearView);
     bgfx::touch(_bgfx_imgui_view);
     
+    #if BUILD_DEVELOPMENT
     if (BUILD_DEBUG && !_run_tests)
     {
         bgfx::dbgTextClear();
         bgfx::setDebug(!_show_stats ? BGFX_DEBUG_NONE : BGFX_DEBUG_STATS);
     }
+    #endif
 }
 
 FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
@@ -808,7 +820,7 @@ FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
     bgfx::Init bgfxInit;
     bgfxInit.type = bgfx::RendererType::Count; // Automatically choose a renderer.
     
-    #if !BUILD_DEPLOY
+    #if BUILD_ENABLE_MEMORY_TRACKER
     struct BgfxAllocatorkHandler : bx::AllocatorI
     {
         BgfxAllocatorkHandler()
@@ -842,7 +854,11 @@ FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
             return memory_allocate(HASH_BGFX, _size, to_unsigned(_align), MEMORY_PERSISTENT);
         }
     };
+    static BgfxAllocatorkHandler bgfx_allocator_handler{};
+    bgfxInit.allocator = &bgfx_allocator_handler;
+    #endif
     
+    #if BUILD_DEVELOPMENT
     struct BgfxCallbackHandler : bgfx::CallbackI
     {
         bool ignore_logs = false;
@@ -921,10 +937,7 @@ FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
         }
     };
     static BgfxCallbackHandler bgfx_callback_handler{};
-    static BgfxAllocatorkHandler bgfx_allocator_handler{};
-
     bgfxInit.callback = &bgfx_callback_handler;
-    bgfxInit.allocator = &bgfx_allocator_handler;
     #endif
 
     #if FOUNDATION_PLATFORM_LINUX
@@ -941,8 +954,11 @@ FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
     glfwGetFramebufferSize(window, &width, &height);
     bgfxInit.resolution.width = (uint32_t)width;
     bgfxInit.resolution.height = (uint32_t)height;
-    bgfxInit.resolution.reset = _run_tests ? BGFX_RESET_NONE : (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI);
-
+    bgfxInit.resolution.reset = 
+    #if BUILD_DEVELOPMENT
+        _run_tests ? BGFX_RESET_NONE : 
+    #endif
+        (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI);
     
     log_infof(HASH_BGFX, STRING_CONST("Initializing BGFX (%d)..."), (int)bgfxInit.type);
     if (!bgfx::init(bgfxInit))
@@ -954,7 +970,7 @@ FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
 FOUNDATION_STATIC void setup_imgui(GLFWwindow* window)
 {
     log_info(HASH_IMGUI, STRING_CONST("Initializing IMGUI..."));
-
+    
     ImGui::SetAllocatorFunctions(imgui_allocate, imgui_deallocate, nullptr);
 
     // Setup Dear ImGui binding
@@ -1047,7 +1063,7 @@ extern int main_initialize()
     memset(&config, 0, sizeof config);
     memset(&application, 0, sizeof application);
 
-    #ifdef BUILD_DEBUG
+    #if BUILD_ENABLE_MEMORY_TRACKER
         memory_set_tracker(memory_tracker_local());
     #endif
     
@@ -1065,12 +1081,14 @@ extern int main_initialize()
         environment_set_current_working_directory(STRING_ARGS(exe_dir));
     #endif
 
+    #if BUILD_DEVELOPMENT
     _run_tests = environment_command_line_arg("run-tests");
 
     if (environment_command_line_arg("debug") || environment_command_line_arg("verbose"))
         log_set_suppress(0, ERRORLEVEL_NONE);
     else
         log_set_suppress(0, ERRORLEVEL_DEBUG);
+    #endif
 
     GLFWwindow* window = setup_main_window();
     if (!window)
@@ -1095,12 +1113,20 @@ extern GLFWwindow* main_window()
 
 extern bool main_is_running_tests()
 {
+#if BUILD_DEVELOPMENT
     return _run_tests;
+#else
+    return false;
+#endif
 }
 
 extern double main_tick_elapsed_time_ms()
 {
+#if BUILD_ENABLE_PROFILE
     return _smooth_elapsed_time_ms;
+#else
+    return 0;
+#endif
 }
 
 extern void main_process(GLFWwindow* window, app_render_handler_t render, app_render_handler_t begin, app_render_handler_t end)
@@ -1177,11 +1203,13 @@ extern bool main_poll(GLFWwindow* window)
 
 extern int main_run(void* context)
 {
-    extern int main_tests(void* context, GLFWwindow* window);
-
     GLFWwindow* current_window = _glfw_window;
+
+    #if BUILD_DEVELOPMENT
+    extern int main_tests(void* context, GLFWwindow* window);
     if (_run_tests)
         return main_tests(context, current_window);
+    #endif
 
     const bool exit_after_first_tick = environment_command_line_arg("exit");
 
@@ -1213,8 +1241,12 @@ extern void main_finalize()
 {
     extern void app_shutdown();
 
+    #if BUILD_DEVELOPMENT
     if (!_run_tests)
+    #endif
+    {
         glfw_save_window_geometry(_glfw_window);
+    }
 
     app_shutdown();
     dispatcher_shutdown();

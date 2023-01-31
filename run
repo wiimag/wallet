@@ -32,7 +32,8 @@ esac
 RUN=1 # Indicate if the default build should be run at the end
 BUILD=0
 BUILD_DEBUG=0
-BUID_RELEASE=1
+BUILD_RELEASE=1
+BUILD_DEPLOY=0
 TESTS=0
 OPEN=0
 OPEN_WORKSPACE=0
@@ -76,6 +77,11 @@ while [[ $# -gt 0 ]]; do
         BUILD_DEBUG=1
         shift
       fi
+
+      if [ $# -ne 0 ] && [ $1 = "deploy" ]; then
+        BUILD_DEPLOY=1
+        shift
+      fi
       ;;
     o|open)
       OPEN=1
@@ -108,7 +114,7 @@ done
 #
 if [ $HELP -eq 1 ]; then
 
-    echo "  Usage: $progname [${bold}b${normal}uild [debug|release]] "
+    echo "  Usage: $progname [${bold}b${normal}uild [debug|release|deploy]] "
     echo "             [${bold}t${normal}ests] " 
     echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
     echo "             [${bold}s${normal}tart] [--option=<value>] ...additional arguments passed to last command"
@@ -146,6 +152,8 @@ if [ $BUILD -eq 1 ]; then
     if [ $machine == "MinGw" ]; then
         if [ $BUILD_DEBUG -eq 1 ]; then
             ./scripts/build_win_debug.bat $POSITIONAL_ARGS
+        elif  [ $BUILD_DEPLOY -eq 1 ]; then
+            ./scripts/build_win_deploy.bat $POSITIONAL_ARGS
         else
             ./scripts/build_win_release.bat $POSITIONAL_ARGS
         fi

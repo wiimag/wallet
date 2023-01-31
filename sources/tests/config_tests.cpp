@@ -3,6 +3,10 @@
  * License: https://infineis.com/LICENSE
  */
 
+#include <foundation/platform.h>
+
+#if BUILD_DEVELOPMENT
+
 #include "test_utils.h"
 
 #include <framework/config.h>
@@ -46,3 +50,5 @@ TEST_SUITE("Configuration")
         config_deallocate(cv);
     }
 }
+
+#endif // BUILD_DEVELOPMENT

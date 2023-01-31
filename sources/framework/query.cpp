@@ -47,7 +47,7 @@
      * 6. > nmake /f MakeFile.vc mode=static DEBUG=no
      * 7. > nmake /f MakeFile.vc mode=static DEBUG=yes
      */
-    #if BUILD_RELEASE
+    #if BUILD_RELEASE || BUILD_DEPLOY
         #pragma comment( lib, "libcurl_a.lib" )
     #else
         #pragma comment( lib, "libcurl_a_debug.lib" )
@@ -112,7 +112,7 @@ FOUNDATION_STATIC CURL* query_create_curl_request()
         if (environment_command_line_arg("verbose"))
             curl_easy_setopt(req, CURLOPT_VERBOSE, 1L);
 
-        #if !BUILD_DEPLOY
+        #if BUILD_DEVELOPMENT
         curl_easy_setopt(req, CURLOPT_SSL_VERIFYPEER, 0L);
         curl_easy_setopt(req, CURLOPT_SSL_VERIFYHOST, 0L);
         #endif
@@ -751,9 +751,11 @@ void query_initialize()
     if (_initialized)
         return;
         
+    #if BUILD_ENABLE_MEMORY_TRACKER
     curl_global_init_mem(CURL_GLOBAL_DEFAULT, curl_malloc_cb,
         curl_free_cb, curl_realloc_cb,
         curl_strdup_cb, curl_calloc_cb);
+    #endif
 
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK)

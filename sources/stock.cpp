@@ -250,7 +250,10 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
         
         stock_t* s = &_db_stocks[index];
         if (!s->has_resolve(FetchLevel::TECHNICAL_EOD) && !s->has_resolve(FetchLevel::EOD))
-            return log_warnf(HASH_STOCK, WARNING_NETWORK, STRING_CONST("Missing EOD results to resolve indexed price for %s"), SYMBOL_CSTR(s->code));
+        {
+            log_warnf(HASH_STOCK, WARNING_NETWORK, STRING_CONST("Missing EOD results to resolve indexed price for %s"), SYMBOL_CSTR(s->code));
+            return;
+        }
         history = s->history;
     }
     

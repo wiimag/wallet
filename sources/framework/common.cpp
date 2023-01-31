@@ -790,7 +790,7 @@ bool path_equals(const char* a, size_t a_length, const char* b, size_t b_length)
 
 void process_debug_output(const char* output, size_t output_length /*= 0*/)
 {
-    #if !BUILD_DEPLOY
+    #if BUILD_DEVELOPMENT
         #if FOUNDATION_PLATFORM_WINDOWS
             OutputDebugStringA(output);
         #else

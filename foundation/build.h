@@ -147,6 +147,22 @@ and disabled in all other configurations.
 #endif
 #endif
 
+#if BUILD_DEPLOY
+    #undef BUILD_DEBUG
+    #define BUILD_DEBUG 0
+
+    #undef BUILD_RELEASE
+    #define BUILD_RELEASE 0
+#endif
+
+#ifndef BUILD_DEVELOPMENT
+    #if BUILD_DEBUG || BUILD_RELEASE
+        #define BUILD_DEVELOPMENT 1
+    #else
+        #define BUILD_DEVELOPMENT 0
+    #endif
+#endif
+
 // Configurable choices
 #ifndef BUILD_ENABLE_ASSERT
 #if BUILD_DEBUG || BUILD_RELEASE
@@ -189,7 +205,7 @@ and disabled in all other configurations.
 #endif
 
 #ifndef BUILD_ENABLE_MEMORY_CONTEXT
-#if BUILD_DEBUG /*|| BUILD_RELEASE*/
+#if BUILD_DEBUG || BUILD_RELEASE
 #define BUILD_ENABLE_MEMORY_CONTEXT 1
 #else
 #define BUILD_ENABLE_MEMORY_CONTEXT 0

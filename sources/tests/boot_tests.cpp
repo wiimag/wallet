@@ -7,6 +7,10 @@
  *      > ./build/infineis.exe --run-tests --minimal=false --duration=true && n artifacts/tests.log
  */
 
+#include <foundation/platform.h>
+
+#if BUILD_DEVELOPMENT
+
 #include "test_utils.h"
 
 #include <framework/glfw.h>
@@ -248,3 +252,5 @@ extern GLFWwindow* main_test_window()
 }
 
 REGISTER_REPORTER("foundation", 1, TestReporter);
+
+#endif

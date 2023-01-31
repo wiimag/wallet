@@ -14,6 +14,8 @@
 
 #include <foundation/string.h>
 
+#if BUILD_DEVELOPMENT
+
 #include <doctest/doctest.h>
 
 #include <iomanip>
@@ -178,3 +180,5 @@ void TEST_RENDER_FRAME(const function<void()>& render_callback, const function<v
 void TEST_CLEAR_FRAME();
 
 void REQUIRE_WAIT(bool* watch_var, double timeout_seconds = 5.0);
+
+#endif

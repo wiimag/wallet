@@ -3,6 +3,10 @@
  * License: https://infineis.com/LICENSE
  */
 
+#include <foundation/platform.h>
+
+#if BUILD_DEVELOPMENT
+ 
 #include "test_utils.h"
 
 #include <framework/common.h>
@@ -110,3 +114,5 @@ TEST_SUITE("Generics")
         CHECK_EQ(numbers.move(-2), 12343322);
     }
 }
+
+#endif // BUILD_DEVELOPMENT

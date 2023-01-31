@@ -314,7 +314,7 @@ void dispatcher_shutdown()
     _dispatcher_actions = nullptr;
 }
 
-#if !BUILD_DEPLOY
+#if BUILD_DEVELOPMENT
 
 //
 // # TESTS

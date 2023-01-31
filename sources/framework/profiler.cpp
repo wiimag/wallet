@@ -285,7 +285,7 @@ FOUNDATION_STATIC void profiler_menu()
 
 void profiler_menu_timer()
 {
-    #if !BUILD_DEPLOY && BUILD_ENABLE_PROFILE
+    #if BUILD_DEVELOPMENT && BUILD_ENABLE_PROFILE
     {
         static tick_t last_frame_tick = time_current();
         tick_t elapsed_ticks = time_diff(last_frame_tick, time_current());
@@ -324,7 +324,7 @@ FOUNDATION_STATIC void profiler_initialize()
     if (!environment_command_line_arg("profile"))
         return;
         
-    const size_t profile_buffer_size = 512 * 1024;
+    const size_t profile_buffer_size = 2 * 1024 * 1024;
     _profile_buffer = (uint8_t*)memory_allocate(HASH_PROFILER, profile_buffer_size, 0, MEMORY_PERSISTENT);
     profile_initialize(S("Infineis"), _profile_buffer, profile_buffer_size);
     profile_enable(true);
@@ -367,6 +367,6 @@ FOUNDATION_STATIC void profiler_shutdown()
     array_deallocate(_trackers);
 }
 
-DEFINE_SERVICE(PROFILER, profiler_initialize, profiler_shutdown, SERVICE_PRIORITY_SYSTEM);
+DEFINE_SERVICE(PROFILER, profiler_initialize, profiler_shutdown, SERVICE_PRIORITY_UI);
 
 #endif

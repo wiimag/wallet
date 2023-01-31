@@ -77,34 +77,86 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
     {
         if (ImGui::BeginMenu("Help"))
         {
-            #if BUILD_DEBUG
-                bool show_debug_log = log_suppress(HASH_DEBUG) == ERRORLEVEL_NONE;
-                if (ImGui::MenuItem("Show Debug Logs", nullptr, &show_debug_log))
-                {
-                    if (show_debug_log)
-                    {
-                        console_show();
-                        log_set_suppress(0, ERRORLEVEL_NONE);
-                        log_set_suppress(HASH_DEBUG, ERRORLEVEL_NONE);
-                    }
-                    else
-                    {
-                        log_set_suppress(0, ERRORLEVEL_DEBUG);
-                        log_set_suppress(HASH_DEBUG, ERRORLEVEL_DEBUG);
-                    }
-                }
+            #if BUILD_DEVELOPMENT
+            if (ImGui::BeginMenu("BUILD"))
+            {
+                #if BUILD_DEBUG
+                ImGui::MenuItem("BUILD_DEBUG");
+                #endif
+                #if BUILD_RELEASE
+                ImGui::MenuItem("BUILD_RELEASE");
+                #endif
+                #if BUILD_DEPLOY
+                ImGui::MenuItem("BUILD_DEPLOY");
+                #endif
+                #if BUILD_DEVELOPMENT
+                ImGui::MenuItem("BUILD_DEVELOPMENT");
+                #endif
+                #if BUILD_ENABLE_LOG
+                ImGui::MenuItem("BUILD_ENABLE_LOG");
+                #endif
+                #if BUILD_ENABLE_ASSERT
+                ImGui::MenuItem("BUILD_ENABLE_ASSERT");
+                #endif
+                #if BUILD_ENABLE_ERROR_CONTEXT
+                ImGui::MenuItem("BUILD_ENABLE_ERROR_CONTEXT");
+                #endif
+                #if BUILD_ENABLE_DEBUG_LOG
+                ImGui::MenuItem("BUILD_ENABLE_DEBUG_LOG");
+                #endif
+                #if BUILD_ENABLE_PROFILE
+                ImGui::MenuItem("BUILD_ENABLE_PROFILE");
+                #endif
+                #if BUILD_ENABLE_MEMORY_CONTEXT
+                ImGui::MenuItem("BUILD_ENABLE_MEMORY_CONTEXT");
+                #endif
+                #if BUILD_ENABLE_MEMORY_TRACKER
+                ImGui::MenuItem("BUILD_ENABLE_MEMORY_TRACKER");
+                #endif
+                #if BUILD_ENABLE_MEMORY_GUARD
+                ImGui::MenuItem("BUILD_ENABLE_MEMORY_GUARD");
+                #endif
+                #if BUILD_ENABLE_MEMORY_STATISTICS
+                ImGui::MenuItem("BUILD_ENABLE_MEMORY_STATISTICS");
+                #endif
+                #if BUILD_ENABLE_STATIC_HASH_DEBUG
+                ImGui::MenuItem("BUILD_ENABLE_STATIC_HASH_DEBUG");
+                #endif
+                ImGui::EndMenu();
+            }
+            #endif
 
-                if (ImGui::MenuItem("Show Memory Stats"))
+            #if BUILD_ENABLE_DEBUG_LOG
+            bool show_debug_log = log_suppress(HASH_DEBUG) == ERRORLEVEL_NONE;
+            if (ImGui::MenuItem("Show Debug Logs", nullptr, &show_debug_log))
+            {
+                if (show_debug_log)
                 {
-                    MEMORY_TRACKER(HASH_MEMORY);
                     console_show();
-                    auto mem_stats = memory_statistics();
-                    log_infof(HASH_MEMORY, STRING_CONST("Memory stats: \n"
-                        "\t Current: %.3g mb (%llu)\n"
-                        "\t Total: %.3g mb (%llu)"),
-                        mem_stats.allocated_current / 1024.0f / 1024.0f, mem_stats.allocations_current,
-                        mem_stats.allocated_total / 1024.0f / 1024.0f, mem_stats.allocations_total);
+                    log_set_suppress(0, ERRORLEVEL_NONE);
+                    log_set_suppress(HASH_DEBUG, ERRORLEVEL_NONE);
+                }
+                else
+                {
+                    log_set_suppress(0, ERRORLEVEL_DEBUG);
+                    log_set_suppress(HASH_DEBUG, ERRORLEVEL_DEBUG);
+                }
+            }
+            #endif
 
+            #if BUILD_ENABLE_MEMORY_STATISTICS && BUILD_ENABLE_MEMORY_TRACKER
+            if (ImGui::MenuItem("Show Memory Stats"))
+            {
+                MEMORY_TRACKER(HASH_MEMORY);
+                console_show();
+                auto mem_stats = memory_statistics();
+                log_infof(HASH_MEMORY, STRING_CONST("Memory stats: \n"
+                    "\t Current: %.3g mb (%llu)\n"
+                    "\t Total: %.3g mb (%llu)"),
+                    mem_stats.allocated_current / 1024.0f / 1024.0f, mem_stats.allocations_current,
+                    mem_stats.allocated_total / 1024.0f / 1024.0f, mem_stats.allocations_total);
+
+                #if BUILD_ENABLE_MEMORY_TRACKER && BUILD_ENABLE_MEMORY_CONTEXT
                     struct memory_context_stats_t {
                         hash_t context;
                         uint64_t allocated_mem;
@@ -141,39 +193,44 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
                     }
 
                     array_deallocate(memory_contexts);
-                }
-
-                if (ImGui::MenuItem("Show Memory Usages"))
-                {
-                    console_show();
-                    const bool prefix_enaled = log_is_prefix_enabled();
-                    log_enable_prefix(false);
-                    log_enable_auto_newline(true);
-                    memory_tracker_dump([](hash_t context, const void* addr, size_t size, void* const* trace, size_t depth)->int
-                    {
-                        context = context ? context : HASH_DEFAULT;
-                        string_const_t context_name = hash_to_string(context);
-                        if (context_name.length == 0)
-                            context_name = CTEXT("other");
-                        char current_frame_stack_buffer[512];
-                        string_t stf = stacktrace_resolve(STRING_CONST_CAPACITY(current_frame_stack_buffer), trace, min((size_t)3, depth), 0);
-                        if (size > 256 * 1024)
-                        {
-                            log_warnf(HASH_MEMORY, WARNING_MEMORY, STRING_CONST("%.*s: 0x%p, %.3g mb [%.*s]\n%.*s"), STRING_FORMAT(context_name), addr, size / 1024.0f / 1024.0f,
-                                min(32, (int)size), (const char*)addr, STRING_FORMAT(stf));
-                        }
-                        else
-                        {
-                            log_infof(HASH_MEMORY, STRING_CONST("%.*s: 0x%p, %.4g kb [%.*s]\n%.*s"), STRING_FORMAT(context_name), addr, size / 1024.0f,
-                                min(32, (int)size), (const char*)addr, STRING_FORMAT(stf));
-                        }
-                        return 0;
-                    });
-                    log_enable_prefix(prefix_enaled);
-                }
+                #endif
+            }
             #endif
 
+            #if BUILD_ENABLE_MEMORY_TRACKER && BUILD_ENABLE_MEMORY_CONTEXT
+            if (ImGui::MenuItem("Show Memory Usages"))
+            {
+                console_show();
+                const bool prefix_enaled = log_is_prefix_enabled();
+                log_enable_prefix(false);
+                log_enable_auto_newline(true);
+                memory_tracker_dump([](hash_t context, const void* addr, size_t size, void* const* trace, size_t depth)->int
+                {
+                    context = context ? context : HASH_DEFAULT;
+                    string_const_t context_name = hash_to_string(context);
+                    if (context_name.length == 0)
+                        context_name = CTEXT("other");
+                    char current_frame_stack_buffer[512];
+                    string_t stf = stacktrace_resolve(STRING_CONST_CAPACITY(current_frame_stack_buffer), trace, min((size_t)3, depth), 0);
+                    if (size > 256 * 1024)
+                    {
+                        log_warnf(HASH_MEMORY, WARNING_MEMORY, STRING_CONST("%.*s: 0x%p, %.3g mb [%.*s]\n%.*s"), STRING_FORMAT(context_name), addr, size / 1024.0f / 1024.0f,
+                            min(32, (int)size), (const char*)addr, STRING_FORMAT(stf));
+                    }
+                    else
+                    {
+                        log_infof(HASH_MEMORY, STRING_CONST("%.*s: 0x%p, %.4g kb [%.*s]\n%.*s"), STRING_FORMAT(context_name), addr, size / 1024.0f,
+                            min(32, (int)size), (const char*)addr, STRING_FORMAT(stf));
+                    }
+                    return 0;
+                });
+                log_enable_prefix(prefix_enaled);
+            }
+            #endif
+
+            #if BUILD_ENABLE_DEBUG_LOG || BUILD_ENABLE_MEMORY_STATISTICS || (BUILD_ENABLE_MEMORY_TRACKER && BUILD_ENABLE_MEMORY_CONTEXT)
             ImGui::Separator();
+            #endif
 
             string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
             if (ImGui::MenuItem(string_format_static_const("Version %.*s.%s (%s)", STRING_FORMAT(version_string), GIT_SHORT_HASH, __DATE__)))
@@ -291,7 +348,10 @@ void app_open_dialog(const char* title, app_dialog_handler_t&& handler, uint32_t
     {
         app_dialog_t& dlg = _dialogs[i];
         if (string_equal(title, string_length(title), dlg.title, string_length(dlg.title)))
-            return log_warnf(0, WARNING_UI, STRING_CONST("Dialog %s is already opened"), dlg.title);
+        {
+            log_warnf(0, WARNING_UI, STRING_CONST("Dialog %s is already opened"), dlg.title);
+            return;
+        }
     }
 
     app_dialog_t dlg{};
@@ -324,7 +384,9 @@ extern void app_exception_handler(const char* dump_file, size_t length)
 
 extern void app_configure(foundation_config_t& config, application_t& application)
 {
+    #if BUILD_ENABLE_STATIC_HASH_DEBUG
     config.hash_store_size = 256;
+    #endif
     application.name = string_const(PRODUCT_NAME, string_length(PRODUCT_NAME));
     application.short_name = string_const(PRODUCT_CODE_NAME, string_length(PRODUCT_CODE_NAME));
     application.company = string_const(STRING_CONST(PRODUCT_COMPANY));

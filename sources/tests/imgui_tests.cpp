@@ -3,6 +3,10 @@
  * License: https://infineis.com/LICENSE
  */
 
+#include <foundation/platform.h>
+
+#if BUILD_DEVELOPMENT
+
 #include "test_utils.h"
 
 #include <framework/imgui.h>
@@ -57,3 +61,5 @@ TEST_SUITE("IMGUI")
         CHECK_FALSE(clicked);
     }
 }
+
+#endif // BUILD_DEVELOPMENT
