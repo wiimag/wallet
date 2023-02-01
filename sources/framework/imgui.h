@@ -115,4 +115,6 @@ namespace ImGui
     // Make the UI compact because there are so many fields
     void PushStyleCompact();
     void PopStyleCompact();
+    void PushStyleTight();
+    void PopStyleTight();
 }

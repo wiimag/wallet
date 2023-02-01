@@ -17,6 +17,7 @@ typedef enum {
     STATUS_UNDEFINED = INT_MAX,
     STATUS_INITIALIZED = (1),
     STATUS_RESOLVING = (2),
+    STATUS_AVAILABLE = (3),
 
     STATUS_ERROR = (-1),
     STATUS_UNRESOLVED = (-2),
@@ -29,6 +30,7 @@ typedef enum {
     STATUS_ERROR_INVALID_REQUEST = (-17),
     STATUS_ERROR_INVALID_STREAM = (-18),
     STATUS_ERROR_LOAD_FAILURE = (-19),
+    STATUS_ERROR_NOT_AVAILABLE = (-19),
 } status_t;
 
 struct HandleKey

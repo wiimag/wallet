@@ -13,7 +13,10 @@
 #include <framework/service.h>
 #include <framework/shared_mutex.h>
 #include <framework/handle.h>
+#include <framework/session.h>
 
+#include <foundation/fs.h>
+#include <foundation/path.h>
 #include <foundation/stream.h>
 
 #include <stb/stb_image.h>
@@ -25,8 +28,6 @@
 struct logo_image_t
 {
     hash_t key{ 0 };
-    
-    string_table_symbol_t url{};
     string_table_symbol_t symbol{};
     
     int width{ 0 };
@@ -36,11 +37,11 @@ struct logo_image_t
 
     stock_handle_t stock_handle;
     status_t status{ STATUS_UNDEFINED };
+    status_t thumbnail_cache_status{ STATUS_UNDEFINED };
 
     job_t* download_job{ nullptr };
 
     bgfx::TextureHandle texture = BGFX_INVALID_HANDLE;
-
 };
 
 static shared_mutex _logos_mutex;
@@ -70,75 +71,6 @@ typedef Handle<logo_image_t, [](HandleKey key)->logo_image_t*
 //
 // # PRIVATE
 //
-
-void logo_render_command(const ImDrawList* parent_list, const ImDrawCmd* cmd)
-{
-    FOUNDATION_ASSERT(cmd->UserCallbackData);
-
-//     const infineis_viewport_t* viewport = (infineis_viewport_t*)cmd->UserCallbackData;
-//     if (viewport->frame == nullptr || viewport->frame->samples == nullptr)
-//         return;
-// 
-//     infineis_frame_t* frame = viewport->frame;
-//     const bgfx::ViewId dcm_view = 1;
-//     const infineis_viewport_desc_t& desc = viewport->desc;
-//     const ImRect& rect = desc.rect;
-//     const auto wsize = rect.GetSize();
-//     const float frame_width = frame->width * desc.scale[0];
-//     const float frame_height = frame->height * desc.scale[1];
-//     const ImVec2 offset = desc.offset;
-// 
-//     const float scx = viewport->scroll_offset.x;
-//     const float scy = viewport->scroll_offset.y;
-// 
-//     if (!bgfx::isValid(frame->dcm_texture))
-//     {
-//         const int16_t* samples = frame->samples;
-//         const uint32_t sample_count = array_size(samples);
-// 
-//         bgfx::TextureFormat::Enum texture_format = bgfx::TextureFormat::R16S;
-//         frame->dcm_texture = bgfx::createTexture2D(
-//             frame->width, frame->height, false, 1, texture_format, 0,
-//             bgfx::makeRef(frame->samples, sample_count * sizeof(frame->samples[0])));
-//     }
-// 
-//     float scrolling_position[16], scale[16], transform[16], moffset[16], tmp[16];
-//     bx::mtxTranslate(moffset, rect.Min.x + offset.x, rect.Min.y + offset.y, 0);
-//     bx::mtxTranslate(scrolling_position, -scx, -scy, 0);
-//     bx::mtxScale(scale, frame_width, frame_height, 1);
-//     bx::mtxMul(tmp, scale, scrolling_position);
-//     bx::mtxMul(transform, tmp, moffset);
-//     bgfx::setTransform(transform);
-// 
-//     const uint16_t xx = (uint16_t)bx::max(cmd->ClipRect.x, 0.0f);
-//     const uint16_t yy = (uint16_t)bx::max(cmd->ClipRect.y, 0.0f);
-//     const uint16_t ww = (uint16_t)bx::min(cmd->ClipRect.z, 65535.0f) - xx;
-//     const uint16_t hh = (uint16_t)bx::min(cmd->ClipRect.w, 65535.0f) - yy;
-//     bgfx::setScissor(xx, yy, ww, hh);
-// 
-//     infineis_frame_window_properties_t window_properties;
-//     window_properties.level = desc.center;
-//     window_properties.window = desc.window;
-//     window_properties.rescale_intercept = frame->rescale_intercept;
-//     window_properties.pixel_max = (float)(1 << (frame->bits_allocated - 1));
-// 
-//     infineis_frame_render_options_t render_options;
-//     render_options.dynamic = desc.full_dynamic ? 1.0f : 0;
-// 
-//     bgfx::setUniform(_bgfx_dcm_frame_options_uniform, &render_options, UINT16_MAX);
-//     bgfx::setUniform(_bgfx_dcm_frame_window_uniform, &window_properties, UINT16_MAX);
-// 
-//     uint64_t state = BGFX_STATE_WRITE_RGB | BGFX_STATE_WRITE_A | BGFX_STATE_MSAA |
-//         BGFX_STATE_BLEND_FUNC(BGFX_STATE_BLEND_SRC_ALPHA, BGFX_STATE_BLEND_INV_SRC_ALPHA);
-// 
-//     FOUNDATION_ASSERT(bgfx::isValid(frame->dcm_texture));
-//     bgfx::setState(state);
-//     bgfx::setTexture(0, _bgfx_dcm_frame_tex_color, frame->dcm_texture);
-//     bgfx::setVertexBuffer(0, _bgfx_dcm_frame_vertex_buffer);
-//     bgfx::setIndexBuffer(_bgfx_dcm_frame_index_buffer);
-// 
-//     bgfx::submit(dcm_view, _bgfx_dcm_frame_shader_program);
-}
 
 FOUNDATION_STATIC logo_image_t* logo_find_image(hash_t logo_hash)
 {
@@ -208,6 +140,33 @@ FOUNDATION_STATIC int logo_image_stream_eof(void* user)
     return stream_eos(stream) ? 1 : 0;
 }
 
+FOUNDATION_STATIC string_const_t logo_thumbnail_cached_path(logo_image_t* image)
+{
+    string_const_t symbol = string_table_decode_const(image->symbol);
+    string_const_t basename = path_base_file_name(STRING_ARGS(symbol));
+    return session_get_user_file_path(STRING_ARGS(basename), STRING_CONST("thumbnails"), STRING_CONST("png"));
+}
+
+FOUNDATION_STATIC bool logo_thumbnail_is_cached(logo_image_t* image)
+{
+    if (image->thumbnail_cache_status == STATUS_AVAILABLE)
+        return true;
+        
+    if (image->thumbnail_cache_status == STATUS_UNDEFINED)
+    {
+        string_const_t cache_file_path = logo_thumbnail_cached_path(image);
+        if (fs_is_file(STRING_ARGS(cache_file_path)))
+        {
+            image->thumbnail_cache_status = STATUS_AVAILABLE;
+            return true;
+        }
+        
+        image->thumbnail_cache_status = STATUS_ERROR_NOT_AVAILABLE;
+    }
+
+    return false;
+}
+
 FOUNDATION_STATIC int logo_image_download(void* payload)
 {
     SHARED_READ_LOCK(_logos_mutex);
@@ -217,46 +176,53 @@ FOUNDATION_STATIC int logo_image_download(void* payload)
     if (image == nullptr)
         return STATUS_ERROR_INVALID_HANDLE;
         
-    string_const_t url = string_table_decode_const(image->url);
-    if (url.length == 0)
-    {
-        log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to decode image URL for %s"), SYMBOL_CSTR(image->symbol));
-        return (image->status = STATUS_ERROR_INVALID_REQUEST);
-    }
-
-    // Initiate the logo download
-    const char* image_url = eod_build_image_url(STRING_ARGS(url));
-    log_infof(HASH_LOGO, STRING_CONST("Downloading logo %s"), image_url);
+    stream_t* download_stream = nullptr;
+    string_const_t cache_file_path = logo_thumbnail_cached_path(image);
+    const bool load_from_cache = fs_is_file(STRING_ARGS(cache_file_path));
+    if (load_from_cache)
+        download_stream = fs_open_file(STRING_ARGS(cache_file_path), STREAM_IN);
     
-    stream_t* download_stream = query_execute_download_file(image_url);
     if (download_stream == nullptr)
     {
-        log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to download logo %s"), image_url);
-        return (image->status = STATUS_ERROR_INVALID_STREAM);
-    }
-
-    const size_t download_size = stream_size(download_stream);
-    log_infof(HASH_LOGO, STRING_CONST("Downloaded logo %s (%" PRIsize ")"), image_url, download_size);
+        const stock_t* s = image->stock_handle;
+        string_const_t url = string_table_decode_const(s->logo);
+        if (url.length == 0)
+        {
+            log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to decode image URL for %s"), SYMBOL_CSTR(image->symbol));
+            return (image->status = STATUS_ERROR_INVALID_REQUEST);
+        }
         
-    stbi_io_callbacks callbacks;
-    callbacks.read = logo_image_stream_read;
-    callbacks.skip = logo_image_stream_skip;
-    callbacks.eof = logo_image_stream_eof;
+        const char* image_url = eod_build_image_url(STRING_ARGS(url));
+        
+        // Initiate the logo download
+        log_infof(HASH_LOGO, STRING_CONST("Downloading logo %s"), image_url);
+        download_stream = query_execute_download_file(image_url);
+
+        if (download_stream == nullptr)
+        {
+            log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to download logo %s"), image_url);
+            return (image->status = STATUS_ERROR_INVALID_STREAM);
+        }
+
+        const size_t download_size = stream_size(download_stream);
+        log_debugf(HASH_LOGO, STRING_CONST("Downloaded logo %s (%" PRIsize ")"), image_url, download_size);
+    }
 
     // Rewind stream
     stream_seek(download_stream, 0, STREAM_SEEK_BEGIN);
 
-    log_infof(HASH_LOGO, STRING_CONST("Decoding logo %s"), image_url);
+    log_debugf(HASH_LOGO, STRING_CONST("Decoding logo %s"), string_table_decode(image->symbol));
+    stbi_io_callbacks callbacks;
+    callbacks.read = logo_image_stream_read;
+    callbacks.skip = logo_image_stream_skip;
+    callbacks.eof = logo_image_stream_eof;
     image->data = stbi_load_from_callbacks(&callbacks, download_stream, &image->width, &image->height, &image->channels, 0);
-    stream_deallocate(download_stream);
 
     if (image->data == nullptr)
     {
-        log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to decode logo %s"), image_url);
+        log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to decode logo %s"), string_table_decode(image->symbol));
         return image->data ? (image->status = STATUS_OK) : (image->status = STATUS_ERROR_LOAD_FAILURE);
     }
-        
-    log_infof(HASH_LOGO, STRING_CONST("Decoded logo %s (%dx%dx%d)"), image_url, image->width, image->height, image->channels);
 
     // Load image as a texture
     FOUNDATION_ASSERT(!bgfx::isValid(image->texture));
@@ -264,8 +230,26 @@ FOUNDATION_STATIC int logo_image_download(void* payload)
     image->texture = bgfx::createTexture2D(
         image->width, image->height, false, 1, texture_format, 0,
         bgfx::makeRef(image->data, image->width * image->height * image->channels));
+
+    image->status = STATUS_OK;
+    log_debugf(HASH_LOGO, STRING_CONST("Loaded logo %s (%dx%dx%d)"), string_table_decode(image->symbol), image->width, image->height, image->channels);
     
-    return (image->status = STATUS_OK);
+    // Save logo to cache
+    if (!load_from_cache)
+    {
+        stream_t* cache_file_stream = fs_open_file(STRING_ARGS(cache_file_path), STREAM_CREATE | STREAM_OUT | STREAM_BINARY | STREAM_TRUNCATE);
+        if (cache_file_stream != nullptr)
+        {
+            log_debugf(HASH_LOGO, STRING_CONST("Caching logo to %.*s"), STRING_FORMAT(cache_file_path));
+            stream_seek(download_stream, 0, STREAM_SEEK_BEGIN);
+            stream_copy(download_stream, cache_file_stream);
+            stream_deallocate(cache_file_stream);
+        }
+    }
+
+    stream_deallocate(download_stream);
+    
+    return image->status;
 }
 
 FOUNDATION_STATIC bool logo_resolve_image(logo_handle_t handle)
@@ -276,11 +260,6 @@ FOUNDATION_STATIC bool logo_resolve_image(logo_handle_t handle)
     logo_image_t* image = handle;
 
     if (image->status <= STATUS_ERROR)
-        return false;
-    
-    // Resolve the stock handle
-    const stock_t* s = image->stock_handle;
-    if (s == nullptr)
         return false;
 
     // Cleanup any finished download job
@@ -293,16 +272,23 @@ FOUNDATION_STATIC bool logo_resolve_image(logo_handle_t handle)
 
     if (image->status == STATUS_RESOLVING)
         return false;
+        
+    if (!logo_thumbnail_is_cached(image))
+    {
+        // Resolve the stock handle
+        const stock_t* s = image->stock_handle;
+        if (s == nullptr)
+            return false;
+            
+        if (!s->has_resolve(FetchLevel::FUNDAMENTALS))
+            return false;
 
-    if (!s->has_resolve(FetchLevel::FUNDAMENTALS))
-        return false;
-
-    // Check if we have an URL to download the image data.
-    if (s->logo == STRING_TABLE_NULL_SYMBOL)
-        return (image->status = STATUS_ERROR_INVALID_REQUEST) >= 0;
+        // Check if we have an URL to download the image data.
+        if (s->logo == STRING_TABLE_NULL_SYMBOL)
+            return (image->status = STATUS_ERROR_INVALID_REQUEST) >= 0;
+    }
        
     // Initiate the logo download
-    image->url = s->logo;
     if (image->download_job == nullptr)
     {
         image->status = STATUS_RESOLVING;
@@ -348,11 +334,13 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*
     ImGui::Image((ImTextureID)texture.idx, size);
     if (ImGui::IsItemHovered())
     {
+        ImGui::PushStyleTight();
         ImGui::PushStyleColor(ImGuiCol_PopupBg, 0xFFFFFFFF);
         ImGui::BeginTooltip();
         ImGui::Image((ImTextureID)texture.idx, ImVec2(width, height));
         ImGui::EndTooltip();
         ImGui::PopStyleColor();
+        ImGui::PopStyleTight();
     }
 
     return true;
@@ -364,7 +352,8 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*
 
 FOUNDATION_STATIC void logo_initialize()
 {
-    
+    string_const_t query_cache_path = session_get_user_file_path(STRING_CONST("thumbnails"));
+    fs_make_directory(STRING_ARGS(query_cache_path));
 }
 
 FOUNDATION_STATIC void logo_shutdown()

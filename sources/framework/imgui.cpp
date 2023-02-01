@@ -51,6 +51,22 @@ namespace ImGui
     {
         ImGui::PopStyleVar(2);
     }
+
+    void PushStyleTight()
+    {
+        ImGuiStyle& style = ImGui::GetStyle();
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
+    }
+
+    void PopStyleTight()
+    {
+        ImGui::PopStyleVar(6);
+    }
 }
 
 bool shortcut_executed(bool ctrl, bool alt, bool shift, bool super, int key)
