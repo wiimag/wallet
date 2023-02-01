@@ -10,6 +10,7 @@
 #include "title.h"
 #include "symbols.h"
 #include "eod.h"
+#include "logo.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -451,6 +452,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
 
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
+        ImGui::PushStyleCompact();
         ImGui::BeginGroup();
         const char* formatted_code = title->code;
 
@@ -459,23 +461,30 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         else if (title_has_decreased(title, nullptr, 30.0 * 60.0))
             formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_DOWN);
 
-        float width = ImGui::GetContentRegionAvail().x;
-        float code_width = ImGui::CalcTextSize(formatted_code).x;
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const ImVec2& space = table_current_cell_rect().GetSize();
+        const float cell_width = space.x;
+        const ImVec2& text_size = ImGui::CalcTextSize(formatted_code);
+        const float button_width = text_size.y;
+        const float code_width = text_size.x + (style.ItemSpacing.x * 2.0f);
 
+        ImGui::Logo(title->code, title->code_length, ImVec2(button_width, button_width));
         ImGui::TextUnformatted(formatted_code);
 
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             pattern_open(title->code, title->code_length);
 
-        if ((code_width + 40.0f) < width && (title->buy_total_quantity > 0 || title->sell_total_quantity > 0))
+        const float space_left = ImGui::GetContentRegionAvail().x - code_width - (style.FramePadding.x*2.0f) - button_width;
+        if (button_width < space_left && (title->buy_total_quantity > 0 || title->sell_total_quantity > 0))
         {
-            ImGui::MoveCursor(width - code_width - imgui_get_font_ui_scale(48.0f), 0, true);
+            ImGui::MoveCursor(space_left - button_width, 0, true);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
             if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
                 title->show_details_ui = true;
             ImGui::PopStyleColor(1);
         }
         ImGui::EndGroup();
+        ImGui::PopStyleCompact();
     }
 
     return title->code;
@@ -1607,7 +1616,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
     table_add_column(table, STRING_CONST(ICON_MD_INVENTORY " Type    "), 
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_TYPE), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
     table_add_column(table, STRING_CONST(ICON_MD_STORE " Sector"), 
-        E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_TEXT_WRAPPING | COLUMN_SEARCHABLE)
+        E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SEARCHABLE)
         .width = 200.0f;
 
     table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"), 

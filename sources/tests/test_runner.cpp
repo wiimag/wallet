@@ -1,6 +1,6 @@
 /*
  * Copyright 2023 Wiimag Inc. All rights reserved.
- * License: https://wiimag.com/LICENSE
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #include <framework/common.h>
@@ -339,6 +339,6 @@ FOUNDATION_STATIC void test_runner_shutdown()
 }
 
 REGISTER_REPORTER("test_runner", 2, TestRunnerReporter);
-DEFINE_SERVICE(TEST_RUNNER, test_runner_initialize, test_runner_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_SERVICE(TEST_RUNNER, test_runner_initialize, test_runner_shutdown, SERVICE_PRIORITY_TESTS);
 
 #endif

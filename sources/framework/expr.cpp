@@ -1,6 +1,8 @@
 /*
  * Copyright 2022 Wiimag Inc. All rights reserved.
- * License: https://wiimag.com/LICENSE
+ * License: https://equals-forty-two.com/LICENSE
+ * 
+ * This module uses code from https://github.com/zserge/expr
  */
 
 #include "expr.h"

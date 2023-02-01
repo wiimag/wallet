@@ -1,6 +1,6 @@
 /*
  * Copyright 2023 Wiimag Inc. All rights reserved.
- * License: https://wiimag.com/LICENSE
+ * License: https://equals-forty-two.com/LICENSE
  * 
  * Example how to run tests: 
  *      > ./build/<app>.exe --run-tests & cat artifacts/tests.log

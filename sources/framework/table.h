@@ -1,6 +1,6 @@
 /*
  * Copyright 2022 Wiimag Inc. All rights reserved.
- * License: https://wiimag.com/LICENSE
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #pragma once
@@ -25,7 +25,7 @@ typedef enum : unsigned int {
     COLUMN_STRETCH = 1 << 7,
     COLUMN_DYNAMIC_VALUE = 1 << 8,
     COLUMN_ROUND_NUMBER = 1 << 9,
-    COLUMN_TEXT_WRAPPING = 1 << 10,
+    //COLUMN_TEXT_WRAPPING = 1 << 10,
     COLUMN_HIDE_HEADER_TEXT = 1 << 11,
     COLUMN_CUSTOM_DRAWING = 1 << 12,
     COLUMN_NOCLIP_CONTENT = 1 << 13,
@@ -215,6 +215,11 @@ struct column_t
         this->width = _width;
         return *this;
     }
+
+    ImRect get_rect() const
+    {
+        return ImGui::TableGetCellBgRect(ImGui::GetCurrentTable(), ImGui::TableGetColumnIndex());
+    }
 };
 
 struct row_t
@@ -304,3 +309,7 @@ void table_cell_right_aligned_label(const char* label, size_t label_length, cons
 void table_cell_middle_aligned_column_label(const char* label, void* payload);
 
 void table_cell_middle_aligned_label(const char* label, size_t label_length);
+
+const ImRect& table_current_cell_rect();
+
+float table_default_row_height();

@@ -1,6 +1,6 @@
 /*
  * Copyright 2022-2023 Wiimag Inc. All rights reserved.
- * License: https://wiimag.com/LICENSE
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #include "app.h"
@@ -70,15 +70,18 @@ FOUNDATION_STATIC void app_main_menu_begin(GLFWwindow* window)
 }
 
 FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
-{
+{    
     service_foreach_menu();
 
     if (ImGui::BeginMenuBar())
     {
+        if (ImGui::BeginMenu("Windows"))
+            ImGui::EndMenu();
+            
         if (ImGui::BeginMenu("Help"))
         {
             #if BUILD_DEVELOPMENT
-            if (ImGui::BeginMenu("BUILD"))
+            if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::BeginMenu("BUILD"))
             {
                 #if BUILD_DEBUG
                 ImGui::MenuItem("BUILD_DEBUG");

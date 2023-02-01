@@ -1,6 +1,6 @@
 /*
  * Copyright 2022 Wiimag Inc. All rights reserved.
- * License: https://wiimag.com/LICENSE
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #include "table.h"
@@ -20,6 +20,8 @@
 #include <algorithm>
 
 #define ENABLE_ROW_HEIGHT_MIDDLE 1
+
+static thread_local ImRect _table_last_cell_rect;
 
 FOUNDATION_FORCEINLINE bool format_is_numeric(column_format_t format)
 {
@@ -149,7 +151,12 @@ FOUNDATION_STATIC void cell_label_wrapped(row_t& row, string_const_t label)
 FOUNDATION_STATIC void cell_label(string_const_t label)
 {
     if (label.str && label.length > 0)
+    {
+        const float space = ImGui::GetContentRegionAvail().x;
         ImGui::TextUnformatted(label.str, label.str + label.length);
+        if (ImGui::IsItemHovered() && ImGui::GetItemRectSize().x >space)
+            ImGui::SetTooltip(" %.*s ", STRING_FORMAT(label));
+    }
 }
 
 void table_cell_middle_aligned_label(const char* label, size_t label_length)
@@ -176,13 +183,15 @@ void table_cell_right_aligned_label(const char* label, size_t label_length, cons
         text_display_end++;
 
     auto sx = ImGui::GetCursorPosX();
-    auto cx = (sx + ImGui::GetColumnWidth() - ImGui::CalcTextSize(label, text_display_end).x
-        - ImGui::GetStyle().CellPadding.x / 2.0f) + offset;
+    auto tx = ImGui::CalcTextSize(label, text_display_end).x;
+    auto cx = (sx + ImGui::GetColumnWidth() - tx - ImGui::GetStyle().CellPadding.x / 2.0f) + offset;
     ImGui::SetCursorPosX(cx);
     if (url && url_length > 0)
         ImGui::TextURL(label, text_display_end, url, url_length);
     else
         ImGui::TextUnformatted(label, text_display_end);
+    if (ImGui::IsItemHovered() && tx > ImGui::GetColumnWidth() * 1.05f)
+        ImGui::SetTooltip(" %.*s ", (int)label_length, label);
 }
 
 void table_cell_right_aligned_column_label(const char* label, void* payload)
@@ -460,6 +469,9 @@ FOUNDATION_STATIC void table_render_sort_rows(table_t* table)
         if (!table->needs_sorting && time_elapsed(table->last_sort_time) < 0.5)
             return;
 
+        foreach(r, table->rows)
+            r->height = table_default_row_height();
+
         const ImGuiTableColumnSortSpecs* column_sort_specs = table_specs->Specs;
         column_t* sorted_column = table_column_at(table, column_sort_specs->ColumnIndex);
         if (sorted_column != nullptr)
@@ -563,6 +575,8 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
     }
 
     ImGui::TableNextRow();
+    ImGui::TableNextRow();
+    ImGui::TableNextRow();
     ImGui::TableNextColumn();
     ImGui::TextUnformatted("Summary");
     for (size_t i = 1; i < ARRAY_COUNT(summary_cells); i++)
@@ -612,205 +626,212 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
     ImGui::PopStyleColor(2);
 }
 
+FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_index, int column_count)
+{
+    const auto font_height = table_default_row_height();
+    //const auto font_height = ImGui::GetFontSize() - imgui_get_font_ui_scale(4.0f);
+    
+    row_t& row = table->rows[element_index];
+    table_element_ptr_t element = row.element;
+
+    row.hovered = false;
+    row.background_color = 0;
+
+    ImGui::TableNextRow();
+
+    const auto sx = ImGui::TableGetRowRect();
+    row.rect = ImRect(sx.x, sx.y, sx.z, sx.y + row.height);
+    if (ImGui::IsWindowHovered(ImGuiHoveredFlags_None) && row.rect.Contains(ImGui::GetMousePos()))
+        row.hovered = true;
+
+    if (table->row_begin)
+        table->row_begin(table, &row, element);
+
+    const float row_cursor_y = ImGui::GetCursorPosY();
+
+#if ENABLE_ROW_HEIGHT_MIDDLE
+    float middle_row_cursor_position = row_cursor_y;
+    if (row.height > 0 && font_height < row.height)
+        middle_row_cursor_position += (row.height - font_height) / 2.0f;
+#endif
+
+    float max_cell_height = 0;
+    ImGuiTable* ct = ImGui::GetCurrentTable();
+    const size_t max_column_count = sizeof(table->columns) / sizeof(table->columns[0]);
+    for (int i = 0, column_index = 0; i < max_column_count; ++i)
+    {
+        column_t& column = table->columns[i];
+        if (column_index == column_count)
+            break;
+        else if (!column.used)
+            continue;
+
+        column_index++;
+        if (!ImGui::TableNextColumn())
+            continue;
+
+        //has_wrapping_text |= (column.flags & COLUMN_TEXT_WRAPPING) != 0;
+
+        if ((column.flags & COLUMN_DYNAMIC_VALUE) && !row.fetched && table->update)
+            row.fetched = table->update(element);
+
+        char cell_id_buf[64];
+        string_t cell_id = string_format(STRING_CONST_CAPACITY(cell_id_buf), STRING_CONST("cell_%d_%d"), element_index, column_index);
+        ImGui::PushID(cell_id.str, cell_id.str + cell_id.length);
+
+        cell_t cell = column.fetch_value ? column.fetch_value(element, &column) : cell_t{};
+        string_const_t str_value = cell_value_to_string(cell, column);
+
+        column_flags_t alignment_flags = column.flags & COLUMN_ALIGNMENT_MASK;
+        if (alignment_flags == 0 && format_is_numeric(column.format))
+            alignment_flags |= COLUMN_RIGHT_ALIGN;
+
+        const ImRect cell_rect = ImGui::TableGetCellBgRect(ct, i);
+        cell.style.rect = {
+            cell_rect.Min.x,
+            cell_rect.Min.y,
+            cell_rect.GetWidth(),
+            max(row.height, cell_rect.GetHeight())
+        };
+
+        if (column.style_formatter)
+            column.style_formatter(element, &column, &cell, cell.style);
+
+        const ImVec2 cell_min = ImVec2(cell.style.rect.x, cell.style.rect.y);
+        const ImVec2 cell_max = ImVec2(
+            cell.style.rect.x + cell.style.rect.width,
+            cell.style.rect.y + cell.style.rect.height);
+        _table_last_cell_rect.Min = cell_min;
+        _table_last_cell_rect.Max = cell_max;
+        //if (i >= table->column_freeze) // Because of clipping reasons it seems we can't set the cell background color here
+        {
+            if ((table->flags & TABLE_HIGHLIGHT_HOVERED_ROW) && row.hovered)
+            {
+                ImDrawList* dl = ImGui::GetWindowDrawList();
+                dl->AddRectFilled(cell_min, cell_max, BACKGROUND_HIGHLIGHT_COLOR, 0, 0);
+            }
+            else if (row.background_color != 0)
+            {
+                ImDrawList* dl = ImGui::GetWindowDrawList();
+                dl->AddRectFilled(cell_min, cell_max, row.background_color, 0, 0);
+            }
+        }
+
+        if (cell.style.types & COLUMN_COLOR_BACKGROUND)
+        {
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            dl->AddRectFilled(cell_min, cell_max, cell.style.background_color, 0, 0);
+        }
+
+        if (cell.style.types & COLUMN_COLOR_TEXT)
+            ImGui::PushStyleColor(ImGuiCol_Text, cell.style.text_color);
+
+        if (column.flags & COLUMN_CUSTOM_DRAWING && column.fetch_value)
+        {
+            column.flags |= COLUMN_RENDER_ELEMENT;
+            cell = column.fetch_value(element, &column);
+            column.flags &= ~COLUMN_RENDER_ELEMENT;
+        }
+        else if (string_is_null(str_value))
+        {
+            ImGui::Dummy(ImVec2(0, 0));
+        }
+        else
+        {
+#if ENABLE_ROW_HEIGHT_MIDDLE
+            ImGui::SetCursorPosY(middle_row_cursor_position);
+#endif
+
+            if (alignment_flags & COLUMN_RIGHT_ALIGN)
+                table_cell_right_aligned_label(STRING_ARGS(str_value));
+            else if (alignment_flags & COLUMN_CENTER_ALIGN)
+                table_cell_middle_aligned_label(STRING_ARGS(str_value));
+            else
+                cell_label(str_value);
+        }
+
+        if (cell.style.types & COLUMN_COLOR_TEXT)
+            ImGui::PopStyleColor();
+
+        // Handle tooltip
+        if (ImGui::IsItemHovered())
+        {
+            if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+            {
+                if (column.selected)
+                    column.selected(element, &column, &cell);
+                else if (table->selected)
+                    table->selected(element, &column, &cell);
+            }
+            else if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle))
+            {
+                // Copy value to clipboard
+                ImGui::SetClipboardText(str_value.str);
+            }
+
+            hash_t cell_hash = string_hash(STRING_ARGS(cell_id));
+            if (column.hovered_cell != cell_hash)
+            {
+                column.hovered_cell = cell_hash;
+                column.hovered_time = time_current();
+            }
+            else if (column.tooltip && time_elapsed(column.hovered_time) > 1.0)
+            {
+                ImGui::BeginTooltip();
+                column.tooltip(element, &column, &cell);
+                ImGui::EndTooltip();
+            }
+        }
+
+        // Handle contextual menu
+        if (column.context_menu && ImGui::BeginPopupContextItem(cell_id.str))
+        {
+            column.context_menu(element, &column, &cell);
+            ImGui::Dummy(ImVec2(0, 0));
+            ImGui::EndPopup();
+        }
+        else if (table->context_menu && ImGui::BeginPopupContextItem(cell_id.str))
+        {
+            table->context_menu(element, &column, &cell);
+            ImGui::Dummy(ImVec2(0, 0));
+            ImGui::EndPopup();
+        }
+
+        ImGui::PopID();
+
+        if (*(uintptr_t**)element == nullptr)
+            break;
+
+        #if ENABLE_ROW_HEIGHT_MIDDLE
+        const float row_cursor_height = (ImGui::GetCursorPosY() - row_cursor_y) - 4.0f;
+        max_cell_height = max(max(row_cursor_height, cell_max.y - cell_min.y), max_cell_height);
+        #endif
+    }
+
+    #if ENABLE_ROW_HEIGHT_MIDDLE
+    row.height = max_cell_height;
+    #endif
+
+    if (table->row_end)
+        table->row_end(table, &row, element);
+}
+
 FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
 {
-    const auto font_height = ImGui::GetFontSize() - imgui_get_font_ui_scale(4.0f);
-    const ImGuiStyle& ims = ImGui::GetStyle();
-
     TIME_TRACKER(0.005, "Render table %.*s", STRING_FORMAT(table->name));
 
     ImGuiListClipper clipper;
-    bool has_wrapping_text = false;
     clipper.Begin(table->rows_visible_count);
     while (clipper.Step())
     {
         if (clipper.DisplayStart >= clipper.DisplayEnd)
             continue;
 
-        for (int element_index = clipper.DisplayStart; element_index < min(clipper.DisplayEnd, table->rows_visible_count); ++element_index)
+        for (int element_index = clipper.DisplayStart; 
+             element_index < min(clipper.DisplayEnd, table->rows_visible_count); 
+             ++element_index)
         {
-            row_t& row = table->rows[element_index];
-            table_element_ptr_t element = row.element;
-
-            row.hovered = false;
-            row.background_color = 0;
-
-            ImGui::TableNextRow();
-
-            const auto sx = ImGui::TableGetRowRect();
-            row.rect = ImRect(sx.x, sx.y, sx.z, sx.y + row.height);
-            if (ImGui::IsWindowHovered(ImGuiHoveredFlags_None) && row.rect.Contains(ImGui::GetMousePos()))
-                row.hovered = true;
-
-            if (table->row_begin)
-                table->row_begin(table, &row, element);
-
-            #if ENABLE_ROW_HEIGHT_MIDDLE
-            float middle_row_cursor_position = ImGui::GetCursorPosY();
-            if (row.height > 0 && font_height < row.height)
-                middle_row_cursor_position += (row.height - font_height) / 2.0f;
-            #endif
-
-            float max_cell_height = 0;
-            ImGuiTable* ct = ImGui::GetCurrentTable();
-            const size_t max_column_count = sizeof(table->columns) / sizeof(table->columns[0]);
-            for (int i = 0, column_index = 0; i < max_column_count; ++i)
-            {
-                column_t& column = table->columns[i];
-                if (column_index == column_count)
-                    break;
-                else if (!column.used)
-                    continue;
-
-                column_index++;
-                if (!ImGui::TableNextColumn())
-                    continue;
-
-                has_wrapping_text |= (column.flags & COLUMN_TEXT_WRAPPING) != 0;
-
-                if ((column.flags & COLUMN_DYNAMIC_VALUE) && !row.fetched && table->update)
-                    row.fetched = table->update(element);
-
-                char cell_id_buf[64];
-                string_t cell_id = string_format(STRING_CONST_CAPACITY(cell_id_buf), STRING_CONST("cell_%d_%d"), element_index, column_index);
-                ImGui::PushID(cell_id.str, cell_id.str + cell_id.length);
-
-                cell_t cell = column.fetch_value ? column.fetch_value(element, &column) : cell_t{};
-                string_const_t str_value = cell_value_to_string(cell, column);
-
-                column_flags_t alignment_flags = column.flags & COLUMN_ALIGNMENT_MASK;
-                if (alignment_flags == 0 && format_is_numeric(column.format))
-                    alignment_flags |= COLUMN_RIGHT_ALIGN;
-
-                const ImRect cell_rect = ImGui::TableGetCellBgRect(ct, i);
-                cell.style.rect = { 
-                    cell_rect.Min.x,
-                    cell_rect.Min.y,
-                    cell_rect.GetWidth(),
-                    max(row.height, cell_rect.GetHeight())
-                };
-
-                if (column.style_formatter)
-                    column.style_formatter(element, &column, &cell, cell.style);
-
-                const ImVec2 cell_min = ImVec2(cell.style.rect.x, cell.style.rect.y);
-                const ImVec2 cell_max = ImVec2(
-                    cell.style.rect.x + cell.style.rect.width, 
-                    cell.style.rect.y + cell.style.rect.height);
-                //if (i >= table->column_freeze) // Because of clipping reasons it seems we can't set the cell background color here
-                {
-                    if ((table->flags & TABLE_HIGHLIGHT_HOVERED_ROW) && row.hovered)
-                    {
-                        ImDrawList* dl = ImGui::GetWindowDrawList();
-                        dl->AddRectFilled(cell_min, cell_max, BACKGROUND_HIGHLIGHT_COLOR, 0, 0);
-                    }
-                    else if (row.background_color != 0)
-                    {
-                        ImDrawList* dl = ImGui::GetWindowDrawList();
-                        dl->AddRectFilled(cell_min, cell_max, row.background_color, 0, 0);
-                    }
-                }
-                
-                if (cell.style.types & COLUMN_COLOR_BACKGROUND)
-                {
-                    ImDrawList* dl = ImGui::GetWindowDrawList();
-                    dl->AddRectFilled(cell_min, cell_max, cell.style.background_color, 0, 0);
-                }
-                
-                if (cell.style.types & COLUMN_COLOR_TEXT)
-                    ImGui::PushStyleColor(ImGuiCol_Text, cell.style.text_color);
-
-                if (column.flags & COLUMN_CUSTOM_DRAWING && column.fetch_value)
-                {
-                    column.flags |= COLUMN_RENDER_ELEMENT;
-                    cell = column.fetch_value(element, &column);
-                    column.flags &= ~COLUMN_RENDER_ELEMENT;
-                }
-                else if (string_is_null(str_value))
-                {
-                    ImGui::Dummy(ImVec2(0,0));
-                }
-                else if (column.flags & COLUMN_TEXT_WRAPPING)
-                {
-                    cell_label_wrapped(row, str_value);
-                }
-                else
-                {
-                    #if ENABLE_ROW_HEIGHT_MIDDLE
-                    ImGui::SetCursorPosY(middle_row_cursor_position);
-                    #endif
-
-                    if (alignment_flags & COLUMN_RIGHT_ALIGN)
-                        table_cell_right_aligned_label(STRING_ARGS(str_value));
-                    else if (alignment_flags & COLUMN_CENTER_ALIGN)
-                        table_cell_middle_aligned_label(STRING_ARGS(str_value));
-                    else
-                        cell_label(str_value);
-                }
-
-                if (cell.style.types & COLUMN_COLOR_TEXT)
-                    ImGui::PopStyleColor();
-
-                // Handle tooltip
-                if (ImGui::IsItemHovered())
-                {
-                    if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-                    {
-                        if (column.selected)
-                            column.selected(element, &column, &cell);
-                        else if (table->selected)
-                            table->selected(element, &column, &cell);
-                    }
-                    else if(ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle))
-                    {
-                        // Copy value to clipboard
-                        ImGui::SetClipboardText(str_value.str);
-                    }
-
-                    hash_t cell_hash = string_hash(STRING_ARGS(cell_id));
-                    if (column.hovered_cell != cell_hash)
-                    {
-                        column.hovered_cell = cell_hash;
-                        column.hovered_time = time_current();
-                    }						
-                    else if (column.tooltip && time_elapsed(column.hovered_time) > 1.0)
-                    {
-                        ImGui::BeginTooltip();
-                        column.tooltip(element, &column, &cell);
-                        ImGui::EndTooltip();
-                    }						
-                }
-
-                // Handle contextual menu
-                if (column.context_menu && ImGui::BeginPopupContextItem(cell_id.str))
-                {
-                    column.context_menu(element, &column, &cell);
-                    ImGui::Dummy(ImVec2(0, 0));
-                    ImGui::EndPopup();
-                }
-                else if (table->context_menu && ImGui::BeginPopupContextItem(cell_id.str))
-                {
-                    table->context_menu(element, &column, &cell);
-                    ImGui::Dummy(ImVec2(0, 0));
-                    ImGui::EndPopup();
-                }
-
-                ImGui::PopID();
-
-                if (*(uintptr_t**)element == nullptr)
-                    break;
-
-                #if ENABLE_ROW_HEIGHT_MIDDLE
-                max_cell_height = max(cell_max.y - cell_min.y, max_cell_height);
-                #endif
-            }
-
-            #if ENABLE_ROW_HEIGHT_MIDDLE
-            row.height = max_cell_height;
-            #endif
-
-            if (table->row_end)
-                table->row_end(table, &row, element);
+            table_render_row_element(table, element_index, column_count);
         }
     }
 
@@ -842,13 +863,7 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
             ImGui::PopID();
         }
     }
-    else if (has_wrapping_text)
-    {
-        ImGui::TableNextRow();
-        ImGui::TableNextRow();
-        ImGui::TableNextRow();
-    }
-
+    
     ImGui::EndTable();
 }
 
@@ -911,4 +926,15 @@ column_t& table_add_column(table_t* table,
     }
 
     return table->columns[column_count - 1];
+}
+
+const ImRect& table_current_cell_rect()
+{
+    return _table_last_cell_rect;
+}
+
+float table_default_row_height()
+{
+    static const auto font_height = imgui_get_font_ui_scale(30.0f);
+    return font_height;
 }

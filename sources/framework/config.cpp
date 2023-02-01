@@ -1,6 +1,6 @@
 ﻿/*
  * Copyright 2022 Wiimag Inc. All rights reserved.
- * License: https://wiimag.com/LICENSE
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #include "config.h"

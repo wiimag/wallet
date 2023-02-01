@@ -118,7 +118,7 @@ bool dispatcher_unregister_event_listener(
 ```cpp
 /*
  * Copyright 2022 Wiimag Inc. All rights reserved.
- * License: https://wiimag.com/LICENSE
+ * License: https://equals-forty-two.com/LICENSE
  * 
  * DESCRIPTION OF THE MODULE, i.e. Render pad to test rendering code.
  */
