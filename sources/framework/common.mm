@@ -1,6 +1,6 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
- * License: https://infineis.net/LICENSE
+ * Copyright 2022 Wiimag Inc. All rights reserved.
+ * License: https://wiimag.com/LICENSE
  */
 
 #include "common.h"

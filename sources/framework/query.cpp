@@ -1,6 +1,6 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022 Wiimag Inc. All rights reserved.
+ * License: https://wiimag.com/LICENSE
  */
 
 #include "query.h"
@@ -121,7 +121,8 @@ FOUNDATION_STATIC CURL* query_create_curl_request()
         {
             static thread_local char user_agent_header[256];
             const application_t* app = environment_application();
-            string_format(STRING_CONST_CAPACITY(user_agent_header), STRING_CONST("user-agent: Infineis/%hu.%hu"), app->version.sub.major, app->version.sub.minor);
+            string_format(STRING_CONST_CAPACITY(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"), 
+                STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
             _req_json_header_chunk = curl_slist_append(_req_json_header_chunk, user_agent_header);
             _req_json_header_chunk = curl_slist_append(_req_json_header_chunk, "Content-Type: application/json");
         }
@@ -369,7 +370,8 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
 
     char user_agent_header[256];
     const application_t* app = environment_application();
-    string_format(STRING_CONST_CAPACITY(user_agent_header), STRING_CONST("user-agent: Infineis/%hu.%hu"), app->version.sub.major, app->version.sub.minor);
+    string_format(STRING_CONST_CAPACITY(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
+        STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
     curl_slist* headerlist = curl_slist_append(NULL, user_agent_header);
     headerlist = curl_slist_append(headerlist, "Expect:");
 
