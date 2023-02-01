@@ -77,6 +77,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\external\mnyfmt.c" />
+    <ClCompile Include="..\..\external\stb\stb.c" />
     <ClCompile Include="..\..\sources\app.cpp" />
     <ClCompile Include="..\..\sources\bulk.cpp" />
     <ClCompile Include="..\..\sources\eod.cpp" />

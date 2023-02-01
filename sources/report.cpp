@@ -467,17 +467,22 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         const ImVec2& text_size = ImGui::CalcTextSize(formatted_code);
         const float button_width = text_size.y;
         const float code_width = text_size.x + (style.ItemSpacing.x * 2.0f);
-
-        ImGui::Logo(title->code, title->code_length, ImVec2(button_width, button_width));
+        const bool has_orders = (title->buy_total_quantity > 0 || title->sell_total_quantity > 0);
+        
+        const float logo_size = button_width;
         ImGui::TextUnformatted(formatted_code);
-
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             pattern_open(title->code, title->code_length);
+            
+        float space_left = ImGui::GetContentRegionAvail().x - code_width;
+        ImGui::MoveCursor(space_left - button_width - logo_size + 10.0f, 0, true);
+        if (!ImGui::Logo(title->code, title->code_length, ImVec2(logo_size, logo_size)))
+            ImGui::Dummy(ImVec2(logo_size, logo_size));
 
-        const float space_left = ImGui::GetContentRegionAvail().x - code_width - (style.FramePadding.x*2.0f) - button_width;
-        if (button_width < space_left && (title->buy_total_quantity > 0 || title->sell_total_quantity > 0))
+        space_left = ImGui::GetContentRegionAvail().x - code_width - (style.FramePadding.x*2.0f) - logo_size;
+        if (button_width < space_left && has_orders)
         {
-            ImGui::MoveCursor(space_left - button_width, 0, true);
+            ImGui::MoveCursor(-14.0f, 1.0f, true);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
             if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
                 title->show_details_ui = true;

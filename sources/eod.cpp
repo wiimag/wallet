@@ -139,6 +139,16 @@ string_const_t eod_build_url(const char* api, const char* ticker, query_format_t
     return string_const(STRING_ARGS(eod_url));
 }
 
+const char* eod_build_image_url(const char* image_url, size_t image_url_length)
+{
+    static thread_local char IMAGE_URL_BUFFER[2048];
+
+    string_const_t HOST_API = string_const(STRING_CONST("https://eodhistoricaldata.com"));
+    string_t url = string_copy(STRING_CONST_CAPACITY(IMAGE_URL_BUFFER), STRING_ARGS(HOST_API));
+    
+    return string_append(STRING_ARGS(url), STRING_CONST_LENGTH(IMAGE_URL_BUFFER), image_url, image_url_length).str;
+}
+
 const char* eod_build_url(const char* api, query_format_t format, const char* uri_format, ...)
 {    
     static thread_local char URL_BUFFER[2048];

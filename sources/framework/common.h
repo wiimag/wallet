@@ -556,7 +556,7 @@ template<typename T> using alias = T;
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr int to_int(size_t v)
 {
-    FOUNDATION_ASSERT(v <= INT_MAX);
+    FOUNDATION_ASSERT_MSGFORMAT(v <= INT_MAX, "%" PRIsize " > %d", v, INT_MAX);
     return (int)v;
 }
 

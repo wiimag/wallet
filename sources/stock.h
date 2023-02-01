@@ -83,6 +83,7 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     string_table_symbol_t type{};
     string_table_symbol_t currency{};
     string_table_symbol_t url{};
+    string_table_symbol_t logo{};
     string_table_symbol_t updated_at{};
     string_table_symbol_t exchange{};
     double shares_count{ DNAN };
@@ -202,8 +203,12 @@ status_t stock_initialize(const char* code, size_t code_length, stock_handle_t* 
 status_t stock_resolve(stock_handle_t& stock_handle, fetch_level_t fetch_levels);
 
 /// <summary>
-/// 
+/// Request and resolve a stock symbol.
 /// </summary>
+/// <param name="symbol">The symbol to resolve.</param>
+/// <param name="symbol_length">The length of the symbol.</param>
+/// <param name="fetch_level">The fetch level to resolve.</param>
+/// 
 stock_handle_t stock_request(const char* symbol, size_t symbol_length, fetch_level_t fetch_level);
 
 /// <summary>
