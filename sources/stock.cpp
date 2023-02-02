@@ -232,7 +232,7 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
 FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, stock_index_t index)
 {
     tick_t timeout = time_current();
-    do
+    while (time_elapsed(timeout) < 30.0)
     {
         {
             SHARED_READ_LOCK(_db_lock);
@@ -243,7 +243,7 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
         }
         
         thread_sleep(10);
-    } while (time_elapsed(timeout) < 60.0);
+    }
     
     day_result_t* history = nullptr;
     {

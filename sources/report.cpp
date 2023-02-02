@@ -463,31 +463,65 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
 
         const ImGuiStyle& style = ImGui::GetStyle();
         const ImVec2& space = table_current_cell_rect().GetSize();
-        const float cell_width = space.x;
         const ImVec2& text_size = ImGui::CalcTextSize(formatted_code);
         const float button_width = text_size.y;
-        const float code_width = text_size.x + (style.ItemSpacing.x * 2.0f);
         const bool has_orders = (title->buy_total_quantity > 0 || title->sell_total_quantity > 0);
-        
-        const float logo_size = button_width;
-        ImGui::TextUnformatted(formatted_code);
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-            pattern_open(title->code, title->code_length);
-            
-        float space_left = ImGui::GetContentRegionAvail().x - code_width;
-        ImGui::MoveCursor(space_left - button_width - logo_size + 10.0f, 0, true);
-        if (!ImGui::Logo(title->code, title->code_length, ImVec2(logo_size, logo_size)))
-            ImGui::Dummy(ImVec2(logo_size, logo_size));
 
-        space_left = ImGui::GetContentRegionAvail().x - code_width - (style.FramePadding.x*2.0f) - logo_size;
-        if (button_width < space_left && has_orders)
+        int logo_banner_width = 0, logo_banner_height = 0, logo_banner_channels = 0;
+        ImU32 logo_banner_color = 0xFFFFFFFF;
+        if (logo_is_banner(title->code, title->code_length, 
+                logo_banner_width, logo_banner_height, logo_banner_channels, logo_banner_color))
         {
-            ImGui::MoveCursor(-14.0f, 1.0f, true);
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
-            if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
-                title->show_details_ui = true;
-            ImGui::PopStyleColor(1);
+            const float ratio = logo_banner_height / text_size.y;
+            logo_banner_height = text_size.y;
+            logo_banner_width /= ratio;
+
+            if (logo_banner_channels == 4)
+            {
+                ImDrawList* dl = ImGui::GetWindowDrawList();
+                dl->AddRectFilled(ImGui::GetCursorScreenPos(), ImGui::GetCursorScreenPos() + ImVec2(logo_banner_width, logo_banner_height), logo_banner_color);
+            }
+            if (!ImGui::Logo(title->code, title->code_length, ImVec2(logo_banner_width, logo_banner_height)))
+                ImGui::TextUnformatted(formatted_code);
+            else if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("%.*s", (int)title->code_length, title->code);
+            }
+            
+            const float space_left = ImGui::GetContentRegionAvail().x - logo_banner_width - (style.FramePadding.x * 2.0f);
+            if (button_width < space_left + 15.0f && has_orders)
+            {
+                ImGui::MoveCursor(space_left - button_width - style.FramePadding.x / 2.0f, 1.0f, true);
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
+                if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
+                    title->show_details_ui = true;
+                ImGui::PopStyleColor(1);
+            }
         }
+        else
+        {
+            const float code_width = text_size.x + (style.ItemSpacing.x * 2.0f);
+            ImGui::TextUnformatted(formatted_code);
+            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                pattern_open(title->code, title->code_length);
+
+            float logo_size = button_width;
+            float space_left = ImGui::GetContentRegionAvail().x - code_width;
+            ImGui::MoveCursor(space_left - button_width - logo_size + 10.0f, 0, true);
+            if (ImGui::GetCursorPos().x < code_width || !ImGui::Logo(title->code, title->code_length, ImVec2(logo_size, logo_size)))
+                ImGui::Dummy(ImVec2(logo_size, logo_size));
+
+            space_left = ImGui::GetContentRegionAvail().x - code_width;
+            if (button_width < space_left + 35.0f && has_orders)
+            {
+                ImGui::MoveCursor(-14.0f, 1.0f, true);
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
+                if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
+                    title->show_details_ui = true;
+                ImGui::PopStyleColor(1);
+            }
+        }
+        
         ImGui::EndGroup();
         ImGui::PopStyleCompact();
     }

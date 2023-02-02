@@ -140,10 +140,15 @@ FOUNDATION_STATIC int logo_image_stream_eof(void* user)
     return stream_eos(stream) ? 1 : 0;
 }
 
-FOUNDATION_STATIC string_const_t logo_thumbnail_cached_path(logo_image_t* image)
+FOUNDATION_STATIC string_const_t logo_symbol_base_name(logo_image_t* image)
 {
     string_const_t symbol = string_table_decode_const(image->symbol);
-    string_const_t basename = path_base_file_name(STRING_ARGS(symbol));
+    return path_base_file_name(STRING_ARGS(symbol));
+}
+
+FOUNDATION_STATIC string_const_t logo_thumbnail_cached_path(logo_image_t* image)
+{
+    string_const_t basename = logo_symbol_base_name(image);
     return session_get_user_file_path(STRING_ARGS(basename), STRING_CONST("thumbnails"), STRING_CONST("png"));
 }
 
@@ -188,21 +193,20 @@ FOUNDATION_STATIC int logo_image_download(void* payload)
         string_const_t url = string_table_decode_const(s->logo);
         if (url.length == 0)
         {
-            log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to decode image URL for %s"), SYMBOL_CSTR(image->symbol));
-            return (image->status = STATUS_ERROR_INVALID_REQUEST);
+            log_debugf(HASH_LOGO, STRING_CONST("Failed to decode image URL for %s"), SYMBOL_CSTR(image->symbol));
+
+            // Try to build guess logo URL
+            string_const_t basename = logo_symbol_base_name(image);
+            url = string_format_static(STRING_CONST("/img/logos/US/%.*s.png"), STRING_FORMAT(basename));
         }
         
-        const char* image_url = eod_build_image_url(STRING_ARGS(url));
-        
         // Initiate the logo download
+        const char* image_url = eod_build_image_url(STRING_ARGS(url));
         log_infof(HASH_LOGO, STRING_CONST("Downloading logo %s"), image_url);
         download_stream = query_execute_download_file(image_url);
 
         if (download_stream == nullptr)
-        {
-            log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to download logo %s"), image_url);
             return (image->status = STATUS_ERROR_INVALID_STREAM);
-        }
 
         const size_t download_size = stream_size(download_stream);
         log_debugf(HASH_LOGO, STRING_CONST("Downloaded logo %s (%" PRIsize ")"), image_url, download_size);
@@ -282,10 +286,6 @@ FOUNDATION_STATIC bool logo_resolve_image(logo_handle_t handle)
             
         if (!s->has_resolve(FetchLevel::FUNDAMENTALS))
             return false;
-
-        // Check if we have an URL to download the image data.
-        if (s->logo == STRING_TABLE_NULL_SYMBOL)
-            return (image->status = STATUS_ERROR_INVALID_REQUEST) >= 0;
     }
        
     // Initiate the logo download
@@ -315,7 +315,7 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*
         return false;
 
     // Get logo image texture
-    int width = 0, height = 0;
+    int width = 0, height = 0, channels = 0;
     bgfx::TextureHandle texture = BGFX_INVALID_HANDLE;
     {
         SHARED_READ_LOCK(_logos_mutex);
@@ -324,6 +324,7 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*
         {
             width = image->width;
             height = image->height;
+            channels = image->channels;
             texture = image->texture;
         }
     }
@@ -334,16 +335,41 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*
     ImGui::Image((ImTextureID)texture.idx, size);
     if (ImGui::IsItemHovered())
     {
-        ImGui::PushStyleTight();
-        ImGui::PushStyleColor(ImGuiCol_PopupBg, 0xFFFFFFFF);
+        if (channels == 4)
+            ImGui::PushStyleColor(ImGuiCol_PopupBg, 0xFFFFFFFF);
         ImGui::BeginTooltip();
         ImGui::Image((ImTextureID)texture.idx, ImVec2(width, height));
         ImGui::EndTooltip();
-        ImGui::PopStyleColor();
-        ImGui::PopStyleTight();
+        if (channels == 4)
+            ImGui::PopStyleColor();
     }
 
     return true;
+}
+
+bool logo_is_banner(const char* symbol, size_t symbol_length, int& banner_width, int& banner_height, int& banner_channels, ImU32& image_bg_color)
+{
+    // Request logo image
+    logo_handle_t logo_handle = logo_request_image(symbol, symbol_length);
+    if (!logo_handle)
+        return false;
+
+    // Get logo image texture
+    int width = 0, height = 0;
+    {
+        SHARED_READ_LOCK(_logos_mutex);
+        const logo_image_t* image = logo_handle;
+        if (image == nullptr)
+            return false;
+        banner_width = image->width;
+        banner_height = image->height;
+        banner_channels = image->channels;
+        image_bg_color = 0xFFFFFFFF;
+        if ((float)image->width > image->height * 1.85f)
+            return true;
+    }
+
+    return false;
 }
 
 //
