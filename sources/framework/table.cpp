@@ -574,8 +574,8 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
         }
     }
 
-    ImGui::TableNextRow();
-    ImGui::TableNextRow();
+    //ImGui::TableNextRow();
+    //ImGui::TableNextRow();
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
     ImGui::TextUnformatted("Summary");
@@ -818,7 +818,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
 
 FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
 {
-    TIME_TRACKER(0.005, "Render table %.*s", STRING_FORMAT(table->name));
+    TIME_TRACKER(0.008, "Render table %.*s", STRING_FORMAT(table->name));
 
     ImGuiListClipper clipper;
     clipper.Begin(table->rows_visible_count);

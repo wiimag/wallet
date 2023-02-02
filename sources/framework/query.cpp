@@ -745,7 +745,7 @@ FOUNDATION_STATIC char* curl_strdup_cb(const char* str)
 
 FOUNDATION_STATIC void* curl_calloc_cb(size_t nmemb, size_t size)
 {
-    return memory_allocate(HASH_CURL, nmemb * size, min(8U, to_unsigned(nmemb)), MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+    return memory_allocate(HASH_CURL, nmemb * size, min(8U, to_uint(nmemb)), MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
 }
 
 void query_initialize()

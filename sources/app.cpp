@@ -154,8 +154,8 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
                 console_show();
                 auto mem_stats = memory_statistics();
                 log_infof(HASH_MEMORY, STRING_CONST("Memory stats: \n"
-                    "\t Current: %.3g mb (%llu)\n"
-                    "\t Total: %.3g mb (%llu)"),
+                    "\t Current: %.4g mb (%llu)\n"
+                    "\t Total: %.4g mb (%llu)"),
                     mem_stats.allocated_current / 1024.0f / 1024.0f, mem_stats.allocations_current,
                     mem_stats.allocated_total / 1024.0f / 1024.0f, mem_stats.allocations_total);
 
@@ -189,7 +189,9 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
                         string_const_t context_name = hash_to_string(c->context);
                         if (context_name.length == 0)
                             context_name = CTEXT("other");
-                        if (c->allocated_mem > 512 * 1024)
+                        if (c->allocated_mem > 512 * 1024 * 1024)
+                            log_warnf(HASH_MEMORY, WARNING_MEMORY, STRING_CONST("%16.*s : %5.3g gb"), STRING_FORMAT(context_name), c->allocated_mem / 1024.0f / 1024.0f / 1024.0f);
+                        else if (c->allocated_mem > 512 * 1024)
                             log_warnf(HASH_MEMORY, WARNING_MEMORY, STRING_CONST("%16.*s : %5.3g mb"), STRING_FORMAT(context_name), c->allocated_mem / 1024.0f / 1024.0f);
                         else 
                             log_infof(HASH_MEMORY, STRING_CONST("%34.*s : %5.3g kb"), STRING_FORMAT(context_name), c->allocated_mem / 1024.0f);

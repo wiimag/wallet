@@ -97,6 +97,18 @@ ImColor imgui_color_text_for_background(const ImColor& bg)
     return TEXT_COLOR_LIGHT;
 }
 
+ImColor imgui_color_contrast_background(const ImColor& color)
+{
+    float h, s, v;
+    ImGui::ColorConvertRGBtoHSV(color.Value.x, color.Value.y, color.Value.z, h, s, v);
+
+    bool mr = color.Value.x > 0.9f;
+    bool mg = color.Value.y > 0.95f;
+    bool mb = color.Value.z > 0.90f;
+
+    return ImColor(0.9f + (mr ? 0.1f : 0.0f), 0.9f + (mg ? 0.1f : 0.0f), 0.9f + (mb ? 0.1f : 0.0f));
+}
+
 FOUNDATION_STATIC void imgui_draw_frame(const char* id, const ImVec2& view_size, const imgui_frame_render_callback_t& render_callback, ImGuiWindowFlags frame_flags)
 {
     ImVec2 screen_position = ImGui::GetCursorScreenPos();

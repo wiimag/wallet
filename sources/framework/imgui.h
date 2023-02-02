@@ -50,6 +50,7 @@ FOUNDATION_FORCEINLINE bool shortcut_executed(int key) { return shortcut_execute
 ImVec4 imgui_color_highlight(ImVec4 c, float intensity);
 
 ImColor imgui_color_text_for_background(const ImColor& bg);
+ImColor imgui_color_contrast_background(const ImColor& color);
 
 bool imgui_draw_splitter(const char* id, float* splitter_pos,
     const imgui_frame_render_callback_t& left_callback,

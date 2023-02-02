@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 Wiimag Inc. All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * Copyright 2022-2023 Infineis Inc. All rights reserved.
+ * License: https://infineis.com/LICENSE
  */
 
 #include <framework/glfw.h>
@@ -837,7 +837,7 @@ FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
                 {
                     memory_context_push(HASH_BGFX);
                     size_t oldsize = memory_size(_ptr);
-                    void* bgfx_mem = memory_reallocate(_ptr, _size, to_unsigned(_align), oldsize, MEMORY_PERSISTENT);
+                    void* bgfx_mem = memory_reallocate(_ptr, _size, to_uint(_align), oldsize, MEMORY_PERSISTENT);
                     memory_context_pop();
                     return bgfx_mem;
                 }
@@ -851,7 +851,7 @@ FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
             if (_size == 0)
                 return nullptr;
             
-            return memory_allocate(HASH_BGFX, _size, to_unsigned(_align), MEMORY_PERSISTENT);
+            return memory_allocate(HASH_BGFX, _size, to_uint(_align), MEMORY_PERSISTENT);
         }
     };
     static BgfxAllocatorkHandler bgfx_allocator_handler{};

@@ -300,12 +300,12 @@ void profiler_menu_timer()
         char frame_time[32];
         if (tick_elapsed_time < smooth_elapsed_time - 1)
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms (%.3lg/%.4lg mb)"), tick_elapsed_time, smooth_elapsed_time,
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms (%.4lg/%.4lg mb)"), tick_elapsed_time, smooth_elapsed_time,
                 mem_stats.allocated_current / 1024.0 / 1024.0, mem_stats.allocated_total / 1024.0 / 1024.0);
         }
         else
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms (%.3lg/%.4lg mb)"), tick_elapsed_time,
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms (%.4lg/%.4lg mb)"), tick_elapsed_time,
                 mem_stats.allocated_current / 1024.0 / 1024.0, mem_stats.allocated_total / 1024.0 / 1024.0);
         }
 

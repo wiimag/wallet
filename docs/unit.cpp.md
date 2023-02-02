@@ -117,8 +117,8 @@ bool dispatcher_unregister_event_listener(
 
 ```cpp
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * Copyright 2023 Infineis Inc. All rights reserved.
+ * License: https://infineis.com/LICENSE
  * 
  * DESCRIPTION OF THE MODULE, i.e. Render pad to test rendering code.
  */
@@ -222,7 +222,7 @@ void render_pad_shutdown()
 
 /* =======> MODULE SERVICE DEFINITION (IF ANY) <======== */
 
-DEFINE_SERVICE(RENDER_PAD, render_pad_initialize, render_pad_shutdown, 0);
+DEFINE_SERVICE(RENDER_PAD, render_pad_initialize, render_pad_shutdown, SERVICE_PRIORITY_MODULE);
 
 //
 // # TESTS
