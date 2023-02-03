@@ -1,6 +1,6 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #include "string_table.h"
@@ -48,6 +48,9 @@ string_table_symbol_t string_table_encode(string_t value)
 
 string_table_symbol_t string_table_encode_unescape(string_const_t value)
 {
+    if (value.length == 0)
+        return STRING_TABLE_NULL_SYMBOL;
+
     if (string_find(STRING_ARGS(value), '\\', 0) == STRING_NPOS)
         return string_table_encode(STRING_ARGS(value));
 

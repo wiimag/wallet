@@ -1,6 +1,6 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #include "imgui.h"
@@ -51,6 +51,22 @@ namespace ImGui
     {
         ImGui::PopStyleVar(2);
     }
+
+    void PushStyleTight()
+    {
+        ImGuiStyle& style = ImGui::GetStyle();
+        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+        ImGui::PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0);
+        ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0);
+    }
+
+    void PopStyleTight()
+    {
+        ImGui::PopStyleVar(6);
+    }
 }
 
 bool shortcut_executed(bool ctrl, bool alt, bool shift, bool super, int key)
@@ -79,6 +95,18 @@ ImColor imgui_color_text_for_background(const ImColor& bg)
     if ((bg.Value.x * 0.299f + bg.Value.y * 0.587f + bg.Value.z * 0.114f) * 255.0f * bg.Value.w > 116.0f)
         return TEXT_COLOR_DARK;
     return TEXT_COLOR_LIGHT;
+}
+
+ImColor imgui_color_contrast_background(const ImColor& color)
+{
+    float h, s, v;
+    ImGui::ColorConvertRGBtoHSV(color.Value.x, color.Value.y, color.Value.z, h, s, v);
+
+    bool mr = color.Value.x > 0.9f;
+    bool mg = color.Value.y > 0.95f;
+    bool mb = color.Value.z > 0.90f;
+
+    return ImColor(0.9f + (mr ? 0.1f : 0.0f), 0.9f + (mg ? 0.1f : 0.0f), 0.9f + (mb ? 0.1f : 0.0f));
 }
 
 FOUNDATION_STATIC void imgui_draw_frame(const char* id, const ImVec2& view_size, const imgui_frame_render_callback_t& render_callback, ImGuiWindowFlags frame_flags)
@@ -165,8 +193,6 @@ bool imgui_draw_splitter(const char* id, float* splitter_pos,
     *splitter_pos = max(max(space_left * 0.05f, min_pixel_size), *splitter_pos);
     *splitter_pos = min(*splitter_pos, min(space_left * 0.95f, space_left - min_pixel_size));
 
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-
     // Render left or top view
     const char* view_left_id = string_format_static_const("ViewLeft###%s_1", id);
     const ImVec2 left_view_size = ImVec2(hv ? *splitter_pos : space_expand, hv ? space_expand : *splitter_pos);
@@ -177,6 +203,8 @@ bool imgui_draw_splitter(const char* id, float* splitter_pos,
         left_callback(view_rect);
     }
     ImGui::EndChild();
+
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 
     // Render splitter handle
     if (hv)
@@ -196,6 +224,9 @@ bool imgui_draw_splitter(const char* id, float* splitter_pos,
     // Render right or bottom view
     if (hv)
         ImGui::SameLine();
+
+    ImGui::PopStyleVar();
+        
     screen_position = ImGui::GetCursorScreenPos();
     const char* view_right_id = string_format_static_const("ViewRight###%s_2", id);
     const ImVec2 right_view_size = ImGui::GetContentRegionAvail();
@@ -207,14 +238,15 @@ bool imgui_draw_splitter(const char* id, float* splitter_pos,
     }
     ImGui::EndChild();
 
-    ImGui::PopStyleVar();
-
     return updated;
 }
 
 ImRect imgui_draw_rect(const ImVec2& offset, const ImVec2& size, const ImColor& border_color /*= 0U*/, const ImColor& background_color /*= 0U*/)
 {
-    ImGui::MoveCursor(offset.x, offset.y, true);
+    if (offset.x != 0 && offset.y != 0)
+        ImGui::MoveCursor(offset.x, offset.y, true);
+    else
+        ImGui::SameLine();
     ImGui::Dummy(size);
     ImRect rect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
 

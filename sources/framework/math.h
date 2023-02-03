@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #pragma once

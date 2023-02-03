@@ -1,6 +1,6 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #pragma once
@@ -554,14 +554,28 @@ template<typename T> using alias = T;
 }
 
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr int to_int(size_t v)
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr int32_t to_int(size_t v)
 {
-    FOUNDATION_ASSERT(v <= INT_MAX);
-    return (int)v;
+    FOUNDATION_ASSERT_MSGFORMAT(v <= INT_MAX, "%" PRIsize " > %d", v, INT_MAX);
+    return (int32_t)v;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr unsigned to_unsigned(size_t v)
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t to_uint(int32_t v)
+{
+    FOUNDATION_ASSERT_MSGFORMAT(v >= 0, "%d<0", v);
+    return (uint32_t)v;
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t to_uint(size_t v)
 {
     FOUNDATION_ASSERT(v <= UINT_MAX);
-    return (unsigned)v;
+    return (uint32_t)v;
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t rgb_to_abgr(const uint32_t v, const uint8_t alpha = 0xFF)
+{
+    const uint8_t r = (v & 0x00FF0000) >> 16;
+    const uint8_t g = (v & 0x0000FF00) >> 8;
+    const uint8_t b = (v & 0x000000FF);
+    return (alpha << 24) | (b << 16) | (g << 8) | (r);
 }

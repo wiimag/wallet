@@ -10,6 +10,7 @@
 #include "title.h"
 #include "symbols.h"
 #include "eod.h"
+#include "logo.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -451,31 +452,140 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
 
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
+        ImGui::PushStyleCompact();
         ImGui::BeginGroup();
         const char* formatted_code = title->code;
 
+        bool can_show_banner = !ImGui::IsKeyDown(ImGuiKey_B);
         if (title_has_increased(title, nullptr, 30.0 * 60.0))
-            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_UP);
-        else if (title_has_decreased(title, nullptr, 30.0 * 60.0))
-            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_DOWN);
-
-        float width = ImGui::GetContentRegionAvail().x;
-        float code_width = ImGui::CalcTextSize(formatted_code).x;
-
-        ImGui::TextUnformatted(formatted_code);
-
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-            pattern_open(title->code, title->code_length);
-
-        if ((code_width + 40.0f) < width && (title->buy_total_quantity > 0 || title->sell_total_quantity > 0))
         {
-            ImGui::MoveCursor(width - code_width - imgui_get_font_ui_scale(48.0f), 0, true);
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
-            if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
-                title->show_details_ui = true;
-            ImGui::PopStyleColor(1);
+            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_UP);
+            can_show_banner = false;
         }
+        else if (title_has_decreased(title, nullptr, 30.0 * 60.0))
+        {
+            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_DOWN);
+            can_show_banner = false;
+        }
+
+        const ImGuiStyle& style = ImGui::GetStyle();
+        const ImRect& cell_rect = table_current_cell_rect();
+        const ImVec2& space = cell_rect.GetSize();
+        const ImVec2& text_size = ImGui::CalcTextSize(formatted_code);
+        const float button_width = text_size.y;
+        const bool has_orders = (title->buy_total_quantity > 0 || title->sell_total_quantity > 0);
+
+        int logo_banner_width = 0, logo_banner_height = 0, logo_banner_channels = 0;
+        ImU32 logo_banner_color = 0xFFFFFFFF, fill_color = 0xFFFFFFFF;
+        if (logo_is_banner(title->code, title->code_length, 
+                logo_banner_width, logo_banner_height, logo_banner_channels, logo_banner_color, fill_color) &&
+                can_show_banner && 
+                (logo_banner_width / (logo_banner_height / text_size.y)) > space.x * 0.3f)
+        {
+            const float ratio = logo_banner_height / text_size.y;
+            logo_banner_height = text_size.y;
+            logo_banner_width /= ratio;
+
+            if (logo_banner_channels == 4)
+            {
+                ImDrawList* dl = ImGui::GetWindowDrawList();
+                const ImColor bg_logo_banner_color = fill_color;
+                dl->AddRectFilled(cell_rect.Min, cell_rect.Max, fill_color);
+
+                ImGui::PushStyleColor(ImGuiCol_Text, (ImU32)imgui_color_text_for_background(fill_color));
+            }
+            else if (logo_banner_channels == 3)
+            {
+                ImDrawList* dl = ImGui::GetWindowDrawList();
+                dl->AddRectFilled(cell_rect.Min, cell_rect.Max, fill_color);
+
+                const ImU32 best_text_color = imgui_color_text_for_background(fill_color);
+                ImGui::PushStyleColor(ImGuiCol_Text, best_text_color);
+            }
+
+            const float height_scale = logo_banner_channels == 4 ? 1.0f : cell_rect.GetHeight() / logo_banner_height;
+            if (logo_banner_channels == 3)
+                ImGui::MoveCursor(-style.FramePadding.x, -style.FramePadding.y - 1.0f, false);
+            if (!ImGui::Logo(title->code, title->code_length, 
+                ImVec2(logo_banner_width * height_scale, logo_banner_height * height_scale)))
+            {
+                ImGui::TextUnformatted(formatted_code);
+            }
+            else
+            {
+                if (logo_banner_channels == 3)
+                    ImGui::MoveCursor(style.FramePadding.x, style.FramePadding.y + 1.0f, false);
+                ImGui::Dummy(ImVec2(logo_banner_width, logo_banner_height));
+            }
+
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, 0xFFEEEEEE);
+                ImGui::SetTooltip("%.*s", (int)title->code_length, title->code);
+                ImGui::PopStyleColor();
+            }
+            
+            const float space_left = ImGui::GetContentRegionAvail().x - logo_banner_width - (style.FramePadding.x * 2.0f);
+            if (button_width < space_left + 15.0f)
+            {
+                ImGui::MoveCursor(space_left - button_width - style.FramePadding.x / 2.0f, 1.0f, true);
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
+                if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
+                {
+                    if (has_orders)
+                        title->show_details_ui = true;
+                    else
+                        title->show_buy_ui = true;
+                }
+                ImGui::PopStyleColor(1);
+            }
+
+            ImGui::PopStyleColor();
+        }
+        else
+        {
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            if (logo_banner_width > 0)
+            {
+                dl->AddRectFilled(cell_rect.Min, cell_rect.Max, logo_banner_color); // ABGR
+                const ImU32 best_text_color = imgui_color_text_for_background(logo_banner_color);
+                ImGui::PushStyleColor(ImGuiCol_Text, best_text_color);
+            }
+
+            const float code_width = text_size.x + (style.ItemSpacing.x * 2.0f);
+            ImGui::TextUnformatted(formatted_code);
+            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                pattern_open(title->code, title->code_length);
+
+            float logo_size = button_width;
+            float space_left = ImGui::GetContentRegionAvail().x - code_width;
+            ImGui::MoveCursor(space_left - button_width - logo_size + 10.0f, 0, true);
+            if (ImGui::GetCursorPos().x < code_width || !ImGui::Logo(title->code, title->code_length, ImVec2(logo_size, logo_size), true))
+                ImGui::Dummy(ImVec2(logo_size, logo_size));
+            else
+                ImGui::Dummy(ImVec2(logo_size, logo_size));
+
+            space_left = ImGui::GetContentRegionAvail().x - code_width;
+            if (button_width < space_left + 35.0f)
+            {
+                ImGui::MoveCursor(-14.0f, 1.0f, true);
+                ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
+                if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
+                {
+                    if (has_orders)
+                        title->show_details_ui = true;
+                    else
+                        title->show_buy_ui = true;
+                }
+                ImGui::PopStyleColor(1);
+            }
+
+            if (logo_banner_width > 0)
+                ImGui::PopStyleColor();
+        }
+        
         ImGui::EndGroup();
+        ImGui::PopStyleCompact();
     }
 
     return title->code;
@@ -1207,7 +1317,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
 FOUNDATION_STATIC void report_render_buy_lot_dialog(report_t* report, title_t* title)
 {
-    string_const_t title_buy_popup_id = string_format_static(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##9"), title->code_length, title->code);
+    string_const_t title_buy_popup_id = string_format_static(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##10"), title->code_length, title->code);
     if (!report_render_dialog_begin(title_buy_popup_id, &title->show_buy_ui, ImGuiWindowFlags_NoResize))
         return;
 
@@ -1227,11 +1337,11 @@ FOUNDATION_STATIC void report_render_buy_lot_dialog(report_t* report, title_t* t
         ImGui::SetDateToday(&tm_date);
     }
 
-    ImVec2 content_size = ImVec2(890.0f, 175.0f);
-    ImGui::MoveCursor(2, 10);
+    ImVec2 content_size = ImVec2(imgui_get_font_ui_scale(890.0f), imgui_get_font_ui_scale(175.0f));
+    ImGui::MoveCursor(imgui_get_font_ui_scale(2.0f), imgui_get_font_ui_scale(10.0f));
     if (ImGui::BeginChild("##Content", content_size, false))
     {
-        const float control_width = (content_size.x - 100.0f) / 3;
+        const float control_width = (content_size.x - imgui_get_font_ui_scale(100.0f)) / 3;
         ImGui::Columns(3);
 
         if (ImGui::IsWindowAppearing())
@@ -1265,7 +1375,7 @@ FOUNDATION_STATIC void report_render_buy_lot_dialog(report_t* report, title_t* t
         ImGui::NextColumn();
 
         ImGui::Columns(3);
-        ImGui::MoveCursor(0, 10);
+        ImGui::MoveCursor(0, imgui_get_font_ui_scale(10.0f));
 
         double orig_buy_value = quantity * price;
         double buy_value = orig_buy_value;
@@ -1281,7 +1391,7 @@ FOUNDATION_STATIC void report_render_buy_lot_dialog(report_t* report, title_t* t
         ImGui::NextColumn();
         ImGui::NextColumn();
 
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 211);
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(211.0f));
         if (ImGui::Button("Cancel"))
             title->show_buy_ui = false;
         ImGui::SameLine();
@@ -1607,7 +1717,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
     table_add_column(table, STRING_CONST(ICON_MD_INVENTORY " Type    "), 
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_TYPE), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
     table_add_column(table, STRING_CONST(ICON_MD_STORE " Sector"), 
-        E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_TEXT_WRAPPING | COLUMN_SEARCHABLE)
+        E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SEARCHABLE)
         .width = 200.0f;
 
     table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"), 

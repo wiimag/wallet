@@ -1,10 +1,10 @@
 /*
- * Copyright 2023 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2023 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  * 
  * Example how to run tests: 
- *      > ./build/infineis.exe --run-tests & cat artifacts/tests.log
- *      > ./build/infineis.exe --run-tests --minimal=false --duration=true && n artifacts/tests.log
+ *      > ./build/<app>.exe --run-tests & cat artifacts/tests.log
+ *      > ./build/<app>.exe --run-tests --minimal=false --duration=true && n artifacts/tests.log
  */
 
 #include <foundation/platform.h>

@@ -117,6 +117,7 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     entry.country = string_table_encode(general["CountryName"].as_string());
     entry.currency = string_table_encode(general["CurrencyCode"].as_string());
     entry.url = string_table_encode_unescape(general["WebURL"].as_string());
+    entry.logo = string_table_encode_unescape(general["LogoURL"].as_string());
     entry.updated_at = string_table_encode(general["UpdatedAt"].as_string());
     entry.exchange = string_table_encode(general["Exchange"].as_string());
     entry.description = string_table_encode_unescape(general["Description"].as_string());
@@ -231,7 +232,7 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
 FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, stock_index_t index)
 {
     tick_t timeout = time_current();
-    do
+    while (time_elapsed(timeout) < 30.0)
     {
         {
             SHARED_READ_LOCK(_db_lock);
@@ -242,7 +243,7 @@ FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, 
         }
         
         thread_sleep(10);
-    } while (time_elapsed(timeout) < 60.0);
+    }
     
     day_result_t* history = nullptr;
     {

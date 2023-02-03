@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #include "console.h"
@@ -495,4 +495,4 @@ FOUNDATION_STATIC void console_shutdown()
     string_table_deallocate(_console_string_table);
 }
 
-DEFINE_SERVICE(CONSOLE, console_initialize, console_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_SERVICE(CONSOLE, console_initialize, console_shutdown, SERVICE_PRIORITY_LOW);

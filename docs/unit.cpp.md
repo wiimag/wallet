@@ -117,7 +117,7 @@ bool dispatcher_unregister_event_listener(
 
 ```cpp
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
+ * Copyright 2023 Infineis Inc. All rights reserved.
  * License: https://infineis.com/LICENSE
  * 
  * DESCRIPTION OF THE MODULE, i.e. Render pad to test rendering code.
@@ -129,8 +129,7 @@ bool dispatcher_unregister_event_listener(
 
 /* =======> Same level header inclusions <======== */
 
-#include "butils.h"
-#include "infineis.h"
+#include "app.h"
 
 /* =======> Application framework header inclusions <======== */
 
@@ -223,7 +222,7 @@ void render_pad_shutdown()
 
 /* =======> MODULE SERVICE DEFINITION (IF ANY) <======== */
 
-DEFINE_SERVICE(RENDER_PAD, render_pad_initialize, render_pad_shutdown, 0);
+DEFINE_SERVICE(RENDER_PAD, render_pad_initialize, render_pad_shutdown, SERVICE_PRIORITY_MODULE);
 
 //
 // # TESTS

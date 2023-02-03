@@ -1,6 +1,8 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
+ * 
+ * This module uses code from https://github.com/zserge/expr
  */
 
 #include "expr.h"

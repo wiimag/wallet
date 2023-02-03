@@ -12,6 +12,7 @@ typedef struct GLFWwindow GLFWwindow;
 string_t eod_get_key();
 bool eod_save_key(string_t eod_key);
 
+const char* eod_build_image_url(const char* image_url, size_t image_url_length);
 const char* eod_build_url(const char* api, query_format_t format, const char* uri_format, ...);
 string_const_t eod_build_url(const char* api, const char* ticker, query_format_t format);
 string_const_t eod_build_url(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1);

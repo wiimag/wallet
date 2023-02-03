@@ -1,6 +1,6 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #pragma once
@@ -40,6 +40,3 @@ void job_deallocate(job_t*& job);
 job_t* job_execute(job_handler_t handler, void* payload = nullptr, job_flags_t flags = JOB_FLAGS_NONE);
 
 bool job_completed(job_t* job);
-
-void job_async();
-void job_sync();

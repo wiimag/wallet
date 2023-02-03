@@ -1,6 +1,6 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #pragma once
@@ -10,6 +10,8 @@
 #include <foundation/array.h>
 #include <foundation/mutex.h>
 #include <foundation/beacon.h>
+
+#include <algorithm>
 
 namespace generics {
 

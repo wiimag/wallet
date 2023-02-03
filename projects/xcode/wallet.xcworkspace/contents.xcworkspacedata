@@ -22,7 +22,7 @@
    </Group>
    <Group
       location = "group:"
-      name = "infineis">
+      name = "wallet">
       <FileRef
          location = "group:/Users/jonathans/work/wallet/projects/xcode/wallet.xcodeproj">
       </FileRef>

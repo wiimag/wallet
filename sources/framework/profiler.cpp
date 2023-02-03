@@ -1,24 +1,24 @@
 /*
- * Copyright 2023 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2023 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #include "profiler.h"
 
 #if BUILD_ENABLE_PROFILE
 
-#include "common.h"
-#include "service.h"
-#include "session.h"
-#include "shared_mutex.h"
-#include "imgui.h"
-#include "table.h"
+#include <framework/common.h>
+#include <framework/service.h>
+#include <framework/session.h>
+#include <framework/shared_mutex.h>
 #include <framework/imgui.h>
+#include <framework/table.h>
 
 #include <foundation/hash.h>
 #include <foundation/string.h>
 #include <foundation/profile.h>
 #include <foundation/stream.h>
+#include <foundation/environment.h>
 
 #include <bx/sort.h>
 
@@ -300,12 +300,12 @@ void profiler_menu_timer()
         char frame_time[32];
         if (tick_elapsed_time < smooth_elapsed_time - 1)
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms (%.3lg/%.4lg mb)"), tick_elapsed_time, smooth_elapsed_time,
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms (%.4lg/%.4lg mb)"), tick_elapsed_time, smooth_elapsed_time,
                 mem_stats.allocated_current / 1024.0 / 1024.0, mem_stats.allocated_total / 1024.0 / 1024.0);
         }
         else
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms (%.3lg/%.4lg mb)"), tick_elapsed_time,
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms (%.4lg/%.4lg mb)"), tick_elapsed_time,
                 mem_stats.allocated_current / 1024.0 / 1024.0, mem_stats.allocated_total / 1024.0 / 1024.0);
         }
 
@@ -325,8 +325,9 @@ FOUNDATION_STATIC void profiler_initialize()
         return;
         
     const size_t profile_buffer_size = 2 * 1024 * 1024;
+    const application_t* app = environment_application();
     _profile_buffer = (uint8_t*)memory_allocate(HASH_PROFILER, profile_buffer_size, 0, MEMORY_PERSISTENT);
-    profile_initialize(S("Infineis"), _profile_buffer, profile_buffer_size);
+    profile_initialize(STRING_ARGS(app->name), _profile_buffer, profile_buffer_size);
     profile_enable(true);
 
     string_const_t session_profile_file_path;

@@ -1,6 +1,6 @@
 /*
- * Copyright 2022 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #pragma once
@@ -14,13 +14,13 @@
 typedef enum {
     STATUS_OK = 0,
 
+    STATUS_UNDEFINED = INT_MAX,
     STATUS_INITIALIZED = (1),
     STATUS_RESOLVING = (2),
+    STATUS_AVAILABLE = (3),
 
-    STATUS_UNDEFINED = (-1),
+    STATUS_ERROR = (-1),
     STATUS_UNRESOLVED = (-2),
-
-    STATUS_ERROR = (-10),
     STATUS_ERROR_NULL_REFERENCE = (-11),
     STATUS_ERROR_INVALID_HANDLE = (-12),
     STATUS_ERROR_DB_ACCESS = (-13),
@@ -28,6 +28,9 @@ typedef enum {
     STATUS_ERROR_HASH_TABLE_NOT_LARGE_ENOUGH = (-15),
     STATUS_ERROR_FAILED_CREATE_JOB = (-16),
     STATUS_ERROR_INVALID_REQUEST = (-17),
+    STATUS_ERROR_INVALID_STREAM = (-18),
+    STATUS_ERROR_LOAD_FAILURE = (-19),
+    STATUS_ERROR_NOT_AVAILABLE = (-19),
 } status_t;
 
 struct HandleKey
@@ -97,6 +100,13 @@ struct Handle
     FOUNDATION_FORCEINLINE operator T*()
     {
         return resolve();
+    }
+
+    FOUNDATION_FORCEINLINE operator bool() const
+    {
+        if (key.index == SIZE_MAX)
+            return false;
+        return true;
     }
 
     FOUNDATION_FORCEINLINE operator const T*() const

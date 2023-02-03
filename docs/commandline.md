@@ -9,11 +9,11 @@ to the application to alter the application runtime.
 | Query Flags | Description |
 |:------------|-------------|
 | ```--help``` | Prints a help message listing all these flags/options |
-| ```--version``` | Prints the version of the **Infineis** framework and exit right away |
+| ```--version``` | Prints the version of the application framework and exit right away |
 | **User Options** | <hr> |
 | ```--session=<name>``` | Override the default application session name in order to run the application like a new user. |
 | **Cloud Options** | <hr> |
-| ```--host=<string>``` | Override the default https://cloud.infineis.com URL to execute all cloud queries. |
+| ```--host=<string>``` | Override the default `https://cloud.<domain>.com` URL to execute all cloud queries. |
 | ```--apikey=<string>``` | Force the application to use the developer API key to run all cloud queries. |
 | **Developer Options** | <hr> |
 | ```--console``` | Open the developer console on startup. |
