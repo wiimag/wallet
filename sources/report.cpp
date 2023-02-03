@@ -452,11 +452,9 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
 
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
-        ImGui::PushStyleCompact();
-        ImGui::BeginGroup();
         const char* formatted_code = title->code;
 
-        bool can_show_banner = !ImGui::IsKeyDown(ImGuiKey_B);
+        bool can_show_banner = SETTINGS.show_logo_banners && !ImGui::IsKeyDown(ImGuiKey_B);
         if (title_has_increased(title, nullptr, 30.0 * 60.0))
         {
             formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_UP);
@@ -475,6 +473,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         const float button_width = text_size.y;
         const bool has_orders = (title->buy_total_quantity > 0 || title->sell_total_quantity > 0);
 
+        ImGui::PushStyleCompact();
         int logo_banner_width = 0, logo_banner_height = 0, logo_banner_channels = 0;
         ImU32 logo_banner_color = 0xFFFFFFFF, fill_color = 0xFFFFFFFF;
         if (logo_is_banner(title->code, title->code_length, 
@@ -506,8 +505,8 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             const float height_scale = logo_banner_channels == 4 ? 1.0f : cell_rect.GetHeight() / logo_banner_height;
             if (logo_banner_channels == 3)
                 ImGui::MoveCursor(-style.FramePadding.x, -style.FramePadding.y - 1.0f, false);
-            if (!ImGui::Logo(title->code, title->code_length, 
-                ImVec2(logo_banner_width * height_scale, logo_banner_height * height_scale)))
+            if (!logo_render(title->code, title->code_length, 
+                ImVec2(logo_banner_width * height_scale, logo_banner_height * height_scale), false, false))
             {
                 ImGui::TextUnformatted(formatted_code);
             }
@@ -560,7 +559,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             float logo_size = button_width;
             float space_left = ImGui::GetContentRegionAvail().x - code_width;
             ImGui::MoveCursor(space_left - button_width - logo_size + 10.0f, 0, true);
-            if (ImGui::GetCursorPos().x < code_width || !ImGui::Logo(title->code, title->code_length, ImVec2(logo_size, logo_size), true))
+            if (ImGui::GetCursorPos().x < code_width || !logo_render(title->code, title->code_length, ImVec2(logo_size, logo_size), true, true))
                 ImGui::Dummy(ImVec2(logo_size, logo_size));
             else
                 ImGui::Dummy(ImVec2(logo_size, logo_size));
@@ -584,7 +583,6 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
                 ImGui::PopStyleColor();
         }
         
-        ImGui::EndGroup();
         ImGui::PopStyleCompact();
     }
 

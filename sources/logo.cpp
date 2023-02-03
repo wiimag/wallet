@@ -7,6 +7,7 @@
 
 #include "eod.h"
 #include "stock.h"
+#include "settings.h"
 
 #include <framework/common.h>
 #include <framework/jobs.h>
@@ -433,11 +434,66 @@ FOUNDATION_STATIC bool logo_resolve_image(logo_handle_t handle)
     return image->status == STATUS_OK && bgfx::isValid(image->texture);
 }
 
+FOUNDATION_STATIC ImU32 logo_transparent_background_color(const logo_image_t* image, const uint8_t* pixels)
+{
+    const uint8_t a = pixels[3];
+
+    if (a < 10)
+    { // ABGR
+        const uint8_t r = image->most_common_color & 0xFF;
+        const uint8_t g = (image->most_common_color & 0xFF00) >> 8;
+        const uint8_t b = (image->most_common_color & 0xFF0000) >> 16;
+
+        if (((r / 255.0f) * 0.299f + (g / 255.0f) * 0.587f + (b / 255.0f) * 0.114f) * 255.0f > 116.0f)
+        {
+            if (r > g && r > b)
+                return 0xCC111122;
+            if (g > r && g > b)
+                return 0xDD334433;
+            if (b > r && b > g)
+                return 0xFF221111;
+            return 0xFF111111;
+        }
+
+        if (r > g && r > b)
+            return 0xCCDADAEE;
+        if (g > r && g > b)
+            return 0xDDEEFFEE;
+        if (b > r && b > g)
+            return 0xFFFFEEEE;
+        return 0xFFFFFFFF;
+    }
+
+    {
+        const uint8_t r = pixels[0];
+        const uint8_t g = pixels[1];
+        const uint8_t b = pixels[2];
+        return ((b << 24) | (g << 16) | (r << 8) || a);
+    }
+}
+
+FOUNDATION_STATIC ImU32 logo_get_fill_color(const logo_image_t* image)
+{
+    const uint8_t r = image->most_common_color & 0xFF;
+    const uint8_t g = (image->most_common_color & 0xFF00) >> 8;
+    const uint8_t b = (image->most_common_color & 0xFF0000) >> 16;
+
+    if ((r >= 0xAA && g >= 0xAA && b >= 0xAA) || (r < 0x11 && g < 0x11 && b < 0x11))
+        return image->most_common_color;
+
+    FOUNDATION_ASSERT(image->data);
+    const uint8_t* pixels = &image->data[0];
+    if (image->channels == 3)
+        return (0xFF000000 | (pixels[2] << 16) | (pixels[1] << 8) | (pixels[0] << 0));
+
+    return logo_transparent_background_color(image, pixels);
+}
+
 //
 // # PUBLIC API
 //
 
-bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*= ImVec2(0, 0)*/, bool background /*= false*/)
+bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*= ImVec2(0, 0)*/, bool background /*= false*/, bool show_tooltip /*= true*/)
 {
     MEMORY_TRACKER(HASH_LOGO);
 
@@ -471,12 +527,13 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*
 
     const ImVec2& spos = ImGui::GetCursorScreenPos();
     const ImU32 bg_logo_banner_color = imgui_color_text_for_background(banner_color);
+    const ImRect logo_rect(spos, spos + size);
     ImDrawList* dl = ImGui::GetWindowDrawList();
     if (channels == 4 && background)
-        dl->AddRectFilled(spos, spos + size, bg_logo_banner_color); // ABGR
+        dl->AddRectFilled(logo_rect.Min, logo_rect.Max, bg_logo_banner_color); // ABGR
 
-    dl->AddImage((ImTextureID)texture.idx, spos, spos + size);
-    if (ImGui::IsMouseHoveringRect(spos, spos + size))
+    dl->AddImage((ImTextureID)texture.idx, logo_rect.Min, logo_rect.Max);
+    if (show_tooltip && ImGui::IsMouseHoveringRect(logo_rect.Min, logo_rect.Max))
     {
         if (channels == 4)
             ImGui::PushStyleColor(ImGuiCol_PopupBg, bg_logo_banner_color);
@@ -488,44 +545,6 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*
     }
 
     return true;
-}
-
-FOUNDATION_STATIC ImU32 logo_transparent_background_color(const logo_image_t* image, const uint8_t* pixels)
-{
-    const uint8_t a = pixels[3];
-
-    if (a < 10)
-    { // ABGR
-        const uint8_t r = image->most_common_color & 0xFF;
-        const uint8_t g = (image->most_common_color & 0xFF00) >> 8;
-        const uint8_t b = (image->most_common_color & 0xFF0000) >> 16;
-
-        if (((r / 255.0f) * 0.299f + (g / 255.0f) * 0.587f + (b / 255.0f) * 0.114f) * 255.0f  > 116.0f)
-        {
-            if (r > g && r > b)
-                return 0xCC111122;
-            if (g > r && g > b)
-                return 0xDD334433;
-            if (b > r && b > g)
-                return 0xFF221111;
-            return 0xFF111111;
-        }
-        
-        if (r > g && r > b)
-            return 0xCCDADAEE;
-        if (g > r && g > b)
-            return 0xDDEEFFEE;
-        if (b > r && b > g)
-            return 0xFFFFEEEE;
-        return 0xFFFFFFFF;
-    }
-
-    {
-        const uint8_t r = pixels[0];
-        const uint8_t g = pixels[1];
-        const uint8_t b = pixels[2];
-        return ((b << 24) | (g << 16) | (r << 8) || a);
-    }
 }
 
 bool logo_is_banner(const char* symbol, size_t symbol_length, int& banner_width, int& banner_height, int& banner_channels, 
@@ -546,16 +565,122 @@ bool logo_is_banner(const char* symbol, size_t symbol_length, int& banner_width,
         banner_height = image->height;
         banner_channels = image->channels;
         image_bg_color = image->most_common_color;
+        fill_color = logo_get_fill_color(image);
 
-        const uint8_t* pixels = &image->data[0];
-        fill_color = image->channels == 3 ? 
-            (0xFF000000 | (pixels[2] << 16) | (pixels[1] << 8) | (pixels[0] << 0)) :
-            logo_transparent_background_color(image, pixels);
         if ((float)image->width > image->height * 1.75f)
             return true;
     }
 
     return false;
+}
+
+bool logo_render_banner(const char* symbol, size_t symbol_length, const ImRect& rect, ImU32* suggested_text_color /*= nullptr*/)
+{
+    bool selected = false;
+    ImGui::PushStyleCompact();
+    string_const_t code = string_const(symbol, symbol_length);
+
+    bool can_show_banner = SETTINGS.show_logo_banners && !ImGui::IsKeyDown(ImGuiKey_B);
+    const ImGuiStyle& style = ImGui::GetStyle();
+    const ImVec2& space = rect.GetSize();
+    const ImVec2& text_size = ImGui::CalcTextSize(STRING_RANGE(code));
+    const float button_width = text_size.y;
+
+    int logo_banner_width = 0, logo_banner_height = 0, logo_banner_channels = 0;
+    ImU32 logo_banner_color = 0xFFFFFFFF, fill_color = 0xFFFFFFFF;
+    if (logo_is_banner(STRING_ARGS(code),
+        logo_banner_width, logo_banner_height, logo_banner_channels, logo_banner_color, fill_color) &&
+        can_show_banner &&
+        (logo_banner_width / (logo_banner_height / text_size.y)) > space.x * 0.3f)
+    {
+        const float ratio = logo_banner_height / text_size.y;
+        logo_banner_height = text_size.y;
+        logo_banner_width /= ratio;
+
+        if (logo_banner_channels == 4)
+        {
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            const ImColor bg_logo_banner_color = fill_color;
+            dl->AddRectFilled(rect.Min, rect.Max, fill_color);
+
+            const ImU32 best_text_color = imgui_color_text_for_background(fill_color); 
+            ImGui::PushStyleColor(ImGuiCol_Text, best_text_color);
+            if (suggested_text_color)
+                *suggested_text_color = best_text_color;
+        }
+        else if (logo_banner_channels == 3)
+        {
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            dl->AddRectFilled(rect.Min, rect.Max, fill_color);
+
+            const ImU32 best_text_color = imgui_color_text_for_background(fill_color);
+            ImGui::PushStyleColor(ImGuiCol_Text, best_text_color);
+            
+            if (suggested_text_color)
+                *suggested_text_color = best_text_color;
+        }
+        else
+        {
+            FOUNDATION_ASSERT_FAIL("Invalid logo banner channels");
+        }
+
+        const float height_scale = logo_banner_channels == 4 ? 1.0f : rect.GetHeight() / logo_banner_height;
+        if (logo_banner_channels == 3)
+            ImGui::MoveCursor(-style.FramePadding.x, -style.FramePadding.y - 1.0f, false);
+        if (!logo_render(STRING_ARGS(code),
+            ImVec2(logo_banner_width * height_scale, logo_banner_height * height_scale), false, false))
+        {
+            ImGui::TextUnformatted(STRING_RANGE(code));
+        }
+        else
+        {
+            if (logo_banner_channels == 3)
+                ImGui::MoveCursor(style.FramePadding.x, style.FramePadding.y + 1.0f, false);
+            ImGui::Dummy(ImVec2(logo_banner_width, logo_banner_height));
+            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                selected = true;
+        }
+
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, 0xFFEEEEEE);
+            ImGui::SetTooltip("%.*s", STRING_FORMAT(code));
+            ImGui::PopStyleColor();
+        }
+
+        ImGui::PopStyleColor();
+    }
+    else
+    {
+        ImDrawList* dl = ImGui::GetWindowDrawList();
+        if (logo_banner_width > 0)
+        {
+            dl->AddRectFilled(rect.Min, rect.Max, logo_banner_color); // ABGR
+            const ImU32 best_text_color = imgui_color_text_for_background(logo_banner_color);
+            ImGui::PushStyleColor(ImGuiCol_Text, best_text_color);
+
+            if (suggested_text_color)
+                *suggested_text_color = best_text_color;
+        }
+
+        const float code_width = text_size.x + (style.ItemSpacing.x * 2.0f);
+        ImGui::TextUnformatted(STRING_RANGE(code));
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+            selected = true;
+
+        float logo_size = imgui_get_font_ui_scale(32.0f);
+        float space_left = rect.GetWidth() - code_width;
+        ImGui::MoveCursor(space_left - logo_size + imgui_get_font_ui_scale(4.0f), 0, true);
+        logo_render(STRING_ARGS(code), ImVec2(logo_size, logo_size), true, true);
+        ImGui::Dummy(ImVec2(logo_size, logo_size));
+
+        if (logo_banner_width > 0)
+            ImGui::PopStyleColor();
+    }
+
+    ImGui::PopStyleCompact();
+
+    return selected;
 }
 
 //

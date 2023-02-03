@@ -7,6 +7,7 @@
 
 #include "eod.h"
 #include "stock.h"
+#include "logo.h"
 
 #include "framework/common.h"
 #include "framework/session.h"
@@ -27,7 +28,7 @@ void settings_draw()
 
     {
         string_t eod_key = eod_get_key();
-        ImGui::MoveCursor(0, 5);
+        ImGui::AlignTextToFramePadding();
         ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com"));
 
         ImGui::NextColumn();
@@ -38,6 +39,7 @@ void settings_draw()
 
     {
         ImGui::NextColumn();
+        ImGui::AlignTextToFramePadding();
         ImGui::TextURL("Currency", nullptr, STRING_CONST("https://eodhistoricaldata.com/financial-apis/list-supported-forex-currencies/"));
 
         ImGui::NextColumn();
@@ -48,6 +50,7 @@ void settings_draw()
         ImGui::NextColumn();
         if (!string_equal(STRING_ARGS(string_const(SETTINGS.preferred_currency)), STRING_CONST("USD")))
         {
+            ImGui::AlignTextToFramePadding();
             ImGui::Text("i.e. USD%s is %.2lf $", SETTINGS.preferred_currency, 
                 stock_exchange_rate(STRING_CONST("USD"), STRING_ARGS(string_const(SETTINGS.preferred_currency))));
         }
@@ -55,6 +58,7 @@ void settings_draw()
 
     {
         ImGui::NextColumn();
+        ImGui::AlignTextToFramePadding();
         ImGui::TextURL("Preferred Dividends %", nullptr, STRING_CONST("https://en.wikipedia.org/wiki/Dividend#:~:text=A%20dividend%20is%20a%20distribution,business%20(called%20retained%20earnings)."));
 
         ImGui::NextColumn();
@@ -67,9 +71,41 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
+    {
+        ImGui::NextColumn();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted("Show logo banners");
+
+        ImGui::NextColumn();
+        if (ImGui::Checkbox("##ShowLogoBanners", &SETTINGS.show_logo_banners))
+        {
+        }
+
+        ImGui::NextColumn();
+        const ImVec2 logo_banner_size = ImVec2(imgui_get_font_ui_scale(200.0f), imgui_get_font_ui_scale(40.0f));
+        if (SETTINGS.show_logo_banners)
+        {
+            logo_render(STRING_CONST("KHC.US"), logo_banner_size, true, false);
+
+            ImGui::MoveCursor(logo_banner_size.x + 10.0f, 0.0f, false);
+            logo_render(STRING_CONST("LUMN.US"), logo_banner_size, true, false);
+
+            ImGui::MoveCursor(logo_banner_size.x + 10.0f, 0.0f, false);
+            logo_render(STRING_CONST("FTS.TO"), logo_banner_size, true, false);
+        }
+        else 
+        {
+            const ImVec2& spos = ImGui::GetCursorScreenPos();
+            ImGui::MoveCursor(2, 4.0f, false);
+            logo_render_banner(STRING_CONST("U.US"), ImRect(spos, spos + logo_banner_size));
+            ImGui::MoveCursor(2, -4.0f, true);
+        }
+    }
+
     ImGui::MoveCursor(0, 30.0f);
     {
         ImGui::NextColumn();
+        ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Font scaling");
 
         ImGui::NextColumn();
@@ -78,6 +114,7 @@ void settings_draw()
         }
 
         ImGui::NextColumn();
+        ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Changing that settings requires restarting the application.");
     }
 
@@ -106,6 +143,7 @@ void settings_initialize()
     SETTINGS.show_symbols_CVE = session_get_bool("show_symbols_CVE", SETTINGS.show_symbols_CVE);
     SETTINGS.show_symbols_NEO = session_get_bool("show_symbols_NEO", SETTINGS.show_symbols_NEO);
     SETTINGS.show_symbols_INDX = session_get_bool("show_symbols_INDX", SETTINGS.show_symbols_INDX);
+    SETTINGS.show_logo_banners = session_get_bool("show_logo_banners", SETTINGS.show_logo_banners);
 
     SETTINGS.current_tab = session_get_integer(SESSION_KEY_CURRENT_TAB, SETTINGS.current_tab);
     SETTINGS.good_dividends_ratio = (double)session_get_float("good_dividends_ratio", (float)SETTINGS.good_dividends_ratio);
@@ -125,6 +163,7 @@ void settings_shutdown()
     session_set_bool("show_symbols_CVE", SETTINGS.show_symbols_CVE);
     session_set_bool("show_symbols_NEO", SETTINGS.show_symbols_NEO);
     session_set_bool("show_symbols_INDX", SETTINGS.show_symbols_INDX);
+    session_set_bool("show_logo_banners", SETTINGS.show_logo_banners);
     session_set_integer(SESSION_KEY_CURRENT_TAB, SETTINGS.current_tab);
     session_set_string(SESSION_KEY_SEARCH_TERMS, SETTINGS.search_terms);
     session_set_string(SESSION_KEY_SEARCH_FILTER, SETTINGS.search_filter);
