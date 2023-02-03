@@ -106,6 +106,7 @@
     <ClCompile Include="..\..\sources\framework\tabs.cpp" />
     <ClCompile Include="..\..\sources\logo.cpp" />
     <ClCompile Include="..\..\sources\pattern.cpp" />
+    <ClCompile Include="..\..\sources\realtime.cpp" />
     <ClCompile Include="..\..\sources\report.cpp" />
     <ClCompile Include="..\..\sources\reportgraph.cpp" />
     <ClCompile Include="..\..\sources\report_expr.cpp" />
@@ -143,6 +144,7 @@
     <ClInclude Include="..\..\sources\eod.h" />
     <ClInclude Include="..\..\sources\events.h" />
     <ClInclude Include="..\..\sources\framework\common.h" />
+    <ClInclude Include="..\..\sources\framework\database.h" />
     <ClInclude Include="..\..\sources\framework\concurrent_queue.h" />
     <ClInclude Include="..\..\sources\framework\config.h" />
     <ClInclude Include="..\..\sources\framework\console.h" />
@@ -170,6 +172,7 @@
     <ClInclude Include="..\..\sources\framework\tabs.h" />
     <ClInclude Include="..\..\sources\logo.h" />
     <ClInclude Include="..\..\sources\pattern.h" />
+    <ClInclude Include="..\..\sources\realtime.h" />
     <ClInclude Include="..\..\sources\report.h" />
     <ClInclude Include="..\..\sources\settings.h" />
     <ClInclude Include="..\..\sources\stock.h" />

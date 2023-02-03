@@ -6,6 +6,7 @@
 #include "stock.h"
 
 #include "eod.h"
+#include "events.h"
 
 #include <framework/common.h>
 #include <framework/query.h>
@@ -16,6 +17,7 @@
 #include <framework/query.h>
 #include <framework/service.h>
 #include <framework/profiler.h>
+#include <framework/dispatcher.h>
 
 #include <foundation/log.h>
 #include <foundation/array.h>
@@ -443,6 +445,10 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         entry->last_update_time = time_current();
         entry->fetch_level = FetchLevel::NONE;
         entry->resolved_level = FetchLevel::NONE;
+
+        string_const_t ticker = string_table_decode_const(handle.code);
+        dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)ticker.str, ticker.length);
+
         _db_lock.exclusive_unlock();
     }
     

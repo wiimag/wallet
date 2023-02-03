@@ -294,6 +294,77 @@ bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& 
     return false;
 }
 
+template<typename T, typename V>
+FOUNDATION_STATIC int array_binary_search(const T* array, size_t size, const V& value)
+{
+    int low = 0;
+    int high = (int)size - 1;
+    int mid = 0;
+    while (low <= high)
+    {
+        mid = (low + high) / 2;
+
+        const T& mid_value = array[mid];
+        if (mid_value < value)
+            low = mid + 1;
+        else if (mid_value > value)
+            high = mid - 1;
+        else
+            return mid;
+    }
+    return ~mid;
+}
+
+template<typename T>
+struct range_view 
+{
+    FOUNDATION_FORCEINLINE range_view(T* data, std::size_t size)
+        : m_data{ data }, m_size{ size } { }
+
+    struct iterator
+    {
+        const T* ptr;
+
+        typedef T type;
+        typedef const T const_type;
+
+        FOUNDATION_FORCEINLINE iterator(const T* ptr)
+            : ptr(ptr)
+        {
+        }
+
+        FOUNDATION_FORCEINLINE bool operator!=(const iterator& other) const
+        {
+            return ptr != other.ptr;
+        }
+
+        FOUNDATION_FORCEINLINE bool operator==(const iterator& other) const
+        {
+            return ptr == other.ptr;
+        }
+
+        FOUNDATION_FORCEINLINE iterator& operator++()
+        {
+            ptr++;
+            return *this;
+        }
+
+        FOUNDATION_FORCEINLINE const T& operator*() const
+        {
+            return *ptr;
+        }
+    };
+
+    iterator begin() { return iterator(m_data); }
+    iterator end() { return iterator(m_data + m_size); }
+
+    iterator begin() const { return iterator(m_data); }
+    iterator end() const { return iterator(m_data + m_size); }
+
+    T* m_data;
+    size_t m_size;
+};
+
 // ## URLs
 
 string_const_t url_encode(const char* str, size_t str_length = 0);

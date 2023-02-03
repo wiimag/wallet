@@ -356,6 +356,7 @@ FOUNDATION_STATIC int logo_image_download(void* payload)
 
     if (image->data == nullptr)
     {
+        stream_deallocate(download_stream);
         log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to decode logo %s"), string_table_decode(image->symbol));
         return image->data ? (image->status = STATUS_OK) : (image->status = STATUS_ERROR_LOAD_FAILURE);
     }
