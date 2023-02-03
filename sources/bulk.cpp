@@ -8,6 +8,7 @@
 #include "eod.h"
 #include "pattern.h"
 #include "settings.h"
+#include "logo.h"
 
 #include <framework/session.h>
 #include <framework/imgui.h>
@@ -54,16 +55,6 @@ FOUNDATION_STATIC void bulk_fetch_exchange_list(const json_object_t& json)
 
         exchanges = array_push(exchanges, ex);
     }
-
-#if 0
-    // Add some missing markets
-    exchanges = array_push(exchanges, (exchange_t{
-        string_table_encode("Toronto Venture"), // Name
-        string_table_encode("V"),	            // Code
-        string_table_encode("Canada"),          // Country
-        string_table_encode("CAD"),             // Currency
-        }));
-#endif
 
     if (_exchanges)
         array_deallocate(_exchanges);
@@ -169,6 +160,14 @@ FOUNDATION_STATIC string_const_t bulk_get_symbol_code(const bulk_t* b)
 FOUNDATION_STATIC cell_t bulk_column_symbol_code(table_element_ptr_t element, const column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
+
+    if (column->flags & COLUMN_RENDER_ELEMENT)
+    {
+        string_const_t code = SYMBOL_CONST(b->code);
+        const ImRect& cell_rect = table_current_cell_rect();
+        logo_render_banner(STRING_ARGS(code), cell_rect, nullptr);
+    }
+    
     return bulk_get_symbol_code(b);
 }
 
@@ -397,11 +396,14 @@ FOUNDATION_STATIC void bulk_create_symbols_table()
     _symbols_table->context_menu = bulk_table_context_menu;
     _symbols_table->search = bulk_table_search;
 
-    table_add_column(_symbols_table, STRING_CONST("Title"), bulk_column_symbol_code, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE/* | COLUMN_FREEZE*/)
-        .set_style_formatter(bulk_draw_symbol_code_color)
+    table_add_column(_symbols_table, STRING_CONST("Title"), bulk_column_symbol_code, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING)
         .set_selected_callback(bulk_column_title_selected);
 
-    table_add_column(_symbols_table, STRING_CONST("Name"), bulk_column_symbol_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(_symbols_table, STRING_CONST("Name"), 
+        bulk_column_symbol_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
+        .set_selected_callback(bulk_column_title_selected)
+        .set_style_formatter(bulk_draw_symbol_code_color);
+
     table_add_column(_symbols_table, STRING_CONST("Date"), bulk_column_symbol_date, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
     table_add_column(_symbols_table, STRING_CONST("Type"), bulk_column_symbol_type, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE);
     table_add_column(_symbols_table, STRING_CONST("Ex.||Exchange"), bulk_column_symbol_exchange, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_MIDDLE_ALIGN);
