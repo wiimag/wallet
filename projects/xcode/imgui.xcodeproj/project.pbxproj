@@ -14,7 +14,6 @@
 		B93598302919B6C800D36643 /* imgui.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B935981C2919B6C800D36643 /* imgui.cpp */; };
 		B93598362919B6C800D36643 /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B93598272919B6C800D36643 /* imgui_tables.cpp */; };
 		B93598372919B6C800D36643 /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B935982A2919B6C800D36643 /* imgui_draw.cpp */; };
-		B93E5F2F292FAC1B00A706BD /* ImGuizmo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B93E5F2D292FAC1B00A706BD /* ImGuizmo.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,8 +36,6 @@
 		B93598282919B6C800D36643 /* implot_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = implot_internal.h; sourceTree = "<group>"; };
 		B93598292919B6C800D36643 /* implot.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = implot.h; sourceTree = "<group>"; };
 		B935982A2919B6C800D36643 /* imgui_draw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_draw.cpp; sourceTree = "<group>"; };
-		B93E5F2D292FAC1B00A706BD /* ImGuizmo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ImGuizmo.cpp; sourceTree = "<group>"; };
-		B93E5F2E292FAC1B00A706BD /* ImGuizmo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ImGuizmo.h; sourceTree = "<group>"; };
 		D5D335834140F17D0A34811A /* libimgui.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libimgui.a; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -64,8 +61,6 @@
 		B935980F2919B6C800D36643 /* imgui */ = {
 			isa = PBXGroup;
 			children = (
-				B93E5F2D292FAC1B00A706BD /* ImGuizmo.cpp */,
-				B93E5F2E292FAC1B00A706BD /* ImGuizmo.h */,
 				B93598192919B6C800D36643 /* imgui_date_chooser.cpp */,
 				B935982A2919B6C800D36643 /* imgui_draw.cpp */,
 				B93598272919B6C800D36643 /* imgui_tables.cpp */,
@@ -166,7 +161,6 @@
 				B935982B2919B6C800D36643 /* imgui_widgets.cpp in Sources */,
 				B935982D2919B6C800D36643 /* implot_items.cpp in Sources */,
 				B93598362919B6C800D36643 /* imgui_tables.cpp in Sources */,
-				B93E5F2F292FAC1B00A706BD /* ImGuizmo.cpp in Sources */,
 				B93598302919B6C800D36643 /* imgui.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

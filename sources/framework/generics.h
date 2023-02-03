@@ -11,6 +11,8 @@
 #include <foundation/mutex.h>
 #include <foundation/beacon.h>
 
+#include <algorithm>
+
 namespace generics {
 
     template<typename T>

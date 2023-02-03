@@ -15,6 +15,9 @@
 		B9227E0B291A96900037FAE2 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B9227E00291A95390037FAE2 /* libglfw3.a */; };
 		B929C1332939136E00AEE333 /* libcurl.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B929C1322939136E00AEE333 /* libcurl.tbd */; };
 		B93AD6D829846616005F2016 /* wallet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B93AD6D729846604005F2016 /* wallet.cpp */; };
+		B94CB934298D51F300C8129E /* logo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B94CB932298D51F200C8129E /* logo.cpp */; };
+		B94CB936298D521200C8129E /* generics_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B94CB935298D521200C8129E /* generics_tests.cpp */; };
+		B94CB93D298D528F00C8129E /* stb.c in Sources */ = {isa = PBXBuildFile; fileRef = B94CB939298D528F00C8129E /* stb.c */; };
 		B94CBE9B297AFC3700575D12 /* varying.def.sc in Resources */ = {isa = PBXBuildFile; fileRef = B94CBE93297AFC3700575D12 /* varying.def.sc */; };
 		B96DB0C7297AD0BC00374F96 /* test_runner.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B96DB0C6297AD0BC00374F96 /* test_runner.cpp */; };
 		B9953AD2297AFB81006A8390 /* shared_mutex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B9953AA9297AFB81006A8390 /* shared_mutex.cpp */; };
@@ -188,6 +191,14 @@
 		B929C1322939136E00AEE333 /* libcurl.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libcurl.tbd; path = usr/lib/libcurl.tbd; sourceTree = SDKROOT; };
 		B93AD6D629846604005F2016 /* wallet.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = wallet.h; sourceTree = "<group>"; };
 		B93AD6D729846604005F2016 /* wallet.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = wallet.cpp; sourceTree = "<group>"; };
+		B94CB932298D51F200C8129E /* logo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = logo.cpp; sourceTree = "<group>"; };
+		B94CB933298D51F200C8129E /* logo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = logo.h; sourceTree = "<group>"; };
+		B94CB935298D521200C8129E /* generics_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = generics_tests.cpp; sourceTree = "<group>"; };
+		B94CB938298D528F00C8129E /* stb_truetype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stb_truetype.h; path = stb/stb_truetype.h; sourceTree = "<group>"; };
+		B94CB939298D528F00C8129E /* stb.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = stb.c; path = stb/stb.c; sourceTree = "<group>"; };
+		B94CB93A298D528F00C8129E /* stb_textedit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stb_textedit.h; path = stb/stb_textedit.h; sourceTree = "<group>"; };
+		B94CB93B298D528F00C8129E /* stb_image.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stb_image.h; path = stb/stb_image.h; sourceTree = "<group>"; };
+		B94CB93C298D528F00C8129E /* stb_rect_pack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stb_rect_pack.h; path = stb/stb_rect_pack.h; sourceTree = "<group>"; };
 		B94CBE93297AFC3700575D12 /* varying.def.sc */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = varying.def.sc; sourceTree = "<group>"; };
 		B96DB0C6297AD0BC00374F96 /* test_runner.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test_runner.cpp; sourceTree = "<group>"; };
 		B9953AA7297AFB81006A8390 /* jobs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = jobs.h; sourceTree = "<group>"; };
@@ -376,6 +387,19 @@
 			path = "lib-vc2022-64";
 			sourceTree = "<group>";
 		};
+		B94CB937298D527100C8129E /* stb */ = {
+			isa = PBXGroup;
+			children = (
+				B94CB939298D528F00C8129E /* stb.c */,
+				B94CB93B298D528F00C8129E /* stb_image.h */,
+				B94CB93C298D528F00C8129E /* stb_rect_pack.h */,
+				B94CB93A298D528F00C8129E /* stb_textedit.h */,
+				B94CB938298D528F00C8129E /* stb_truetype.h */,
+			);
+			name = stb;
+			path = ../../external;
+			sourceTree = SOURCE_ROOT;
+		};
 		B94CBE85297AFC3700575D12 /* shaders */ = {
 			isa = PBXGroup;
 			children = (
@@ -460,6 +484,7 @@
 				B9C689102918A7E300C585E1 /* mnyfmt.h */,
 				B9FF98FF296C571B00F966DD /* doctest */,
 				B9227DF7291A95390037FAE2 /* glfw */,
+				B94CB937298D527100C8129E /* stb */,
 			);
 			name = external;
 			path = ../../external;
@@ -484,6 +509,7 @@
 				B9C689322918A7E300C585E1 /* app.cpp */,
 				B9CF9DAB29845BF4006AF271 /* bulk.cpp */,
 				B9CF9DB229845BF4006AF271 /* eod.cpp */,
+				B94CB932298D51F200C8129E /* logo.cpp */,
 				B9CF9DB429845BF4006AF271 /* pattern.cpp */,
 				B9CF9DAF29845BF4006AF271 /* report_expr.cpp */,
 				B9CF9DAE29845BF4006AF271 /* report.cpp */,
@@ -497,6 +523,7 @@
 				B9CF9DB629845BF4006AF271 /* bulk.h */,
 				B9CF9DAD29845BF4006AF271 /* eod.h */,
 				B9F99B5C29770B49004DB76A /* events.h */,
+				B94CB933298D51F200C8129E /* logo.h */,
 				B9CF9DB329845BF4006AF271 /* pattern.h */,
 				B9CF9DB529845BF4006AF271 /* report.h */,
 				B9C689262918A7E300C585E1 /* resource.h */,
@@ -522,6 +549,7 @@
 		B9FF98F3296C56E800F966DD /* tests */ = {
 			isa = PBXGroup;
 			children = (
+				B94CB935298D521200C8129E /* generics_tests.cpp */,
 				B9FF98F9296C56E800F966DD /* boot_tests.cpp */,
 				B9FF98F4296C56E800F966DD /* config_tests.cpp */,
 				B9FF98F5296C56E800F966DD /* imgui_tests.cpp */,
@@ -748,10 +776,12 @@
 				B9953AD9297AFB81006A8390 /* table.cpp in Sources */,
 				B9FF98FD296C56E800F966DD /* test_utils.cpp in Sources */,
 				B9953AE3297AFB81006A8390 /* progress.cpp in Sources */,
+				B94CB936298D521200C8129E /* generics_tests.cpp in Sources */,
 				B9CF9DBC29845BF4006AF271 /* report.cpp in Sources */,
 				B9CF9DC329845BF4006AF271 /* title.cpp in Sources */,
 				B9FF98FA296C56E800F966DD /* config_tests.cpp in Sources */,
 				B9CF9DA829845B93006AF271 /* imgui.cpp in Sources */,
+				B94CB93D298D528F00C8129E /* stb.c in Sources */,
 				B9953AE0297AFB81006A8390 /* dispatcher.cpp in Sources */,
 				B9CF9DA529845B93006AF271 /* math.cpp in Sources */,
 				B9C689422918A7E300C585E1 /* mnyfmt.c in Sources */,
@@ -771,6 +801,7 @@
 				B9CF9DC129845BF4006AF271 /* pattern.cpp in Sources */,
 				B9953AE5297AFB81006A8390 /* tabs.cpp in Sources */,
 				B96DB0C7297AD0BC00374F96 /* test_runner.cpp in Sources */,
+				B94CB934298D51F300C8129E /* logo.cpp in Sources */,
 				B9953AD6297AFB81006A8390 /* query.cpp in Sources */,
 				B9953AD4297AFB81006A8390 /* boot.cpp in Sources */,
 				B9953AD2297AFB81006A8390 /* shared_mutex.cpp in Sources */,
@@ -836,7 +867,7 @@
 					"BX_CONFIG_DEBUG=0",
 					"FOUNDATION_SIZE_REAL=8",
 					IMGUI_ENABLE_TEST_ENGINE,
-					"BUILD_DEPLOY=1",
+					"BUILD_RELEASE=1",
 				);
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;

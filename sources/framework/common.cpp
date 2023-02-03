@@ -214,7 +214,7 @@ string_const_t string_from_date(const tm& tm)
 string_const_t string_from_date(time_t at)
 {
     tm tm;
-    if (time_to_local(at, &tm) != 0)
+    if (time_to_local(at, &tm) == false)
         return string_null();
     return string_from_date(tm);
 }
@@ -230,7 +230,7 @@ bool time_to_local(time_t at, tm* out_tm)
     #if FOUNDATION_PLATFORM_WINDOWS
     return localtime_s(out_tm, &at) != 0;
     #else
-    return localtime_r(&at, out_tm);
+    return localtime_r(&at, out_tm) != 0;
     #endif
 }
 
