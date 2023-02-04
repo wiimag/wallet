@@ -318,6 +318,9 @@
     <ClCompile Include="..\..\sources\realtime.cpp">
       <Filter>app</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\sources\tests\database_tests.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="../../resources/main.ico">

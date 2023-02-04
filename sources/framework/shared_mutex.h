@@ -97,6 +97,15 @@ public:
         #endif
     }
 
+    FOUNDATION_FORCEINLINE bool locked() const
+    {
+        #if FOUNDATION_PLATFORM_WINDOWS
+        return mutex_.Ptr != 0;
+        #else
+        return mutex_.__data.__writer != 0;
+        #endif
+    }
+
 private:
     #if FOUNDATION_PLATFORM_WINDOWS
     mutable SRWLOCK mutex_;
