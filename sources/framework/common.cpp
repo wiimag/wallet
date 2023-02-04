@@ -228,7 +228,7 @@ time_t time_now()
 bool time_to_local(time_t at, tm* out_tm)
 {
     #if FOUNDATION_PLATFORM_WINDOWS
-    return localtime_s(out_tm, &at) != 0;
+    return localtime_s(out_tm, &at) == 0;
     #else
     return localtime_r(&at, out_tm) != 0;
     #endif

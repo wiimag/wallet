@@ -15,8 +15,8 @@
 #define MAX_JOB_THREADS 8
 #endif
 
-static thread_t* _job_threads[MAX_JOB_THREADS]{ nullptr };
 static concurrent_queue<job_t*> _scheduled_jobs{};
+static thread_t* _job_threads[MAX_JOB_THREADS]{ nullptr };
 
 static void* job_thread_fn(void* arg)
 {
@@ -93,6 +93,8 @@ void job_deallocate(job_t*& job)
         return;
     if ((job->completed || !job->scheduled))
     {   
+        if (job->payload_size > 0)
+            memory_deallocate(job->payload);
         job->~job_t();
         memory_deallocate(job);
         job = nullptr;
@@ -101,11 +103,28 @@ void job_deallocate(job_t*& job)
         job->flags |= JOB_DEALLOCATE_AFTER_EXECUTION;
 }
 
-job_t* job_execute(job_handler_t handler, void* payload /*= nullptr*/, job_flags_t flags /*= JOB_FLAGS_NONE*/)
+job_t* job_execute(const job_handler_t& handler, void* payload /*= nullptr*/, job_flags_t flags /*= JOB_FLAGS_NONE*/)
+{
+    return job_execute(handler, payload, 0, flags);
+}
+
+job_t* job_execute(const job_handler_t& handler, void* payload, size_t payload_size, job_flags_t flags /*= JOB_FLAGS_NONE*/)
 {
     job_t* new_job = job_allocate();
     new_job->handler = handler;
-    new_job->payload = payload;
+    
+    if (payload_size == 0)
+    {
+        new_job->payload = payload;
+        new_job->payload_size = 0;
+    }
+    else
+    {
+        void* allocated_payload = memory_allocate(0, payload_size, 0, MEMORY_PERSISTENT);
+        new_job->payload = memcpy(allocated_payload, payload, payload_size);
+        new_job->payload_size = payload_size;
+    }
+
     new_job->flags = flags;
     new_job->scheduled = true;
     _scheduled_jobs.push(new_job);

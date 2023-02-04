@@ -45,7 +45,7 @@ static struct REALTIME_MODULE {
 
     shared_mutex      stocks_mutex;
     stock_realtime_t* stocks{ nullptr };
-} *REALTIME;
+} *_realtime;
 
 //
 // # PRIVATE
@@ -67,12 +67,12 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
     string_const_t code { (const char*)args.data, args.size };
     const hash_t key = hash(code.str, code.length);
 
-    shared_mutex& mutex = REALTIME->stocks_mutex;
+    shared_mutex& mutex = _realtime->stocks_mutex;
     
     if (!mutex.shared_lock())
         return false;
      
-    int fidx = array_binary_search(REALTIME->stocks, array_size(REALTIME->stocks), key);
+    int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
     if (!mutex.shared_unlock() || fidx >= 0)
         return false;
     
@@ -86,8 +86,10 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
     if (!mutex.exclusive_lock())
         return false;
 
+    log_infof(HASH_REALTIME, STRING_CONST("Registering new realtime stock %.*s"), STRING_FORMAT(code));
+
     fidx = ~fidx;
-    array_insert_memcpy(REALTIME->stocks, fidx, &stock);
+    array_insert_memcpy(_realtime->stocks, fidx, &stock);
     return mutex.exclusive_unlock();
 }
 
@@ -96,7 +98,7 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
     if (res.error_code > 0)
         return;
 
-    shared_mutex& mutex = REALTIME->stocks_mutex;
+    shared_mutex& mutex = _realtime->stocks_mutex;
     
     for (auto e : res)
     {
@@ -110,15 +112,27 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
         if (!mutex.shared_lock())
             continue;
 
-        int fidx = array_binary_search(REALTIME->stocks, array_size(REALTIME->stocks), key);
+        int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
         if (fidx >= 0)
         {
-            stock_realtime_t& stock = REALTIME->stocks[fidx];
-            stock.price = r.price;
-            stock.timestamp = r.timestamp;
+            stock_realtime_t& stock = _realtime->stocks[fidx];
 
-            // Is that safe enough?
-            array_push_memcpy(stock.records, &r);
+            if (r.timestamp > stock.timestamp)
+            {
+                stock.price = r.price;
+                stock.timestamp = r.timestamp;
+
+                log_infof(HASH_REALTIME, STRING_CONST("Streaming new realtime values %lld > %.*s > %lf (%llu)"), 
+                    r.timestamp, STRING_FORMAT(code), r.price, stream_size(_realtime->stream));
+                
+                // Is that safe enough?
+                array_push_memcpy(stock.records, &r);
+
+                stream_write(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
+                stream_write(_realtime->stream, stock.code, sizeof(stock.code));
+                stream_write(_realtime->stream, &r.price, sizeof(r.price));
+                stream_flush(_realtime->stream);
+            }
         }
         mutex.shared_unlock();
     }
@@ -126,17 +140,66 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
 
 FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
 {
+    shared_mutex& mutex = _realtime->stocks_mutex;
+    
+    while (!stream_eos(_realtime->stream))
+    {
+        char code[16];
+        size_t code_length;
+        stock_realtime_record_t r;
+
+        stream_read(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
+        stream_read(_realtime->stream, code, sizeof(code));
+        stream_read(_realtime->stream, &r.price, sizeof(r.price));
+
+        code_length = string_length(code);
+        const hash_t key = hash(code, code_length);
+
+        SHARED_WRITE_LOCK(mutex);
+        int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
+        if (fidx < 0)
+        {
+            stock_realtime_t stock;
+            string_copy(STRING_CONST_CAPACITY(stock.code), code, code_length);
+            stock.key = key;
+            stock.timestamp = r.timestamp;
+            stock.price = r.price;
+            stock.records = nullptr;
+            array_push_memcpy(stock.records, &r);
+
+            fidx = ~fidx;
+            array_insert_memcpy(_realtime->stocks, fidx, &stock);
+        }
+        else
+        {
+            stock_realtime_t& stock = _realtime->stocks[fidx];
+
+            if (r.timestamp > stock.timestamp)
+            {
+                stock.timestamp = r.timestamp;
+                stock.price = r.price;
+            }
+            array_push_memcpy(stock.records, &r);
+        }
+    }
+
     unsigned int wait_time = 1;
     static string_const_t* codes = nullptr;
     while (!thread_try_wait(wait_time))
     {
-        shared_mutex& mutex = REALTIME->stocks_mutex;
+        time_t oldest = INT64_MAX;
         if (mutex.shared_lock())
         {
-            for (size_t i = 0, end = array_size(REALTIME->stocks); i < end; ++i)
+            time_t now = time_now();
+            for (size_t i = 0, end = array_size(_realtime->stocks); i < end; ++i)
             {
-                const stock_realtime_t& stock = REALTIME->stocks[i];
-                array_push(codes, string_const(stock.code, string_length(stock.code)));
+                const stock_realtime_t& stock = _realtime->stocks[i];
+                const double minutes = time_elapsed_days(stock.timestamp, now) * 24.0 * 60.0;
+                if (minutes > 5)
+                    array_push(codes, string_const(stock.code, string_length(stock.code)));
+
+                if (stock.timestamp != 0 && stock.timestamp < oldest)
+                    oldest = stock.timestamp;
             }
             mutex.shared_unlock();
 
@@ -152,20 +215,31 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
                     
                     // Send batch
                     string_const_t url = eod_build_url("real-time", batch[0].str, FORMAT_JSON, "s", code_list.str);
+                    log_infof(HASH_REALTIME, STRING_CONST("Fetching realtime stock data for %.*s"), STRING_FORMAT(code_list));
                     if (!query_execute_json(url.str, FORMAT_JSON_WITH_ERROR, realtime_fetch_query_data))
                         break;
 
                     if (thread_try_wait(5000))
                         goto realtime_background_thread_fn_quit;
+
+                    batch_size = 0;
                 }
             }
 
             array_clear(codes);
-            wait_time = 5000;
+            if (oldest != INT64_MAX)
+            {
+                double wait_minutes = time_elapsed_days(oldest, now) * 24.0 * 60.0;
+                wait_minutes = max(0.0, 5.0 - wait_minutes);
+                wait_time = max(60000U, to_uint(math_trunc(wait_minutes * 60.0 * 1000.0)));
+            }
+            else
+            {
+                wait_time = 5000;
+            }
         }
     }
-
-
+    
 realtime_background_thread_fn_quit:
     array_deallocate(codes);    
     return 0;
@@ -177,20 +251,20 @@ realtime_background_thread_fn_quit:
 
 FOUNDATION_STATIC void realtime_initialize()
 {
-    REALTIME = MEM_NEW(HASH_REALTIME, REALTIME_MODULE);
+    _realtime = MEM_NEW(HASH_REALTIME, REALTIME_MODULE);
 
     // Open realtime stock stream.
     string_const_t realtime_stream_path = session_get_user_file_path(STRING_CONST("realtime"), nullptr, 0, STRING_CONST("stream"));
-    REALTIME->stream = fs_open_file(STRING_ARGS(realtime_stream_path), STREAM_CREATE | STREAM_IN | STREAM_OUT | STREAM_BINARY);
-    if (REALTIME->stream == nullptr)
+    _realtime->stream = fs_open_file(STRING_ARGS(realtime_stream_path), STREAM_CREATE | STREAM_IN | STREAM_OUT | STREAM_BINARY);
+    if (_realtime->stream == nullptr)
     {
         log_panic(HASH_REALTIME, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to open realtime stream"));
         return;
     }
 
     // Create thread to query realtime stock
-    REALTIME->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
-    if (REALTIME->background_thread == nullptr || !thread_start(REALTIME->background_thread))
+    _realtime->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
+    if (_realtime->background_thread == nullptr || !thread_start(_realtime->background_thread))
     {
         log_panic(HASH_REALTIME, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to create realtime background thread"));
         return;
@@ -201,16 +275,16 @@ FOUNDATION_STATIC void realtime_initialize()
 
 FOUNDATION_STATIC void realtime_shutdown()
 {   
-    stream_deallocate(REALTIME->stream);
+    stream_deallocate(_realtime->stream);
     
-    thread_signal(REALTIME->background_thread);
-    thread_deallocate(REALTIME->background_thread);
+    thread_signal(_realtime->background_thread);
+    thread_deallocate(_realtime->background_thread);
 
-    foreach(s, REALTIME->stocks)
+    foreach(s, _realtime->stocks)
         array_deallocate(s->records);
-    array_deallocate(REALTIME->stocks);
+    array_deallocate(_realtime->stocks);
 
-    MEM_DELETE(REALTIME);
+    MEM_DELETE(_realtime);
 }
 
 DEFINE_SERVICE(REALTIME, realtime_initialize, realtime_shutdown, SERVICE_PRIORITY_REALTIME);

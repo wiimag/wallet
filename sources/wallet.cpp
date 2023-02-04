@@ -559,6 +559,9 @@ static int wallet_history_format_date_monthly(double value, char* buff, int size
 
     double day_space = *(double*)user_data;
     string_const_t date_str = string_from_date(d);
+    if (date_str.length == 0)
+        return 0;
+
     if (day_space <= 5)
         return (int)string_copy(buff, size, date_str.str + 5, 5).length;
 
@@ -602,7 +605,6 @@ static void wallet_history_draw_graph(report_t* report, wallet_t* wallet)
     ImPlot::SetupAxis(ImAxis_X1, "##Date", ImPlotAxisFlags_LockMax | ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight);
     ImPlot::SetupAxisFormat(ImAxis_X1, wallet_history_format_date_monthly, &day_space);
     ImPlot::SetupAxisTicks(ImAxis_X1, wallet->history_dates, (int)array_size(wallet->history_dates), nullptr, false);
-    //ImPlot::SetupAxisTicks(ImAxis_X1, (double)min_d, (double)max_d, min(math_round(day_range * 2.0), 12), nullptr, false);
     ImPlot::SetupAxisLimits(ImAxis_X1, (double)min_d - time_one_day() * day_space, (double)max_d + time_one_day() * day_space, ImPlotCond_Once);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, (double)min_d - time_one_day() * day_space, (double)max_d + time_one_day() * day_space/*, ImPlotCond_Once*/);
     ImPlot::SetupAxisFormat(ImAxis_X1, wallet_history_format_date, nullptr);

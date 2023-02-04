@@ -130,6 +130,13 @@ FOUNDATION_FORCEINLINE bool string_is_null(string_t s)
     return s.str == nullptr || s.length == 0;
 }
 
+FOUNDATION_FORCEINLINE bool string_starts_with(const char* str, size_t str_length, const char* prefix, size_t prefix_length)
+{
+    if (str_length < prefix_length)
+        return false;
+    return string_equal(str, prefix_length, prefix, prefix_length);
+}
+
 FOUNDATION_FORCEINLINE bool is_char_alpha_num_hex(char c)
 {
     if (c >= '0' && c <= '9')
