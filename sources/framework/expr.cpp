@@ -2420,7 +2420,6 @@ FOUNDATION_STATIC void eval_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATE"), expr_eval_create_date, NULL, 0 }));
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATESTR"), expr_eval_date_to_string, NULL, 0 }));
     
-
     // Must always be last
     array_push(_expr_user_funcs, (expr_func_t{ NULL, 0, NULL, NULL, 0 }));
 

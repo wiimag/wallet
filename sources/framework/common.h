@@ -302,24 +302,23 @@ bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& 
 }
 
 template<typename T, typename V>
-FOUNDATION_STATIC int array_binary_search(const T* array, size_t size, const V& value)
+FOUNDATION_STATIC int array_binary_search(const T* array, uint32_t _num, const V& _key)
 {
-    int low = 0;
-    int high = (int)size - 1;
-    int mid = 0;
-    while (low <= high)
+    uint32_t offset = 0;
+    for (uint32_t ll = _num; offset < ll;)
     {
-        mid = (low + high) / 2;
+        const uint32_t idx = (offset + ll) / 2;
 
-        const T& mid_value = array[mid];
-        if (mid_value < value)
-            low = mid + 1;
-        else if (mid_value > value)
-            high = mid - 1;
+        const T& mid_value = array[idx];
+        if (mid_value > _key)
+            ll = idx;
+        else if (mid_value < _key)
+            offset = idx + 1;
         else
-            return mid;
+            return idx;
     }
-    return ~mid;
+
+    return ~offset;
 }
 
 template<typename T>

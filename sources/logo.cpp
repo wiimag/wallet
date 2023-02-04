@@ -494,7 +494,7 @@ FOUNDATION_STATIC ImU32 logo_get_fill_color(const logo_image_t* image)
 // # PUBLIC API
 //
 
-bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*= ImVec2(0, 0)*/, bool background /*= false*/, bool show_tooltip /*= true*/)
+bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& _size /*= ImVec2(0, 0)*/, bool background /*= false*/, bool show_tooltip /*= true*/, ImRect* fill_rect /*= nullptr*/)
 {
     MEMORY_TRACKER(HASH_LOGO);
 
@@ -526,14 +526,23 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& size /*
     if (!bgfx::isValid(texture))
         return false;
 
+    ImVec2 rendered_size = _size;
+    if (rendered_size.x == 0)
+    {
+        rendered_size.x = ImGui::GetContentRegionAvail().x;
+        const float hratio = rendered_size.x / width;
+        rendered_size.y = height * hratio;
+    }
     const ImVec2& spos = ImGui::GetCursorScreenPos();
     const ImU32 bg_logo_banner_color = imgui_color_text_for_background(banner_color);
-    const ImRect logo_rect(spos, spos + size);
+    const ImRect logo_rect(spos, spos + rendered_size);
     ImDrawList* dl = ImGui::GetWindowDrawList();
     if (channels == 4 && background)
         dl->AddRectFilled(logo_rect.Min, logo_rect.Max, bg_logo_banner_color); // ABGR
 
     dl->AddImage((ImTextureID)texture.idx, logo_rect.Min, logo_rect.Max);
+    if (fill_rect)
+        *fill_rect = logo_rect;
     if (show_tooltip && ImGui::IsMouseHoveringRect(logo_rect.Min, logo_rect.Max))
     {
         if (channels == 4)
