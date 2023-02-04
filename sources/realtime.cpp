@@ -50,6 +50,7 @@ static struct REALTIME_MODULE {
     stock_realtime_t* stocks{ nullptr };
 
     bool show_window{ false };
+    table_t* table{ nullptr };
 } *_realtime;
 
 //
@@ -87,7 +88,7 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
 
     fidx = ~fidx;
     array_insert_memcpy(_realtime->stocks, fidx, &stock);
-    log_infof(HASH_REALTIME, STRING_CONST("1. Registering new realtime stock %.*s (%" PRIhash ")"), STRING_FORMAT(code), key);
+    log_debugf(HASH_REALTIME, STRING_CONST("Registering new realtime stock %.*s (%" PRIhash ")"), STRING_FORMAT(code), key);
     return true;
 }
 
@@ -117,7 +118,7 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
                 stock.price = r.price;
                 stock.timestamp = r.timestamp;
 
-                log_infof(HASH_REALTIME, STRING_CONST("Streaming new realtime values %lld > %.*s > %lf (%llu)"), 
+                log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime values %lld > %.*s > %lf (%llu)"),
                     r.timestamp, STRING_FORMAT(code), r.price, stream_size(_realtime->stream));
                 
                 // Is that safe enough?
@@ -161,18 +162,18 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
 
             fidx = ~fidx;
             array_insert_memcpy(_realtime->stocks, fidx, &stock);
-            log_infof(HASH_REALTIME, STRING_CONST("2. Registering new realtime stock %s (%" PRIhash ")"), stock.code, stock.key);
+            log_debugf(HASH_REALTIME, STRING_CONST("Registering new realtime stock %s (%" PRIhash ")"), stock.code, stock.key);
         }
         else
         {
-            stock_realtime_t& stock = _realtime->stocks[fidx];
+            stock_realtime_t& stock_ref = _realtime->stocks[fidx];
 
-            if (r.timestamp > stock.timestamp)
+            if (r.timestamp > stock_ref.timestamp)
             {
-                stock.price = r.price;
-                stock.timestamp = r.timestamp;
+                stock_ref.price = r.price;
+                stock_ref.timestamp = r.timestamp;
             }
-            array_push_memcpy(stock.records, &r);
+            array_push_memcpy(stock_ref.records, &r);
         }
     }
 
@@ -197,7 +198,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
             mutex.shared_unlock();
 
             size_t batch_size = 0;
-            string_const_t batch[16];
+            string_const_t batch[32];
             for (size_t i = 0, end = array_size(codes); i < end; ++i)
             {
                 batch[batch_size++] = codes[i];
@@ -208,11 +209,11 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
                     
                     // Send batch
                     string_const_t url = eod_build_url("real-time", batch[0].str, FORMAT_JSON, "s", code_list.str);
-                    log_infof(HASH_REALTIME, STRING_CONST("Fetching realtime stock data for %.*s"), STRING_FORMAT(code_list));
+                    log_infof(HASH_REALTIME, STRING_CONST("Fetching realtime stock data for %.*s\n%.*s"), STRING_FORMAT(code_list), STRING_FORMAT(url));
                     if (!query_execute_json(url.str, FORMAT_JSON_WITH_ERROR, realtime_fetch_query_data))
                         break;
 
-                    if (thread_try_wait(5000))
+                    if (thread_try_wait(15000))
                         goto realtime_background_thread_fn_quit;
 
                     batch_size = 0;
@@ -224,8 +225,8 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
             if (oldest != INT64_MAX)
             {
                 double wait_minutes = time_elapsed_days(oldest, now) * 24.0 * 60.0;
-                wait_minutes = max(0.0, 5.0 - wait_minutes);
-                wait_time = max(60000U, to_uint(math_trunc(wait_minutes * 60.0 * 1000.0)));
+                wait_minutes = max(0.0, 15.0 - wait_minutes);
+                wait_time = max(5 * 60000U, to_uint(math_trunc(wait_minutes * 60.0 * 1000.0)));
             }
             else
             {
@@ -279,6 +280,84 @@ FOUNDATION_STATIC int realtime_format_date_range_label(double value, char* buff,
     return (int)string_format(buff, size, STRING_CONST("%.3g mins."), value).length;
 }
 
+FOUNDATION_STATIC cell_t realtime_table_draw_title(table_element_ptr_t element, const column_t* column)
+{
+    const stock_realtime_t* s = (const stock_realtime_t*)element;
+
+    if (column->flags & COLUMN_RENDER_ELEMENT)
+    {
+        ImRect logo_rect;
+        if (!logo_render(s->code, string_length(s->code), {}, true, false, &logo_rect))
+            ImGui::TextUnformatted(s->code);
+        else
+        {
+            ImGui::SetCursorScreenPos(logo_rect.Min);
+            ImGui::Dummy(logo_rect.GetSize());
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip("%s", s->code);
+            }
+        }
+    }
+
+    return s->code;
+}
+
+FOUNDATION_STATIC cell_t realtime_table_draw_time(table_element_ptr_t element, const column_t* column)
+{
+    const stock_realtime_t* s = (const stock_realtime_t*)element;
+
+    if (column->flags & COLUMN_RENDER_ELEMENT)
+    {
+        string_const_t date_string = string_from_time_static((tick_t)s->timestamp * (tick_t)1000, true);
+        ImGui::TextWrapped("%.*s", STRING_FORMAT(date_string));
+    }
+
+    return s->timestamp;
+}
+
+FOUNDATION_STATIC cell_t realtime_table_draw_price(table_element_ptr_t element, const column_t* column)
+{
+    const stock_realtime_t* s = (const stock_realtime_t*)element;
+    return s->price;
+}
+
+FOUNDATION_STATIC cell_t realtime_table_draw_monitor(table_element_ptr_t element, const column_t* column)
+{
+    const stock_realtime_t* s = (const stock_realtime_t*)element;
+
+    if (column->flags & COLUMN_RENDER_ELEMENT)
+    {
+        const size_t record_count = array_size(s->records);
+        if (record_count > 2 && ImPlot::BeginPlot("##MonitorGraph", {-1.0f, _realtime->table->fixed_height}))
+        {
+            double min = (double)s->records[0].timestamp;
+            double max = (double)array_last(s->records)->timestamp;
+            ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
+            ImPlot::SetupAxisFormat(ImAxis_X1, realtime_format_date_range_label, (void*)s);
+            ImPlot::SetupAxisTicks(ImAxis_X1, min, max, 6);
+            ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max + (max - min) * 0.05);
+
+            ImPlot::PlotLineG("##Values", [](int idx, void* user_data)->ImPlotPoint
+            {
+                stock_realtime_t* c = (stock_realtime_t*)user_data;
+                const stock_realtime_record_t* r = &c->records[idx];
+
+                const double x = (double)r->timestamp;
+                const double y = r->price;
+                return ImPlotPoint(x, y);
+            }, (void*)s, array_size(s->records), ImPlotLineFlags_SkipNaN);
+            ImPlot::EndPlot();
+        }
+        else
+        {
+            ImGui::TextUnformatted("Not enough data");
+        }
+    }
+
+    return (double)array_size(s->records);
+}
+
 FOUNDATION_STATIC void realtime_render_prices()
 {
     if (_realtime->show_window == false)
@@ -290,103 +369,20 @@ FOUNDATION_STATIC void realtime_render_prices()
 
     if (ImGui::Begin("Realtime Stocks##1", &_realtime->show_window, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoCollapse))
     {
-        if (ImGui::BeginTable("##Evaluators", 4,
-            ImGuiTableFlags_ScrollY |
-            ImGuiTableFlags_RowBg | 
-            ImGuiTableFlags_Hideable | 
-            ImGuiTableFlags_SizingFixedFit |
-            ImGuiTableFlags_Resizable, ImVec2(-1.0f, -1.0f)))
+        if (_realtime->table == nullptr)
         {
-            ImGui::TableSetupScrollFreeze(0, 1);
-
-            ImGui::TableSetupColumn("Title");
-            ImGui::TableSetupColumn("Time", 0, 0, 0, table_cell_right_aligned_column_label);
-            ImGui::TableSetupColumn("Price", 0, 0, 0, table_cell_right_aligned_column_label);
-            ImGui::TableSetupColumn("Monitor", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableHeadersRow();
-
-            SHARED_READ_LOCK(_realtime->stocks_mutex);
-
-            ImGuiListClipper clipper;
-            clipper.Begin(array_size(_realtime->stocks), 200.0f);
-            while (clipper.Step())
-            {
-                if (clipper.DisplayStart >= clipper.DisplayEnd)
-                    continue;
-
-                for (int element_index = clipper.DisplayStart; element_index < clipper.DisplayEnd; ++element_index)
-                {
-                    stock_realtime_t& ev = _realtime->stocks[element_index];
-                    const size_t record_count = array_size(ev.records);
-                    //if (record_count <= 2)
-                      //  continue;
-
-                    ImGui::TableNextRow(ImGuiTableRowFlags_None, 200.0f);
-                    {
-                        bool evaluate_expression = false;
-
-                        ImGui::PushID(&ev);
-
-                        if (ImGui::TableNextColumn())
-                        {
-                            ImRect logo_rect;
-                            if (!logo_render(ev.code, string_length(ev.code), {}, true, false, &logo_rect))
-                                ImGui::TextUnformatted(ev.code);
-                            else
-                            {
-                                ImGui::SetCursorScreenPos(logo_rect.Min);
-                                ImGui::Dummy(logo_rect.GetSize());
-                                if (ImGui::IsItemHovered())
-                                {
-                                    ImGui::SetTooltip("%s", ev.code);
-                                }
-                            }
-                        }
-
-                        if (ImGui::TableNextColumn())
-                        {
-                            string_const_t date_string = string_from_date(ev.timestamp);
-                            table_cell_right_aligned_label(STRING_ARGS(date_string));
-                        }
-
-                        if (ImGui::TableNextColumn())
-                        {
-                            char price_label_buffer[16];
-                            string_t price_label = string_format(STRING_CONST_CAPACITY(price_label_buffer), STRING_CONST("%.2lf $"), ev.price);
-                            table_cell_right_aligned_label(STRING_ARGS(price_label));
-                        }
-
-                        if (ImGui::TableNextColumn())
-                        {
-                            if (record_count > 2 && ImPlot::BeginPlot("##MonitorGraph"))
-                            {
-                                double min = (double)ev.records[0].timestamp;
-                                double max = (double)array_last(ev.records)->timestamp;
-                                ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
-                                ImPlot::SetupAxisFormat(ImAxis_X1, realtime_format_date_range_label, &ev);
-                                ImPlot::SetupAxisTicks(ImAxis_X1, min, max, 6);
-                                ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max + (max - min) * 0.05);
-
-                                ImPlot::PlotLineG("##Values", [](int idx, void* user_data)->ImPlotPoint
-                                    {
-                                        stock_realtime_t* c = (stock_realtime_t*)user_data;
-                                        const stock_realtime_record_t* r = &c->records[idx];
-
-                                        const double x = (double)r->timestamp;
-                                        const double y = r->price;
-                                        return ImPlotPoint(x, y);
-                                    }, &ev, array_size(ev.records), ImPlotLineFlags_SkipNaN);
-                                ImPlot::EndPlot();
-                            }
-                        }
-
-                        ImGui::PopID();
-                    }
-                }
-            }
-
-            ImGui::EndTable();
+            _realtime->table = table_allocate("realtime");
+            _realtime->table->fixed_height = imgui_get_font_ui_scale(250.0f);
+            table_add_column(_realtime->table, "Title", realtime_table_draw_title, COLUMN_FORMAT_TEXT, 
+                COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING | COLUMN_NOCLIP_CONTENT);
+            table_add_column(_realtime->table, "Time", realtime_table_draw_time, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING);
+            table_add_column(_realtime->table, "Price", realtime_table_draw_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_VALIGN_TOP);
+            table_add_column(_realtime->table, "Monitor", realtime_table_draw_monitor, COLUMN_FORMAT_NUMBER, 
+                COLUMN_SORTABLE | COLUMN_STRETCH | COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_DEFAULT_SORT);
         }
+
+        SHARED_READ_LOCK(_realtime->stocks_mutex);
+        table_render(_realtime->table, _realtime->stocks, array_size(_realtime->stocks), sizeof(stock_realtime_t), 0, 0);
     } ImGui::End();
 }
 
@@ -442,9 +438,9 @@ FOUNDATION_STATIC void realtime_shutdown()
     session_set_bool("show_realtime_window", _realtime->show_window);
 
     stream_deallocate(_realtime->stream);
-    
     thread_signal(_realtime->background_thread);
     thread_deallocate(_realtime->background_thread);
+    table_deallocate(_realtime->table);
 
     foreach(s, _realtime->stocks)
         array_deallocate(s->records);
@@ -453,4 +449,4 @@ FOUNDATION_STATIC void realtime_shutdown()
     MEM_DELETE(_realtime);
 }
 
-DEFINE_SERVICE(REALTIME, realtime_initialize, realtime_shutdown, SERVICE_PRIORITY_MODULE);
+DEFINE_SERVICE(REALTIME, realtime_initialize, realtime_shutdown, SERVICE_PRIORITY_UI);

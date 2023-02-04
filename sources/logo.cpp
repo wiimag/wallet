@@ -334,14 +334,14 @@ FOUNDATION_STATIC int logo_image_download(void* payload)
         
         // Initiate the logo download
         const char* image_url = eod_build_image_url(STRING_ARGS(url));
-        log_infof(HASH_LOGO, STRING_CONST("Downloading logo %s"), image_url);
+        log_debugf(HASH_LOGO, STRING_CONST("Downloading logo %s"), image_url);
         download_stream = query_execute_download_file(image_url);
 
         if (download_stream == nullptr)
             return (image->status = STATUS_ERROR_INVALID_STREAM);
 
         const size_t download_size = stream_size(download_stream);
-        log_debugf(HASH_LOGO, STRING_CONST("Downloaded logo %s (%" PRIsize ")"), image_url, download_size);
+        log_infof(HASH_LOGO, STRING_CONST("Downloaded logo %s (%" PRIsize ")"), image_url, download_size);
     }
 
     // Rewind stream

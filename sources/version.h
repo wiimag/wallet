@@ -33,7 +33,7 @@
 
 #define VERSION_MAJOR 0
 #define VERSION_MINOR                   9
-#define VERSION_PATCH                   15
+#define VERSION_PATCH                   16
 #define VERSION_BUILD GIT_REVCOUNT
 
 #define PRODUCT_VERSION STRINGIZE(VERSION_MAJOR.VERSION_MINOR.VERSION_PATCH)
