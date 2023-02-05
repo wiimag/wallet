@@ -14,15 +14,23 @@
 #include <framework/common.h>
 #include <framework/database.h>
 
+#include <foundation/uuid.h>
 #include <foundation/random.h>
 
 #include <doctest/doctest.h>
+
+struct kvp_t { uuid_t id; uint256_t data; };
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hashint(const int& value)
 {
     if (value == 0)
         return (hash_t)UINT64_MAX;
     return (hash_t)value;
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash_uuid(const kvp_t& kvp)
+{
+    return kvp.id.word[0] ^ kvp.id.word[1];
 }
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const stock_t& value)
@@ -33,6 +41,22 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const stock_t& value)
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const string_const_t& value)
 {
     return hash(STRING_ARGS(value));
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void print_stock(const stock_t* s)
+{
+    INFO(s->id);
+    INFO(s->current.close);
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void print_stock_day_result(const day_result_t& ed)
+{
+    INFO(ed.change);
+}
+
+FOUNDATION_STATIC void print_stocks(const database<stock_t>& db)
+{
+    
 }
 
 TEST_SUITE("Database")
@@ -219,6 +243,8 @@ TEST_SUITE("Database")
         auto s = stock_t{ hash(STRING_CONST("SSE.V")) };
         s.current.close = 0.025;
 
+        //print_stocks(db);
+
         CHECK_EQ(db.insert(u), u.id);
         CHECK_EQ(db.insert(p), p.id);
         CHECK_EQ(db.insert(s), s.id);
@@ -233,6 +259,12 @@ TEST_SUITE("Database")
             t->name = string_table_encode("Unity");
             t->exchange = string_table_encode("US");
         }
+
+        print_stock(db[p.id]);
+        // The exclude lock should be disposed only when returning from the function call.
+
+        print_stock_day_result(db[p.id]->current);
+        print_stock_day_result(db.lock(p.id)->current);
         
         db[s.id]->country = string_table_encode("Canada");
         db[s.id]->exchange = string_table_encode("Venture");
@@ -273,13 +305,43 @@ TEST_SUITE("Database")
         CHECK_NE(db.insert(string_const("Arnold")), 0);
         REQUIRE_EQ(db.size(), 3);
 
-        CHECK(db.remove(hash(STRING_CONST("Arnold"))));
+        string_const_t removed;
+        CHECK(db.remove(hash(STRING_CONST("Arnold")), &removed));
+        CHECK(string_equal(STRING_ARGS(removed), STRING_CONST("Arnold")));
         REQUIRE_EQ(db.size(), 2);
 
         db.clear();
         CHECK_GT(db.capacity, 1);
         CHECK_EQ(db.size(), 0);
         CHECK(db.elements != nullptr); // The element array should only be cleared, not deallocated
+    }
+
+    TEST_CASE("Failures")
+    {   
+        database<kvp_t, hash_uuid> db;
+
+        const uuid_t u1 = uuid_generate_random();
+        const uuid_t u2 = uuid_generate_random();
+        db.put({ u1, {1, random64(), random64(), random64()}});
+        db.put({ uuid_generate_random(), {random64(), 2, random64(), random64()} });
+        db.put({ u2, {random64(), random64(), 3, random64()} });
+        db.put({ u2, {random64(), random64(), random64(), 4} }); // Should not be added
+
+        REQUIRE_EQ(db.size(), 3);
+
+        CHECK_EQ(db.get(u1.word[0] ^ u1.word[1]).data.word[0], 1);
+        CHECK_EQ(db.get(u2.word[0] ^ u2.word[1]).data.word[3], 4);
+
+        CHECK_FALSE(db.select((hash_t)random64(), nullptr, true));
+
+        CHECK(uuid_is_null(db.get((hash_t)random64()).id));
+        CHECK_EQ(db.get((hash_t)random64()).data.word[0], 0ULL);
+        CHECK_EQ(db.get((hash_t)random64()).data.word[1], 0ULL);
+        CHECK_EQ(db.get((hash_t)random64()).data.word[2], 0ULL);
+        CHECK_EQ(db.get((hash_t)random64()).data.word[3], 0ULL);
+
+        kvp_t dummy;
+        CHECK_FALSE(db.select((hash_t)random64(), dummy));
     }
 }
 

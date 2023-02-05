@@ -21,15 +21,17 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const T& value)
 template<typename T, hash_t(*HASHER)(const T& v) = [](const T& v) { return hash(v); } >
 struct database
 {
-    size_t capacity;
-    shared_mutex mutex;
-    hashtable64_t* hashes;
     T* elements;
+    size_t capacity;
+    hashtable64_t* hashes;
+    mutable shared_mutex mutex;
+
+    static constexpr const hash_t INVALID_KEY{ 0 };
 
     database()
-        : capacity(16)
+        : elements(nullptr)
+        , capacity(16)
         , hashes(nullptr)
-        , elements(nullptr)
     {
         hashes = hashtable64_allocate(capacity);
     }
@@ -57,14 +59,20 @@ struct database
         const hash_t key = HASHER(value);
 
         if (!mutex.shared_lock())
-            return 0;
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to get shared lock");
+            return INVALID_KEY;
+        }
             
         const uint64_t index = hashtable64_get(hashes, key);
         if (!mutex.shared_unlock() || index != 0)
-            return 0;
+            return INVALID_KEY;
         
         if (!mutex.exclusive_lock())
-            return 0;
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to get exclusive lock");
+            return INVALID_KEY;
+        }
             
         unsigned int element_index = array_size(elements) + 1; // 1 based
 
@@ -72,31 +80,45 @@ struct database
             grow();
 
         array_push(elements, value);
-        mutex.exclusive_unlock();
+        if (!mutex.exclusive_unlock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to release exclusive lock");
+        }
         
         return key;
     }
     
-    hash_t update(const T& value)
+    constexpr hash_t update(const T& value)
     {
         const hash_t key = HASHER(value);
 
         if (!mutex.shared_lock())
-            return 0;
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to get shared lock");
+            return INVALID_KEY;
+        }
 
         const uint64_t index = hashtable64_get(hashes, key);
         if (index == 0)
         {
-            mutex.shared_unlock();
-            return 0;
+            if (!mutex.shared_unlock())
+            {
+                FOUNDATION_ASSERT_FAIL("Failed to release shared lock");
+            }
+            return INVALID_KEY;
         }
 
         elements[index - 1] = value;
-        mutex.shared_unlock();
+        if (!mutex.shared_unlock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to release shared lock");
+            return INVALID_KEY;
+        }
+
         return key;
     }
 
-    hash_t put(const T& value)
+    constexpr hash_t put(const T& value)
     {
         const hash_t key = HASHER(value);
         const uint64_t index = hashtable64_get(hashes, key);
@@ -111,66 +133,60 @@ struct database
         shared_mutex* m{ nullptr };
         T* value{ nullptr };
 
-        AutoLock()
+        AutoLock(const AutoLock&);
+        AutoLock& operator=(const AutoLock&);
+        AutoLock& operator=(AutoLock&& o);
+
+        FOUNDATION_FORCEINLINE AutoLock()
             : m(nullptr)
             , value(nullptr)
         {
         }
 
-        AutoLock(const AutoLock&);
-        AutoLock& operator=(const AutoLock&);
-
-        AutoLock(AutoLock&& o)
+        FOUNDATION_FORCEINLINE AutoLock(AutoLock&& o)
             : m(o.m)
             , value(o.value)
         {
             o.m = nullptr;
             o.value = nullptr;
         }
-        
-        AutoLock& operator=(AutoLock&& o)
-        {
-            m = o.m;
-            value = o.value;
-            o.m = nullptr;
-            o.value = nullptr;
-        }
 
-        AutoLock(shared_mutex* mutex, T* value_ptr = nullptr)
+        FOUNDATION_FORCEINLINE AutoLock(shared_mutex* mutex, T* value_ptr = nullptr)
             : m(mutex)
             , value(value_ptr)
         {
-            if (m)
-                m->exclusive_lock();
+            if (m && !m->exclusive_lock())
+            {
+                FOUNDATION_ASSERT_FAIL("Failed to get exclusive lock");
+                m = nullptr;
+                value = nullptr;
+            }
         }
 
-        ~AutoLock()
+        FOUNDATION_FORCEINLINE ~AutoLock()
         {
-            if (m)
-                m->exclusive_unlock();
+            if (m && !m->exclusive_unlock())
+            {
+                FOUNDATION_ASSERT_FAIL("Failed to release exclusive lock");
+            }
         }
 
-        operator bool() const
+        FOUNDATION_FORCEINLINE operator bool() const
         {
             return m != nullptr && value != nullptr;
         }
 
-        T* operator->()
+        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T* operator->()
         {
             return value;
         }
 
-        const T* operator->() const
-        {
-            return *value;
-        }
-
-        operator const T* () const
+        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const T* operator->() const
         {
             return value;
         }
 
-        operator T* () const
+        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL operator const T* () const
         {
             return value;
         }
@@ -183,33 +199,51 @@ struct database
             return {};
 
         if (!mutex.shared_lock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to get shared lock");
             return {};
+        }
 
         if (index > array_size(elements))
         {
+            FOUNDATION_ASSERT_FAIL("Index is out of bound");
             mutex.shared_unlock();
             return {};
         }
-        mutex.shared_unlock();
 
-        AutoLock l(&mutex, &elements[index - 1]);
-        if (HASHER(*l.value) != key)
+        if (!mutex.shared_unlock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to release shared lock");
             return {};
+        }
+
+        AutoLock locked_value(&mutex, &elements[index - 1]);
+        if (HASHER(*locked_value.value) != key)
+        { 
+            FOUNDATION_ASSERT_FAIL("Element has been invalidated");
+            return {};
+        }
             
-        return l;
+        return locked_value;
     }
 
     void clear()
     {
         if (!mutex.exclusive_lock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to get exclusive lock");
             return;
+        }
 
         array_clear(elements);
         hashtable64_clear(hashes);
-        mutex.exclusive_unlock();
+        if (!mutex.exclusive_unlock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to release exclusive lock");
+        }
     }
 
-    bool contains(hash_t key) const
+    constexpr bool contains(hash_t key) const
     {
         return hashtable64_get(hashes, key) != 0;
     }
@@ -220,6 +254,20 @@ struct database
         return contains(key);
     }
 
+    constexpr const T& get(hash_t key) const
+    {
+        const uint64_t index = hashtable64_get(hashes, key);
+        if (index == 0)
+        {
+            static thread_local T NULL_VALUE{};
+            return NULL_VALUE;
+        }
+
+        SHARED_READ_LOCK(mutex);
+        FOUNDATION_ASSERT_MSG(index <= array_size(elements), "Index is out of bound");
+        return elements[index - 1];
+    }
+
     bool select(hash_t key, T& value) const
     {
         const uint64_t index = hashtable64_get(hashes, key);
@@ -227,10 +275,14 @@ struct database
             return false;
         
         if (!mutex.shared_lock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to get shared lock");
             return false;
+        }
 
         if (index > array_size(elements))
         {
+            FOUNDATION_ASSERT_FAIL("Index is out of bound");
             mutex.shared_unlock();
             return false;
         }
@@ -238,6 +290,7 @@ struct database
         value = elements[index - 1];
         if (HASHER(value) != key)
         {
+            FOUNDATION_ASSERT_FAIL("Element has been invalidated");
             mutex.shared_unlock();
             return false;
         }
@@ -247,17 +300,19 @@ struct database
 
     bool select(hash_t key, const function<void(T& value)>& selector, bool quick_and_unsafe = false) const
     {
-        FOUNDATION_ASSERT(selector);
-
         const uint64_t index = hashtable64_get(hashes, key);
         if (index == 0)
             return false;
 
         if (!mutex.shared_lock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to get shared lock");
             return false;
+        }
 
         if (index > array_size(elements))
         {
+            FOUNDATION_ASSERT_FAIL("Index is out of bound");
             mutex.shared_unlock();
             return false;
         }
@@ -265,10 +320,12 @@ struct database
         T& value = elements[index - 1];
         if (!quick_and_unsafe && HASHER(value) != key)
         {
+            FOUNDATION_ASSERT_FAIL("Element has been invalidated");
             mutex.shared_unlock();
             return false;
         }
 
+        FOUNDATION_ASSERT(selector);
         selector(value);
         return mutex.shared_unlock();
     }
@@ -280,10 +337,14 @@ struct database
             return false;
 
         if (!mutex.exclusive_lock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to get exclusive lock");
             return false;
+        }
 
         if (index > array_size(elements))
         {
+            FOUNDATION_ASSERT_FAIL("Index is out of bound");
             mutex.exclusive_unlock();
             return false;
         }
@@ -291,6 +352,7 @@ struct database
         const T& value = elements[index - 1];
         if (HASHER(value) != key)
         {
+            FOUNDATION_ASSERT_FAIL("Element has been invalidated");
             mutex.exclusive_unlock();
             return false;
         }
@@ -312,13 +374,6 @@ struct database
     bool empty() const
     {
         return size() == 0;
-    }
-
-    constexpr T operator[](hash_t key) const
-    {
-        T v;
-        select(key, v);
-        v;
     }
     
     constexpr AutoLock operator[](hash_t key)
