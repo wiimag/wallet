@@ -9,6 +9,8 @@
  
 #include "test_utils.h"
 
+#include <stock.h>
+
 #include <framework/common.h>
 #include <framework/database.h>
 
@@ -16,11 +18,21 @@
 
 #include <doctest/doctest.h>
 
-FOUNDATION_FORCEINLINE hash_t hashint(const int& value)
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hashint(const int& value)
 {
     if (value == 0)
         return (hash_t)UINT64_MAX;
     return (hash_t)value;
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const stock_t& value)
+{
+    return value.id;
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const string_const_t& value)
+{
+    return hash(STRING_ARGS(value));
 }
 
 TEST_SUITE("Database")
@@ -191,9 +203,83 @@ TEST_SUITE("Database")
         }
         CHECK_FALSE(db.mutex.locked());
 
-        CHECK_EQ(db[k1].payload, 84U);
-        CHECK_EQ(db[k2].payload, 12384U);
+        auto k1v = db[k1].value->payload;
+        CHECK_EQ(k1v, 84U);
+        CHECK_EQ(db[k2].value->payload, 12384U);
         REQUIRE_EQ(db.size(), 5);
+    }
+
+    TEST_CASE("Put")
+    {
+        database<stock_t> db;
+
+        auto u = stock_t{ hash(STRING_CONST("U.US")) };
+        auto p = stock_t{ hash(STRING_CONST("PFE.US")) };
+
+        auto s = stock_t{ hash(STRING_CONST("SSE.V")) };
+        s.current.close = 0.025;
+
+        CHECK_EQ(db.insert(u), u.id);
+        CHECK_EQ(db.insert(p), p.id);
+        CHECK_EQ(db.insert(s), s.id);
+        REQUIRE_EQ(db.size(), 3);
+
+        CHECK_EQ(db[u.id]->current.close, 0.0);
+        CHECK_EQ(db[s.id]->current.close, 0.025);
+        CHECK_EQ(db[u.id]->fetch_level, FetchLevel::NONE);
+
+        {
+            auto t = db[u.id];
+            t->name = string_table_encode("Unity");
+            t->exchange = string_table_encode("US");
+        }
+        
+        db[s.id]->country = string_table_encode("Canada");
+        db[s.id]->exchange = string_table_encode("Venture");
+
+        db.put(stock_t{ hash(STRING_CONST("U.US")), 0, FetchLevel::REALTIME });
+        REQUIRE_EQ(db.size(), 3);
+        CHECK_EQ(db[u.id]->fetch_level, FetchLevel::REALTIME);
+
+        db.put(stock_t{ hash(STRING_CONST("AMZN.US")), 1, FetchLevel::TECHNICAL_EMA });
+        REQUIRE_EQ(db.size(), 4);
+        CHECK_EQ(db[hash(STRING_CONST("AMZN.US"))]->fetch_level, FetchLevel::TECHNICAL_EMA);
+    }
+
+    TEST_CASE("Remove")
+    {
+        database<string_const_t> db;
+
+        string_const_t jo = CTEXT("Jonathan");
+        string_const_t seb = CTEXT("Sébastien");
+        string_const_t steeve = CTEXT("Steeve");
+        string_const_t mathilde = CTEXT("Mathilde");
+
+        CHECK_EQ(db.insert(jo), hash(STRING_ARGS(jo)));
+        CHECK_EQ(db.insert(seb), hash(STRING_ARGS(seb)));
+        CHECK_EQ(db.insert(steeve), hash(STRING_ARGS(steeve)));
+        REQUIRE_EQ(db.size(), 3);
+
+        CHECK(db.contains(steeve));
+        CHECK(db.contains(hash(STRING_ARGS(seb))));
+        CHECK_FALSE(db.contains(mathilde));
+        CHECK_FALSE(db.contains(hash(STRING_CONST("Arnold"))));
+        CHECK_FALSE(db.contains(hash(STRING_CONST("Mathilde"))));
+
+        CHECK_FALSE(db.remove(hash(STRING_ARGS(mathilde))));
+        CHECK(db.remove(hash(STRING_ARGS(jo))));
+        REQUIRE_EQ(db.size(), 2);
+
+        CHECK_NE(db.insert(string_const("Arnold")), 0);
+        REQUIRE_EQ(db.size(), 3);
+
+        CHECK(db.remove(hash(STRING_CONST("Arnold"))));
+        REQUIRE_EQ(db.size(), 2);
+
+        db.clear();
+        CHECK_GT(db.capacity, 1);
+        CHECK_EQ(db.size(), 0);
+        CHECK(db.elements != nullptr); // The element array should only be cleared, not deallocated
     }
 }
 

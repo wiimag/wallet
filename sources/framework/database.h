@@ -8,10 +8,17 @@
 #include <framework/function.h>
 #include <framework/shared_mutex.h>
 
+#include <foundation/hash.h>
 #include <foundation/array.h>
 #include <foundation/hashtable.h>
 
-template<typename T, hash_t(*HASHER)(const T& v) = [](const T& v) { return hash(&v, 8); } >
+template<typename T>
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const T& value)
+{
+    return hash(&value, FOUNDATION_ALIGNOF(T));
+}
+
+template<typename T, hash_t(*HASHER)(const T& v) = [](const T& v) { return hash(v); } >
 struct database
 {
     size_t capacity;
@@ -20,7 +27,7 @@ struct database
     T* elements;
 
     database()
-        : capacity(64)
+        : capacity(16)
         , hashes(nullptr)
         , elements(nullptr)
     {
@@ -147,6 +154,26 @@ struct database
         {
             return m != nullptr && value != nullptr;
         }
+
+        T* operator->()
+        {
+            return value;
+        }
+
+        const T* operator->() const
+        {
+            return *value;
+        }
+
+        operator const T* () const
+        {
+            return value;
+        }
+
+        operator T* () const
+        {
+            return value;
+        }
     };
 
     constexpr AutoLock lock(hash_t key)
@@ -175,7 +202,7 @@ struct database
     void clear()
     {
         if (!mutex.exclusive_lock())
-            return 0;
+            return;
 
         array_clear(elements);
         hashtable64_clear(hashes);
@@ -286,12 +313,16 @@ struct database
     {
         return size() == 0;
     }
-    
+
     constexpr T operator[](hash_t key) const
     {
-        T v{};
-        if (select(key, v))
-            return v;
-        return {};
+        T v;
+        select(key, v);
+        v;
+    }
+    
+    constexpr AutoLock operator[](hash_t key)
+    {
+        return lock(key);
     }
 };

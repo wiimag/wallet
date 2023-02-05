@@ -20,6 +20,9 @@
 #define SL1(EXPRESSION) [](auto _1){ return EXPRESSION; }
 #define SL2(EXPRESSION) [](auto _1, auto _2){ return EXPRESSION; }
 #define SL3(EXPRESSION) [](auto _1, auto _2, auto _3){ return EXPRESSION; }
+#define SC1(EXPRESSION) [](const auto& _1){ return EXPRESSION; }
+#define SC2(EXPRESSION) [](const auto& _1, const auto& _2){ return EXPRESSION; }
+#define SC3(EXPRESSION) [](const auto& _1, const auto& _2, const auto& _3){ return EXPRESSION; }
 #define LC1(EXPRESSION) [=](const auto& _1){ return EXPRESSION; }
 #define LC2(EXPRESSION) [=](const auto& _1, const auto& _2){ return EXPRESSION; }
 #define LC3(EXPRESSION) [=](const auto& _1, const auto& _2, const auto& _3){ return EXPRESSION; }
