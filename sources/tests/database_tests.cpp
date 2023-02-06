@@ -13,6 +13,7 @@
 
 #include <framework/common.h>
 #include <framework/database.h>
+#include <framework/handle.h>
 
 #include <foundation/uuid.h>
 #include <foundation/random.h>
@@ -55,11 +56,6 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void print_stock(const stock_t* s)
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void print_stock_day_result(const day_result_t& ed)
 {
     INFO(ed.change);
-}
-
-FOUNDATION_STATIC void print_stocks(const database<stock_t>& db)
-{
-    
 }
 
 TEST_SUITE("Database")
@@ -242,16 +238,19 @@ TEST_SUITE("Database")
 
         auto u = stock_t{ hash(STRING_CONST("U.US")) };
         auto p = stock_t{ hash(STRING_CONST("PFE.US")) };
-
         auto s = stock_t{ hash(STRING_CONST("SSE.V")) };
         s.current.close = 0.025;
-
-        //print_stocks(db);
 
         CHECK_EQ(db.insert(u), u.id);
         CHECK_EQ(db.insert(p), p.id);
         CHECK_EQ(db.insert(s), s.id);
         REQUIRE_EQ(db.size(), 3);
+
+        for (const auto& e : db)
+        {
+            CHECK_NE(e.id, 0);
+            INFO(e.current.close);
+        }
 
         CHECK_EQ(db[u.id]->current.close, 0.0);
         CHECK_EQ(db[s.id]->current.close, 0.025);
@@ -400,43 +399,123 @@ TEST_SUITE("Database")
 
         { // Iteration with exclusive lock
             int iteration_count = 0;
-            for(auto it = db.begin_exclusive_lock(), end = db.end_exclusive_lock(); it != end; ++it)
+            for(auto it = db.begin_exclusive_lock(), 
+                     end = db.end_exclusive_lock(); it != end; ++it)
             {
                 CHECK(db.mutex.locked());
                 INFO(iteration_count, it->id, it->price);
                 iteration_count++;
-                break;
+                break; // Only iterate once and make sure lock is released as soon as possible.
             }
             CHECK_FALSE(db.mutex.locked());
             REQUIRE_EQ(iteration_count, 1);
         }
     }
 
-//     TEST_CASE("Concurrent Inserts")
-//     {
-//         thread_t jobs[8];
-//         database<price_t> db;
-// 
-//         const hash_t h1 = db.insert({ 1, 12.0 });
-//         const hash_t h2 = db.insert({ 2, 13.0 });
-//         const hash_t h3 = db.insert({ 3, 14.0 });
-// 
-//         REQUIRE_EQ(db.size(), 3);
-// 
-//         constexpr auto job_thread_fn = [](void* arg)->void*{ return 0; };
-// 
-//         for (int i = 0; i < ARRAY_COUNT(jobs); ++i)
-//         {
-//             string_const_t thread_name = string_format_static(STRING_CONST("test_job_%d"), i+1);
-//             thread_initialize(&jobs[0], job_thread_fn, nullptr, STRING_ARGS(thread_name), THREAD_PRIORITY_TIMECRITICAL, 0);
-//         }
-// 
-//         //for (int i = 0; i < ARRAY_COUNT(jobs); ++i)
-//           //  CHECK(thread_start(&jobs[0]));
-// 
-//         for (int i = 0; i < ARRAY_COUNT(jobs); ++i)
-//             thread_finalize(&jobs[0]);
-//     }
+    TEST_CASE("Concurrent Inserts")
+    {
+        typedef database<price_t, hash> price_database_t;
+        
+        thread_t jobs_insert[8];
+        thread_t jobs_enumerator[4];
+
+        price_database_t db;
+
+        const hash_t h1 = db.insert({ 1, 12.0 });
+        const hash_t h2 = db.insert({ 2, 13.0 });
+        const hash_t h3 = db.insert({ 3, 14.0 });
+
+        REQUIRE_EQ(db.size(), 3);
+
+        static atom32_t duplicates{ 0 };
+        static atom32_t enumerations{ 0 };
+
+        // Create inserter threads
+        {
+            constexpr auto job_insert_thread_fn = [](void* arg)->void*
+            {
+                price_database_t& db = *(price_database_t*)arg;
+                while (!thread_try_wait(0))
+                {
+                    if (db.insert({ random64(), random_range(20.0, 100.0) }) == 0)
+                        duplicates++;
+                }
+                return 0;
+            };
+
+            for (int i = 0; i < ARRAY_COUNT(jobs_insert); ++i)
+            {
+                string_const_t thread_name = string_format_static(STRING_CONST("test_job_%d"), i + 1);
+                thread_initialize(&jobs_insert[i], job_insert_thread_fn, &db, STRING_ARGS(thread_name), (thread_priority_t)(random32() % 6), 0);
+            }
+            
+            for (int i = 0; i < ARRAY_COUNT(jobs_insert); ++i)
+                CHECK(thread_start(&jobs_insert[i]));
+        }
+
+        const hash_t h4 = db.put({ 4, 15.0 });
+
+        // Create enumerator threads
+        {
+            constexpr auto job_enumerator_thread_fn = [](void* arg)->void*
+            {
+                price_database_t& db = *(price_database_t*)arg;
+                while (!thread_try_wait(enumerations.load()))
+                {
+                    for (const auto& e : db)
+                        INFO(e.id, e.price);
+                    ++enumerations;
+                }
+                return 0;
+            };
+
+            for (int i = 0; i < ARRAY_COUNT(jobs_enumerator); ++i)
+            {
+                string_const_t thread_name = string_format_static(STRING_CONST("test_job_%d"), i + 1);
+                thread_initialize(&jobs_enumerator[i], job_enumerator_thread_fn, &db, STRING_ARGS(thread_name), (thread_priority_t)(random32() % 6), 0);
+            }
+
+            for (int i = 0; i < ARRAY_COUNT(jobs_enumerator); ++i)
+                CHECK(thread_start(&jobs_enumerator[i]));
+        }
+
+        while (duplicates < 10 || db.size() < 64 * 1024)
+        {
+            thread_sleep(1);
+            REQUIRE_EQ(db.get(h1).price, 12.0);
+
+            thread_sleep(1);
+            price_t p;
+            REQUIRE(db.select(h2, p));
+            REQUIRE_EQ(p.price, 13.0);
+            
+            thread_sleep(1);
+            REQUIRE_EQ(db.lock(h3)->price, 14.0);
+                        
+           thread_sleep(1);
+           REQUIRE_EQ(db[h4]->price, 15.0);
+        }
+
+        for (int i = 0; i < ARRAY_COUNT(jobs_insert); ++i)
+        {
+            thread_signal(&jobs_insert[i]);
+            thread_join(&jobs_insert[i]);
+            thread_finalize(&jobs_insert[i]);
+        }
+
+        for (int i = 0; i < ARRAY_COUNT(jobs_enumerator); ++i)
+        {
+            thread_signal(&jobs_enumerator[i]);
+            thread_join(&jobs_enumerator[i]);
+            thread_finalize(&jobs_enumerator[i]);
+        }
+
+        INFO(db.capacity, db.size(), (int32_t)duplicates, (int32_t)enumerations);
+
+        CHECK_GE(db.size(), 1024);
+        CHECK_GT((int32_t)duplicates, 1);
+        CHECK_GE((int32_t)enumerations, (int32_t)duplicates);
+    }
 }
 
 #endif // BUILD_DEVELOPMENT

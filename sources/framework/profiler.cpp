@@ -214,9 +214,7 @@ FOUNDATION_STATIC cell_t profiler_table_sample_count(table_element_ptr_t element
 
 FOUNDATION_STATIC void profiler_create_table()
 {
-    // ICON_MD_TIMER, ICON_MD_TRENDING_DOWN, ICON_MD_TRENDING_UP, ICON_MD_LAST_PAGE, ICON_MD_NUMBERS
-
-    _profiler_table = table_allocate("profiler#9");
+    _profiler_table = table_allocate("Profiler#9");
     const float value_column_width = imgui_get_font_ui_scale(80.0f);
     table_add_column(_profiler_table, "Name", profiler_table_name, COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_FREEZE);
     table_add_column(_profiler_table, ICON_MD_TIMER "||Avg", profiler_table_avg, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE).set_width(value_column_width * 1.1f);
@@ -300,13 +298,13 @@ void profiler_menu_timer()
         char frame_time[32];
         if (tick_elapsed_time < smooth_elapsed_time - 1)
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms (%.4lg/%.4lg mb)"), tick_elapsed_time, smooth_elapsed_time,
-                mem_stats.allocated_current / 1024.0 / 1024.0, mem_stats.allocated_total / 1024.0 / 1024.0);
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms (%.4lg mb)"), 
+                tick_elapsed_time, smooth_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
         }
         else
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms (%.4lg/%.4lg mb)"), tick_elapsed_time,
-                mem_stats.allocated_current / 1024.0 / 1024.0, mem_stats.allocated_total / 1024.0 / 1024.0);
+            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms (%.4lg mb)"), 
+                tick_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
         }
 
         ImGui::MenuItem(frame_time, nullptr, nullptr, false);

@@ -84,10 +84,10 @@ FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string
 FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, uint64_t index)
 {
     day_result_t dresult{};
+    dresult.close = json_read_number(json, STRING_CONST("close"));        
     dresult.date = (time_t)json_read_number(json, STRING_CONST("timestamp"));
     dresult.gmtoffset = (uint8_t)json_read_number(json, STRING_CONST("gmtoffset"));
     dresult.open = json_read_number(json, STRING_CONST("open"));
-    dresult.close = json_read_number(json, STRING_CONST("close"));
     dresult.previous_close = json_read_number(json, STRING_CONST("previousClose"));
     dresult.low = json_read_number(json, STRING_CONST("low"));
     dresult.high = json_read_number(json, STRING_CONST("high"));
@@ -104,6 +104,12 @@ FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, u
 
         entry->current = dresult;
         entry->mark_resolved(FetchLevel::REALTIME);
+
+        if (!math_real_is_nan(dresult.close))
+        {
+            string_const_t ticker = string_table_decode_const(entry->code);
+            dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)ticker.str, ticker.length);
+        }
     }
 }
 
@@ -445,9 +451,6 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         entry->last_update_time = time_current();
         entry->fetch_level = FetchLevel::NONE;
         entry->resolved_level = FetchLevel::NONE;
-
-        string_const_t ticker = string_table_decode_const(handle.code);
-        dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)ticker.str, ticker.length);
 
         _db_lock.exclusive_unlock();
     }

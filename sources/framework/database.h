@@ -13,7 +13,7 @@
 #include <foundation/hashtable.h>
 
 template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const T& value)
+hash_t hash(const T& value)
 {
     return hash(&value, FOUNDATION_ALIGNOF(T));
 }
@@ -151,9 +151,9 @@ struct database
             o.value = nullptr;
         }
 
-        FOUNDATION_FORCEINLINE AutoLock(shared_mutex* mutex, T* value_ptr = nullptr)
+        FOUNDATION_FORCEINLINE AutoLock(shared_mutex* mutex)
             : m(mutex)
-            , value(value_ptr)
+            , value(nullptr)
         {
             if (m && !m->exclusive_lock())
             {
@@ -193,35 +193,24 @@ struct database
     };
 
     constexpr AutoLock lock(hash_t key)
-    {            
+    {          
+        AutoLock locked_value(&mutex);
+        
         const uint64_t index = hashtable64_get(hashes, key);
         if (index == 0)
-            return {};
-
-        if (!mutex.shared_lock())
-        {
-            FOUNDATION_ASSERT_FAIL("Failed to get shared lock");
-            return {};
-        }
-
+            return locked_value;
+            
         if (index > array_size(elements))
         {
             FOUNDATION_ASSERT_FAIL("Index is out of bound");
-            mutex.shared_unlock();
-            return {};
+            return locked_value;
         }
 
-        if (!mutex.shared_unlock())
-        {
-            FOUNDATION_ASSERT_FAIL("Failed to release shared lock");
-            return {};
-        }
-
-        AutoLock locked_value(&mutex, &elements[index - 1]);
+        locked_value.value = &elements[index - 1];
         if (HASHER(*locked_value.value) != key)
         { 
             FOUNDATION_ASSERT_FAIL("Element has been invalidated");
-            return {};
+            return locked_value;
         }
             
         return locked_value;
