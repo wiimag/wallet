@@ -380,4 +380,130 @@ struct database
     {
         return lock(key);
     }
+
+    constexpr const T& operator[](hash_t key) const
+    {
+        return get(key);
+    }
+
+    struct iterator
+    {
+        size_t index;
+        const database& db;
+        shared_mutex* m{ nullptr };
+        bool exclusive_lock{ false };
+
+        typedef T type;
+        typedef const T const_type;
+
+        FOUNDATION_FORCEINLINE iterator(const database& db, size_t index, shared_mutex* mutex, bool exclusive_lock)
+            : index(index)
+            , db(db)
+            , m(mutex)
+            , exclusive_lock(exclusive_lock)
+        {
+            FOUNDATION_ASSERT(index <= db.size());
+            
+            if (exclusive_lock)
+            {
+                if (m == nullptr || !m->exclusive_lock())
+                {
+                    FOUNDATION_ASSERT_FAIL("Failed to get exclusive lock");
+                    m = nullptr;
+                }
+            }
+            else if (m && !m->shared_lock())
+            {
+                FOUNDATION_ASSERT_FAIL("Failed to get shared lock");
+                m = nullptr;
+            }
+        }
+
+        FOUNDATION_FORCEINLINE ~iterator()
+        {
+            if (exclusive_lock)
+            {
+                if (m && !m->exclusive_unlock())
+                {
+                    FOUNDATION_ASSERT_FAIL("Failed to release exclusive lock");
+                }
+            }
+            else if (m && !m->shared_unlock())
+            {
+                FOUNDATION_ASSERT_FAIL("Failed to release shared lock");
+            }
+        }
+
+        iterator(const iterator&);
+        iterator& operator=(const iterator&);
+        iterator& operator=(iterator&& o);
+
+        FOUNDATION_FORCEINLINE iterator(iterator&& o)
+            : db(o.db)
+            , index(o.index)
+            , m(o.m)
+        {
+            o.m = nullptr;
+        }
+
+        FOUNDATION_FORCEINLINE bool operator!=(const iterator& other) const
+        {
+            return (index != other.index);
+        }
+
+        FOUNDATION_FORCEINLINE bool operator==(const iterator& other) const
+        {
+            return (index == other.index);
+        }
+
+        FOUNDATION_FORCEINLINE iterator& operator++()
+        {
+            index++;
+            return *this;
+        }
+
+        FOUNDATION_FORCEINLINE const T& operator*() const
+        {
+            FOUNDATION_ASSERT(index < array_size(db.elements));
+            return db.elements[index];
+        }
+
+        FOUNDATION_FORCEINLINE T& operator*()
+        {
+            FOUNDATION_ASSERT(index < array_size(db.elements));
+            return db.elements[index];
+        }
+
+        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T* operator->()
+        {
+            FOUNDATION_ASSERT(index < array_size(db.elements));
+            return &db.elements[index];
+        }
+
+        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const T* operator->() const
+        {
+            FOUNDATION_ASSERT(index < array_size(db.elements));
+            return &db.elements[index];
+        }
+    };
+
+    FOUNDATION_FORCEINLINE iterator begin() const
+    {
+        return iterator{ *this, 0, &mutex, false };
+    }
+
+    FOUNDATION_FORCEINLINE iterator end() const
+    {
+        return iterator{ *this, this->size(), nullptr, false };
+    }
+
+    FOUNDATION_FORCEINLINE iterator begin_exclusive_lock()
+    {
+        return iterator{ *this, 0, &mutex, true };
+    }
+
+    FOUNDATION_FORCEINLINE iterator end_exclusive_lock()
+    {
+        return iterator{ *this,  this->size(), nullptr, false };
+    }
 };

@@ -16,10 +16,13 @@
 
 #include <foundation/uuid.h>
 #include <foundation/random.h>
+#include <foundation/thread.h>
 
 #include <doctest/doctest.h>
 
 struct kvp_t { uuid_t id; uint256_t data; };
+
+struct price_t { uint64_t id; double price; };
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hashint(const int& value)
 {
@@ -343,6 +346,97 @@ TEST_SUITE("Database")
         kvp_t dummy;
         CHECK_FALSE(db.select((hash_t)random64(), dummy));
     }
+
+    TEST_CASE("Enumerate")
+    {
+        database<price_t> db;
+
+        const hash_t h1 = db.insert({ 1, 12.0 });
+        const hash_t h2 = db.insert({ 2, 13.0 });
+        const hash_t h3 = db.insert({ 3, 14.0 });
+
+        REQUIRE_EQ(db.size(), 3);
+
+        { // Shared lock raw access (unsafe)
+            SHARED_READ_LOCK(db.mutex);
+            int iteration_count = 0;
+            foreach(p, db.elements)
+            {
+                INFO(iteration_count, p->id, p->price);
+                CHECK(db.mutex.locked());
+                iteration_count++;
+            }
+            CHECK(db.mutex.locked()); // db is still locked
+            REQUIRE_EQ(iteration_count, 3);
+        }
+
+        { // Iteration with implicit shared lock
+            int iteration_count = 0;
+            for (const auto& e : db)
+            {
+                INFO(iteration_count, e.id, e.price);
+                CHECK(db.mutex.locked());
+                iteration_count++;
+            }
+            CHECK_FALSE(db.mutex.locked());
+            REQUIRE_EQ(iteration_count, 3);
+        }
+
+        { // Iteration with implicit shared lock
+            int iteration_count = 0;
+            for (auto& e : db)
+            {
+                CHECK(db.mutex.locked());
+                e.price = 55.0;
+                INFO(iteration_count, e.id, e.price);
+                iteration_count++;
+            }
+            CHECK_EQ(db.get(h1).price, 55.0);
+            CHECK_EQ(db.lock(h2)->price, 55.0);
+            CHECK_EQ(db[h3]->price, 55.0);
+            CHECK_FALSE(db.mutex.locked());
+            REQUIRE_EQ(iteration_count, 3);
+        }
+
+        { // Iteration with exclusive lock
+            int iteration_count = 0;
+            for(auto it = db.begin_exclusive_lock(), end = db.end_exclusive_lock(); it != end; ++it)
+            {
+                CHECK(db.mutex.locked());
+                INFO(iteration_count, it->id, it->price);
+                iteration_count++;
+                break;
+            }
+            CHECK_FALSE(db.mutex.locked());
+            REQUIRE_EQ(iteration_count, 1);
+        }
+    }
+
+//     TEST_CASE("Concurrent Inserts")
+//     {
+//         thread_t jobs[8];
+//         database<price_t> db;
+// 
+//         const hash_t h1 = db.insert({ 1, 12.0 });
+//         const hash_t h2 = db.insert({ 2, 13.0 });
+//         const hash_t h3 = db.insert({ 3, 14.0 });
+// 
+//         REQUIRE_EQ(db.size(), 3);
+// 
+//         constexpr auto job_thread_fn = [](void* arg)->void*{ return 0; };
+// 
+//         for (int i = 0; i < ARRAY_COUNT(jobs); ++i)
+//         {
+//             string_const_t thread_name = string_format_static(STRING_CONST("test_job_%d"), i+1);
+//             thread_initialize(&jobs[0], job_thread_fn, nullptr, STRING_ARGS(thread_name), THREAD_PRIORITY_TIMECRITICAL, 0);
+//         }
+// 
+//         //for (int i = 0; i < ARRAY_COUNT(jobs); ++i)
+//           //  CHECK(thread_start(&jobs[0]));
+// 
+//         for (int i = 0; i < ARRAY_COUNT(jobs); ++i)
+//             thread_finalize(&jobs[0]);
+//     }
 }
 
 #endif // BUILD_DEVELOPMENT
