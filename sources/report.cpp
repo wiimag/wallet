@@ -11,6 +11,7 @@
 #include "symbols.h"
 #include "eod.h"
 #include "logo.h"
+#include "realtime.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -664,6 +665,15 @@ FOUNDATION_STATIC void report_title_open_details_view(table_element_ptr_const_t 
     title->show_details_ui = true;
 }
 
+FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+   
+    realtime_render_graph(title->code, title->code_length, time_add_days(time_now(), -1), 1300.0f, 600.0f);
+}
+
 FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
@@ -709,8 +719,12 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
         if (current_price != old_price)
             title_refresh(title);
     }, 60ULL);
-}
 
+    time_t since = time_add_days(time_now(), -9);
+    title_get_last_transaction_date(title, &since);
+    
+    realtime_render_graph(title->code, title->code_length, since, max(ImGui::GetContentRegionAvail().x, 900.0f), 300.0f);
+}
 
 FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
 {
@@ -1676,7 +1690,8 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
     table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"), 
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE);
     table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE)
+        .set_tooltip_callback(report_title_day_change_tooltip);
 
     table_add_column(table, STRING_CONST("  Y. " ICON_MD_CALENDAR_VIEW_DAY "||" ICON_MD_CALENDAR_VIEW_DAY " Yesterday % "), 
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_YESTERDAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);

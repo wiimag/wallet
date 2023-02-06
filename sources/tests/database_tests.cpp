@@ -164,11 +164,17 @@ TEST_SUITE("Database")
         CHECK_NE(k1, 0);
         
         // Select and update data while lock is active
-        db.select(k1, [&db](test_t& v) 
+        db.update(k1, [&db](test_t& v) 
         {
             CHECK(db.mutex.locked());
             CHECK_EQ(v.payload, 42U);
             v.payload = 24U;
+        });
+
+        db.select(k1, [&db](const test_t& v)
+        {
+            CHECK(db.mutex.locked());
+            CHECK_EQ(v.payload, 24U);
         });
 
         test_t v;
@@ -334,7 +340,7 @@ TEST_SUITE("Database")
         CHECK_EQ(db.get(u1.word[0] ^ u1.word[1]).data.word[0], 1);
         CHECK_EQ(db.get(u2.word[0] ^ u2.word[1]).data.word[3], 4);
 
-        CHECK_FALSE(db.select((hash_t)random64(), nullptr, true));
+        CHECK_FALSE(db.select((hash_t)random64(), nullptr));
 
         CHECK(uuid_is_null(db.get((hash_t)random64()).id));
         CHECK_EQ(db.get((hash_t)random64()).data.word[0], 0ULL);
@@ -412,7 +418,7 @@ TEST_SUITE("Database")
         }
     }
 
-    TEST_CASE("Concurrent Inserts")
+    TEST_CASE("Concurrent Inserts" * doctest::timeout(30))
     {
         typedef database<price_t, hash> price_database_t;
         

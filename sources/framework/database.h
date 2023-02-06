@@ -287,7 +287,12 @@ struct database
         return mutex.shared_unlock();
     }
 
-    bool select(hash_t key, const function<void(T& value)>& selector, bool quick_and_unsafe = false) const
+    bool select(hash_t key, const function<void(const T& value)>& selector) const
+    {
+        return update(key, [&selector](const T& value) { selector(value); }, true);
+    }
+
+    bool update(hash_t key, const function<void(T& value)>& selector, bool quick_and_unsafe = false) const
     {
         const uint64_t index = hashtable64_get(hashes, key);
         if (index == 0)

@@ -637,7 +637,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
     row.hovered = false;
     row.background_color = 0;
 
-    ImGui::TableNextRow(0, table->fixed_height);
+    ImGui::TableNextRow(0, table->row_fixed_height);
 
     const auto sx = ImGui::TableGetRowRect();
     row.rect = ImRect(sx.x, sx.y, sx.z, sx.y + row.height);
@@ -822,7 +822,7 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
     TIME_TRACKER(0.008, "Render table %.*s", STRING_FORMAT(table->name));
 
     ImGuiListClipper clipper;
-    clipper.Begin(table->rows_visible_count, table->fixed_height);
+    clipper.Begin(table->rows_visible_count, table->row_fixed_height);
     while (clipper.Step())
     {
         if (clipper.DisplayStart >= clipper.DisplayEnd)
@@ -842,7 +842,7 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
     // Handle default context menu on empty space
     if (table->context_menu)
     {
-        ImGui::TableNextRow(0, table->fixed_height);
+        ImGui::TableNextRow(0, table->row_fixed_height);
         int hovered_column = -1;
         for (int column = 0; column < column_count + 1; column++)
         {

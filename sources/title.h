@@ -87,3 +87,5 @@ bool title_is_index(const title_t* t);
 bool title_has_increased(const title_t* t, double* delta = nullptr, double since_seconds = 15.0 * 60.0, double* elapsed_seconds = nullptr);
 bool title_has_decreased(const title_t* t, double* out_delta = nullptr, double since_seconds = 15.0 * 60.0, double* elapsed_seconds = nullptr);
 
+time_t title_get_last_transaction_date(const title_t* t, time_t* date = nullptr);
+time_t title_get_first_transaction_date(const title_t* t, time_t* date = nullptr);

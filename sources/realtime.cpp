@@ -380,6 +380,51 @@ FOUNDATION_STATIC const char* realtime_monitor_price_format(const stock_realtime
     return "%.4g $";
 }
 
+FOUNDATION_STATIC bool realtime_render_graph(const stock_realtime_t* s, time_t since, float width, float height)
+{
+    const auto record_count = array_size(s->records);
+    if (record_count <= 1)
+        return false;
+        
+    stock_realtime_record_t* first = &s->records[0];
+    const stock_realtime_record_t* last = array_last(s->records);
+
+    if (since != 0)
+    {
+        int fidx = array_binary_search(s->records, record_count, since);
+        if (fidx < 0)
+            fidx = max(0, min(~fidx, to_int(record_count - 1)));
+        first = &s->records[fidx];
+    }
+
+    const int visible_record_count = (last - first) + 1;
+    if (visible_record_count <= 1)
+        return false;
+
+    if (!ImPlot::BeginPlot(s->code, { width, height }, ImPlotFlags_NoTitle))
+        return false;
+
+    const double min = (double)first->timestamp;
+    const double max = (double)last->timestamp;
+    ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
+    ImPlot::SetupAxisFormat(ImAxis_X1, realtime_format_date_range_label, (void*)s);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, realtime_monitor_price_format(s));
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max);
+
+    ImPlot::PlotLineG("##Values", [](int idx, void* user_data)->ImPlotPoint
+    {
+        const stock_realtime_record_t* first = (const stock_realtime_record_t*)user_data;
+        const stock_realtime_record_t* r = first + idx;
+
+        const double x = (double)r->timestamp;
+        const double y = r->price;
+        return ImPlotPoint(x, y);
+    }, (void*)first, visible_record_count, ImPlotLineFlags_SkipNaN);
+    ImPlot::EndPlot();
+
+    return true;
+}
+
 FOUNDATION_STATIC cell_t realtime_table_draw_monitor(table_element_ptr_t element, const column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
@@ -387,27 +432,7 @@ FOUNDATION_STATIC cell_t realtime_table_draw_monitor(table_element_ptr_t element
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         const size_t record_count = array_size(s->records);
-        if (record_count >= 2 && ImPlot::BeginPlot(s->code, {-1.0f, _realtime->table->fixed_height}, ImPlotFlags_NoTitle))
-        {
-            double min = (double)s->records[0].timestamp;
-            double max = (double)array_last(s->records)->timestamp;
-            ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
-            ImPlot::SetupAxisFormat(ImAxis_X1, realtime_format_date_range_label, (void*)s);
-            ImPlot::SetupAxisFormat(ImAxis_Y1, realtime_monitor_price_format(s));
-            ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max);
-
-            ImPlot::PlotLineG("##Values", [](int idx, void* user_data)->ImPlotPoint
-            {
-                stock_realtime_t* c = (stock_realtime_t*)user_data;
-                const stock_realtime_record_t* r = &c->records[idx];
-
-                const double x = (double)r->timestamp;
-                const double y = r->price;
-                return ImPlotPoint(x, y);
-            }, (void*)s, array_size(s->records), ImPlotLineFlags_SkipNaN);
-            ImPlot::EndPlot();
-        }
-        else
+        if (record_count < 2 || !realtime_render_graph(s, 0, -1.0f, _realtime->table->row_fixed_height))
         {
             ImGui::TextUnformatted("Not enough data");
         }
@@ -436,7 +461,7 @@ FOUNDATION_STATIC void realtime_render_prices()
         if (_realtime->table == nullptr)
         {
             _realtime->table = table_allocate("realtime");
-            _realtime->table->fixed_height = imgui_get_font_ui_scale(250.0f);
+            _realtime->table->row_fixed_height = imgui_get_font_ui_scale(250.0f);
             table_add_column(_realtime->table, "Title", realtime_table_draw_title, COLUMN_FORMAT_TEXT, 
                 COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING | COLUMN_NOCLIP_CONTENT)
                 .set_selected_callback(realtime_code_selected);
@@ -465,6 +490,21 @@ FOUNDATION_STATIC void realtime_menu()
     }
 
     ImGui::EndMenuBar();
+}
+
+//
+// # PUBLIC API
+//
+
+bool realtime_render_graph(const char* code, size_t code_length, time_t since /*= 0*/, float width /*= -1.0f*/, float height /*= -1.0f*/)
+{
+    const hash_t key = hash(code, code_length);
+    const int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
+    if (fidx < 0)
+        return false;
+    
+    const stock_realtime_t* s = &_realtime->stocks[fidx];
+    return realtime_render_graph(s, since, width, height);
 }
 
 //

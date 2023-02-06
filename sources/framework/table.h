@@ -248,7 +248,7 @@ struct table_t
     row_t* rows{ nullptr };
     int rows_visible_count{ 0 };
     hash_t ordered_hash { 0 };
-    float fixed_height{ -1.0f };
+    float row_fixed_height{ -1.0f };
 
     int column_freeze{ 0 };
     bool needs_sorting { false };

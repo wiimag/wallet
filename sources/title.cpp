@@ -517,3 +517,41 @@ void title_deallocate(title_t*& title)
 {
     MEM_DELETE(title);
 }
+
+time_t title_get_last_transaction_date(const title_t* t, time_t* out_date /*= nullptr*/)
+{
+    time_t last_date = 0;
+    for (auto corder : t->data["orders"])
+    {
+        string_const_t date_str = corder["date"].as_string();
+        if (date_str.length == 0)
+            continue;
+        const time_t odate = string_to_date(STRING_ARGS(date_str));
+        if (odate > last_date)
+            last_date = odate;
+    }
+
+    if (out_date && last_date != 0)
+        *out_date = last_date;
+
+    return last_date;
+}
+
+time_t title_get_first_transaction_date(const title_t* t, time_t* out_date /*= nullptr*/)
+{
+    time_t first_date = INT64_MAX;
+    for (auto corder : t->data["orders"])
+    {
+        string_const_t date_str = corder["date"].as_string();
+        if (date_str.length == 0)
+            continue;
+        const time_t odate = string_to_date(STRING_ARGS(date_str));
+        if (odate < first_date)
+            first_date = odate;
+    }
+
+    if (out_date&& first_date != INT64_MAX)
+        *out_date = first_date;
+
+    return first_date;
+}
