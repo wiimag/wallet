@@ -35,6 +35,7 @@ typedef enum : unsigned int {
     COLUMN_COMPUTE_SUMMARY = 1 << 17,
     COLUMN_RENDER_ELEMENT = 1 << 18,
     COLUMN_DEFAULT_SORT = 1 << 19,
+    COLUMN_VALIGN_TOP = 1 << 20,
 
     COLUMN_ALIGNMENT_MASK = COLUMN_LEFT_ALIGN | COLUMN_RIGHT_ALIGN | COLUMN_MIDDLE_ALIGN,
 } column_flag_t;
@@ -247,6 +248,7 @@ struct table_t
     row_t* rows{ nullptr };
     int rows_visible_count{ 0 };
     hash_t ordered_hash { 0 };
+    float row_fixed_height{ -1.0f };
 
     int column_freeze{ 0 };
     bool needs_sorting { false };

@@ -130,6 +130,13 @@ FOUNDATION_FORCEINLINE bool string_is_null(string_t s)
     return s.str == nullptr || s.length == 0;
 }
 
+FOUNDATION_FORCEINLINE bool string_starts_with(const char* str, size_t str_length, const char* prefix, size_t prefix_length)
+{
+    if (str_length < prefix_length)
+        return false;
+    return string_equal(str, prefix_length, prefix, prefix_length);
+}
+
 FOUNDATION_FORCEINLINE bool is_char_alpha_num_hex(char c)
 {
     if (c >= '0' && c <= '9')
@@ -293,6 +300,76 @@ bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& 
 
     return false;
 }
+
+template<typename T, typename V>
+FOUNDATION_STATIC int array_binary_search(const T* array, uint32_t _num, const V& _key)
+{
+    uint32_t offset = 0;
+    for (uint32_t ll = _num; offset < ll;)
+    {
+        const uint32_t idx = (offset + ll) / 2;
+
+        const T& mid_value = array[idx];
+        if (mid_value > _key)
+            ll = idx;
+        else if (mid_value < _key)
+            offset = idx + 1;
+        else
+            return idx;
+    }
+
+    return ~offset;
+}
+
+template<typename T>
+struct range_view 
+{
+    FOUNDATION_FORCEINLINE range_view(T* data, std::size_t size)
+        : m_data{ data }, m_size{ size } { }
+
+    struct iterator
+    {
+        const T* ptr;
+
+        typedef T type;
+        typedef const T const_type;
+
+        FOUNDATION_FORCEINLINE iterator(const T* ptr)
+            : ptr(ptr)
+        {
+        }
+
+        FOUNDATION_FORCEINLINE bool operator!=(const iterator& other) const
+        {
+            return ptr != other.ptr;
+        }
+
+        FOUNDATION_FORCEINLINE bool operator==(const iterator& other) const
+        {
+            return ptr == other.ptr;
+        }
+
+        FOUNDATION_FORCEINLINE iterator& operator++()
+        {
+            ptr++;
+            return *this;
+        }
+
+        FOUNDATION_FORCEINLINE const T& operator*() const
+        {
+            return *ptr;
+        }
+    };
+
+    iterator begin() { return iterator(m_data); }
+    iterator end() { return iterator(m_data + m_size); }
+
+    iterator begin() const { return iterator(m_data); }
+    iterator end() const { return iterator(m_data + m_size); }
+
+    T* m_data;
+    size_t m_size;
+};
 
 // ## URLs
 

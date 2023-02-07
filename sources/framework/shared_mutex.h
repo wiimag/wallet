@@ -97,6 +97,20 @@ public:
         #endif
     }
 
+    FOUNDATION_FORCEINLINE bool locked() const
+    {
+        #if FOUNDATION_PLATFORM_WINDOWS
+        return mutex_.Ptr != 0;
+        #else
+        if (pthread_rwlock_trywrlock(&mutex_) == 0)
+        {
+            pthread_rwlock_unlock(&mutex_);
+            return false;
+        }
+        return true;
+        #endif
+    }
+
 private:
     #if FOUNDATION_PLATFORM_WINDOWS
     mutable SRWLOCK mutex_;

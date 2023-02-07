@@ -12,6 +12,8 @@
 		B90335D6291BE323003184CF /* App.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B90335D5291BE323003184CF /* App.xcassets */; };
 		B90447D129476E3300CB6494 /* libz.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B90447D029476E3300CB6494 /* libz.tbd */; };
 		B906776F2919C19200E5D8FF /* libimgui.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B906776C2919C17F00E5D8FF /* libimgui.a */; };
+		B9097E2B299292470045EF22 /* realtime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B9097E29299292470045EF22 /* realtime.cpp */; };
+		B9097E2D2992926E0045EF22 /* database_tests.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B9097E2C2992926E0045EF22 /* database_tests.cpp */; };
 		B9227E0B291A96900037FAE2 /* libglfw3.a in Frameworks */ = {isa = PBXBuildFile; fileRef = B9227E00291A95390037FAE2 /* libglfw3.a */; };
 		B929C1332939136E00AEE333 /* libcurl.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = B929C1322939136E00AEE333 /* libcurl.tbd */; };
 		B93AD6D829846616005F2016 /* wallet.cpp in Sources */ = {isa = PBXBuildFile; fileRef = B93AD6D729846604005F2016 /* wallet.cpp */; };
@@ -183,6 +185,9 @@
 		B90335D5291BE323003184CF /* App.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = App.xcassets; sourceTree = "<group>"; };
 		B90447D029476E3300CB6494 /* libz.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libz.tbd; path = usr/lib/libz.tbd; sourceTree = SDKROOT; };
 		B90677672919C17F00E5D8FF /* imgui.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = imgui.xcodeproj; sourceTree = SOURCE_ROOT; };
+		B9097E29299292470045EF22 /* realtime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = realtime.cpp; sourceTree = "<group>"; };
+		B9097E2A299292470045EF22 /* realtime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = realtime.h; sourceTree = "<group>"; };
+		B9097E2C2992926E0045EF22 /* database_tests.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = database_tests.cpp; sourceTree = "<group>"; };
 		B9227DF8291A95390037FAE2 /* LICENSE.md */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = net.daringfireball.markdown; path = LICENSE.md; sourceTree = "<group>"; };
 		B9227DFD291A95390037FAE2 /* glfw3.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glfw3.h; sourceTree = "<group>"; };
 		B9227DFE291A95390037FAE2 /* glfw3native.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = glfw3native.h; sourceTree = "<group>"; };
@@ -511,6 +516,7 @@
 				B9CF9DB229845BF4006AF271 /* eod.cpp */,
 				B94CB932298D51F200C8129E /* logo.cpp */,
 				B9CF9DB429845BF4006AF271 /* pattern.cpp */,
+				B9097E29299292470045EF22 /* realtime.cpp */,
 				B9CF9DAF29845BF4006AF271 /* report_expr.cpp */,
 				B9CF9DAE29845BF4006AF271 /* report.cpp */,
 				B9CF9DB029845BF4006AF271 /* reportgraph.cpp */,
@@ -525,6 +531,7 @@
 				B9F99B5C29770B49004DB76A /* events.h */,
 				B94CB933298D51F200C8129E /* logo.h */,
 				B9CF9DB329845BF4006AF271 /* pattern.h */,
+				B9097E2A299292470045EF22 /* realtime.h */,
 				B9CF9DB529845BF4006AF271 /* report.h */,
 				B9C689262918A7E300C585E1 /* resource.h */,
 				B9C689012918A7E300C585E1 /* settings.h */,
@@ -549,9 +556,10 @@
 		B9FF98F3296C56E800F966DD /* tests */ = {
 			isa = PBXGroup;
 			children = (
-				B94CB935298D521200C8129E /* generics_tests.cpp */,
 				B9FF98F9296C56E800F966DD /* boot_tests.cpp */,
 				B9FF98F4296C56E800F966DD /* config_tests.cpp */,
+				B9097E2C2992926E0045EF22 /* database_tests.cpp */,
+				B94CB935298D521200C8129E /* generics_tests.cpp */,
 				B9FF98F5296C56E800F966DD /* imgui_tests.cpp */,
 				B96DB0C6297AD0BC00374F96 /* test_runner.cpp */,
 				B9FF98F8296C56E800F966DD /* test_utils.cpp */,
@@ -775,6 +783,7 @@
 				B9CF9DA729845B93006AF271 /* expr.cpp in Sources */,
 				B9953AD9297AFB81006A8390 /* table.cpp in Sources */,
 				B9FF98FD296C56E800F966DD /* test_utils.cpp in Sources */,
+				B9097E2B299292470045EF22 /* realtime.cpp in Sources */,
 				B9953AE3297AFB81006A8390 /* progress.cpp in Sources */,
 				B94CB936298D521200C8129E /* generics_tests.cpp in Sources */,
 				B9CF9DBC29845BF4006AF271 /* report.cpp in Sources */,
@@ -792,6 +801,7 @@
 				B9CF9DC029845BF4006AF271 /* eod.cpp in Sources */,
 				B9953ADA297AFB81006A8390 /* jobs.cpp in Sources */,
 				B9953ADE297AFB81006A8390 /* service.cpp in Sources */,
+				B9097E2D2992926E0045EF22 /* database_tests.cpp in Sources */,
 				B9CF9DA929845B93006AF271 /* glfw.cpp in Sources */,
 				B93AD6D829846616005F2016 /* wallet.cpp in Sources */,
 				B9CF9DBE29845BF4006AF271 /* reportgraph.cpp in Sources */,

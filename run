@@ -25,6 +25,10 @@ case "${unameOut}" in
 esac
 #echo ${machine}
 
+is_number() { 
+  [ "$1" ] && [ -z "${1//[0-9]}" ] ;
+}
+
 #
 # Parse common command line arguments
 #
@@ -38,6 +42,8 @@ TESTS=0
 OPEN=0
 OPEN_WORKSPACE=0
 START=0
+PRINT=0
+PRINT_LARGEFILES=0
 HELP=0
 VERBOSE=0
 POSITIONAL_ARGS=()
@@ -83,6 +89,16 @@ while [[ $# -gt 0 ]]; do
         shift
       fi
       ;;
+    p|print)
+      PRINT=1
+      shift # past argument
+
+      # The release argument is the default, but remove it if it was specified
+      if [ $# -ne 0 ] && [ $1 = "largefiles" ]; then
+        PRINT_LARGEFILES=1
+        shift
+      fi
+      ;;
     o|open)
       OPEN=1
       shift # past argument
@@ -117,13 +133,15 @@ if [ $HELP -eq 1 ]; then
     echo "  Usage: $progname [${bold}b${normal}uild [debug|release|deploy]] "
     echo "             [${bold}t${normal}ests] " 
     echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
+    echo "             [${bold}p${normal}rint [largefiles] "
     echo "             [${bold}s${normal}tart] [--option=<value>] ...additional arguments passed to last command"
     echo ""
     echo "  Commands:"
-    echo "    ${bold}b${normal}uild [debug|release] Build the solution in debug or release (release if used by default)"
-    echo "    ${bold}t${normal}ests                 Run application tests (i.e. using --run-tests)"
-    echo "    ${bold}o${normal}pen [workspace]      Open the application solution workspace (i.e. Visual Studio or Xcode IDE)"
-    echo "    ${bold}s${normal}tart                 Launch the application after running other commands "
+    echo "    ${bold}b${normal}uild [debug|release]  Build the solution in debug or release (release if used by default)"
+    echo "    ${bold}t${normal}ests                  Run application tests (i.e. using --run-tests)"
+    echo "    ${bold}o${normal}pen [workspace]       Open the application solution workspace (i.e. Visual Studio or Xcode IDE)"
+    echo "    ${bold}p${normal}rint [largefiles|...] Print various solution information or stats"
+    echo "    ${bold}s${normal}tart                  Launch the application after running other commands "
     echo ""
     echo "    If no commands are specified, we start the application by default, i.e. './run')"
     echo ""
@@ -139,6 +157,7 @@ if [ $HELP -eq 1 ]; then
     echo "    ./run build                         Build the solution"
     echo "    ./run build tests start             Build then run tests and finally lanch the application"
     echo "    ./run build tests --success=true    Build then run tests passing the --success=true argument to test framework"
+    echo "    ./run print largefiles 50           Print top 50 largest files in the repo."
     echo ""
     exit 0
 
@@ -193,6 +212,34 @@ if [ $OPEN -eq 1 ]; then
         if [ $retval -ne 0 ]; then
             echo
             echo "===OPEN WORKSPACE FAILED ($retval)==="
+            echo
+            exit $retval
+        fi
+
+        RUN=0
+    fi
+fi
+
+#
+# Print various solution information
+#
+if [ $PRINT -eq 1 ]; then
+
+    if [ $PRINT_LARGEFILES -eq 1 ]; then
+
+        TOP_COUNT=20
+        if is_number ${POSITIONAL_ARGS[0]}; then
+          TOP_COUNT=${POSITIONAL_ARGS[0]}
+        fi
+
+        while read -r largefile; do
+          echo $largefile | awk '{printf "%s %s ", $1, $3 ; system("git rev-list --all --objects | grep " $1 " | cut -d \" \" -f 2-")}'
+        done <<< "$(git rev-list --all --objects | awk '{print $1}' | git cat-file --batch-check | sort -k3nr | head -n $TOP_COUNT)"
+
+        retval=$?
+        if [ $retval -ne 0 ]; then
+            echo
+            echo "=== PRINT FAILED ($retval)==="
             echo
             exit $retval
         fi

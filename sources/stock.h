@@ -153,7 +153,7 @@ struct stock_handle_t
 
     const stock_t* operator*() const
     {
-        bool stock_request(const stock_handle_t & handle, const stock_t * *out_stock);
+        bool stock_request(const stock_handle_t & handle, const stock_t** out_stock);
         
         if (id == 0)
             return nullptr;

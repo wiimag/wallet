@@ -37,7 +37,7 @@ struct market_report_t
 
 static market_report_t* _markets;
 static mutex_t* _symbols_lock = nullptr;
-static volatile int _loading_symbols_id = 0;
+static atom32_t _loading_symbols_id = 0;
 
 //
 // # PRIVATE

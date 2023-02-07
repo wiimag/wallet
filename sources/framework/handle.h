@@ -37,6 +37,7 @@ struct HandleKey
 {
     size_t index{ HANDLE_INVALID };
     hash_t hash{ 0 };
+    //void* user_data{ nullptr };
 };
 
 #define HANDLE_NIL (HandleKey{HANDLE_INVALID, 0})

@@ -404,12 +404,12 @@ extern int app_initialize(GLFWwindow* window)
 {
     // Framework systems
     string_table_initialize();
-    session_setup(nullptr);
     progress_initialize();
-    
     jobs_initialize();
     query_initialize();
-    
+
+    session_setup(nullptr);
+
     // App systems
     settings_initialize();
     service_initialize();
@@ -421,6 +421,7 @@ extern void app_shutdown()
 {
     // Lets make sure all requests are finished 
     // before exiting shutting down other services.
+    jobs_shutdown();
     query_shutdown();
     
     // App systems
@@ -430,7 +431,6 @@ extern void app_shutdown()
     // Framework systems
     tabs_shutdown();
     app_dialog_shutdown();
-    jobs_shutdown();
     progress_finalize();
     session_shutdown();
     string_table_shutdown();

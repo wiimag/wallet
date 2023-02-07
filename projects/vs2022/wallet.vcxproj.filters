@@ -175,6 +175,12 @@
     <ClInclude Include="..\..\sources\logo.h">
       <Filter>app</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sources\realtime.h">
+      <Filter>app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\framework\database.h">
+      <Filter>framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sources\stock.cpp">
@@ -308,6 +314,12 @@
     </ClCompile>
     <ClCompile Include="..\..\external\stb\stb.c">
       <Filter>external\stb</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\realtime.cpp">
+      <Filter>app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\tests\database_tests.cpp">
+      <Filter>tests</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

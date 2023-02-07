@@ -19,7 +19,8 @@ typedef void (*service_shutdown_handler_t)(void);
 typedef function<void()> service_invoke_handler_t;
 
 #define SERVICE_PRIORITY_CRITICAL   -10
-#define SERVICE_PRIORITY_SYSTEM      -1
+#define SERVICE_PRIORITY_SYSTEM      -2
+#define SERVICE_PRIORITY_REALTIME    -1
 #define SERVICE_PRIORITY_BASE         0
 #define SERVICE_PRIORITY_HIGH         1
 #define SERVICE_PRIORITY_MODULE       2
