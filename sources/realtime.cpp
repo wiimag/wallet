@@ -25,12 +25,14 @@
 
 #include <algorithm>
 
+#define REALTIME_STREAM_VERSION (1)
 #define HASH_REALTIME static_hash_string("realtime", 8, 0x29e09dfa4716c805ULL)
 
 struct stock_realtime_record_t
 {
     time_t timestamp;
     double price;
+    double volume;
 };
 
 struct stock_realtime_t
@@ -39,6 +41,7 @@ struct stock_realtime_t
     char   code[16];
     time_t timestamp;
     double price;
+    double volume;
 
     stock_realtime_record_t* records{ nullptr };
 };
@@ -85,6 +88,7 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
     stock.key = key;
     stock.timestamp = time_now();
     stock.price = DNAN;
+    stock.volume = 0;
     stock.records = nullptr;
 
     fidx = ~fidx;
@@ -125,6 +129,7 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
 
         stock_realtime_record_t r;
         r.price = e["close"].as_number();
+        r.volume = e["volume"].as_number(0);
         r.timestamp = (time_t)e["timestamp"].as_number(0);
 
         if (r.timestamp == 0 || math_real_is_nan(r.price))
@@ -140,6 +145,7 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
             if (r.timestamp > stock.timestamp)
             {
                 stock.price = r.price;
+                stock.volume = r.volume;
                 stock.timestamp = r.timestamp;
 
                 log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime values %lld > %.*s > %lf (%llu)"),
@@ -150,17 +156,96 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
                     stream_write(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
                     stream_write(_realtime->stream, stock.code, sizeof(stock.code));
                     stream_write(_realtime->stream, &r.price, sizeof(r.price));
+                    stream_write(_realtime->stream, &r.volume, sizeof(r.volume));
                 }
             }
         }
     }
 }
 
+FOUNDATION_STATIC stream_t* realtime_open_stream()
+{
+    string_const_t realtime_stream_path = session_get_user_file_path(STRING_CONST("realtime"), nullptr, 0, STRING_CONST("stream"));
+    stream_t* stream = fs_open_file(STRING_ARGS(realtime_stream_path), STREAM_CREATE | STREAM_IN | STREAM_OUT | STREAM_BINARY);
+    if (stream == nullptr)
+    {
+        log_panic(HASH_REALTIME, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to open realtime stream"));
+        return nullptr;
+    }
+
+    return stream;
+}
+
+FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
+{
+    // Create a new stream
+    stream_t* migrate_stream = fs_temporary_file();
+    FOUNDATION_ASSERT(migrate_stream);
+
+    stream_write(migrate_stream, "REAL", 4);
+    stream_write(migrate_stream, &to, sizeof(to));
+
+    char temp_path_buffer[BUILD_MAX_PATHLEN];
+    string_const_t temp_path_const = stream_path(migrate_stream);
+    string_t temp_path = string_copy(STRING_CONST_CAPACITY(temp_path_buffer), temp_path_const.str, temp_path_const.length);
+
+    char current_stream_path_buffer[BUILD_MAX_PATHLEN];
+    string_const_t current_stream_path_const = stream_path(_realtime->stream);
+    string_t current_stream_path = string_copy(STRING_CONST_CAPACITY(current_stream_path_buffer), current_stream_path_const.str, current_stream_path_const.length);
+    
+    if (from == 0 && to == 1)
+    {
+        stream_seek(_realtime->stream, 0, STREAM_SEEK_BEGIN);
+        while (!stream_eos(_realtime->stream))
+        {
+            stock_realtime_t stock;
+            stock_realtime_record_t r;
+            r.volume = 0;
+
+            stream_read(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
+            stream_read(_realtime->stream, stock.code, sizeof(stock.code));
+            stream_read(_realtime->stream, &r.price, sizeof(r.price));
+
+            if (r.timestamp <= 0 || math_real_is_nan(r.price))
+                continue;
+
+            stream_write(migrate_stream, &r.timestamp, sizeof(r.timestamp));
+            stream_write(migrate_stream, stock.code, sizeof(stock.code));
+            stream_write(migrate_stream, &r.price, sizeof(r.price));
+            stream_write(migrate_stream, &r.volume, sizeof(r.volume));
+        }
+        
+        from = to;
+    }
+
+    stream_deallocate(migrate_stream);
+    stream_deallocate(_realtime->stream);
+    if (fs_copy_file(STRING_ARGS(temp_path), STRING_ARGS(current_stream_path)))
+        _realtime->stream = realtime_open_stream();
+
+    FOUNDATION_ASSERT(_realtime->stream);
+}
+
 FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
 {
     shared_mutex& mutex = _realtime->stocks_mutex;
+
+    // Read stream version
+    int stream_version = 0;
+    if (!stream_eos(_realtime->stream))
+    {
+        char file_format[4] = { '\0' };
+        stream_read(_realtime->stream, file_format, sizeof(file_format));
+        if (!string_equal(file_format, 4, STRING_CONST("REAL")))
+            realtime_migrate_stream(stream_version, REALTIME_STREAM_VERSION);
+        else if (stream_read(_realtime->stream, &stream_version, sizeof(stream_version)) == sizeof(stream_version))
+        {
+            if (stream_version != REALTIME_STREAM_VERSION)
+                realtime_migrate_stream(stream_version, REALTIME_STREAM_VERSION);
+        }
+    }
     
-    while (!stream_eos(_realtime->stream))
+    while (stream_version == REALTIME_STREAM_VERSION && !stream_eos(_realtime->stream))
     {
         stock_realtime_t stock;
         stock_realtime_record_t r;
@@ -168,6 +253,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         stream_read(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
         stream_read(_realtime->stream, stock.code, sizeof(stock.code));
         stream_read(_realtime->stream, &r.price, sizeof(r.price));
+        stream_read(_realtime->stream, &r.volume, sizeof(r.volume));
 
         if (r.timestamp <= 0 || math_real_is_nan(r.price))
             continue;
@@ -181,6 +267,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         { 
             stock.price = r.price;
             stock.timestamp = r.timestamp;
+            stock.volume = r.volume;
             stock.records = nullptr;
             array_push_memcpy(stock.records, &r);
             
@@ -196,6 +283,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
                 if (r.timestamp > stock_ref.timestamp)
                 {
                     stock_ref.price = r.price;
+                    stock_ref.volume = r.volume;
                     stock_ref.timestamp = r.timestamp;
                 }
             }
@@ -265,6 +353,21 @@ realtime_background_thread_fn_quit:
     return 0;
 }
 
+FOUNDATION_STATIC int realtime_format_volume_label(double value, char* buff, int size, void* user_data)
+{
+    const double abs_value = math_abs(value);
+    if (abs_value >= 1e12)
+        return to_int(string_format(buff, size, STRING_CONST("%.3lgT $"), value / 1e12).length);
+    if (abs_value >= 1e9)
+        return to_int(string_format(buff, size, STRING_CONST("%.3lgB $"), value / 1e9).length);
+    else if (abs_value >= 1e6)
+        return to_int(string_format(buff, size, STRING_CONST("%.3lgM $"), value / 1e6).length);
+    else if (abs_value >= 1e3)
+        return to_int(string_format(buff, size, STRING_CONST("%.3lgK $"), value / 1e3).length);
+
+    return to_int(string_format(buff, size, STRING_CONST("%.3lg"), value).length);
+}
+
 FOUNDATION_STATIC int realtime_format_date_range_label(double value, char* buff, int size, void* user_data)
 {
     stock_realtime_t* ev = (stock_realtime_t*)user_data;
@@ -328,7 +431,7 @@ FOUNDATION_STATIC cell_t realtime_table_draw_title(table_element_ptr_t element, 
     return s->code;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_draw_time(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t realtime_table_column_time(table_element_ptr_t element, const column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
 
@@ -341,13 +444,19 @@ FOUNDATION_STATIC cell_t realtime_table_draw_time(table_element_ptr_t element, c
     return s->timestamp;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_draw_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t realtime_table_column_price(table_element_ptr_t element, const column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
     return s->price;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_draw_last_change_p(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t realtime_table_column_volume(table_element_ptr_t element, const column_t* column)
+{
+    const stock_realtime_t* s = (const stock_realtime_t*)element;
+    return s->volume;
+}
+
+FOUNDATION_STATIC cell_t realtime_table_column_last_change_p(table_element_ptr_t element, const column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
 
@@ -361,7 +470,7 @@ FOUNDATION_STATIC cell_t realtime_table_draw_last_change_p(table_element_ptr_t e
     return (last - prev) / prev * 100.0;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_draw_sample_count(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t realtime_table_column_sample_count(table_element_ptr_t element, const column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
     return (double)array_size(s->records);
@@ -407,11 +516,16 @@ FOUNDATION_STATIC bool realtime_render_graph(const stock_realtime_t* s, time_t s
     const double min = (double)first->timestamp;
     const double max = (double)last->timestamp;
     ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
+    ImPlot::SetupAxis(ImAxis_Y1, "##Price", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
+    ImPlot::SetupAxis(ImAxis_Y2, "##Volume", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_Opposite);
     ImPlot::SetupAxisFormat(ImAxis_X1, realtime_format_date_range_label, (void*)s);
     ImPlot::SetupAxisFormat(ImAxis_Y1, realtime_monitor_price_format(s));
+    //ImPlot::SetupAxisFormat(ImAxis_Y2, realtime_format_volume_label, (void*)s);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y2, 0, INFINITY);
 
-    ImPlot::PlotLineG("##Values", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::SetAxis(ImAxis_Y1);
+    ImPlot::PlotLineG("##Price", [](int idx, void* user_data)->ImPlotPoint
     {
         const stock_realtime_record_t* first = (const stock_realtime_record_t*)user_data;
         const stock_realtime_record_t* r = first + idx;
@@ -420,6 +534,18 @@ FOUNDATION_STATIC bool realtime_render_graph(const stock_realtime_t* s, time_t s
         const double y = r->price;
         return ImPlotPoint(x, y);
     }, (void*)first, visible_record_count, ImPlotLineFlags_SkipNaN);
+
+    ImPlot::SetAxis(ImAxis_Y2);
+    ImPlot::PlotLineG("##Volume", [](int idx, void* user_data)->ImPlotPoint
+    {
+        const stock_realtime_record_t* first = (const stock_realtime_record_t*)user_data;
+        const stock_realtime_record_t* r = first + idx;
+
+        const double x = (double)r->timestamp;
+        const double y = r->volume;
+        return ImPlotPoint(x, y);
+    }, (void*)first, visible_record_count, ImPlotLineFlags_SkipNaN);
+
     ImPlot::EndPlot();
 
     return true;
@@ -465,12 +591,13 @@ FOUNDATION_STATIC void realtime_render_prices()
             table_add_column(_realtime->table, "Title", realtime_table_draw_title, COLUMN_FORMAT_TEXT, 
                 COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING | COLUMN_NOCLIP_CONTENT)
                 .set_selected_callback(realtime_code_selected);
-            table_add_column(_realtime->table, "Time", realtime_table_draw_time, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING);
-            table_add_column(_realtime->table, "Price", realtime_table_draw_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_VALIGN_TOP);
-            table_add_column(_realtime->table, "%||Change %", realtime_table_draw_last_change_p, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT);
+            table_add_column(_realtime->table, "Time", realtime_table_column_time, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING);
+            table_add_column(_realtime->table, "Price", realtime_table_column_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_VALIGN_TOP);
+            table_add_column(_realtime->table, "Volume", realtime_table_column_volume, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT | COLUMN_NUMBER_ABBREVIATION);
+            table_add_column(_realtime->table, "%||Change %", realtime_table_column_last_change_p, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT);
             table_add_column(_realtime->table, "Monitor", realtime_table_draw_monitor, COLUMN_FORMAT_NUMBER, 
                 COLUMN_SORTABLE | COLUMN_STRETCH | COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_DEFAULT_SORT);
-            table_add_column(_realtime->table, "#||Samples", realtime_table_draw_sample_count, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT);
+            table_add_column(_realtime->table, "#||Samples", realtime_table_column_sample_count, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT);
         }
 
         SHARED_READ_LOCK(_realtime->stocks_mutex);
@@ -518,13 +645,7 @@ FOUNDATION_STATIC void realtime_initialize()
     _realtime->show_window = session_get_bool("show_realtime_window", _realtime->show_window);
 
     // Open realtime stock stream.
-    string_const_t realtime_stream_path = session_get_user_file_path(STRING_CONST("realtime"), nullptr, 0, STRING_CONST("stream"));
-    _realtime->stream = fs_open_file(STRING_ARGS(realtime_stream_path), STREAM_CREATE | STREAM_IN | STREAM_OUT | STREAM_BINARY);
-    if (_realtime->stream == nullptr)
-    {
-        log_panic(HASH_REALTIME, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to open realtime stream"));
-        return;
-    }
+    _realtime->stream = realtime_open_stream();
 
     // Create thread to query realtime stock
     _realtime->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
