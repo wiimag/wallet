@@ -540,7 +540,7 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& _size /
     if (channels == 4 && background)
         dl->AddRectFilled(logo_rect.Min, logo_rect.Max, bg_logo_banner_color); // ABGR
 
-    dl->AddImage((ImTextureID)texture.idx, logo_rect.Min, logo_rect.Max);
+    dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min, logo_rect.Max);
     if (fill_rect)
         *fill_rect = logo_rect;
     if (show_tooltip && ImGui::IsMouseHoveringRect(logo_rect.Min, logo_rect.Max))
@@ -548,7 +548,7 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& _size /
         if (channels == 4)
             ImGui::PushStyleColor(ImGuiCol_PopupBg, bg_logo_banner_color);
         ImGui::BeginTooltip();
-        ImGui::Image((ImTextureID)texture.idx, ImVec2(width, height));
+        ImGui::Image((ImTextureID)(intptr_t)texture.idx, ImVec2(width, height));
         ImGui::EndTooltip();
         if (channels == 4)
             ImGui::PopStyleColor();

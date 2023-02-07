@@ -102,7 +102,12 @@ public:
         #if FOUNDATION_PLATFORM_WINDOWS
         return mutex_.Ptr != 0;
         #else
-        return mutex_.__data.__writer != 0;
+        if (pthread_rwlock_trywrlock(&mutex_) == 0)
+        {
+            pthread_rwlock_unlock(&mutex_);
+            return false;
+        }
+        return true;
         #endif
     }
 

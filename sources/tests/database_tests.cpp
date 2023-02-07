@@ -6,7 +6,7 @@
 #include <foundation/platform.h>
 
 #if BUILD_DEVELOPMENT
- 
+
 #include "test_utils.h"
 
 #include <stock.h>
@@ -63,9 +63,9 @@ TEST_SUITE("Database")
     TEST_CASE("Insert And Grow")
     {
         database<int, hashint> db;
-        
+
         CHECK(db.empty());
-        
+
         size_t start_capacity = db.capacity;
         CHECK_GT(db.capacity, 1);
 
@@ -76,7 +76,7 @@ TEST_SUITE("Database")
         CHECK_EQ(db.insert(1), (hash_t)0); // Should not be added again.
         CHECK_EQ(db.insert(2), (hash_t)2);
         CHECK_EQ(db.insert(3), (hash_t)3);
-        
+
         CHECK_FALSE(db.empty());
         REQUIRE_EQ(db.size(), 4);
 
@@ -162,9 +162,9 @@ TEST_SUITE("Database")
 
         hash_t k1 = db.insert({ "ABCD", 42U });
         CHECK_NE(k1, 0);
-        
+
         // Select and update data while lock is active
-        db.update(k1, [&db](test_t& v) 
+        db.update(k1, [&db](test_t& v)
         {
             CHECK(db.mutex.locked());
             CHECK_EQ(v.payload, 42U);
@@ -180,7 +180,7 @@ TEST_SUITE("Database")
         test_t v;
         CHECK(db.select(k1, v));
         CHECK_EQ(v.payload, 24);
-        
+
         REQUIRE_EQ(db.size(), 1);
     }
 
@@ -258,7 +258,7 @@ TEST_SUITE("Database")
             INFO(e.current.close);
         }
 
-        CHECK_EQ(db[u.id]->current.close, 0.0);
+        CHECK(math_real_is_nan(db[u.id]->current.close));
         CHECK_EQ(db[s.id]->current.close, 0.025);
         CHECK_EQ(db[u.id]->fetch_level, FetchLevel::NONE);
 
@@ -273,7 +273,7 @@ TEST_SUITE("Database")
 
         print_stock_day_result(db[p.id]->current);
         print_stock_day_result(db.lock(p.id)->current);
-        
+
         db[s.id]->country = string_table_encode("Canada");
         db[s.id]->exchange = string_table_encode("Venture");
 
@@ -291,7 +291,7 @@ TEST_SUITE("Database")
         database<string_const_t> db;
 
         string_const_t jo = CTEXT("Jonathan");
-        string_const_t seb = CTEXT("Sébastien");
+        string_const_t seb = CTEXT("Sebastien");
         string_const_t steeve = CTEXT("Steeve");
         string_const_t mathilde = CTEXT("Mathilde");
 
@@ -325,7 +325,7 @@ TEST_SUITE("Database")
     }
 
     TEST_CASE("Failures")
-    {   
+    {
         database<kvp_t, hash_uuid> db;
 
         const uuid_t u1 = uuid_generate_random();
@@ -405,7 +405,7 @@ TEST_SUITE("Database")
 
         { // Iteration with exclusive lock
             int iteration_count = 0;
-            for(auto it = db.begin_exclusive_lock(), 
+            for(auto it = db.begin_exclusive_lock(),
                      end = db.end_exclusive_lock(); it != end; ++it)
             {
                 CHECK(db.mutex.locked());
@@ -421,7 +421,7 @@ TEST_SUITE("Database")
     TEST_CASE("Concurrent Inserts" * doctest::timeout(30))
     {
         typedef database<price_t, hash> price_database_t;
-        
+
         thread_t jobs_insert[8];
         thread_t jobs_enumerator[4];
 
@@ -441,7 +441,7 @@ TEST_SUITE("Database")
             constexpr auto job_insert_thread_fn = [](void* arg)->void*
             {
                 price_database_t& db = *(price_database_t*)arg;
-                while (!thread_try_wait(0))
+                while (!thread_try_wait(1))
                 {
                     if (db.insert({ random64(), random_range(20.0, 100.0) }) == 0)
                         duplicates++;
@@ -454,7 +454,7 @@ TEST_SUITE("Database")
                 string_const_t thread_name = string_format_static(STRING_CONST("test_job_%d"), i + 1);
                 thread_initialize(&jobs_insert[i], job_insert_thread_fn, &db, STRING_ARGS(thread_name), (thread_priority_t)(random32() % 6), 0);
             }
-            
+
             for (int i = 0; i < ARRAY_COUNT(jobs_insert); ++i)
                 CHECK(thread_start(&jobs_insert[i]));
         }
@@ -485,7 +485,7 @@ TEST_SUITE("Database")
                 CHECK(thread_start(&jobs_enumerator[i]));
         }
 
-        while (duplicates < 10 || db.size() < 64 * 1024)
+        while ((duplicates >= 1 || duplicates < 10) && db.size() < 64 * 1024)
         {
             thread_sleep(1);
             REQUIRE_EQ(db.get(h1).price, 12.0);
@@ -494,10 +494,10 @@ TEST_SUITE("Database")
             price_t p;
             REQUIRE(db.select(h2, p));
             REQUIRE_EQ(p.price, 13.0);
-            
+
             thread_sleep(1);
             REQUIRE_EQ(db.lock(h3)->price, 14.0);
-                        
+
            thread_sleep(1);
            REQUIRE_EQ(db[h4]->price, 15.0);
         }

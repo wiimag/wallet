@@ -148,8 +148,8 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
                 stock.volume = r.volume;
                 stock.timestamp = r.timestamp;
 
-                log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime values %lld > %.*s > %lf (%llu)"),
-                    r.timestamp, STRING_FORMAT(code), r.price, stream_size(_realtime->stream));
+                log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime values %lld > %.*s > %lf (%" PRIsize ")"),
+                    (int64_t)r.timestamp, STRING_FORMAT(code), r.price, stream_size(_realtime->stream));
                 
                 if (realtime_stock_add_record(&stock, r))
                 {
@@ -506,7 +506,7 @@ FOUNDATION_STATIC bool realtime_render_graph(const stock_realtime_t* s, time_t s
         first = &s->records[fidx];
     }
 
-    const int visible_record_count = (last - first) + 1;
+    const int visible_record_count = (int)(last - first) + 1;
     if (visible_record_count <= 1)
         return false;
 

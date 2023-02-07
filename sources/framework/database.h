@@ -243,7 +243,7 @@ struct database
         return contains(key);
     }
 
-    constexpr const T& get(hash_t key) const
+    /*constexpr*/ const T& get(hash_t key) const
     {
         const uint64_t index = hashtable64_get(hashes, key);
         if (index == 0)
