@@ -451,7 +451,7 @@ TEST_SUITE("Database")
 
             for (int i = 0; i < ARRAY_COUNT(jobs_insert); ++i)
             {
-                string_const_t thread_name = string_format_static(STRING_CONST("test_job_%d"), i + 1);
+                string_const_t thread_name = string_format_static(STRING_CONST("test_inserter_job_%d"), i + 1);
                 thread_initialize(&jobs_insert[i], job_insert_thread_fn, &db, STRING_ARGS(thread_name), (thread_priority_t)(random32() % 6), 0);
             }
 
@@ -466,7 +466,7 @@ TEST_SUITE("Database")
             constexpr auto job_enumerator_thread_fn = [](void* arg)->void*
             {
                 price_database_t& db = *(price_database_t*)arg;
-                while (!thread_try_wait(enumerations.load()))
+                while (!thread_try_wait(min(enumerations.load(), 100)))
                 {
                     for (const auto& e : db)
                         INFO(e.id, e.price);
@@ -477,7 +477,7 @@ TEST_SUITE("Database")
 
             for (int i = 0; i < ARRAY_COUNT(jobs_enumerator); ++i)
             {
-                string_const_t thread_name = string_format_static(STRING_CONST("test_job_%d"), i + 1);
+                string_const_t thread_name = string_format_static(STRING_CONST("test_enumerator_job_%d"), i + 1);
                 thread_initialize(&jobs_enumerator[i], job_enumerator_thread_fn, &db, STRING_ARGS(thread_name), (thread_priority_t)(random32() % 6), 0);
             }
 
@@ -485,7 +485,7 @@ TEST_SUITE("Database")
                 CHECK(thread_start(&jobs_enumerator[i]));
         }
 
-        while ((duplicates >= 1 || duplicates < 10) && db.size() < 64 * 1024)
+        while ((duplicates == 0 || duplicates < 10) && db.size() < 64 * 1024)
         {
             thread_sleep(1);
             REQUIRE_EQ(db.get(h1).price, 12.0);
