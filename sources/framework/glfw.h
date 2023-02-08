@@ -36,18 +36,48 @@
 #define GLFW_HAS_GAMEPAD_API            (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetGamepadState() new api
 #define GLFW_HAS_GETKEYNAME             (GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
 
+/*! @brief  Returns the main window.
+ *  @return The main window.
+ */
 extern GLFWwindow* main_window();
 
+/*! @brief Center the window on the user main monitor.
+ * @param window The window to center.
+ */
 void glfw_set_window_center(GLFWwindow* window);
 
+/*! @brief Create a new window and restore its previous geometry.
+ *  @param window_title The window title.
+ *  @return The new window.
+ */
 GLFWwindow* glfw_create_window_geometry(const char* window_title);
 
+/*! @brief Save the window geometry.
+ *  @param window The window.
+ */
 void glfw_save_window_geometry(GLFWwindow* window);
 
+/*! @brief Find the monitor on which the window is located.
+ *  @param window The window to find the monitor for.
+ *  @return The monitor on which the window is located.
+ */
 GLFWmonitor* glfw_find_window_monitor(GLFWwindow* window);
 
+/*! @brief Find the monitor on which the window is located given its top-left coordinates.
+ *  @param window_x The window x position.
+ *  @param window_y The window y position.
+ *  @return The monitor on which the window is located.
+ */
 GLFWmonitor* glfw_find_window_monitor(int window_x, int window_y);
 
+/*! @brief Checks if the window is currently focused
+ * @param window The window to check.
+ * @return True if the window is focused, false otherwise.
+ */
 bool glfw_is_window_focused(GLFWwindow* window);
 
+/*! @brief Checks if the mouse is currently over the window.
+ * @param window The window to check.
+ * @return True if the mouse is over the window, false otherwise.
+ */
 bool glfw_is_any_mouse_button_down(GLFWwindow* window);

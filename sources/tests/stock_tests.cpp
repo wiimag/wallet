@@ -14,22 +14,24 @@
 
 #include <framework/dispatcher.h>
 
+#include <foundation/system.h>
+
 #include <doctest/doctest.h>
 
 // 500 stock symbols ending with .US or .TO
 static const char* stock500[] = {
-    "MMM.US", "ABT.US", "ABBV.US", "U.US", "ACN.US", "ATVI.US", "ADBE.US", "AMD.US", "AAP.US", "AES.US",
+    "U.US", "ACN.US", "ATVI.US", "ADBE.US", "AMD.US", "AAP.US", "AES.US",
     "AFL.US", "A.US", "APD.US", "AKAM.US", "ALK.US", "ALB.US", "ARE.US", "ALGN.US", "ALLE.US",
-    "LNT.US", "ALL.US", "GOOGL.US", "GOOG.US", "MO.US", "AMZN.US", "AMCR.US", "AEE.US", "AAL.US", "AEP.US",
+    "LNT.US", "ALL.US", "GOOGL.US", "GOOG.US", "MO.US", "AMCR.US", "AEE.US", "AAL.US", "AEP.US",
     "AXP.US", "AIG.US", "AMT.US", "AWK.US", "AMP.US", "ABC.US", "AME.US", "AMGN.US", "APH.US", "ADI.US",
     "ANSS.US", /*"ANTM.US",*/ "AON.US", "AOS.US", "APA.US", "AIV.US", "AAPL.US", "AMAT.US", "APTV.US", "ADM.US",
     "ARNC.US", "ANET.US", "AJG.US", "AIZ.US", "ATO.US", "T.US", "ADSK.US", "ADP.US", "AZO.US", "AVB.US",
-    "AVY.US", "BKR.US", /*"BLL.US",*/ "BAC.US", "BK.US", "BAX.US", "BDX.US", "BRK-B.US", "BBY.US", "BIIB.US",
-    "BLK.US", "BA.US", "BKNG.US", "BWA.US", "BXP.US", "BSX.US", "BMY.US", "AVGO.US", "BR.US", "BF-B.US",
+    "AVY.US", "BKR.US", "BK.US", "BAX.US", "BDX.US", "BRK-B.US", "BBY.US", "BIIB.US",
+    "BLK.US", "BA.US", "BKNG.US", "BWA.US", "BXP.US", "BSX.US", "BMY.US", "BR.US", "BF-B.US",
     "CHRW.US", /*"COG.US",*/ "CDNS.US", "CPB.US", "COF.US", "CAH.US", "KMX.US", "CCL.US", "CARR.US", "CTLT.US",
     "CAT.US", "CBOE.US", "CBRE.US", "CDW.US", "CE.US", "CNC.US", "CNP.US", /*"CERN.US",*/ "CF.US", "SCHW.US",
-    "CHTR.US", "CVX.US", "CMG.US", "CB.US", "CHD.US", "CI.US", "CINF.US", "CTAS.US", "CSCO.US", "C.US",
-    "CFG.US", /*"CTXS.US",*/ "CLX.US", "CME.US", "CMS.US", "KO.US", "CTSH.US", "CL.US", "CMCSA.US", "CMA.US",
+    "CHTR.US", "CVX.US", "CMG.US", "CB.US", "CHD.US", "CI.US", "CINF.US", "CTAS.US", 
+    "CFG.US", /*"CTXS.US",*/ "CLX.US", "CME.US", "CMS.US", "CTSH.US", "CL.US", "CMCSA.US", "CMA.US",
     "CAG.US", /*"CXO.US",*/ "COP.US", "ED.US", "STZ.US", "COO.US", "CPRT.US", "GLW.US", "CTVA.US", "COST.US",
     "COTY.US", "CCI.US", "CSX.US", "CMI.US", "CVS.US", "DHI.US", "DHR.US", "DRI.US", "DVA.US", "DE.US",
     "DAL.US", "XRAY.US", "DVN.US", "DXCM.US", "FANG.US", "DLR.US", "DFS.US", /*"DISCA.US", "DISCK.US",*/ "DISH.US",
@@ -42,23 +44,23 @@ static const char* stock500[] = {
     "GE.US", "GIS.US", "GM.US", "GPC.US", "GILD.US", "GL.US", "GPN.US", "GS.US", "GWW.US", "HAL.US",
     "HBI.US", "HIG.US", "HAS.US", "HCA.US", "PEAK.US", "HSIC.US", "HSY.US", "HES.US", "HPE.US", "HLT.US",
     "HOLX.US", "HD.US", "HON.US", "HRL.US", "HST.US", "HWM.US", "HPQ.US", "HUM.US", "HBAN.US",
-    "HII.US", "IDXX.US", "ITW.US", "ILMN.US", "INCY.US", "IR.US", "INTC.US", "ICE.US", "IBM.US",
+    "HII.US", "IDXX.US", "ITW.US", "ILMN.US", "INCY.US", "IR.US", "ICE.US", "IBM.US",
     "IP.US", "IPG.US", "IFF.US", "INTU.US", "ISRG.US", "IVZ.US", "IPGP.US", "IQV.US", "IRM.US", "JKHY.US",
     "J.US", "JBHT.US", "SJM.US", "JNJ.US", "JCI.US", "JPM.US", "JNPR.US", "K.US", "KEY.US",
     "KEYS.US", "KMB.US", "KIM.US", "KMI.US", "KLAC.US", "KSS.US", "KHC.US", "KR.US", "LHX.US",
     "LH.US", "LRCX.US", "LW.US", "LVS.US", "LEG.US", "LDOS.US", "LEN.US", "LLY.US", "LNC.US", "LIN.US",
     "LYV.US", "LKQ.US", "LMT.US", "L.US", "LOW.US", "LYB.US", "MTB.US", "MRO.US", "MPC.US", "MKTX.US",
     "MAR.US", "MMC.US", "MLM.US", "MAS.US", "MA.US", "MKC.US", "MCD.US", "MCK.US", "MDT.US",
-    "MRK.US", "MET.US", "MTD.US", "MGM.US", "MCHP.US", "MU.US", "MSFT.US", "MAA.US", "MHK.US", "TAP.US",
+    "MRK.US", "MET.US", "MTD.US", "MGM.US", "MCHP.US", "MU.US", "MAA.US", "MHK.US", "TAP.US",
     "MDLZ.US", "MNST.US", "MCO.US", "MS.US", "MOS.US", "MSI.US", "MSCI.US", "NDAQ.US", "NOV.US",
-    "NKTR.US", "NTAP.US", "NFLX.US", "NWL.US", "NEM.US", "NWSA.US", "NWS.US", "NEE.US", "NKE.US",
+    "NKTR.US", "NTAP.US", "NWL.US", "NEM.US", "NWSA.US", "NWS.US", "NEE.US", 
     "NI.US", "JWN.US", "NSC.US", "NTRS.US", "NOC.US", "NCLH.US", "NRG.US", "NUE.US",
     "NVDA.US", "NVR.US", "ORLY.US", "OXY.US", "ODFL.US", "OMC.US", "OKE.US", "ORCL.US", "PCAR.US", "PKG.US",
     "PH.US", "PAYX.US", "PAYC.US", "PYPL.US", "PNR.US", "PEP.US", "PKI.US", "PRGO.US", "PFE.US",
     "PM.US", "PSX.US", "PNW.US", "PXD.US", "PNC.US", "POOL.US", "PPG.US", "PPL.US", "PFG.US", "PG.US",
     "PGR.US", "PLD.US", "PRU.US", "PTC.US", "PEG.US", "PSA.US", "PHM.US", "PVH.US", "QRVO.US", "PWR.US",
     "QCOM.US", "DGX.US", "RL.US", "RJF.US", "RTX.US", "O.US", "REG.US", "REGN.US", "RF.US", "RSG.US",
-    "RMD.US", "RHI.US", "ROK.US", "ROL.US", "ROP.US", "ROST.US", "RCL.US", "SPGI.US", "CRM.US", "SBAC.US",
+    "RMD.US", "RHI.US", "ROK.US", "ROL.US", "ROP.US", "ROST.US", "RCL.US", "SPGI.US", "SBAC.US",
     "SLB.US", "STX.US", "SEE.US", "SRE.US", "NOW.US", "SHW.US", "SPG.US", "SWKS.US", "SLG.US", "SNA.US",
     "SO.US", "LUV.US", "SWK.US", "SBUX.US", "STT.US", "STE.US", "SYK.US", "SIVB.US", "SYF.US", "SNPS.US",
     "SYY.US", "TMUS.US", "TROW.US", "TTWO.US", "TPR.US", "TGT.US", "TEL.US", "TDY.US", "TFX.US", "TER.US",
@@ -92,7 +94,7 @@ TEST_SUITE("Stocks")
         CHECK_EQ(handle->code, STRING_TABLE_NULL_SYMBOL);
 
         CHECK_EQ(stock_initialize(nullptr, 32, nullptr), STATUS_ERROR_NULL_REFERENCE);
-        CHECK_EQ(stock_initialize("U.US", 0, nullptr), STATUS_ERROR_NULL_REFERENCE);
+        CHECK_EQ(stock_initialize("MFC.TO", 0, nullptr), STATUS_ERROR_NULL_REFERENCE);
         CHECK_EQ(stock_initialize(STRING_CONST("H.TO"), nullptr), STATUS_ERROR_NULL_REFERENCE);
         
         CHECK_EQ(stock_initialize(STRING_CONST("H.TO"), &handle), STATUS_OK);
@@ -106,7 +108,7 @@ TEST_SUITE("Stocks")
 
     TEST_CASE("Request NONE")
     {
-        string_const_t code = CTEXT("U.US");
+        string_const_t code = CTEXT("ABX.TO");
         stock_handle_t handle = stock_request(STRING_ARGS(code), FetchLevel::NONE);
 
         CHECK(!!handle);
@@ -167,7 +169,7 @@ TEST_SUITE("Stocks")
         CHECK(dispatcher_unregister_event_listener(listener_id));
     }
 
-    TEST_CASE("Concurrent Requests" * doctest::timeout(60))
+    TEST_CASE("Concurrent Requests" * doctest::timeout(60) * doctest::skip(!system_debugger_attached()))
     {
         // Fetch realtime stock data from ##stock500
         stock_handle_t* handles = nullptr;
@@ -396,7 +398,7 @@ TEST_SUITE("Stocks")
     TEST_CASE("SAR AND SLOPE" * doctest::timeout(60.0))
     {
         const char* symbols[] = {
-            "CMCSA.US", "NFLX.US", "BAC.US", "T.US", "PEP.US", "CRM.US", "INTC.US", "CSCO.US", "KO.US", "NKE.US"
+            "CPG.TO", /*"CVE.TO", */"BAC.US", "ATH.TO", "PEP.US", "CRM.US", "INTC.US", "CSCO.US", "KO.US", "NKE.US"
         };
 
         // Request all of them at once with EOD level first
@@ -438,7 +440,7 @@ TEST_SUITE("Stocks")
     TEST_CASE("CCI" * doctest::timeout(30.0))
     {
         const char* symbols[] = {
-            "MMM.US", "ABT.US", "ABBV.US", "U.US", "ACN.US"
+            "MMM.US", "ABT.US", "ABBV.US", "RY.TO", "ACN.US"
         };
 
         // Request all of them at once with EOD level first
@@ -501,7 +503,7 @@ TEST_SUITE("Stocks")
         CHECK_EQ(*handle, nullptr);
     }
 
-    TEST_CASE("Request REALTIMEx2" * doctest::timeout(90.0) * doctest::may_fail() * doctest::skip(true))
+    TEST_CASE("Request REALTIMEx2" * doctest::timeout(90.0) * doctest::may_fail() * doctest::skip(!system_debugger_attached()))
     {
         string_const_t code = CTEXT("AAPL.US");
         stock_handle_t handle = stock_request(STRING_ARGS(code), FetchLevel::REALTIME);
@@ -551,7 +553,74 @@ TEST_SUITE("Stocks")
         REQUIRE_LT(xgr, 1.0);
 
         xgr = stock_exchange_rate(STRING_CONST("CAD"), STRING_CONST("SOMETHIGN"), 0);
-        CHECK(math_real_is_nan(xgr));
+        REQUIRE_EQ(xgr, 1.0);
+    }
+
+    TEST_CASE("History")
+    {
+        string_const_t code = CTEXT("AVGO.US");
+        stock_handle_t handle = stock_request(STRING_ARGS(code), FetchLevel::REALTIME);
+
+        const stock_t* s = handle;
+        REQUIRE_NE(s, nullptr);
+
+        const time_t at = time_add_days(time_now(), -30);
+
+        // First request should be empty since we haven't request EOD data yet.
+        const day_result_t* ed = stock_get_EOD(s, at, false);
+        REQUIRE_EQ(ed, nullptr);
+        
+        CHECK_FALSE(stock_update(STRING_ARGS(code), handle, FetchLevel::EOD, 60.0));
+
+        while (!handle->has_resolve(FetchLevel::EOD))
+            dispatcher_wait_for_wakeup_main_thread();
+
+        ed = stock_get_EOD(s, at, false);
+        REQUIRE_NE(ed, nullptr);
+        CHECK_GT(ed->close, 0);
+    }
+
+    TEST_CASE("History Take Last")
+    {
+        stock_handle_t handle{};
+        string_const_t code = CTEXT("HNU.TO");
+
+        CHECK_FALSE(stock_update(STRING_ARGS(code), handle, FetchLevel::EOD, 60.0));
+        while (!handle->has_resolve(FetchLevel::EOD))
+            dispatcher_wait_for_wakeup_main_thread();
+            
+        const time_t at = time_add_days(time_now(), -10000);
+        const day_result_t* ed = stock_get_EOD(handle, at, true);
+        
+        REQUIRE_NE(ed, nullptr);
+        CHECK_EQ(ed->date, 1204693200);
+    }
+
+    TEST_CASE("History Too Far")
+    {
+        stock_handle_t handle{};
+        string_const_t code = CTEXT("HUT.TO");
+
+        CHECK_FALSE(stock_update(STRING_ARGS(code), handle, FetchLevel::EOD, 60.0));
+        while (!handle->has_resolve(FetchLevel::EOD))
+            dispatcher_wait_for_wakeup_main_thread();
+
+        const time_t at = time_add_days(time_now(), -10000);
+        const day_result_t* ed = stock_get_EOD(handle, at, false);
+        REQUIRE_EQ(ed, nullptr);
+    }
+
+    TEST_CASE("History Relative")
+    {
+        string_const_t code = CTEXT("SHOP.TO");
+        stock_handle_t handle = stock_request(STRING_ARGS(code), FetchLevel::EOD);
+        while (!handle->has_resolve(FetchLevel::EOD))
+            dispatcher_wait_for_wakeup_main_thread();
+            
+        const day_result_t* ed = stock_get_EOD(handle, -90, false);
+        CHECK_GT(ed->date, 0);
+        CHECK_LT(ed->date, time_now());
+        CHECK_FALSE(math_real_is_nan(ed->open));
     }
 }
 

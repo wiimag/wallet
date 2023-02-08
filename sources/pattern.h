@@ -5,10 +5,9 @@
  
 #pragma once
 
-#include "bulk.h"
 #include "stock.h"
 
-#include <framework/config.h>
+struct bulk_t;
 
 typedef int pattern_handle_t;
 
@@ -21,7 +20,7 @@ struct pattern_mark_t
 {
     time_t date;
     bool fetched {false};
-    double change_p { DNAN };
+    double change_p { NAN };
 };
 
 #define PATTERN_FLEX_NONE 0

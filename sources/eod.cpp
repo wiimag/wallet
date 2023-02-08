@@ -9,15 +9,13 @@
 #include <framework/glfw.h>
 #include <framework/imgui.h>
 #include <framework/common.h>
-#include <framework/query.h>
-#include <framework/config.h>
 #include <framework/session.h>
 #include <framework/scoped_string.h>
 #include <framework/service.h>
+#include <framework/dispatcher.h>
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>
-#include <foundation/hashtable.h>
 #include <foundation/version.h>
 
 #define HASH_EOD static_hash_string("eod", 3, 0x35f39422e491f3e1ULL)

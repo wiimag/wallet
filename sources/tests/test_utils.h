@@ -11,6 +11,7 @@
 #include <framework/math.h>
 #include <framework/config.h>
 #include <framework/common.h>
+#include <framework/dispatcher.h>
 
 #include <foundation/string.h>
 

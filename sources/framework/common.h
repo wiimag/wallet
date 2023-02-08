@@ -6,16 +6,11 @@
 #pragma once
 
 #include "function.h"
-#include "generics.h"
-#include "dispatcher.h"
 
 #include <foundation/fs.h>
-#include <foundation/assert.h>
-#include <foundation/math.h>
-#include <foundation/string.h>
 #include <foundation/time.h>
 #include <foundation/array.h>
-
+ 
 #include <time.h>
 
 // ## MACROS
@@ -398,25 +393,6 @@ FOUNDATION_FORCEINLINE bool fs_is_file(string_t file_path)
 {
     return fs_is_file(STRING_ARGS(file_path));
 }
-
-// ##Math
-
-FOUNDATION_FORCEINLINE double math_ifnan(double n, double default_value)
-{
-    if (math_real_is_nan(n))
-        return default_value;
-    return n;
-}
-
-FOUNDATION_FORCEINLINE double math_ifzero(double n, double default_value)
-{
-    if (n == 0 || math_real_is_nan(n))
-        return default_value;
-    return n;
-}
-
-double math_average(const double* pn, size_t count, size_t stride = sizeof(double));
-double math_median_average(double* values, double& median, double& average);
 
 // ## Time
 

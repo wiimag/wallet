@@ -8,6 +8,7 @@
 #include <framework/session.h>
 #include <framework/dispatcher.h>
 #include <framework/profiler.h>
+#include <framework/math.h>
 
 #include <foundation/foundation.h>
 

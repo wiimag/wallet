@@ -7,16 +7,13 @@
 
 #include "common.h"
 #include "session.h"
-#include "glfw.h"
 #include "shared_mutex.h"
 #include "profiler.h"
+#include "glfw.h"
 
 #include <foundation/mutex.h>
-#include <foundation/array.h>
-#include <foundation/semaphore.h>
 #include <foundation/event.h>
 #include <foundation/hashstrings.h>
-#include <foundation/thread.h>
 
 struct event_listener_t
 {

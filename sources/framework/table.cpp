@@ -16,7 +16,7 @@
 #include <foundation/time.h>
 
 #include <mnyfmt.h>
-#include <time.h>
+#include <sys/timeb.h>
 #include <algorithm>
 
 #define ENABLE_ROW_HEIGHT_MIDDLE 1

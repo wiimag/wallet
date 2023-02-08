@@ -5,13 +5,12 @@
  
 #pragma once
 
-#include "framework/handle.h"
-#include "framework/string_table.h"
-#include "framework/option.h"
-#include "framework/common.h"
+#include <framework/handle.h>
+#include <framework/common.h>
+#include <framework/string_table.h>
+#include <framework/option.h>
 
 #include <foundation/string.h>
-#include <foundation/math.h>
 
 struct job_t;
 typedef uint64_t stock_index_t;

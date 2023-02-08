@@ -7,22 +7,19 @@
 
 #if BUILD_ENABLE_PROFILE
 
+#include <framework/imgui.h>
 #include <framework/common.h>
 #include <framework/service.h>
 #include <framework/session.h>
 #include <framework/shared_mutex.h>
-#include <framework/imgui.h>
 #include <framework/table.h>
+#include <framework/math.h>
 
-#include <foundation/hash.h>
-#include <foundation/string.h>
-#include <foundation/profile.h>
 #include <foundation/stream.h>
 #include <foundation/environment.h>
+#include <foundation/time.h>
 
 #include <bx/sort.h>
-
-#include <algorithm>
 
 #define HASH_PROFILER static_hash_string("profiler", 8, 0xc9186f3fc62fa119ULL)
 

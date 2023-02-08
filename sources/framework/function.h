@@ -9,7 +9,7 @@
 #include <foundation/memory.h>
 
 #include <new>
-#include <utility>
+#include <type_traits>
 
 // Lambda macros (these macro do not work with referenced values i.e. ..., double& value)
 #define L0(EXPRESSION, ...) [=](__VA_ARGS__){ return EXPRESSION; }

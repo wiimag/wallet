@@ -8,28 +8,14 @@
 #include "eod.h"
 #include "events.h"
 
-#include <framework/common.h>
 #include <framework/query.h>
-#include <framework/scoped_string.h>
-#include <framework/scoped_mutex.h>
 #include <framework/shared_mutex.h>
-#include <framework/jobs.h>
-#include <framework/query.h>
 #include <framework/service.h>
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
+#include <framework/math.h>
 
-#include <foundation/log.h>
-#include <foundation/array.h>
-#include <foundation/time.h>
-#include <foundation/hash.h>
-#include <foundation/objectmap.h>
 #include <foundation/hashtable.h>
-#include <foundation/mutex.h>
-#include <foundation/thread.h>
-
-#include <ctime>
-#include <algorithm>
 
 #define HASH_STOCK static_hash_string("stock", 5, 0x1a0dd7af24ebee7aLL)
 

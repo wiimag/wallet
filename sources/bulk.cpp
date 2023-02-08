@@ -11,11 +11,11 @@
 #include "logo.h"
 
 #include <framework/session.h>
-#include <framework/imgui.h>
 #include <framework/scoped_mutex.h>
 #include <framework/table.h>
 #include <framework/service.h>
 #include <framework/tabs.h>
+#include <framework/config.h>
 
 #define HASH_BULK static_hash_string("bulk", 4, 0x9a6818bbbd28c09eULL)
 
