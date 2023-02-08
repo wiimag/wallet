@@ -292,7 +292,7 @@ FOUNDATION_STATIC double symbol_get_change(void* element, const column_t* column
         return NAN;
     if (rel_days == 0)
         return ed->change_p;
-    return (stock_data->current.close - ed->close) / ed->close * 100.0;
+    return (stock_data->current.adjusted_close - ed->adjusted_close) / ed->adjusted_close * 100.0;
 }
 
 FOUNDATION_STATIC cell_t symbol_get_change_cell(void* element, const column_t* column, int rel_days, bool take_last = false)

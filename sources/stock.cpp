@@ -35,7 +35,6 @@ static hashtable64_t* _exchange_rates = nullptr;
 
 FOUNDATION_STATIC void stock_grow_db()
 {
-    // TODO: Dispose of old stocks (outdated)?
     hashtable64_t* old_table = _db_hashes;
     _db_capacity *= size_t(2);
     hashtable64_t* new_hash_table = hashtable64_allocate(_db_capacity);
@@ -84,31 +83,33 @@ FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, u
         return entry->mark_resolved(FetchLevel::REALTIME);
     }
 
-    day_result_t dresult{};
-    dresult.close = json_read_number(json, STRING_CONST("close"));        
-    dresult.date = (time_t)json_read_number(json, STRING_CONST("timestamp"));
-    dresult.gmtoffset = (uint8_t)json_read_number(json, STRING_CONST("gmtoffset"));
-    dresult.open = json_read_number(json, STRING_CONST("open"));
-    dresult.previous_close = json_read_number(json, STRING_CONST("previousClose"));
-    dresult.low = json_read_number(json, STRING_CONST("low"));
-    dresult.high = json_read_number(json, STRING_CONST("high"));
-    dresult.change = json_read_number(json, STRING_CONST("change"));
-    dresult.change_p = json_read_number(json, STRING_CONST("change_p"));
-    dresult.volume = json_read_number(json, STRING_CONST("volume"));
+    day_result_t d{};
+    d.date = (time_t)json_read_number(json, STRING_CONST("timestamp"));
+    d.gmtoffset = (uint8_t)json_read_number(json, STRING_CONST("gmtoffset"));
+    d.open = json_read_number(json, STRING_CONST("open"));
+    d.close = d.adjusted_close = json_read_number(json, STRING_CONST("close"));
+    d.previous_close = json_read_number(json, STRING_CONST("previousClose"));
+    d.low = json_read_number(json, STRING_CONST("low"));
+    d.high = json_read_number(json, STRING_CONST("high"));
+    d.change = json_read_number(json, STRING_CONST("change"));
+    d.change_p = json_read_number(json, STRING_CONST("change_p"));
+    d.change_p_high = (max(d.close, d.high) - min(d.open, d.low)) * 100.0 / math_ifnan(d.previous_close, d.close);
+    d.volume = json_read_number(json, STRING_CONST("volume"));
+    d.price_factor = NAN;
 
     {
         SHARED_READ_LOCK(_db_lock);
         stock_t* entry = &_db_stocks[index];
 
-        if (entry->current.date != 0 && entry->current.date != dresult.date)
-            array_push(entry->previous, entry->current);
-
-        entry->current = dresult;
-
-        if (!math_real_is_nan(dresult.close))
+        if (entry->current.date != d.date && !math_real_is_nan(d.close))
         {
+            entry->current = d;
             string_const_t ticker = string_table_decode_const(entry->code);
             dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)ticker.str, ticker.length);
+        }
+        else
+        {
+            log_debugf(HASH_STOCK, STRING_CONST("Stock '%.*s' has no new real time data"), STRING_FORMAT(code));
         }
 
         entry->mark_resolved(FetchLevel::REALTIME);
@@ -210,7 +211,7 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
 
     if ((fetch_levels & access_level) && ((entry->fetch_level | entry->resolved_level) & access_level) == 0)
     {
-        if (entry->has_resolve(FetchLevel::TECHNICAL_EOD) || entry->has_resolve(FetchLevel::EOD))
+        if (entry->has_resolve(FetchLevel::EOD))
         {
             if (eod_fetch_async("technical", ticker, FORMAT_JSON_CACHE, "order", "d", "function", fn_name,
                 [index, access_level, desc](const json_object_t& json)
@@ -232,7 +233,7 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
             log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Missing EOD data to fetch technical results %d for %s"), 
                 access_level, ticker);
 
-            if (!entry->is_resolving(FetchLevel::TECHNICAL_EOD, 0) && !entry->is_resolving(FetchLevel::EOD, 0))
+            if (!entry->is_resolving(FetchLevel::EOD, 0))
             {
                 const auto eod_stock_handle_request = stock_request(ticker, string_length(ticker), FetchLevel::EOD);
                 if (eod_stock_handle_request)
@@ -269,124 +270,56 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
         technical_descriptor_t{1, {field_name}, {(uint8_t)offset}});
 }
 
-FOUNDATION_STATIC void stock_read_eod_indexed_prices(const json_object_t& json, stock_index_t index)
-{
-    tick_t timeout = time_current();
-    while (time_elapsed(timeout) < 30.0)
-    {
-        {
-            SHARED_READ_LOCK(_db_lock);
-            
-            stock_t* s = &_db_stocks[index];
-            if (s->has_resolve(FetchLevel::TECHNICAL_EOD) || s->has_resolve(FetchLevel::EOD))
-                break;
-        }
-        
-        thread_sleep(10);
-    }
-    
-    day_result_t* history = nullptr;
-    {
-        SHARED_READ_LOCK(_db_lock);
-        
-        stock_t* s = &_db_stocks[index];
-        if (!s->has_resolve(FetchLevel::TECHNICAL_EOD) && !s->has_resolve(FetchLevel::EOD))
-        {
-            log_warnf(HASH_STOCK, WARNING_NETWORK, STRING_CONST("Missing EOD results to resolve indexed price for %s"), SYMBOL_CSTR(s->code));
-            return;
-        }
-        history = s->history;
-    }
-    
-    double first_price_factor = DNAN;
-    int h = 0, h_end = array_size(history);
-    for (size_t i = 0; i < json.root->value_length; ++i)
-    {
-        const auto& e = json[i];
-        const time_t date = string_to_date(STRING_ARGS(e["date"].as_string()));
-        const double ed_price_factor = e["adjusted_close"].as_number() / e["close"].as_number();
-        
-        for (; h != h_end;)
-        {
-            day_result_t* ed = &history[h];
-            if (time_date_equal(ed->date, date))
-            {
-                ed->price_factor = ed_price_factor;
-                if (!math_real_is_nan(ed->price_factor))
-                    first_price_factor = ed->price_factor;
-                break;
-            }
-            else if (ed->date < date)
-                break;
-            else
-                h++;
-        }
-    }
-
-    {
-        SHARED_WRITE_LOCK(_db_lock);
-        stock_t* s = &_db_stocks[index];
-        if (math_real_is_nan(s->current.price_factor) && !math_real_is_nan(first_price_factor))
-            s->current.price_factor = first_price_factor;
-        s->mark_resolved(FetchLevel::TECHNICAL_INDEXED_PRICE);
-    }
-}
-
-FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_index_t index, FetchLevel eod_fetch_level)
+FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_index_t index)
 {
     MEMORY_TRACKER(HASH_STOCK);
 
     day_result_t* history = nullptr;
     array_reserve(history, json.root->value_length + 1);
 
-    double first_change_p_high = DNAN, first_price_factor = DNAN;
-    int element_count = json.root->value_length;
+    double first_price_factor = DNAN;
+    const int element_count = json.root->value_length;
     const json_token_t* e = &json.tokens[json.root->child];
     for (int i = 0; i < element_count; ++i)
     {
         json_object_t jday(json, e);
-        double volume = jday["volume"].as_number();
+        string_const_t date_str = jday["date"].as_string();
+        const double volume = jday["volume"].as_number();
         if (volume >= 1.0 || i < 7)
         {
-            day_result_t d;
+            day_result_t d{};
 
-            string_const_t date_str = jday["date"].as_string();
             d.date = string_to_date(STRING_ARGS(date_str));
             d.gmtoffset = 0;
 
+            d.volume = volume;
             d.open = jday["open"].as_number();
-            if (eod_fetch_level == FetchLevel::EOD)
-            {
-                d.close = jday["adjusted_close"].as_number();
-                d.price_factor = d.close / jday["close"].as_number();
-
-                if (!math_real_is_nan(d.price_factor))
-                    first_price_factor = d.price_factor;
-            }
-            else 
-                d.close = jday["close"].as_number();
-
-            d.change_p_high = NAN;
-            d.previous_close = NAN;
-
-            if (e->sibling != 0)
-            {
-                json_object_t yday(json, &json.tokens[e->sibling]);
-                d.previous_close = yday["close"].as_number();
-            }
-
+            d.close = jday["close"].as_number();
+            d.adjusted_close = jday["adjusted_close"].as_number();
             d.low = jday["low"].as_number();
             d.high = jday["high"].as_number();
-
+            
+            d.price_factor = d.adjusted_close / d.close;
+            if (!math_real_is_nan(d.price_factor))
+                first_price_factor = d.price_factor;            
+            
             d.change = d.close - d.open;
             d.change_p = d.change * 100.0 / d.open;
             d.change_p_high = (max(d.close, d.high) - min(d.open, d.low)) * 100.0 / math_ifnan(d.previous_close, d.close);
-            d.volume = volume;
-
-            if (!math_real_is_nan(d.change_p_high))
-                first_change_p_high = d.change_p_high;
-
-            history = array_push(history, d);
+                
+            d.previous_close = NAN;
+            if (e->sibling != 0)
+            {
+                json_object_t yday(json, &json.tokens[e->sibling]);
+                d.previous_close = yday["adjusted_close"].as_number();
+            }
+            
+            array_push_memcpy(history, &d);
+        }
+        else
+        {
+            string_const_t ticker = SYMBOL_CONST(_db_stocks[index].code);
+            log_debugf(HASH_STOCK, STRING_CONST("Skipping EOD result for %.*s on %.*s"), STRING_FORMAT(ticker), STRING_FORMAT(date_str));
         }
 
         if (e->sibling == 0)
@@ -402,16 +335,10 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
         entry.history = history;
         entry.history_count = array_size(history);
 
-        if (math_real_is_nan(entry.current.change_p_high) && !math_real_is_nan(first_change_p_high))
-            entry.current.change_p_high = first_change_p_high;
-
         if (math_real_is_nan(entry.current.price_factor) && !math_real_is_nan(first_price_factor))
             entry.current.price_factor = first_price_factor;
 
-        if (eod_fetch_level == FetchLevel::EOD)
-            eod_fetch_level |= FetchLevel::TECHNICAL_INDEXED_PRICE;
-
-        entry.mark_resolved(eod_fetch_level);
+        entry.mark_resolved(FetchLevel::EOD);
     }
 }
 
@@ -528,70 +455,16 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 
     if ((fetch_levels & FetchLevel::EOD) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::EOD) == 0)
     {
-        if (eod_fetch_async("eod", ticker, FORMAT_JSON_CACHE, "order", "d", E31(stock_read_eod_results, _1, index, FetchLevel::EOD), 12ULL * 3600ULL))
+        if (eod_fetch_async("eod", ticker, FORMAT_JSON_CACHE, "order", "d", 
+            LC1(stock_read_eod_results(_1, index)), 12ULL * 3600ULL))
         {
-            entry->mark_fetched(FetchLevel::EOD | FetchLevel::TECHNICAL_INDEXED_PRICE);
+            entry->mark_fetched(FetchLevel::EOD);
             status = STATUS_RESOLVING;
         }
         else
         {
             entry->fetch_errors++;
             log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Failed to fetch EOD results for %s"), entry->fetch_errors, ticker);
-        }
-    }
-
-    if ((fetch_levels & FetchLevel::TECHNICAL_EOD) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::TECHNICAL_EOD) == 0)
-    {
-        // Fix some fetch level combinations
-        if ((entry->resolved_level & FetchLevel::EOD) == FetchLevel::EOD)
-        {
-            entry->history_count = 0;
-            if (entry->history != nullptr)
-                array_push(_trashed_history, entry->history);
-            entry->history = nullptr;
-            entry->resolved_level &= ~FetchLevel::EOD;
-
-            if ((entry->resolved_level & FetchLevel::TECHNICAL_INDEXED_PRICE) == FetchLevel::TECHNICAL_INDEXED_PRICE)
-            {
-                fetch_levels |= FetchLevel::TECHNICAL_INDEXED_PRICE;
-                entry->resolved_level &= ~FetchLevel::TECHNICAL_INDEXED_PRICE;
-            }
-        }
-
-        if (eod_fetch_async("technical", ticker, FORMAT_JSON_CACHE, "order", "d", "function", "splitadjusted",
-            E31(stock_read_eod_results, _1, index, FetchLevel::TECHNICAL_EOD), 12ULL * 3600ULL))
-        {
-            entry->mark_fetched(FetchLevel::TECHNICAL_EOD);
-            status = STATUS_RESOLVING;
-        }
-        else
-        {
-            entry->fetch_errors++;
-            log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Failed to fetch technical EOD results for %s"), entry->fetch_errors, ticker);
-        }
-    }
-
-    if ((fetch_levels & FetchLevel::TECHNICAL_INDEXED_PRICE) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::TECHNICAL_INDEXED_PRICE) == 0)
-    {
-        if (!entry->is_resolving(FetchLevel::TECHNICAL_EOD) && !entry->is_resolving(FetchLevel::EOD))
-        {
-            const auto code_symbol = entry->code;
-            dispatch([code_symbol]()
-            {
-                string_const_t ticker = SYMBOL_CONST(code_symbol);
-                stock_request(STRING_ARGS(ticker), FetchLevel::TECHNICAL_EOD);
-            });
-        }        
-        
-        if (eod_fetch_async("eod", ticker, FORMAT_JSON_CACHE, "order", "d", E21(stock_read_eod_indexed_prices, _1, index), 24ULL * 3600ULL))
-        {
-            entry->mark_fetched(FetchLevel::TECHNICAL_INDEXED_PRICE);
-            status = STATUS_RESOLVING;
-        }
-        else
-        {
-            entry->fetch_errors++;
-            log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Failed to fetch EOD indexed prices for %s"), entry->fetch_errors, ticker);
         }
     }
 
@@ -804,6 +677,39 @@ bool stock_update(const char* code, size_t code_length, stock_handle_t& handle, 
     }
 
     return stock_update(handle, fetch_level, timeout);
+}
+
+day_result_t stock_get_split_adjusted(const char* code, size_t code_length, time_t at)
+{
+    day_result_t d{};
+    string_const_t ticker = { code, code_length };
+    string_const_t date_str = string_from_date(at);
+    const char* url = eod_build_url("technical", FORMAT_JSON_CACHE, "%.*s?order=d&function=splitadjusted&from=%.*s&to=%.*s", 
+        STRING_FORMAT(ticker), STRING_FORMAT(date_str), STRING_FORMAT(date_str));
+    query_execute_json(url, FORMAT_JSON_CACHE, [&d](const json_object_t& res) 
+    {
+        const auto dayresult = res.get(0);
+        if (!dayresult.is_valid())
+            return;
+            
+        string_const_t date_str = dayresult["date"].as_string();
+        d.date = string_to_date(STRING_ARGS(date_str));
+        d.open = dayresult["open"].as_number();
+        d.close = d.adjusted_close = dayresult["close"].as_number();
+        d.low = dayresult["low"].as_number();
+        d.high = dayresult["high"].as_number();
+        d.volume = dayresult["volume"].as_number();
+
+        d.gmtoffset = 0;
+        d.price_factor = 1.0;
+        
+        d.change = d.close - d.open;
+        d.change_p_high = d.change_p = d.change * 100.0 / d.open;
+        d.previous_close = NAN;
+        
+    }, UINT64_MAX);
+    
+    return d;
 }
 
 //

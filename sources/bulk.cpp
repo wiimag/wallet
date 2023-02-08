@@ -210,7 +210,7 @@ FOUNDATION_STATIC void bulk_column_today_cap_tooltip(table_element_ptr_const_t e
             const day_result_t* history = b->stock_handle->history;
             while (n < array_size(history) && time_elapsed_days(history[n].date, today) <= 14.0)
             {
-                a += history[n].volume * (history[n].close - history[n].open);
+                a += history[n].volume * (history[n].adjusted_close - history[n].open);
                 n++;
             }
             b->today_cap = a / n;

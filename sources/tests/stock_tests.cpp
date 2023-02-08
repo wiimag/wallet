@@ -125,7 +125,7 @@ TEST_SUITE("Stocks")
         CHECK_EQ(s->previous, nullptr);
 
         CHECK(math_real_is_nan(s->current.open));
-        CHECK(math_real_is_nan(s->current.close));
+        CHECK(math_real_is_nan(s->current.adjusted_close));
         CHECK_FALSE(s->is_resolving(FetchLevel::EOD, 30.0));
         CHECK_FALSE(s->is_resolving(FetchLevel::REALTIME, 0.0));
         CHECK_FALSE(s->has_resolve(FetchLevel::REALTIME));
@@ -157,7 +157,7 @@ TEST_SUITE("Stocks")
         CHECK_FALSE(s->has_resolve(FetchLevel::EOD));
         REQUIRE_GT(s->current.date, 1);
         CHECK_GT(s->current.open, 0);
-        CHECK_GT(s->current.close, 0);
+        CHECK_GT(s->current.adjusted_close, 0);
         CHECK_GT(s->current.previous_close, 0);
         CHECK_GT(s->current.low, 0);
         CHECK_GT(s->current.high, 0);
@@ -198,7 +198,7 @@ TEST_SUITE("Stocks")
             string_const_t symbol = SYMBOL_CONST(s->code);
             INFO(symbol);
             CHECK_GT(s->current.date, 1);
-            CHECK_GT(s->current.close, 0);
+            CHECK_GT(s->current.adjusted_close, 0);
             CHECK_GE(s->current.volume, 0);
         }
 
@@ -243,26 +243,6 @@ TEST_SUITE("Stocks")
         CHECK_GT(s->dividends_yield.fetch(), 0);
     }
 
-    TEST_CASE("TECHNICAL_INDEXED_PRICE" * doctest::timeout(30.0))
-    {
-        stock_handle_t handle = stock_request(STRING_CONST("QQQ.US"), FetchLevel::TECHNICAL_INDEXED_PRICE);
-
-        while (!handle->has_resolve(FetchLevel::TECHNICAL_INDEXED_PRICE))
-        {
-            dispatcher_update();
-            dispatcher_wait_for_wakeup_main_thread();
-        }
-
-        REQUIRE(handle->has_resolve(FetchLevel::TECHNICAL_EOD));
-        REQUIRE(handle->has_resolve(FetchLevel::TECHNICAL_INDEXED_PRICE));
-
-        const stock_t* s = handle;
-        REQUIRE_GT(array_size(s->history), 6000);
-        CHECK_FALSE(math_real_is_nan(s->history[0].price_factor));
-        CHECK_GT(s->history[0].open, 0);
-        CHECK_GT(s->history[0].close, 0);
-    }
-
     TEST_CASE("EOD" * doctest::timeout(30.0))
     {
         auto prev_history_count = 0;
@@ -273,46 +253,48 @@ TEST_SUITE("Stocks")
                 dispatcher_wait_for_wakeup_main_thread();
 
             REQUIRE(handle->has_resolve(FetchLevel::EOD));
-            REQUIRE(handle->has_resolve(FetchLevel::TECHNICAL_INDEXED_PRICE));
 
             const stock_t* s = handle;
             prev_history_count = array_size(s->history);
             REQUIRE_GT(prev_history_count, 0);
             CHECK_FALSE(math_real_is_nan(s->history[0].price_factor));
             CHECK_GT(s->history[0].open, 0);
-            CHECK_GT(s->history[0].close, 0);
-        }
-
-        // This will reset previous EOD data
-        {            
-            stock_handle_t handle = stock_request(STRING_CONST("MSFT.US"), FetchLevel::TECHNICAL_EOD);
-
-            while (!handle->has_resolve(FetchLevel::TECHNICAL_EOD))
-                dispatcher_wait_for_wakeup_main_thread();
-
-            REQUIRE(handle->has_resolve(FetchLevel::TECHNICAL_EOD));
-
-            const stock_t* s = handle;
-            REQUIRE_EQ(array_size(s->history), prev_history_count);
+            CHECK_GT(s->history[0].adjusted_close, 0);
         }
     }
 
-    TEST_CASE("TECHNICAL_EOD" * doctest::timeout(30.0))
+    TEST_CASE("EOD Split and Adjusted Price" * doctest::timeout(30.0))
     {
-        stock_handle_t handle = stock_request(STRING_CONST("NFLX.US"), FetchLevel::TECHNICAL_EOD);
+        string_const_t code = CTEXT("BBD-B.TO");
+        stock_handle_t handle = stock_request(code.str, code.length, FetchLevel::REALTIME | FetchLevel::EOD);
 
-        while (!handle->has_resolve(FetchLevel::TECHNICAL_EOD))
+        while (!handle->has_resolve(FetchLevel::EOD))
             dispatcher_wait_for_wakeup_main_thread();
 
-        REQUIRE(handle->has_resolve(FetchLevel::TECHNICAL_EOD));
+        REQUIRE(handle->has_resolve(FetchLevel::EOD));
 
         const stock_t* s = handle;
         REQUIRE_GT(array_size(s->history), 0);
-        CHECK(math_real_is_nan(s->history[0].price_factor));
+        CHECK_FALSE(math_real_is_nan(s->history[0].price_factor));
         CHECK_GT(s->history[0].open, 0);
         CHECK_GT(s->history[0].close, 0);
-    }
+        CHECK_GT(s->history[0].adjusted_close, 0);
 
+        const time_t once_upon_a_time = string_to_date(STRING_CONST("1981-02-13"));
+        const day_result_t* actual_eod = stock_get_EOD(s, once_upon_a_time);
+        REQUIRE_NE(actual_eod, nullptr);
+        
+        const auto split_adjusted = stock_get_split_adjusted(code.str, code.length, once_upon_a_time);
+     
+        CHECK_EQ(actual_eod->volume, split_adjusted.volume);
+        CHECK_LT(actual_eod->close, actual_eod->adjusted_close);
+        CHECK_GT(split_adjusted.close, actual_eod->close);
+        CHECK_LE(actual_eod->adjusted_close, split_adjusted.close);
+
+        const auto split_adjusted_price_factor = split_adjusted.close / actual_eod->close;
+        CHECK_GE(split_adjusted_price_factor, actual_eod->price_factor);
+    }
+    
     TEST_CASE("EMA" * doctest::timeout(30.0))
     {
         stock_handle_t handle = stock_request(STRING_CONST("TSLA.US"), FetchLevel::TECHNICAL_EMA);
@@ -333,7 +315,7 @@ TEST_SUITE("Stocks")
 
     TEST_CASE("SMA" * doctest::timeout(30.0))
     {
-        stock_handle_t handle = stock_request(STRING_CONST("AMZN.US"), FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_SMA);
+        stock_handle_t handle = stock_request(STRING_CONST("AMZN.US"), FetchLevel::EOD | FetchLevel::TECHNICAL_SMA);
 
         while (!handle->has_resolve(FetchLevel::TECHNICAL_SMA))
         {
@@ -341,18 +323,18 @@ TEST_SUITE("Stocks")
             dispatcher_wait_for_wakeup_main_thread();
         }
 
-        REQUIRE(handle->has_resolve(FetchLevel::TECHNICAL_EOD));
+        REQUIRE(handle->has_resolve(FetchLevel::EOD));
 
         const stock_t* s = handle;
         REQUIRE_GT(array_size(s->history), 0);
-        CHECK(math_real_is_nan(s->history[0].price_factor));
-        CHECK_FALSE(math_real_is_nan(s->history[0].close));
+        CHECK_FALSE(math_real_is_nan(s->history[0].price_factor));
+        CHECK_FALSE(math_real_is_nan(s->history[0].adjusted_close));
         CHECK_FALSE(math_real_is_nan(s->history[0].sma));
     }
 
     TEST_CASE("WMA" * doctest::timeout(30.0))
     {
-        stock_handle_t handle = stock_request(STRING_CONST("SPY.US"), FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE | FetchLevel::TECHNICAL_WMA);
+        stock_handle_t handle = stock_request(STRING_CONST("SPY.US"), FetchLevel::EOD | FetchLevel::TECHNICAL_WMA);
 
         while (!handle->has_resolve(FetchLevel::TECHNICAL_WMA))
         {
@@ -406,7 +388,7 @@ TEST_SUITE("Stocks")
         for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             string_const_t symbol = string_to_const(symbols[i]);
-            handles[i] = stock_request(STRING_ARGS(symbol), FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_SAR | FetchLevel::TECHNICAL_SLOPE);
+            handles[i] = stock_request(STRING_ARGS(symbol), FetchLevel::EOD | FetchLevel::TECHNICAL_SAR | FetchLevel::TECHNICAL_SLOPE);
             CHECK(!!handles[i]);
         }
 
@@ -448,14 +430,14 @@ TEST_SUITE("Stocks")
         for (unsigned i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             string_const_t symbol = string_to_const(symbols[i]);
-            handles[i] = stock_request(STRING_ARGS(symbol), FetchLevel::TECHNICAL_EOD);
+            handles[i] = stock_request(STRING_ARGS(symbol), FetchLevel::EOD);
             CHECK(!!handles[i]);
         }
         
         // Wait for all of them to resolve
         for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
-            while (!handles[i]->has_resolve(FetchLevel::TECHNICAL_EOD))
+            while (!handles[i]->has_resolve(FetchLevel::EOD))
             {
                 dispatcher_update();
                 dispatcher_wait_for_wakeup_main_thread();
@@ -577,7 +559,7 @@ TEST_SUITE("Stocks")
 
         ed = stock_get_EOD(s, at, false);
         REQUIRE_NE(ed, nullptr);
-        CHECK_GT(ed->close, 0);
+        CHECK_GT(ed->adjusted_close, 0);
     }
 
     TEST_CASE("History Take Last")

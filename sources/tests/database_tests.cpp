@@ -50,7 +50,7 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const string_const_t& va
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void print_stock(const stock_t* s)
 {
     INFO(s->id);
-    INFO(s->current.close);
+    INFO(s->current.adjusted_close);
 }
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void print_stock_day_result(const day_result_t& ed)
@@ -245,7 +245,7 @@ TEST_SUITE("Database")
         auto u = stock_t{ hash(STRING_CONST("U.US")) };
         auto p = stock_t{ hash(STRING_CONST("PFE.US")) };
         auto s = stock_t{ hash(STRING_CONST("SSE.V")) };
-        s.current.close = 0.025;
+        s.current.adjusted_close = 0.025;
 
         CHECK_EQ(db.insert(u), u.id);
         CHECK_EQ(db.insert(p), p.id);
@@ -255,11 +255,11 @@ TEST_SUITE("Database")
         for (const auto& e : db)
         {
             CHECK_NE(e.id, 0);
-            INFO(e.current.close);
+            INFO(e.current.adjusted_close);
         }
 
-        CHECK(math_real_is_nan(db[u.id]->current.close));
-        CHECK_EQ(db[s.id]->current.close, 0.025);
+        CHECK(math_real_is_nan(db[u.id]->current.adjusted_close));
+        CHECK_EQ(db[s.id]->current.adjusted_close, 0.025);
         CHECK_EQ(db[u.id]->fetch_level, FetchLevel::NONE);
 
         {

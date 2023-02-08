@@ -21,7 +21,6 @@ typedef enum class FetchLevel /*: unsigned int*/ {
     REALTIME				= 1 << 0, // Cost  1 call
     FUNDAMENTALS			= 1 << 1, // Cost 10 calls
     EOD						= 1 << 2, // Cost 1 call
-    TECHNICAL_EOD			= 1 << 3, // Cost 5 call
     TECHNICAL_SMA			= 1 << 4, // Cost 5 call
     TECHNICAL_EMA			= 1 << 5, // Cost 5 call
     TECHNICAL_WMA			= 1 << 6, // Cost 5 call
@@ -29,19 +28,19 @@ typedef enum class FetchLevel /*: unsigned int*/ {
     TECHNICAL_SAR			= 1 << 8, // Cost 5 call
     TECHNICAL_SLOPE			= 1 << 9, // Cost 5 call
     TECHNICAL_CCI			= 1 << 10, // Cost 5 call
-    TECHNICAL_INDEXED_PRICE = 1 << 11, // Cost 5 call
 
     TECHINICAL_CHARTS = TECHNICAL_SMA | TECHNICAL_EMA | TECHNICAL_WMA | TECHNICAL_BBANDS | TECHNICAL_SAR | TECHNICAL_SLOPE | TECHNICAL_CCI
 } fetch_level_t;
-DEFINE_VOLATILE_ENUM_FLAGS(FetchLevel);
+DEFINE_ENUM_FLAGS(FetchLevel);
 
 FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
 {
     time_t date{ 0 };
-    uint8_t gmtoffset;
+    uint8_t gmtoffset{ 0 };
 
     double open{ NAN };
     double close{ NAN };
+    double adjusted_close{ NAN };
     double previous_close{ NAN };
     double price_factor{ NAN };
 
@@ -70,9 +69,9 @@ FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
 FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
 {
     hash_t id;
-    volatile tick_t last_update_time {0};
-    volatile fetch_level_t fetch_level{ FetchLevel::NONE };
-    volatile fetch_level_t resolved_level{ FetchLevel::NONE };
+    tick_t last_update_time {0};
+    fetch_level_t fetch_level{ FetchLevel::NONE };
+    fetch_level_t resolved_level{ FetchLevel::NONE };
     unsigned int fetch_errors{ 0 };
 
     string_table_symbol_t code{};
@@ -244,3 +243,11 @@ const day_result_t* stock_get_EOD(const stock_t* stock_data, int rel_day, bool t
 /// 
 /// </summary>
 const day_result_t* stock_get_EOD(const stock_t* stock_data, time_t day_time, bool take_last = false);
+
+/*! @brief Get the split adjusted data at a given date.
+ *  @param code         The stock symbol code
+ *  @param code_length  The length of the stock symbol code
+ *  @param at           Query date
+ *  @return The split adjusted data at the given date
+ */
+day_result_t stock_get_split_adjusted(const char* code, size_t code_length, time_t at);

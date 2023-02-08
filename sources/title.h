@@ -13,6 +13,11 @@
 
 struct wallet_t;
 
+const fetch_level_t TITLE_MINIMUM_FETCH_LEVEL =
+    FetchLevel::REALTIME |
+    FetchLevel::EOD |
+    FetchLevel::FUNDAMENTALS;
+
 FOUNDATION_ALIGNED_STRUCT(title_t, 8) 
 {
     char code[64]{ "" };

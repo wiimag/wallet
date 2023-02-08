@@ -62,9 +62,9 @@ static const char* GRAPH_TYPES[PATTERN_ALL_END] = {
 };
 
 const FetchLevel FETCH_ALL =
-    FetchLevel::REALTIME | 
+    FetchLevel::EOD | 
+    FetchLevel::REALTIME |
     FetchLevel::FUNDAMENTALS | 
-    FetchLevel::TECHNICAL_EOD | 
     FetchLevel::TECHNICAL_SMA | 
     FetchLevel::TECHNICAL_EMA | 
     FetchLevel::TECHNICAL_WMA |
@@ -236,7 +236,7 @@ FOUNDATION_STATIC double pattern_mark_change_p(const pattern_t* pattern, int mar
     if (!mark.fetched)
     {
         const stock_t* s = pattern->stock;
-        if (s == nullptr || !s->has_resolve(FetchLevel::TECHNICAL_EOD | FetchLevel::REALTIME))
+        if (s == nullptr || !s->has_resolve(FetchLevel::EOD | FetchLevel::REALTIME))
             return DNAN;
 
         mark.fetched = true;
@@ -246,7 +246,7 @@ FOUNDATION_STATIC double pattern_mark_change_p(const pattern_t* pattern, int mar
 
         const day_result_t& cd = s->current;
         mark.date = ed->date;
-        mark.change_p = (cd.close - ed->close) / cd.close;
+        mark.change_p = (cd.adjusted_close - ed->adjusted_close) / cd.adjusted_close;
         if (mark.change_p * 100 < -999)
             mark.change_p = DNAN;
     }
@@ -323,7 +323,7 @@ FOUNDATION_STATIC string_const_t pattern_price(const pattern_t* pattern)
     if (s == nullptr)
         return CTEXT("-");
 
-    return string_from_currency(s->current.close);
+    return string_from_currency(s->current.adjusted_close);
 }
 
 FOUNDATION_STATIC string_const_t pattern_currency_conversion(const pattern_t* pattern)
@@ -465,10 +465,10 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
             pattern_format_number(STRING_CONST("%.2lf %%"), share_p * 100.0));
         pattern_render_stats_line(CTEXT("High 52"), 
             pattern_format_currency(s->high_52),
-            pattern_format_percentage(s->current.close / s->high_52 * 100.0));
+            pattern_format_percentage(s->current.adjusted_close / s->high_52 * 100.0));
         pattern_render_stats_line(CTEXT("Low 52"), 
             pattern_format_currency(s->low_52),
-            pattern_format_percentage(s->low_52 / s->current.close * 100.0));
+            pattern_format_percentage(s->low_52 / s->current.adjusted_close * 100.0));
         
         double performance_ratio = (s->high_52 / math_ifnan(s->ws_target, s->low_52)) * math_ifnan(math_ifnan(s->pe, s->peg), 1.0);
         pattern_render_stats_line(CTEXT("Yield"), 
@@ -501,12 +501,12 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         mcp += s->current.change_p / 100.0;
         mcp /= 4.0;
 
-        double buy_limit = min(s->current.close + (s->current.close * (flex_low_p + math_abs(mcp))), s->current.close - (s->current.close * pattern->flex_high.fetch()));
+        double buy_limit = min(s->current.adjusted_close + (s->current.adjusted_close * (flex_low_p + math_abs(mcp))), s->current.adjusted_close - (s->current.adjusted_close * pattern->flex_high.fetch()));
         pattern_render_stats_line(CTEXT("Buy Limit"), 
-            pattern_format_percentage((buy_limit / s->current.close - 1.0) * 100.0),
+            pattern_format_percentage((buy_limit / s->current.adjusted_close - 1.0) * 100.0),
             pattern_format_currency(buy_limit));
 
-        const double flex_price_high = s->current.close + (s->current.close * (flex_high_p - mcp));
+        const double flex_price_high = s->current.adjusted_close + (s->current.adjusted_close * (flex_high_p - mcp));
         const double sell_limit_p = (flex_price_high / buy_limit - 1.0) * 100.0;
         ImGui::PushStyleColor(ImGuiCol_Text, sell_limit_p < 0 ? TEXT_BAD_COLOR : (sell_limit_p > 3 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR));
         pattern_render_stats_line(CTEXT("Sell Limit"), 
@@ -520,7 +520,7 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
             pattern_format_percentage(profit_percentage),
             pattern_format_currency(profit_price));
 
-        const double ws_limit = max(s->ws_target, max(s->current.close * s->peg, s->dma_200));
+        const double ws_limit = max(s->ws_target, max(s->current.adjusted_close * s->peg, s->dma_200));
         const double ws_limit_percentage = (ws_limit / flex_price_high - 1) * 100.0;
         ImGui::PushStyleColor(ImGuiCol_Text, ws_limit_percentage < 50.0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
         pattern_render_stats_line(CTEXT(""),
@@ -737,7 +737,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
         const day_result_t& ed = history[idx];
         const double days_diff = time_elapsed_days(ed.date, c->ref);
         const double x = math_round(days_diff);
-        const double y = ed.close;
+        const double y = ed.adjusted_close;
 
         if (days_diff <= c->acc)
             pattern_build_trend(*c, x, y);
@@ -778,7 +778,7 @@ FOUNDATION_STATIC bool pattern_flex_update(pattern_t* pattern)
 
         if (first)
         {
-            f.change_p = (ed.close / ed.open) - 1.0;
+            f.change_p = (ed.adjusted_close / ed.open) - 1.0;
             first = false;
         }
         else
@@ -939,12 +939,12 @@ void pattern_fetch_lcf_data(const pattern_t* pattern, const json_object_t& json,
     const day_result_t* ed = stock_get_EOD(pattern->stock, lcf->date, true);
     if (ed == nullptr)
         return;
-    if (math_real_eq(ed->open, ed->close, 3))
+    if (math_real_eq(ed->open, ed->adjusted_close, 3))
         return;
 
     bulk_t ps{};
     ps.code = pattern->stock->symbol;
-    ps.close = ed->close;
+    ps.close = ed->adjusted_close;
     ps.open = ed->open;
     ps.date = ed->date;
     if (ps.close > ps.open)
@@ -1203,7 +1203,7 @@ FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
 
 FOUNDATION_STATIC void pattern_render_lcf(pattern_t* pattern, pattern_graph_data_t& graph)
 {
-    if (!pattern->stock->has_resolve(FetchLevel::TECHNICAL_EOD))
+    if (!pattern->stock->has_resolve(FetchLevel::EOD))
     {
         ImGui::TextUnformatted("Resolving technical end of day data...");
         return;
@@ -1308,7 +1308,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
             if (c->lx == 0)
             {
                 const day_result_t* yed = &history[idx + yedi];
-                c->lx = yed->close;
+                c->lx = yed->adjusted_close;
             }
             double ps = (ed->ema - ed->sar) / ed->sar;
             double x = math_round((c->ref - ed->date) / (double)ONE_DAY);
@@ -1344,7 +1344,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     const stock_t* s = pattern->stock;
-    if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::TECHNICAL_EOD))
+    if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::EOD))
         return;
 
     if (!pattern->autofit && !math_real_is_nan(pattern->price_limits.xmin))
@@ -1412,10 +1412,10 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
     if (s->history_count > 1)
     {
         double sd = s->history[0].slope - s->history[1].slope;
-        ImPlot::TagY(s->current.close + s->current.close * sd, ImColor::HSV(239 / 360.0f, 0.73f, 1.0f), "PS %.2lf $", s->current.close * sd);
+        ImPlot::TagY(s->current.adjusted_close + s->current.adjusted_close * sd, ImColor::HSV(239 / 360.0f, 0.73f, 1.0f), "PS %.2lf $", s->current.adjusted_close * sd);
     }
 
-    ImPlot::TagY(s->current.close, ImColor::HSV(239 / 360.0f, 0.63f, 1.0f), "Current");
+    ImPlot::TagY(s->current.adjusted_close, ImColor::HSV(239 / 360.0f, 0.63f, 1.0f), "Current");
 
     if (pattern->autofit)
     {
@@ -1427,11 +1427,11 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
     if (pattern->show_limits)
     {
         ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 1.5f);
-        const double buy_flex = s->current.close + (s->current.close * pattern->flex_low.fetch());
+        const double buy_flex = s->current.adjusted_close + (s->current.adjusted_close * pattern->flex_low.fetch());
         pattern_render_graph_limit("Buy", graph, buy_flex);
         ImPlot::TagY(buy_flex, ImPlot::GetLastItemColor(), "Buy");
 
-        const double sell_flex = s->current.close + (s->current.close * pattern->flex_high.fetch());
+        const double sell_flex = s->current.adjusted_close + (s->current.adjusted_close * pattern->flex_high.fetch());
         pattern_render_graph_limit("Sell", graph, sell_flex);
         ImPlot::TagY(sell_flex, ImPlot::GetLastItemColor(), "Sell");
         ImPlot::PopStyleVar(1);
@@ -1447,7 +1447,7 @@ FOUNDATION_STATIC void pattern_render_graph_analysis(pattern_t* pattern, pattern
 {
     const stock_t* s = pattern->stock;
     const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
-    if (!s || !s->has_resolve(FetchLevel::TECHNICAL_EOD) || !ImPlot::BeginPlot("Pattern Graph##26", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
+    if (!s || !s->has_resolve(FetchLevel::EOD) || !ImPlot::BeginPlot("Pattern Graph##26", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
         return;
 
     double max_days = math_round((pattern->date - pattern->marks[ARRAY_COUNT(FIXED_MARKS) - 1].date) / (double)time_one_day());
@@ -1475,7 +1475,7 @@ FOUNDATION_STATIC void pattern_render_graph_analysis(pattern_t* pattern, pattern
     {
         pattern_render_graph_limit("Flex Low", graph, pattern->flex_low.get_or_default() * 100.0);
         pattern_render_graph_limit("Flex High", graph, pattern->flex_high.get_or_default() * 100.0);
-        pattern_render_graph_limit("WS", graph, (pattern->stock->ws_target - pattern->stock->current.close) / pattern->stock->current.close * 100.0);
+        pattern_render_graph_limit("WS", graph, (pattern->stock->ws_target - pattern->stock->current.adjusted_close) / pattern->stock->current.adjusted_close * 100.0);
     }
 
     // Render patterns
@@ -1509,8 +1509,8 @@ FOUNDATION_STATIC void pattern_history_min_max_price(pattern_t* pattern, time_t 
     {
         if (h->date < ref)
             break;
-        max = ::max(max, h->close);
-        min = ::min(min, h->close);
+        max = ::max(max, h->adjusted_close);
+        min = ::min(min, h->adjusted_close);
     }
 }
 

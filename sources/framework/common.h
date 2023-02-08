@@ -31,18 +31,6 @@ constexpr double DNAN = __builtin_nan("0");
     FOUNDATION_FORCEINLINE T& operator&= (T& a, const T b) { return (T&)((unsigned int&)a &= (unsigned int)b); } \
     FOUNDATION_FORCEINLINE T& operator^= (T& a, const T b) { return (T&)((unsigned int&)a ^= (unsigned int)b); }
 
-#define DEFINE_VOLATILE_ENUM_FLAGS(T) \
-    FOUNDATION_FORCEINLINE const T operator~ (volatile const T a) { return (T)~(unsigned int)a; } \
-    FOUNDATION_FORCEINLINE const bool operator== (volatile const T a, const int b) { return (unsigned int)a == b; } \
-    FOUNDATION_FORCEINLINE const bool operator&& (volatile const T a, volatile T b) { return (unsigned int)a != 0 && (unsigned int)b != 0; } \
-    FOUNDATION_FORCEINLINE const bool operator&& (volatile const T a, const bool b) { return (unsigned int)a != 0 && b; } \
-    FOUNDATION_FORCEINLINE const T operator| (volatile const T a, volatile T b) { return (T)((unsigned int)a | (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE const T operator& (volatile const T a, volatile T b) { return (T)((unsigned int)a & (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE const T operator^ (volatile const T a, volatile T b) { return (T)((unsigned int)a ^ (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE T& operator|= (volatile T& a, volatile const T b) { return (T&)((unsigned int&)a |= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE T& operator&= (volatile T& a, volatile const T b) { return (T&)((unsigned int&)a &= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE T& operator^= (volatile T& a, volatile const T b) { return (T&)((unsigned int&)a ^= (unsigned int)b); }
-
 template<typename T> T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
 template<typename T> T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
 template<typename R, typename T, typename U> R max(T a, U b) { return (((R)(a) > (R)(b)) ? (R)(a) : (R)(b)); }

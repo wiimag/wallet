@@ -84,11 +84,11 @@ static struct {
 
     // Stock only (Start at index 8 <== !!!UPDATE INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
 
-    { "price",      SL2(_2->current.close), nullptr, FetchLevel::REALTIME },
+    { "price",      SL2(_2->current.adjusted_close), nullptr, FetchLevel::REALTIME },
     { "date",       SL2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
     { "gmt",        SL2((double)_2->current.gmtoffset), nullptr, FetchLevel::REALTIME },
     { "open",       SL2(_2->current.open), nullptr, FetchLevel::REALTIME },
-    { "close",      SL2(_2->current.close), nullptr, FetchLevel::REALTIME },
+    { "close",      SL2(_2->current.adjusted_close), nullptr, FetchLevel::REALTIME },
     { "yesterday",  SL2(_2->current.previous_close), nullptr, FetchLevel::REALTIME },
     { "low",        SL2(_2->current.low), nullptr, FetchLevel::REALTIME },
     { "high",       SL2(_2->current.high), nullptr, FetchLevel::REALTIME },
@@ -96,8 +96,8 @@ static struct {
     { "change_p",   SL2(_2->current.change_p), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
     { "volume",     SL2(_2->current.volume), nullptr, FetchLevel::REALTIME },
 
-    { "price_factor",   SL2(_2->current.price_factor), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
-    { "change_p_high",  SL2(_2->current.change_p_high), nullptr, FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_INDEXED_PRICE },
+    { "price_factor",   SL2(_2->current.price_factor), nullptr, FetchLevel::EOD },
+    { "change_p_high",  SL2(_2->current.change_p_high), nullptr, FetchLevel::EOD },
 
     { "wma",    SL2(_2->current.wma), nullptr, FetchLevel::TECHNICAL_WMA },
     { "ema",    SL2(_2->current.ema), nullptr, FetchLevel::TECHNICAL_EMA },
@@ -148,7 +148,7 @@ static struct {
     { CTEXT("date"),           SL2((double)_2->date), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("gmtoffset"),      SL2((double)_2->gmtoffset), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("open"),           SL2(_2->open), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("close"),          SL2(_2->close), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("close"),          SL2(_2->adjusted_close), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("previous_close"), SL2(_2->previous_close), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("price_factor"),   SL2(_2->price_factor), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("low"),            SL2(_2->low), FetchLevel::REALTIME | FetchLevel::EOD },

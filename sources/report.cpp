@@ -59,12 +59,6 @@ typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_ASK,
 } report_column_formula_t;
 
-const FetchLevel REPORT_FETCH_LEVELS =
-FetchLevel::REALTIME |
-FetchLevel::FUNDAMENTALS |
-FetchLevel::TECHNICAL_INDEXED_PRICE |
-FetchLevel::TECHNICAL_EOD;
-
 static report_t* _reports = nullptr;
 static bool* _last_show_ui_ptr = nullptr;
 static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
@@ -278,9 +272,9 @@ FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element
     }
 
     const double ask_price = t->ask_price.fetch();
-    const double avg = math_ifzero(t->average_price, t->stock->current.close);
-    const double c_avg = t->stock->current.close;
-    const double average_fg = (t->average_price + t->stock->current.close) / 2.0;
+    const double avg = math_ifzero(t->average_price, t->stock->current.adjusted_close);
+    const double c_avg = t->stock->current.adjusted_close;
+    const double average_fg = (t->average_price + t->stock->current.adjusted_close) / 2.0;
     const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (t->elapsed_days - t->wallet->average_days) / 20.0 / 100.0);
 
     if (!math_real_is_nan(ask_price) && ask_price < t->average_price)
@@ -308,15 +302,15 @@ FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_con
         return;
     }
 
-    const double avg = math_ifzero(t->average_price, t->stock->current.close);
-    const double c_avg = t->stock->current.close;
-    const double average_fg = (t->average_price + t->stock->current.close) / 2.0;
+    const double avg = math_ifzero(t->average_price, t->stock->current.adjusted_close);
+    const double c_avg = t->stock->current.adjusted_close;
+    const double average_fg = (t->average_price + t->stock->current.adjusted_close) / 2.0;
     const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (t->elapsed_days - t->wallet->average_days) / 20.0 / 100.0);
     if (!math_real_is_nan(avg))
     {
         if (t->average_quantity == 0 && math_ifnan(t->sell_adjusted_quantity, 0) > 0)
         {
-            const double sell_gain_diff = (t->sell_adjusted_price - t->stock->current.close) * t->sell_adjusted_quantity;
+            const double sell_gain_diff = (t->sell_adjusted_price - t->stock->current.adjusted_close) * t->sell_adjusted_quantity;
             ImGui::TextColored(ImColor(sell_gain_diff < 0 ? TEXT_BAD_COLOR : TOOLTIP_TEXT_COLOR), " %s %.*s ",
                 sell_gain_diff > 0 ? "Saved" : "Lost", STRING_FORMAT(string_from_currency(math_abs(sell_gain_diff), "999 999 999 $")));
         }
@@ -398,7 +392,7 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
         case REPORT_FORMULA_PRICE:
             if (title_is_index(t) && t->average_quantity == 0)
                 return NAN;
-            return stock_data->current.close;
+            return stock_data->current.adjusted_close;
         case REPORT_FORMULA_DAY_CHANGE:	return stock_data->current.change_p;
 
         case REPORT_FORMULA_DAY_GAIN:			return title_get_day_change(t, stock_data);
@@ -711,7 +705,7 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
                 title->code, string_table_decode(title->stock->name));
         }
 
-        const double old_price = title->stock->current.close;
+        const double old_price = title->stock->current.adjusted_close;
         const double open = json["open"].as_number();
         const double change = json["change"].as_number();
         const double volume = json["volume"].as_number();
@@ -754,7 +748,7 @@ FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_con
     if (title == nullptr)
         return;
 
-    const double current_price = title->stock->current.close;
+    const double current_price = title->stock->current.adjusted_close;
     if (title_is_index(title))
         return;
 
@@ -857,7 +851,7 @@ FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_con
     if (title == nullptr)
         return;
 
-    const double avg = math_ifzero(title->average_price, title->stock->current.close);
+    const double avg = math_ifzero(title->average_price, title->stock->current.adjusted_close);
     ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
         " (%s $) Bought Price: %.2lf $ \n"
         " (%.*s $) Average Cost: %.3lf $ \n"
@@ -873,7 +867,7 @@ FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_co
     if (title == nullptr)
         return;
 
-    const double avg = math_ifzero(title->average_price, title->stock->current.close);
+    const double avg = math_ifzero(title->average_price, title->stock->current.adjusted_close);
     ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), "Total Dividends %.2lf $", title->total_dividends);
 }
 
@@ -1147,7 +1141,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
     ImGui::SetNextWindowSize(ImVec2(show_ask_price ? 1600.0f : 1400.0f, 600.0f), ImGuiCond_Once);
 
     string_const_t id = string_format_static(STRING_CONST(ICON_MD_FORMAT_LIST_BULLETED " Orders %.*s (%.2lf $)###%.*s_2"), 
-        title->code_length, title->code, title->stock->current.close, title->code_length, title->code);
+        title->code_length, title->code, title->stock->current.adjusted_close, title->code_length, title->code);
     if (!report_render_dialog_begin(id, &title->show_details_ui))
         return;
 
@@ -1269,7 +1263,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
             bool buy_order = order->data["buy"].as_boolean();
             double price = order->data["price"].as_number();
             double quantity = order->data["qty"].as_number();
-            double current = order->title->stock->current.close;
+            double current = order->title->stock->current.adjusted_close;
             double total_value = (price * quantity);
 
             double gain = ((quantity * current) - (price * quantity)) * (buy_order ? 1.0 : -1.0);
@@ -1290,7 +1284,7 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
             double quantity = order->data["qty"].as_number();
             if (buy_order)
             {
-                double current = order->title->stock->current.close;	
+                double current = order->title->stock->current.adjusted_close;
                 return current * quantity;
             }
 
@@ -1364,7 +1358,7 @@ FOUNDATION_STATIC void report_render_buy_lot_dialog(report_t* report, title_t* t
     if (ImGui::IsWindowAppearing() || math_real_is_nan(price))
     {
         quantity = max(math_round(title->average_quantity * 0.1), 100);
-        price = title->stock->current.close;
+        price = title->stock->current.adjusted_close;
         price_scale = price / 10.0f;
         reset_date = true;
 
@@ -1397,14 +1391,14 @@ FOUNDATION_STATIC void report_render_buy_lot_dialog(report_t* report, title_t* t
         {
             const day_result_t* e = stock_get_EOD(title->stock, mktime(&tm_date), true);
             if (e)
-                price = math_ifnan(e->close, price);
+                price = math_ifnan(e->adjusted_close, price);
         }
 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(control_width);
         ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
         if (price < 0)
-            price = title->stock->current.close;
+            price = title->stock->current.adjusted_close;
 
         ImGui::NextColumn();
 
@@ -1464,7 +1458,7 @@ FOUNDATION_STATIC void report_render_sell_lot_dialog(report_t* report, title_t* 
     if (ImGui::IsWindowAppearing() || math_real_is_nan(price))
     {
         quantity = title->average_quantity;
-        price = title->stock->current.close;
+        price = title->stock->current.adjusted_close;
         price_scale = price / 10.0f;
         reset_date = true;
 
@@ -1498,7 +1492,7 @@ FOUNDATION_STATIC void report_render_sell_lot_dialog(report_t* report, title_t* 
         ImGui::SetNextItemWidth(control_width);
         ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
         if (price < 0)
-            price = title->stock->current.close;
+            price = title->stock->current.adjusted_close;
 
         ImGui::NextColumn();
 
@@ -1643,15 +1637,15 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
         if (!t || title_is_index(t))
             continue;
 
-        const bool stock_resolved = t->stock && t->stock->has_resolve(REPORT_FETCH_LEVELS);
+        const bool stock_resolved = t->stock && t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL);
         fully_resolved &= stock_resolved;
 
         if (!stock_resolved)
         {
             bool first_init = !t->stock;                
-            if (!stock_update(t->code, t->code_length, t->stock, REPORT_FETCH_LEVELS, 10.0) && !first_init &&
+            if (!stock_update(t->code, t->code_length, t->stock, TITLE_MINIMUM_FETCH_LEVEL, 10.0) && !first_init &&
                 !dispatcher_wait_for_wakeup_main_thread(1000 / title_count) &&
-                !t->stock->has_resolve(REPORT_FETCH_LEVELS))
+                !t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL))
             {
                 log_debugf(HASH_REPORT, STRING_CONST("Refreshing %s is taking longer than expected"), t->code);
                 break;
@@ -1976,8 +1970,8 @@ void report_summary_update(report_t* report)
 
         if (stock_valid && t->sell_total_quantity > 0)
         {
-            const double sell_gain_if_kept = (s->current.close - t->sell_adjusted_price) * t->sell_adjusted_quantity;
-            const double sell_p = (s->current.close - t->sell_adjusted_price) / t->sell_adjusted_price;
+            const double sell_gain_if_kept = (s->current.adjusted_close - t->sell_adjusted_price) * t->sell_adjusted_quantity;
+            const double sell_p = (s->current.adjusted_close - t->sell_adjusted_price) / t->sell_adjusted_price;
             if (!math_real_is_nan(sell_p))
             {
                 total_sell_gain_if_kept_p += sell_p;
@@ -2034,7 +2028,7 @@ bool report_is_loading(report_t* report)
         const title_t* t = report->titles[i];
         if (title_is_index(t))
             continue;
-        if (!t->stock->has_resolve(REPORT_FETCH_LEVELS))
+        if (!t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL))
             return true;
     }
 
@@ -2319,7 +2313,7 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
         if (title_is_index(t))
             continue;
 
-        if (!t->stock || !t->stock->has_resolve(REPORT_FETCH_LEVELS))
+        if (!t->stock || !t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL))
         {
             log_debugf(HASH_REPORT, STRING_CONST("Syncing title %s"), t->code);
             title_update(t, 0);
@@ -2335,7 +2329,7 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
             continue;
 
         FOUNDATION_ASSERT(!!t->stock);
-        while (!t->stock->has_resolve(REPORT_FETCH_LEVELS))
+        while (!t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL))
         {
             if (time_elapsed(timer) > timeout_seconds)
                 return false;

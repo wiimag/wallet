@@ -50,7 +50,7 @@ FOUNDATION_STATIC bool title_recently_changed(const title_t* t, double* out_delt
         return false;
 
     if (out_delta)
-        *out_delta = s->current.close - last_results->close;
+        *out_delta = s->current.adjusted_close - last_results->adjusted_close;
     return true;
 }
 
@@ -64,7 +64,7 @@ FOUNDATION_STATIC double title_compute_ps(const title_t* t, const stock_t* s)
     const double target_ask = t->wallet->target_ask;
 
     double M = 0;
-    double average_fg = (t->average_price + s->current.close) / 2.0;
+    double average_fg = (t->average_price + s->current.adjusted_close) / 2.0;
     if (t->elapsed_days >= 30)
         M = max(t->average_price, average_fg) * (1.0 + profit_ask - ((t->elapsed_days - average_days) / 20 / 100));
     else
@@ -95,7 +95,7 @@ FOUNDATION_STATIC bool title_fetch_ps(const title_t* t, double& value)
         return false;
 
     // Handle cases where the stock has been dismissed from the market.
-    if (math_real_is_nan(s->current.close))
+    if (math_real_is_nan(s->current.adjusted_close))
     {
         value = DNAN;
         return true;
@@ -104,7 +104,7 @@ FOUNDATION_STATIC bool title_fetch_ps(const title_t* t, double& value)
     if (t->average_quantity == 0 && t->sell_total_quantity > 0)
     {
         // Return the prediction in case the stock was kept (when sold)
-        value = ((t->sell_adjusted_price - s->current.close) / s->current.close) * 100.0;
+        value = ((t->sell_adjusted_price - s->current.adjusted_close) / s->current.adjusted_close) * 100.0;
     }
     else
         value = title_compute_ps(t, s);
@@ -130,7 +130,8 @@ FOUNDATION_STATIC bool title_fetch_today_exchange_rate(const title_t* t, double&
         return false;
 
     string_const_t title_currency = string_table_decode_const(s->currency);
-    value = math_ifnan(stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(t->wallet->preferred_currency)), s->current.close);
+    const auto exchange_rate = stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(t->wallet->preferred_currency));
+    value = math_ifnan(exchange_rate, s->current.adjusted_close);
     return true;
 }
 
@@ -144,7 +145,7 @@ FOUNDATION_STATIC bool title_fetch_ask_price(const title_t* t, double& value)
     const double average_days = t->wallet->average_days;
     const double target_ask = t->wallet->target_ask;
 
-    const double average_fg = (t->average_price + s->current.close) / 2.0;
+    const double average_fg = (t->average_price + s->current.adjusted_close) / 2.0;
     if (t->elapsed_days > 30)
     {
         unsigned samples = 0;
@@ -154,7 +155,7 @@ FOUNDATION_STATIC bool title_fetch_ask_price(const title_t* t, double& value)
         {
             if (s->history[i].date > t->date_average)
             {
-                sampling_average_fg += s->history[i].close;
+                sampling_average_fg += s->history[i].adjusted_close;
                 samples++;
             }
         }
@@ -162,7 +163,7 @@ FOUNDATION_STATIC bool title_fetch_ask_price(const title_t* t, double& value)
         if (samples > 0)
         {
             sampling_average_fg /= samples;
-            sampling_average_fg = (t->average_price + s->current.close + sampling_average_fg) / 3.0;
+            sampling_average_fg = (t->average_price + s->current.adjusted_close + sampling_average_fg) / 3.0;
         }
         else
         {
@@ -188,7 +189,7 @@ double title_get_total_value(const title_t* t, const stock_t* s)
     const double adjusted_quantity = math_ifnan(t->buy_adjusted_quantity - t->sell_adjusted_quantity, t->average_quantity);
     const double total_value = 
         adjusted_quantity *
-        math_ifnan(s->current.close, s->current.previous_close) * 
+        math_ifnan(s->current.adjusted_close, s->current.previous_close) *
         math_ifnan(t->today_exchange_rate.fetch(), 1.0)
         + t->total_dividends;
     return math_ifnan(total_value, 0.0);
@@ -237,7 +238,7 @@ double title_get_range_change_p(const title_t* t, const stock_t* s, int rel_days
         return DNAN;
 
     const day_result_t& current = s->current;
-    return (current.close - ed->close) / ed->close * 100.0;
+    return (current.adjusted_close - ed->adjusted_close) / ed->adjusted_close * 100.0;
 }
 
 double title_get_day_change(const title_t* t, const stock_t* s)
@@ -461,14 +462,8 @@ bool title_refresh(title_t* title)
 }
 
 bool title_update(title_t* t, double timeout /*= 3.0*/)
-{	
-    const fetch_level_t REQUIRED_FETCH_LEVEL = 
-        FetchLevel::REALTIME | 
-        FetchLevel::FUNDAMENTALS | 
-        FetchLevel::TECHNICAL_EOD | 
-        FetchLevel::TECHNICAL_INDEXED_PRICE;
-    
-    bool resolved = stock_update(t->code, t->code_length, t->stock, REQUIRED_FETCH_LEVEL, timeout);
+{	    
+    bool resolved = stock_update(t->code, t->code_length, t->stock, TITLE_MINIMUM_FETCH_LEVEL, timeout);
     if (!resolved)
         return false;
     
