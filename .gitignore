@@ -66,6 +66,7 @@ enc_temp_folder/
 *.old
 *.bck
 *.lastcodeanalysissucceeded
+*.args.json
 
 # Specific files
 sources/version.git.h

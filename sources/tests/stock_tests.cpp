@@ -532,6 +532,27 @@ TEST_SUITE("Stocks")
         stock_handle_t handle = stock_request(nullptr, 0, FetchLevel::NONE);
         CHECK_FALSE(stock_update(handle, FetchLevel::TECHNICAL_BBANDS));
     }
+
+    TEST_CASE("EXCHANGE")
+    {
+        double xgr = stock_exchange_rate(STRING_CONST("USD"), STRING_CONST("CAD"), time_now());
+        REQUIRE_GT(xgr, 1.0);
+
+        double xgr2 = stock_exchange_rate(STRING_CONST("USD"), STRING_CONST("CAD"), time_now());
+        CHECK_EQ(xgr, xgr2);
+
+        xgr = stock_exchange_rate(STRING_CONST("CAD"), STRING_CONST("CAD"), time_now());
+        REQUIRE_EQ(xgr, 1.0);
+
+        xgr = stock_exchange_rate(STRING_CONST("NA"), STRING_CONST("CAD"), time_now());
+        REQUIRE_EQ(xgr, 1.0);
+
+        xgr = stock_exchange_rate(STRING_CONST("CAD"), STRING_CONST("USD"), 0);
+        REQUIRE_LT(xgr, 1.0);
+
+        xgr = stock_exchange_rate(STRING_CONST("CAD"), STRING_CONST("SOMETHIGN"), 0);
+        CHECK(math_real_is_nan(xgr));
+    }
 }
 
 #endif // BUILD_DEVELOPMENT
