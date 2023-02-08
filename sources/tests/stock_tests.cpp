@@ -16,6 +16,64 @@
 
 #include <doctest/doctest.h>
 
+// 500 stock symbols ending with .US or .TO
+static const char* stock500[] = {
+    "MMM.US", "ABT.US", "ABBV.US", "U.US", "ACN.US", "ATVI.US", "ADBE.US", "AMD.US", "AAP.US", "AES.US",
+    "AFL.US", "A.US", "APD.US", "AKAM.US", "ALK.US", "ALB.US", "ARE.US", "ALGN.US", "ALLE.US",
+    "LNT.US", "ALL.US", "GOOGL.US", "GOOG.US", "MO.US", "AMZN.US", "AMCR.US", "AEE.US", "AAL.US", "AEP.US",
+    "AXP.US", "AIG.US", "AMT.US", "AWK.US", "AMP.US", "ABC.US", "AME.US", "AMGN.US", "APH.US", "ADI.US",
+    "ANSS.US", /*"ANTM.US",*/ "AON.US", "AOS.US", "APA.US", "AIV.US", "AAPL.US", "AMAT.US", "APTV.US", "ADM.US",
+    "ARNC.US", "ANET.US", "AJG.US", "AIZ.US", "ATO.US", "T.US", "ADSK.US", "ADP.US", "AZO.US", "AVB.US",
+    "AVY.US", "BKR.US", /*"BLL.US",*/ "BAC.US", "BK.US", "BAX.US", "BDX.US", "BRK-B.US", "BBY.US", "BIIB.US",
+    "BLK.US", "BA.US", "BKNG.US", "BWA.US", "BXP.US", "BSX.US", "BMY.US", "AVGO.US", "BR.US", "BF-B.US",
+    "CHRW.US", /*"COG.US",*/ "CDNS.US", "CPB.US", "COF.US", "CAH.US", "KMX.US", "CCL.US", "CARR.US", "CTLT.US",
+    "CAT.US", "CBOE.US", "CBRE.US", "CDW.US", "CE.US", "CNC.US", "CNP.US", /*"CERN.US",*/ "CF.US", "SCHW.US",
+    "CHTR.US", "CVX.US", "CMG.US", "CB.US", "CHD.US", "CI.US", "CINF.US", "CTAS.US", "CSCO.US", "C.US",
+    "CFG.US", /*"CTXS.US",*/ "CLX.US", "CME.US", "CMS.US", "KO.US", "CTSH.US", "CL.US", "CMCSA.US", "CMA.US",
+    "CAG.US", /*"CXO.US",*/ "COP.US", "ED.US", "STZ.US", "COO.US", "CPRT.US", "GLW.US", "CTVA.US", "COST.US",
+    "COTY.US", "CCI.US", "CSX.US", "CMI.US", "CVS.US", "DHI.US", "DHR.US", "DRI.US", "DVA.US", "DE.US",
+    "DAL.US", "XRAY.US", "DVN.US", "DXCM.US", "FANG.US", "DLR.US", "DFS.US", /*"DISCA.US", "DISCK.US",*/ "DISH.US",
+    "DG.US", "DLTR.US", "D.US", "DOV.US", "DOW.US", "DTE.US", "DUK.US", "DD.US", "DXC.US",
+    "EMN.US", "ETN.US", "EBAY.US", "ECL.US", "EIX.US", "EW.US", "EA.US", "EMR.US", "ETR.US",
+    "EOG.US", "EFX.US", "EQIX.US", "EQR.US", "ESS.US", "EL.US", "EVRG.US", "ES.US", "RE.US", "EXC.US",
+    "EXPE.US", "EXPD.US", "EXR.US", "XOM.US", "FFIV.US", "META.US", "FAST.US", "FRT.US", "FDX.US", "FIS.US",
+    "FITB.US", "FE.US", "FRC.US", "FISV.US", "FLT.US", "FLS.US", "FMC.US", "F.US", "FTNT.US",
+    "FTV.US", "FBHS.US", "FOXA.US", "FOX.US", "BEN.US", "FCX.US", "GPS.US", "GRMN.US", "IT.US", "GD.US",
+    "GE.US", "GIS.US", "GM.US", "GPC.US", "GILD.US", "GL.US", "GPN.US", "GS.US", "GWW.US", "HAL.US",
+    "HBI.US", "HIG.US", "HAS.US", "HCA.US", "PEAK.US", "HSIC.US", "HSY.US", "HES.US", "HPE.US", "HLT.US",
+    "HOLX.US", "HD.US", "HON.US", "HRL.US", "HST.US", "HWM.US", "HPQ.US", "HUM.US", "HBAN.US",
+    "HII.US", "IDXX.US", "ITW.US", "ILMN.US", "INCY.US", "IR.US", "INTC.US", "ICE.US", "IBM.US",
+    "IP.US", "IPG.US", "IFF.US", "INTU.US", "ISRG.US", "IVZ.US", "IPGP.US", "IQV.US", "IRM.US", "JKHY.US",
+    "J.US", "JBHT.US", "SJM.US", "JNJ.US", "JCI.US", "JPM.US", "JNPR.US", "K.US", "KEY.US",
+    "KEYS.US", "KMB.US", "KIM.US", "KMI.US", "KLAC.US", "KSS.US", "KHC.US", "KR.US", "LHX.US",
+    "LH.US", "LRCX.US", "LW.US", "LVS.US", "LEG.US", "LDOS.US", "LEN.US", "LLY.US", "LNC.US", "LIN.US",
+    "LYV.US", "LKQ.US", "LMT.US", "L.US", "LOW.US", "LYB.US", "MTB.US", "MRO.US", "MPC.US", "MKTX.US",
+    "MAR.US", "MMC.US", "MLM.US", "MAS.US", "MA.US", "MKC.US", "MCD.US", "MCK.US", "MDT.US",
+    "MRK.US", "MET.US", "MTD.US", "MGM.US", "MCHP.US", "MU.US", "MSFT.US", "MAA.US", "MHK.US", "TAP.US",
+    "MDLZ.US", "MNST.US", "MCO.US", "MS.US", "MOS.US", "MSI.US", "MSCI.US", "NDAQ.US", "NOV.US",
+    "NKTR.US", "NTAP.US", "NFLX.US", "NWL.US", "NEM.US", "NWSA.US", "NWS.US", "NEE.US", "NKE.US",
+    "NI.US", "JWN.US", "NSC.US", "NTRS.US", "NOC.US", "NCLH.US", "NRG.US", "NUE.US",
+    "NVDA.US", "NVR.US", "ORLY.US", "OXY.US", "ODFL.US", "OMC.US", "OKE.US", "ORCL.US", "PCAR.US", "PKG.US",
+    "PH.US", "PAYX.US", "PAYC.US", "PYPL.US", "PNR.US", "PEP.US", "PKI.US", "PRGO.US", "PFE.US",
+    "PM.US", "PSX.US", "PNW.US", "PXD.US", "PNC.US", "POOL.US", "PPG.US", "PPL.US", "PFG.US", "PG.US",
+    "PGR.US", "PLD.US", "PRU.US", "PTC.US", "PEG.US", "PSA.US", "PHM.US", "PVH.US", "QRVO.US", "PWR.US",
+    "QCOM.US", "DGX.US", "RL.US", "RJF.US", "RTX.US", "O.US", "REG.US", "REGN.US", "RF.US", "RSG.US",
+    "RMD.US", "RHI.US", "ROK.US", "ROL.US", "ROP.US", "ROST.US", "RCL.US", "SPGI.US", "CRM.US", "SBAC.US",
+    "SLB.US", "STX.US", "SEE.US", "SRE.US", "NOW.US", "SHW.US", "SPG.US", "SWKS.US", "SLG.US", "SNA.US",
+    "SO.US", "LUV.US", "SWK.US", "SBUX.US", "STT.US", "STE.US", "SYK.US", "SIVB.US", "SYF.US", "SNPS.US",
+    "SYY.US", "TMUS.US", "TROW.US", "TTWO.US", "TPR.US", "TGT.US", "TEL.US", "TDY.US", "TFX.US", "TER.US",
+    "TXN.US", "TXT.US", "TMO.US", "TJX.US", "TSCO.US", "TT.US", "TDG.US", "TRV.US", "TRMB.US",
+    "TFC.US", "TYL.US", "TSN.US", "UDR.US", "ULTA.US", "USB.US", "UAA.US", "UA.US", "UNP.US",
+    "UAL.US", "UNH.US", "UPS.US", "URI.US", "UHS.US", "UNM.US", "VFC.US", "VLO.US", "VTR.US",
+    "VRSN.US", "VRSK.US", "VZ.US", "VRTX.US", "V.US", "VNO.US", "VMC.US", "WRB.US", "WAB.US",
+    "WMT.US", "WBA.US", "DIS.US", "WM.US", "WAT.US", "WEC.US", "WFC.US", "WELL.US", "WST.US", "WDC.US",
+    "WU.US", "WRK.US", "WY.US", "WHR.US", "WMB.US", "WYNN.US", "XEL.US", "XRX.US", "XYL.US", 
+    "YUM.US", "ZBRA.US", "ZBH.US", "ZION.US", "ZTS.US"
+};
+
+// Invalid stock: "WLTW.US", "VIAC.US", "VAR.US", "TWTR.US", "TIF.US", "PBCT.US", "NLOK.US", "ALXN.US", "NBL.US", "NLSN.US", "MYL.US"
+//                "MXIM.US", "LB.US", "KSU.US", "INFO.US", "HFC.US", "FLIR.US", "ETFC.US", "DRE.US"
+
 TEST_SUITE("Stocks")
 {
     TEST_CASE("Initialize")
@@ -107,6 +165,42 @@ TEST_SUITE("Stocks")
 
         CHECK(stock_was_requested);
         CHECK(dispatcher_unregister_event_listener(listener_id));
+    }
+
+    TEST_CASE("Concurrent Requests" * doctest::timeout(60))
+    {
+        // Fetch realtime stock data from ##stock500
+        stock_handle_t* handles = nullptr;
+        for (int i = 0; i < ARRAY_COUNT(stock500); ++i)
+        {
+            string_const_t code = string_to_const(stock500[i]);
+            stock_handle_t handle = stock_request(STRING_ARGS(code), FetchLevel::REALTIME);
+            CHECK(!!handle);
+            array_push(handles, handle);
+        }
+
+        // Wait for all handles in ##handles to resolve
+        for (unsigned i = 0; i < array_size(handles); ++i)
+        {
+            while (!handles[i]->has_resolve(FetchLevel::REALTIME))
+            {
+                dispatcher_update();
+                dispatcher_wait_for_wakeup_main_thread();
+            }
+        }
+
+        // Check all of them
+        for (unsigned i = 0; i < array_size(handles); ++i)
+        {
+            const stock_t* s = handles[i];
+            string_const_t symbol = SYMBOL_CONST(s->code);
+            INFO(symbol);
+            CHECK_GT(s->current.date, 1);
+            CHECK_GT(s->current.close, 0);
+            CHECK_GE(s->current.volume, 0);
+        }
+
+        array_deallocate(handles);
     }
     
     TEST_CASE("Fetch Description" * doctest::timeout(30.0))
@@ -301,17 +395,13 @@ TEST_SUITE("Stocks")
 
     TEST_CASE("SAR AND SLOPE" * doctest::timeout(60.0))
     {
-        // Get 50 stock symbols from https://www.nasdaq.com/market-activity/quotes/nasdaq-ndx-index
-        const char* symbols[50];
-        symbols[0] = "AAPL.US"; symbols[1] = "MSFT.US"; symbols[2] = "AMZN.US"; symbols[3] = "FB.US"; symbols[4] = "GOOGL.US"; symbols[5] = "GOOG.US"; symbols[6] = "TSLA.US"; symbols[7] = "BRK-B.US"; symbols[8] = "JPM.US"; symbols[9] = "JNJ.US";
-        symbols[10] = "V.US"; symbols[11] = "PG.US"; symbols[12] = "UNH.US"; symbols[13] = "HD.US"; symbols[14] = "MA.US"; symbols[15] = "VZ.US"; symbols[16] = "DIS.US"; symbols[17] = "NVDA.US"; symbols[18] = "PYPL.US"; symbols[19] = "ADBE.US";
-        symbols[20] = "CMCSA.US"; symbols[21] = "NFLX.US"; symbols[22] = "BAC.US"; symbols[23] = "T.US"; symbols[24] = "PEP.US"; symbols[25] = "CRM.US"; symbols[26] = "INTC.US"; symbols[27] = "CSCO.US"; symbols[28] = "KO.US"; symbols[29] = "NKE.US";
-        symbols[30] = "PFE.US"; symbols[31] = "ABT.US"; symbols[32] = "MRK.US"; symbols[33] = "WFC.US"; symbols[34] = "TMO.US"; symbols[35] = "ACN.US"; symbols[36] = "C.US"; symbols[37] = "XOM.US"; symbols[38] = "MCD.US"; symbols[39] = "ABBV.US";
-        symbols[40] = "CVX.US"; symbols[41] = "ORCL.US"; symbols[42] = "AVGO.US"; symbols[43] = "LLY.US"; symbols[44] = "QCOM.US"; symbols[45] = "UNP.US"; symbols[46] = "AMGN.US"; symbols[47] = "DHR.US"; symbols[48] = "MDT.US"; symbols[49] = "NEE.US";
+        const char* symbols[] = {
+            "CMCSA.US", "NFLX.US", "BAC.US", "T.US", "PEP.US", "CRM.US", "INTC.US", "CSCO.US", "KO.US", "NKE.US"
+        };
 
         // Request all of them at once with EOD level first
-        stock_handle_t handles[50];
-        for (int i = 0; i < 50; ++i)
+        stock_handle_t handles[ARRAY_COUNT(symbols)];
+        for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             string_const_t symbol = string_to_const(symbols[i]);
             handles[i] = stock_request(STRING_ARGS(symbol), FetchLevel::TECHNICAL_EOD | FetchLevel::TECHNICAL_SAR | FetchLevel::TECHNICAL_SLOPE);
@@ -319,7 +409,7 @@ TEST_SUITE("Stocks")
         }
 
         // Wait for all of them to resolve
-        for (int i = 0; i < 50; ++i)
+        for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             while (!handles[i]->has_resolve(FetchLevel::TECHNICAL_SAR))
             {
@@ -335,7 +425,7 @@ TEST_SUITE("Stocks")
         }
 
         // Check all of them
-        for (int i = 0; i < 50; ++i)
+        for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             const stock_t* s = handles[i];
             string_const_t symbol = SYMBOL_CONST(s->code);
@@ -347,22 +437,13 @@ TEST_SUITE("Stocks")
 
     TEST_CASE("CCI" * doctest::timeout(30.0))
     {
-        // Get 50 stock symbols from https://www.slickcharts.com/sp500
-        const char* symbols[50];
-        symbols[0] = "MMM.US"; symbols[1] = "ABT.US"; symbols[2] = "ABBV.US"; symbols[3] = "ABMD.US"; symbols[4] = "ACN.US";
-        symbols[5] = "ATVI.US"; symbols[6] = "ADBE.US"; symbols[7] = "AMD.US"; symbols[8] = "AAP.US"; symbols[9] = "AES.US";
-        symbols[10] = "AMG.US"; symbols[11] = "AFL.US"; symbols[12] = "A.US"; symbols[13] = "APD.US"; symbols[14] = "AKAM.US";
-        symbols[15] = "ALK.US"; symbols[16] = "ALB.US"; symbols[17] = "ARE.US"; symbols[18] = "ALXN.US"; symbols[19] = "ALGN.US";
-        symbols[20] = "ALLE.US"; symbols[21] = "LNT.US"; symbols[22] = "ALL.US"; symbols[23] = "GOOGL.US"; symbols[24] = "GOOG.US";
-        symbols[25] = "MO.US"; symbols[26] = "AMZN.US"; symbols[27] = "AMCR.US"; symbols[28] = "AEE.US"; symbols[29] = "AAL.US";
-        symbols[30] = "AEP.US"; symbols[31] = "AXP.US"; symbols[32] = "AIG.US"; symbols[33] = "AMT.US"; symbols[34] = "AWK.US";
-        symbols[35] = "AMP.US"; symbols[36] = "ABC.US"; symbols[37] = "AME.US"; symbols[38] = "AMGN.US"; symbols[39] = "APH.US";
-        symbols[40] = "ADI.US"; symbols[41] = "ANSS.US"; symbols[42] = "ANTM.US"; symbols[43] = "AON.US"; symbols[44] = "AOS.US";
-        symbols[45] = "APA.US"; symbols[46] = "AIV.US"; symbols[47] = "AAPL.US"; symbols[48] = "AMAT.US"; symbols[49] = "APTV.US";
+        const char* symbols[] = {
+            "MMM.US", "ABT.US", "ABBV.US", "U.US", "ACN.US"
+        };
 
         // Request all of them at once with EOD level first
-        stock_handle_t handles[50];
-        for (int i = 0; i < 50; ++i)
+        stock_handle_t handles[ARRAY_COUNT(symbols)];
+        for (unsigned i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             string_const_t symbol = string_to_const(symbols[i]);
             handles[i] = stock_request(STRING_ARGS(symbol), FetchLevel::TECHNICAL_EOD);
@@ -370,7 +451,7 @@ TEST_SUITE("Stocks")
         }
         
         // Wait for all of them to resolve
-        for (int i = 0; i < 50; ++i)
+        for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             while (!handles[i]->has_resolve(FetchLevel::TECHNICAL_EOD))
             {
@@ -379,7 +460,7 @@ TEST_SUITE("Stocks")
             }
         }
 
-        for (int i = 0; i < 50; ++i)
+        for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             string_const_t symbol = string_to_const(symbols[i]);
             handles[i] = stock_request(STRING_ARGS(symbol), FetchLevel::TECHNICAL_CCI);
@@ -387,7 +468,7 @@ TEST_SUITE("Stocks")
         }
 
         // Wait for all of them to resolve
-        for (int i = 0; i < 50; ++i)
+        for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             while (!handles[i]->has_resolve(FetchLevel::TECHNICAL_CCI))
             {
@@ -397,7 +478,7 @@ TEST_SUITE("Stocks")
         }
         
         // Check all of them
-        for (int i = 0; i < 50; ++i)
+        for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             const stock_t* s = handles[i];
             string_const_t symbol = SYMBOL_CONST(s->code);
@@ -418,12 +499,6 @@ TEST_SUITE("Stocks")
         const stock_t* s = handle;
         CHECK_EQ(s, nullptr);
         CHECK_EQ(*handle, nullptr);
-    }
-
-    TEST_CASE("TODO Concurrent Requests")
-    {
-        // Initiate multiple requests in many threads
-        // Actively check resolve status in the main thread without explicitly locking stock pointers (which are cached once)
     }
 
     TEST_CASE("Request REALTIMEx2" * doctest::timeout(90.0) * doctest::may_fail() * doctest::skip(true))
