@@ -69,13 +69,17 @@ FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string
 {
     if (_db_stocks == nullptr || stock_index >= array_size(_db_stocks))
         return false;	
-    stock_t* stock_data = &_db_stocks[stock_index];
-    const char* ticker = string_table_decode(stock_data->code);
+
+    SHARED_READ_LOCK(_db_lock);
+    const stock_t* s = &_db_stocks[stock_index];
+    const char* ticker = string_table_decode(s->code);
     return eod_fetch_async("fundamentals", ticker, FORMAT_JSON_CACHE,
         "filter", "General::Description", [stock_index](const json_object_t& json)
     {
         if (json.root == nullptr)
             return;
+
+        SHARED_READ_LOCK(_db_lock);
         stock_t* stock_data = &_db_stocks[stock_index];
         stock_data->description = string_table_encode_unescape(json_token_value(json.buffer, json.root));
     }, 7 * 24 * 60 * 60ULL);
@@ -83,6 +87,17 @@ FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string
 
 FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, uint64_t index)
 {
+    string_const_t code = json["code"].as_string();
+    string_const_t timestamp = json["timestamp"].as_string();
+    if (string_equal(STRING_ARGS(timestamp), STRING_CONST("NA")))
+    {
+        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, STRING_CONST("Stock '%.*s' has no real time data"), STRING_FORMAT(code));
+        SHARED_READ_LOCK(_db_lock);
+        stock_t* entry = &_db_stocks[index];
+        entry->fetch_errors++;
+        return entry->mark_resolved(FetchLevel::REALTIME);
+    }
+
     day_result_t dresult{};
     dresult.close = json_read_number(json, STRING_CONST("close"));        
     dresult.date = (time_t)json_read_number(json, STRING_CONST("timestamp"));
@@ -103,13 +118,14 @@ FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, u
             array_push(entry->previous, entry->current);
 
         entry->current = dresult;
-        entry->mark_resolved(FetchLevel::REALTIME);
 
         if (!math_real_is_nan(dresult.close))
         {
             string_const_t ticker = string_table_decode_const(entry->code);
             dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)ticker.str, ticker.length);
         }
+
+        entry->mark_resolved(FetchLevel::REALTIME);
     }
 }
 
@@ -223,6 +239,36 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
             {
                 entry->fetch_errors++;
                 log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Failed to fetch technical results %d for %s"), entry->fetch_errors, access_level, ticker);
+            }
+        }
+        else
+        {
+            log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Missing EOD data to fetch technical results %d for %s"), 
+                access_level, ticker);
+
+            if (!entry->is_resolving(FetchLevel::TECHNICAL_EOD, 0) && !entry->is_resolving(FetchLevel::EOD, 0))
+            {
+                const auto eod_stock_handle_request = stock_request(ticker, string_length(ticker), FetchLevel::EOD);
+                if (eod_stock_handle_request)
+                {
+                    status = STATUS_RESOLVING;
+                    dispatch([access_level, eod_stock_handle_request]()
+                    {
+                        string_const_t ticker = SYMBOL_CONST(eod_stock_handle_request.code);
+                        stock_request(STRING_ARGS(ticker), access_level);
+                    });
+                }
+            }
+            else
+            {
+                // TODO: Add dispatch overload with delayed timer
+                dispatch([access_level, index]()
+                {
+                    SHARED_READ_LOCK(_db_lock);
+                    const stock_t* entry = &_db_stocks[index];
+                    string_const_t ticker = SYMBOL_CONST(entry->code);
+                    stock_request(STRING_ARGS(ticker), access_level);
+                });
             }
         }
     }
@@ -389,6 +435,8 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
 
 status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 {
+    MEMORY_TRACKER(HASH_STOCK);
+    
     if (handle.id == 0)
         return STATUS_ERROR_INVALID_HANDLE;
 
@@ -435,9 +483,9 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         handle.ptr = entry = &_db_stocks[index];
         FOUNDATION_ASSERT(entry);
 
+        // Initialize stock entries
         entry->id = handle.id;
         entry->code = handle.code;
-
         entry->description.reset([index](string_table_symbol_t& value) {  return stock_fetch_description(index, value); });
 
         FOUNDATION_ASSERT(handle.id != 0);
@@ -458,12 +506,14 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
     SHARED_READ_LOCK(_db_lock);
     // Fetch stock data
     char ticker[64] { 0 };
-    string_copy(STRING_CONST_CAPACITY(ticker), STRING_ARGS(string_table_decode_const(handle.code)));
+    string_const_t code_string = string_table_decode_const(handle.code);
+    string_copy(STRING_CONST_CAPACITY(ticker), STRING_ARGS(code_string));
 
     status_t status = STATUS_OK;
     if ((fetch_levels & FetchLevel::REALTIME) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::REALTIME) == 0)
     {
-        if (eod_fetch_async("real-time", ticker, FORMAT_JSON_CACHE, E21(stock_read_real_time_results, _1, index), 5 * 60ULL))
+        const uint64_t invalid_cache_query_after_seconds = main_is_running_tests() ? 30ULL : 5 * 60ULL;
+        if (eod_fetch_async("real-time", ticker, FORMAT_JSON_CACHE, E21(stock_read_real_time_results, _1, index), invalid_cache_query_after_seconds))
         {
             entry->mark_fetched(FetchLevel::REALTIME);
             status = STATUS_RESOLVING;
@@ -537,6 +587,16 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 
     if ((fetch_levels & FetchLevel::TECHNICAL_INDEXED_PRICE) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::TECHNICAL_INDEXED_PRICE) == 0)
     {
+        if (!entry->is_resolving(FetchLevel::TECHNICAL_EOD) && !entry->is_resolving(FetchLevel::EOD))
+        {
+            const auto code_symbol = entry->code;
+            dispatch([code_symbol]()
+            {
+                string_const_t ticker = SYMBOL_CONST(code_symbol);
+                stock_request(STRING_ARGS(ticker), FetchLevel::TECHNICAL_EOD);
+            });
+        }        
+        
         if (eod_fetch_async("eod", ticker, FORMAT_JSON_CACHE, "order", "d", E21(stock_read_eod_indexed_prices, _1, index), 24ULL * 3600ULL))
         {
             entry->mark_fetched(FetchLevel::TECHNICAL_INDEXED_PRICE);
@@ -549,14 +609,17 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         }
     }
 
-    stock_fetch_technical_results(FetchLevel::TECHNICAL_SMA, status, fetch_levels, ticker, index, "ema", "ema", offsetof(day_result_t, ema));
-    stock_fetch_technical_results(FetchLevel::TECHNICAL_EMA, status, fetch_levels, ticker, index, "sma", "sma", offsetof(day_result_t, sma));
-    stock_fetch_technical_results(FetchLevel::TECHNICAL_WMA, status, fetch_levels, ticker, index, "wma", "wma", offsetof(day_result_t, wma));
-    stock_fetch_technical_results(FetchLevel::TECHNICAL_SAR, status, fetch_levels, ticker, index, "sar", "sar", offsetof(day_result_t, sar));
-    stock_fetch_technical_results(FetchLevel::TECHNICAL_SLOPE, status, fetch_levels, ticker, index, "slope", "slope", offsetof(day_result_t, slope));
-    stock_fetch_technical_results(FetchLevel::TECHNICAL_CCI, status, fetch_levels, ticker, index, "cci", "cci", offsetof(day_result_t, cci));
-    stock_fetch_technical_results(FetchLevel::TECHNICAL_BBANDS, status, fetch_levels, ticker, index, "bbands",
-        technical_descriptor_t{ 3, { "uband", "mband", "lband" }, { offsetof(day_result_t, uband), offsetof(day_result_t, mband), offsetof(day_result_t, lband) } });
+    if ((fetch_levels & FetchLevel::TECHINICAL_CHARTS) != 0)
+    {
+        stock_fetch_technical_results(FetchLevel::TECHNICAL_EMA, status, fetch_levels, ticker, index, "ema", "ema", offsetof(day_result_t, ema));
+        stock_fetch_technical_results(FetchLevel::TECHNICAL_SMA, status, fetch_levels, ticker, index, "sma", "sma", offsetof(day_result_t, sma));
+        stock_fetch_technical_results(FetchLevel::TECHNICAL_WMA, status, fetch_levels, ticker, index, "wma", "wma", offsetof(day_result_t, wma));
+        stock_fetch_technical_results(FetchLevel::TECHNICAL_SAR, status, fetch_levels, ticker, index, "sar", "sar", offsetof(day_result_t, sar));
+        stock_fetch_technical_results(FetchLevel::TECHNICAL_SLOPE, status, fetch_levels, ticker, index, "slope", "slope", offsetof(day_result_t, slope));
+        stock_fetch_technical_results(FetchLevel::TECHNICAL_CCI, status, fetch_levels, ticker, index, "cci", "cci", offsetof(day_result_t, cci));
+        stock_fetch_technical_results(FetchLevel::TECHNICAL_BBANDS, status, fetch_levels, ticker, index, "bbands",
+            technical_descriptor_t{ 3, { "uband", "mband", "lband" }, { offsetof(day_result_t, uband), offsetof(day_result_t, mband), offsetof(day_result_t, lband) } });
+    }
 
     return status;
 }
@@ -585,10 +648,14 @@ stock_handle_t stock_request(const char* symbol, size_t symbol_length, fetch_lev
 {
     stock_handle_t stock_handle;
     if (stock_initialize(symbol, symbol_length, &stock_handle) != STATUS_OK)
-        return stock_handle;
+        return {};
 
-    if (stock_resolve(stock_handle, fetch_levels) < 0)
+    const status_t status = stock_resolve(stock_handle, fetch_levels);
+    if (status <= STATUS_ERROR)
+    {
+        log_errorf(HASH_STOCK, ERROR_UNKNOWN_RESOURCE, STRING_CONST("Failed to resolve stock %.*s (%d)"), (int)symbol_length, symbol, status);
         return stock_handle;
+    }
 
     return stock_handle;
 }
@@ -698,8 +765,8 @@ status_t stock_initialize(const char* code, size_t code_length, stock_handle_t* 
     if (code == nullptr || code_length <= 0 || stock_handle == nullptr)
         return STATUS_ERROR_NULL_REFERENCE;
 
-    stock_handle->code = string_table_encode(code, code_length);
     stock_handle->id = hash(code, code_length);
+    stock_handle->code = string_table_encode(code, code_length);
 
     return STATUS_OK;
 }
@@ -775,7 +842,7 @@ FOUNDATION_STATIC void stock_shutdown()
             array_deallocate(_trashed_history[i]);
         array_deallocate(_trashed_history);
 
-        for (size_t i = 0; i < array_size(_db_stocks); ++i)
+        for (size_t i = 1; i < array_size(_db_stocks); ++i)
         {
             stock_t* stock_data = &_db_stocks[i];
             array_deallocate(stock_data->previous);

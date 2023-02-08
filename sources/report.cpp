@@ -520,9 +520,14 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
 
             if (ImGui::IsItemHovered())
             {
-                ImGui::PushStyleColor(ImGuiCol_Text, 0xFFEEEEEE);
-                ImGui::SetTooltip("%.*s", (int)title->code_length, title->code);
-                ImGui::PopStyleColor();
+                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                    pattern_open(title->code, title->code_length);
+                else
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, 0xFFEEEEEE);
+                    ImGui::SetTooltip("%.*s", (int)title->code_length, title->code);
+                    ImGui::PopStyleColor();
+                }
             }
             
             const float space_left = ImGui::GetContentRegionAvail().x - logo_banner_width - (style.FramePadding.x * 2.0f);
@@ -657,6 +662,14 @@ FOUNDATION_STATIC cell_t report_column_get_name(table_element_ptr_t element, con
     return title->stock->name;
 }
 
+FOUNDATION_STATIC void report_title_pattern_open(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+    pattern_open(title->code, title->code_length);
+}
+
 FOUNDATION_STATIC void report_title_open_details_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
@@ -670,8 +683,17 @@ FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t
     title_t* title = *(title_t**)element;
     if (title == nullptr)
         return;
+
+    tm tm_now;
+    const time_t now = time_now();
+    int time_lapse_hours = 24;
+    if (time_to_local(now, &tm_now))
+    {
+        if (tm_now.tm_hour >= 10 && tm_now.tm_hour < 17)
+            time_lapse_hours = 8;
+    }
    
-    realtime_render_graph(title->code, title->code_length, time_add_days(time_now(), -1), 1300.0f, 600.0f);
+    realtime_render_graph(title->code, title->code_length, time_add_hours(time_now(), -time_lapse_hours), 1300.0f, 600.0f);
 }
 
 FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
@@ -1688,7 +1710,9 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
 
     table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE);
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE)
+        .set_selected_callback(report_title_pattern_open);
+
     table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), 
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE)
         .set_tooltip_callback(report_title_day_change_tooltip);
@@ -1734,7 +1758,8 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .width = 200.0f;
 
     table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER);
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER, 
+        COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER | COLUMN_MIDDLE_ALIGN);
 }
 
 FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_length, const config_handle_t& data)

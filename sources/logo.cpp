@@ -543,7 +543,7 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& _size /
     dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min, logo_rect.Max);
     if (fill_rect)
         *fill_rect = logo_rect;
-    if (show_tooltip && ImGui::IsMouseHoveringRect(logo_rect.Min, logo_rect.Max))
+    if (show_tooltip && ImGui::IsWindowFocused() && ImGui::IsMouseHoveringRect(logo_rect.Min, logo_rect.Max))
     {
         if (channels == 4)
             ImGui::PushStyleColor(ImGuiCol_PopupBg, bg_logo_banner_color);

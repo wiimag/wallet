@@ -422,6 +422,7 @@ double math_median_average(double* values, double& median, double& average);
 
 time_t time_now();
 time_t time_add_days(time_t t, int days);
+time_t time_add_hours(time_t t, double hours);
 double time_elapsed_days(time_t from, time_t to);
 double time_elapsed_days_round(time_t from, time_t to);
 time_t time_work_day(time_t date, double rel);
@@ -429,9 +430,15 @@ bool time_date_equal(time_t da, time_t db);
 bool time_to_local(time_t t, tm* out_tm);
 time_t time_make(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int millisecond = 0);
 
+FOUNDATION_FORCEINLINE constexpr time_t const time_one_hour()
+{
+    constexpr const time_t one_day = 60 * 60;
+    return one_day;
+}
+
 FOUNDATION_FORCEINLINE constexpr time_t const time_one_day()
 {
-    const time_t one_day = 24 * 60 * 60;
+    constexpr const time_t one_day = 24 * 60 * 60;
     return one_day;
 }
 

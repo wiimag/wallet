@@ -107,6 +107,3 @@ pattern_t* pattern_get(pattern_handle_t handle);
 size_t pattern_count();
 
 string_const_t pattern_get_user_file_path();
-
-void pattern_menu(pattern_handle_t handle);
-void pattern_render(pattern_handle_t handle);

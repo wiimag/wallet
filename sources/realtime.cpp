@@ -55,6 +55,9 @@ static struct REALTIME_MODULE {
 
     bool show_window{ false };
     table_t* table{ nullptr };
+
+    char search[32]{ '\0' };
+    int time_lapse{ 24 * 31 }; // In hours
 } *_realtime;
 
 //
@@ -343,7 +346,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
             }
             else
             {
-                wait_time = 60000U;
+                wait_time = 15 * 60000U;
             }
         }
     }
@@ -357,13 +360,13 @@ FOUNDATION_STATIC int realtime_format_volume_label(double value, char* buff, int
 {
     const double abs_value = math_abs(value);
     if (abs_value >= 1e12)
-        return to_int(string_format(buff, size, STRING_CONST("%.3lgT $"), value / 1e12).length);
+        return to_int(string_format(buff, size, STRING_CONST("%.3lgT"), value / 1e12).length);
     if (abs_value >= 1e9)
-        return to_int(string_format(buff, size, STRING_CONST("%.3lgB $"), value / 1e9).length);
+        return to_int(string_format(buff, size, STRING_CONST("%.3lgB"), value / 1e9).length);
     else if (abs_value >= 1e6)
-        return to_int(string_format(buff, size, STRING_CONST("%.3lgM $"), value / 1e6).length);
+        return to_int(string_format(buff, size, STRING_CONST("%.3lgM"), value / 1e6).length);
     else if (abs_value >= 1e3)
-        return to_int(string_format(buff, size, STRING_CONST("%.3lgK $"), value / 1e3).length);
+        return to_int(string_format(buff, size, STRING_CONST("%.3lgK"), value / 1e3).length);
 
     return to_int(string_format(buff, size, STRING_CONST("%.3lg"), value).length);
 }
@@ -520,7 +523,7 @@ FOUNDATION_STATIC bool realtime_render_graph(const stock_realtime_t* s, time_t s
     ImPlot::SetupAxis(ImAxis_Y2, "##Volume", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_Opposite);
     ImPlot::SetupAxisFormat(ImAxis_X1, realtime_format_date_range_label, (void*)s);
     ImPlot::SetupAxisFormat(ImAxis_Y1, realtime_monitor_price_format(s));
-    //ImPlot::SetupAxisFormat(ImAxis_Y2, realtime_format_volume_label, (void*)s);
+    ImPlot::SetupAxisFormat(ImAxis_Y2, realtime_format_volume_label, (void*)s);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y2, 0, INFINITY);
 
@@ -558,10 +561,13 @@ FOUNDATION_STATIC cell_t realtime_table_draw_monitor(table_element_ptr_t element
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         const size_t record_count = array_size(s->records);
-        if (record_count < 2 || !realtime_render_graph(s, 0, -1.0f, _realtime->table->row_fixed_height))
+        const time_t since = _realtime->time_lapse > 0 ? time_add_hours(time_now(), -_realtime->time_lapse) : 0;
+        ImGui::PushID(_realtime->time_lapse);
+        if (record_count < 2 || !realtime_render_graph(s, since, -1.0f, _realtime->table->row_fixed_height))
         {
             ImGui::TextUnformatted("Not enough data");
         }
+        ImGui::PopID();
     }
 
     return (double)array_size(s->records);
@@ -573,7 +579,41 @@ FOUNDATION_STATIC void realtime_code_selected(table_element_ptr_const_t element,
     pattern_open(s->code, string_length(s->code));
 }
 
-FOUNDATION_STATIC void realtime_render_prices()
+FOUNDATION_STATIC void realtime_render_window_tootlbar()
+{
+    ImGui::BeginGroup();
+
+    // Render search box to filter realtime stocks
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted("Search");
+    ImGui::SameLine();
+    ImGui::PushItemWidth(ImGui::GetFontSize() * 14.0f);
+    if (ImGui::InputTextWithHint("##Search", "Filter stock titles...", _realtime->search, sizeof(_realtime->search)))
+    {
+        // Update table search filter
+        table_set_search_filter(_realtime->table, _realtime->search, string_length(_realtime->search));
+    }
+
+    ImGui::SameLine();
+    bool show_all = _realtime->time_lapse == 0;
+    if (ImGui::Checkbox("Show all records", &show_all))
+    {
+        _realtime->time_lapse = show_all ? 0 : session_get_integer("realtime_time_lapse_days", 24);
+    }
+
+    if (!show_all)
+    {
+        // Render time lapse slider in days
+        ImGui::SameLine();
+        ImGui::PushItemWidth(ImGui::GetFontSize() * 20.0f);
+        if (ImGui::SliderInt("##TimeLapse", &_realtime->time_lapse, 1, 3 * 24, "%d hour(s)"))
+            session_set_integer("realtime_time_lapse_days", _realtime->time_lapse);
+    }
+
+    ImGui::EndGroup();
+}
+
+FOUNDATION_STATIC void realtime_render_window()
 {
     if (_realtime->show_window == false)
         return;
@@ -589,7 +629,7 @@ FOUNDATION_STATIC void realtime_render_prices()
             _realtime->table = table_allocate("realtime");
             _realtime->table->row_fixed_height = imgui_get_font_ui_scale(250.0f);
             table_add_column(_realtime->table, "Title", realtime_table_draw_title, COLUMN_FORMAT_TEXT, 
-                COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING | COLUMN_NOCLIP_CONTENT)
+                COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING | COLUMN_NOCLIP_CONTENT | COLUMN_SEARCHABLE)
                 .set_selected_callback(realtime_code_selected);
             table_add_column(_realtime->table, "Time", realtime_table_column_time, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING);
             table_add_column(_realtime->table, "Price", realtime_table_column_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_VALIGN_TOP);
@@ -600,8 +640,12 @@ FOUNDATION_STATIC void realtime_render_prices()
             table_add_column(_realtime->table, "#||Samples", realtime_table_column_sample_count, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT);
         }
 
-        SHARED_READ_LOCK(_realtime->stocks_mutex);
-        table_render(_realtime->table, _realtime->stocks, array_size(_realtime->stocks), sizeof(stock_realtime_t), 0, 0);
+        realtime_render_window_tootlbar();
+
+        {
+            SHARED_READ_LOCK(_realtime->stocks_mutex);
+            table_render(_realtime->table, _realtime->stocks, array_size(_realtime->stocks), sizeof(stock_realtime_t), 0, 0);
+        }
     } ImGui::End();
 }
 
@@ -642,7 +686,8 @@ FOUNDATION_STATIC void realtime_initialize()
 {
     _realtime = MEM_NEW(HASH_REALTIME, REALTIME_MODULE);
 
-    _realtime->show_window = session_get_bool("show_realtime_window", _realtime->show_window);
+    _realtime->show_window = session_get_bool("realtime_show_window", _realtime->show_window);
+    _realtime->time_lapse = session_get_integer("realtime_time_lapse_days", _realtime->time_lapse);
 
     // Open realtime stock stream.
     _realtime->stream = realtime_open_stream();
@@ -658,12 +703,13 @@ FOUNDATION_STATIC void realtime_initialize()
     dispatcher_register_event_listener(EVENT_STOCK_REQUESTED, realtime_register_new_stock);
 
     service_register_menu(HASH_REALTIME, realtime_menu);
-    service_register_window(HASH_REALTIME, realtime_render_prices);
+    service_register_window(HASH_REALTIME, realtime_render_window);
 }
 
 FOUNDATION_STATIC void realtime_shutdown()
 {   
-    session_set_bool("show_realtime_window", _realtime->show_window);
+    session_set_bool("realtime_show_window", _realtime->show_window);
+    session_set_integer("realtime_time_lapse_days", _realtime->time_lapse);
 
     stream_deallocate(_realtime->stream);
     thread_signal(_realtime->background_thread);

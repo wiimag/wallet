@@ -321,6 +321,9 @@
     <ClCompile Include="..\..\sources\tests\database_tests.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\sources\tests\stock_tests.cpp">
+      <Filter>tests</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="../../resources/main.ico">

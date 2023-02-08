@@ -239,6 +239,11 @@ time_t time_add_days(time_t t, int days)
     return t + (time_one_day() * days);
 }
 
+time_t time_add_hours(time_t t, double hours)
+{
+    return t + (time_t)math_round(time_one_hour() * hours);
+}
+
 time_t time_work_day(time_t date, double rel)
 {
     tm tm_date;

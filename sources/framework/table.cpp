@@ -939,3 +939,8 @@ float table_default_row_height()
     static const auto font_height = imgui_get_font_ui_scale(30.0f);
     return font_height;
 }
+
+void table_set_search_filter(table_t* table, const char* filter, size_t filter_length)
+{
+    table->search_filter = { filter, filter_length };
+}

@@ -118,6 +118,7 @@
     <ClCompile Include="..\..\sources\tests\database_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\generics_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\imgui_tests.cpp" />
+    <ClCompile Include="..\..\sources\tests\stock_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\test_runner.cpp" />
     <ClCompile Include="..\..\sources\tests\test_utils.cpp" />
     <ClCompile Include="..\..\sources\title.cpp" />

@@ -315,3 +315,5 @@ void table_cell_middle_aligned_label(const char* label, size_t label_length);
 const ImRect& table_current_cell_rect();
 
 float table_default_row_height();
+
+void table_set_search_filter(table_t* table, const char* filter, size_t filter_length);

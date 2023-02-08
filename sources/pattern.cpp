@@ -1850,7 +1850,20 @@ void pattern_menu(pattern_handle_t handle)
     }
 }
 
-void pattern_render(pattern_handle_t handle)
+FOUNDATION_STATIC bool pattern_handle_shortcuts(pattern_t* pattern)
+{
+    FOUNDATION_ASSERT(pattern);
+
+    if (ImGui::Shortcut(ImGuiKey_Escape, 0, ImGuiInputFlags_RouteFocused))
+    {
+        pattern->opened = false;
+        return true;
+    }
+
+    return false;
+}
+
+FOUNDATION_STATIC void pattern_render(pattern_handle_t handle)
 {
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
 
@@ -1930,6 +1943,8 @@ void pattern_render(pattern_handle_t handle)
     }
 
     ImGui::EndTable();	
+
+    pattern_handle_shortcuts(pattern);
 }
 
 FOUNDATION_STATIC bool pattern_fetch_flex_low(pattern_handle_t handle, double& value)
