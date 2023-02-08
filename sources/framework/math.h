@@ -223,8 +223,56 @@ typedef struct mat4_t {
 
 } mat4;
 
+// ## Helpers
+
+/*! @brief Returns the given value if it is not NAN, otherwise returns the default value.
+ *  @param n The value to check.
+ *  @param default_value The default value to return if the given value is NAN.
+ *  @return The given value if it is not NAN, otherwise returns the default value.
+ */
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifnan(double n, double default_value)
+{
+    if (math_real_is_nan(n))
+        return default_value;
+    return n;
+}
+
+/*! @brief Returns the given value if it is not zero or NAN, otherwise returns the default value.
+ *  @param n The value to check.
+ *  @param default_value The default value to return if the given value is zero.
+ *  @return The given value if it is not zero, otherwise returns the default value.
+ */
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifzero(double n, double default_value)
+{
+    if (n == 0 || math_real_is_nan(n))
+        return default_value;
+    return n;
+}
+
+/*! @brief Returns the average of the given values.
+ *  @param pn Pointer to the first value.
+ *  @param count Number of values.
+ *  @param stride Stride between values.
+ *  @return The average of the given values.
+*/
+FOUNDATION_CONSTCALL double math_average(const double* pn, size_t count, size_t stride = sizeof(double));
+
+/*! @brief Returns the median and average of the given values.
+ *  @param values Pointer to the first value.
+ *  @param median The median of the given values.
+ *  @param average The average of the given values.
+ *  @return The median of the given values.
+*/
+FOUNDATION_CONSTCALL double math_median_average(double* values, double& median, double& average);
+
 // ## Scalar helpers
 
+/*! @brief Returns the given value clamped to the given range.
+ *  @param _v The value to clamp.
+ *  @param _min The minimum value.
+ *  @param _max The maximum value.
+ *  @return The given value clamped to the given range.
+*/
 FOUNDATION_FORCEINLINE float clamp(float _v, float _min, float _max) { return _v < _min ? _min : _v > _max ? _max : _v; }
 
 // ## Vector 2D helpers

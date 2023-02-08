@@ -5,13 +5,12 @@
  
 #pragma once
 
-#include "framework/handle.h"
-#include "framework/string_table.h"
-#include "framework/option.h"
-#include "framework/common.h"
+#include <framework/handle.h>
+#include <framework/common.h>
+#include <framework/string_table.h>
+#include <framework/option.h>
 
 #include <foundation/string.h>
-#include <foundation/math.h>
 
 struct job_t;
 typedef uint64_t stock_index_t;
@@ -31,6 +30,8 @@ typedef enum class FetchLevel /*: unsigned int*/ {
     TECHNICAL_SLOPE			= 1 << 9, // Cost 5 call
     TECHNICAL_CCI			= 1 << 10, // Cost 5 call
     TECHNICAL_INDEXED_PRICE = 1 << 11, // Cost 5 call
+
+    TECHINICAL_CHARTS = TECHNICAL_SMA | TECHNICAL_EMA | TECHNICAL_WMA | TECHNICAL_BBANDS | TECHNICAL_SAR | TECHNICAL_SLOPE | TECHNICAL_CCI
 } fetch_level_t;
 DEFINE_VOLATILE_ENUM_FLAGS(FetchLevel);
 
@@ -111,29 +112,38 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     double_option_t dividends_yield { DNAN };
     string_option_t description { STRING_TABLE_NULL_SYMBOL };
 
-    bool is_resolving(fetch_level_t required_level, double timeout = 5.0) const
+    //! @brief Checks if the stock is either already resolved or is in the process of being resolved.
+    //! @param required_level The level of resolution required.
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool is_resolving(fetch_level_t required_level, double timeout = 5.0) const
     {
         if (has_resolve(required_level))
             return true;
 
-        if (time_elapsed(last_update_time) > timeout)
+        if (timeout != 0 && time_elapsed(last_update_time) > timeout)
             return false;
             
         return ((this->resolved_level | this->fetch_level) & required_level) == required_level;
     }
 
-    bool has_resolve(fetch_level_t required_level) const
+    //! @brief Checks if the stock is resolved.
+    //! @param required_level The level of resolution required.
+    //! @return True if the stock is resolved, false otherwise.
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool has_resolve(fetch_level_t required_level) const
     {
         return (this->resolved_level & required_level) == required_level;
     }
 
-    void mark_fetched(fetch_level_t fetched_level)
+    //! @brief Mark the stock as currently resolving/fetching some data.
+    //! @param fetched_level The level of resolution that is being fetched.
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void mark_fetched(fetch_level_t fetched_level)
     {
         this->fetch_level |= (fetched_level & ~this->resolved_level);
         this->last_update_time = time_current();
     }
 
-    void mark_resolved(fetch_level_t resolved_level)
+    //! @brief Mark the stock as resolved for a given level.
+    //! @param resolved_level The level of resolution that has being resolved.
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void mark_resolved(fetch_level_t resolved_level)
     {
         this->resolved_level |= resolved_level;
         this->fetch_level &= ~this->resolved_level;
@@ -141,8 +151,6 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
         this->fetch_errors = 0;
     }
 };
-
-struct stock_handle_t;
 
 struct stock_handle_t
 {
@@ -163,24 +171,24 @@ struct stock_handle_t
         return nullptr;
     }
 
-    operator bool() const
+    FOUNDATION_FORCEINLINE operator bool() const
     {
         if (id == 0)
             return false;
         return this->operator*() != nullptr;
     }
 
-    operator const stock_t* () const { return this->operator*(); }
+    FOUNDATION_FORCEINLINE operator const stock_t* () const { return this->operator*(); }
 
-    stock_t* operator->() { return (stock_t*)get(); }
-    const stock_t* operator->() const { return get(); }
+    FOUNDATION_FORCEINLINE stock_t* operator->() { return (stock_t*)get(); }
+    FOUNDATION_FORCEINLINE const stock_t* operator->() const { return get(); }
 
-    const stock_t* get() const
+    FOUNDATION_FORCEINLINE const stock_t* get() const
     {
         const stock_t* s = this->operator*();
         if (s == nullptr)
         {
-            static stock_t NIL{};
+            static const stock_t NIL{};
             return &NIL;
         }
         return s;
@@ -188,17 +196,18 @@ struct stock_handle_t
 };
 
 /// <summary>
-/// 
+/// Request the stock data pointer if already resolved.
+/// The returned pointer is unsafe as it might get invalidated over time.
 /// </summary>
 bool stock_request(const stock_handle_t& handle, const stock_t** out_stock);
 
 /// <summary>
-/// 
+/// Initialize a stock handle structure.
 /// </summary>
 status_t stock_initialize(const char* code, size_t code_length, stock_handle_t* stock_handle);
 
 /// <summary>
-/// 
+/// Attempt to resolve a stock at a given fetch level.
 /// </summary>
 status_t stock_resolve(stock_handle_t& stock_handle, fetch_level_t fetch_levels);
 

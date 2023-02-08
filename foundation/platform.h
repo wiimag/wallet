@@ -1047,7 +1047,6 @@ typedef volatile _Atomic(void*) atomicptr_t;
 #include <string.h>
 
 // String argument helpers
-#define S(s) (s), (sizeof((s)) - 1)
 #define STRING_CONST(s) (s), (sizeof((s)) - 1)
 #define STRING_ARGS(s) (s).str, (s).length
 #define STRING_ARGS_CAPACITY(s) (s).str, (s).length, (s).length + 1

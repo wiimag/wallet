@@ -8,9 +8,7 @@
 #include "function.h"
 #include "string_table.h"
 
-#if FOUNDATION_PLATFORM_MACOS
-    #include <new>
-#endif
+#include <new>
 
 template<typename T, T DEFAULT_VALUE = T{}>
 struct option_t

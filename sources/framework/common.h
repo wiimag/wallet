@@ -6,16 +6,11 @@
 #pragma once
 
 #include "function.h"
-#include "generics.h"
-#include "dispatcher.h"
 
 #include <foundation/fs.h>
-#include <foundation/assert.h>
-#include <foundation/math.h>
-#include <foundation/string.h>
 #include <foundation/time.h>
 #include <foundation/array.h>
-
+ 
 #include <time.h>
 
 // ## MACROS
@@ -399,29 +394,11 @@ FOUNDATION_FORCEINLINE bool fs_is_file(string_t file_path)
     return fs_is_file(STRING_ARGS(file_path));
 }
 
-// ##Math
-
-FOUNDATION_FORCEINLINE double math_ifnan(double n, double default_value)
-{
-    if (math_real_is_nan(n))
-        return default_value;
-    return n;
-}
-
-FOUNDATION_FORCEINLINE double math_ifzero(double n, double default_value)
-{
-    if (n == 0 || math_real_is_nan(n))
-        return default_value;
-    return n;
-}
-
-double math_average(const double* pn, size_t count, size_t stride = sizeof(double));
-double math_median_average(double* values, double& median, double& average);
-
 // ## Time
 
 time_t time_now();
 time_t time_add_days(time_t t, int days);
+time_t time_add_hours(time_t t, double hours);
 double time_elapsed_days(time_t from, time_t to);
 double time_elapsed_days_round(time_t from, time_t to);
 time_t time_work_day(time_t date, double rel);
@@ -429,9 +406,15 @@ bool time_date_equal(time_t da, time_t db);
 bool time_to_local(time_t t, tm* out_tm);
 time_t time_make(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int millisecond = 0);
 
+FOUNDATION_FORCEINLINE constexpr time_t const time_one_hour()
+{
+    constexpr const time_t one_day = 60 * 60;
+    return one_day;
+}
+
 FOUNDATION_FORCEINLINE constexpr time_t const time_one_day()
 {
-    const time_t one_day = 24 * 60 * 60;
+    constexpr const time_t one_day = 24 * 60 * 60;
     return one_day;
 }
 

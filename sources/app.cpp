@@ -19,6 +19,7 @@
 #include <framework/jobs.h>
 #include <framework/query.h>
 #include <framework/console.h>
+#include <framework/dispatcher.h>
 
 #include <foundation/version.h>
 #include <foundation/hashstrings.h>

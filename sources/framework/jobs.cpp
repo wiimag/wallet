@@ -7,6 +7,7 @@
 
 #include "common.h"
 #include "concurrent_queue.h"
+#include "dispatcher.h"
 
 #include <foundation/thread.h>
 #include <foundation/semaphore.h>

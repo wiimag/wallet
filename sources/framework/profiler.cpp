@@ -7,22 +7,19 @@
 
 #if BUILD_ENABLE_PROFILE
 
+#include <framework/imgui.h>
 #include <framework/common.h>
 #include <framework/service.h>
 #include <framework/session.h>
 #include <framework/shared_mutex.h>
-#include <framework/imgui.h>
 #include <framework/table.h>
+#include <framework/math.h>
 
-#include <foundation/hash.h>
-#include <foundation/string.h>
-#include <foundation/profile.h>
 #include <foundation/stream.h>
 #include <foundation/environment.h>
+#include <foundation/time.h>
 
 #include <bx/sort.h>
-
-#include <algorithm>
 
 #define HASH_PROFILER static_hash_string("profiler", 8, 0xc9186f3fc62fa119ULL)
 
@@ -298,12 +295,12 @@ void profiler_menu_timer()
         char frame_time[32];
         if (tick_elapsed_time < smooth_elapsed_time - 1)
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf/%.0lf ms (%.4lg mb)"), 
+            string_format(STRING_CONST_CAPACITY(frame_time), STRING_CONST("%.0lf/%.0lf ms (%.4lg mb)"),
                 tick_elapsed_time, smooth_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
         }
         else
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), S("%.0lf ms (%.4lg mb)"), 
+            string_format(STRING_CONST_CAPACITY(frame_time), STRING_CONST("%.0lf ms (%.4lg mb)"),
                 tick_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
         }
 
@@ -334,7 +331,8 @@ FOUNDATION_STATIC void profiler_initialize()
         if (string_is_null(session_profile_file_path))
         {
             string_const_t timestamp = string_from_uint_static(time_current(), false, 0, 0);
-            session_profile_file_path = session_get_user_file_path(STRING_ARGS(timestamp), S("profiles"), S("profile"), true);
+            session_profile_file_path = session_get_user_file_path(STRING_ARGS(timestamp), 
+                STRING_CONST("profiles"), STRING_CONST("profile"), true);
         }
         _profile_stream = fs_open_file(STRING_ARGS(session_profile_file_path), STREAM_CREATE | STREAM_OUT | STREAM_BINARY);
         FOUNDATION_ASSERT(_profile_stream);
@@ -355,7 +353,7 @@ FOUNDATION_STATIC void profiler_shutdown()
     {
         string_const_t profile_log_saved_path = stream_path(_profile_stream);
         if (!string_is_null(profile_log_saved_path))
-            log_infof(HASH_PROFILER, S("Session profile log saved at %.*s"), STRING_FORMAT(profile_log_saved_path));
+            log_infof(HASH_PROFILER, STRING_CONST("Session profile log saved at %.*s"), STRING_FORMAT(profile_log_saved_path));
         stream_deallocate(_profile_stream);
     }
     

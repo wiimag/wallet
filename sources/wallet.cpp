@@ -5,16 +5,17 @@
  
 #include "wallet.h"
 
-#include "settings.h"
 #include "report.h"
+#include "settings.h"
 
-#include "framework/table.h"
-#include "framework/common.h"
-#include "framework/imgui.h"
-
+#include <framework/imgui.h>
+#include <framework/table.h>
+#include <framework/common.h>
+#include <framework/math.h>
+// 
+#include <foundation/hash.h>
 #include <foundation/array.h>
 #include <foundation/uuid.h>
-#include <foundation/thread.h>
 
 #include <algorithm>
 
@@ -104,7 +105,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
     return updated;
 }
 
-static void wallet_history_sort(wallet_t* wallet)
+FOUNDATION_STATIC void wallet_history_sort(wallet_t* wallet)
 {
     std::sort(wallet->history, wallet->history + array_size(wallet->history), [](const history_t& a, const history_t& b)
     {
@@ -112,7 +113,7 @@ static void wallet_history_sort(wallet_t* wallet)
     });
 }
 
-static void wallet_history_update_entry(report_t* report, wallet_t* wallet, history_t& entry)
+FOUNDATION_STATIC void wallet_history_update_entry(report_t* report, wallet_t* wallet, history_t& entry)
 {
     if (!report_sync_titles(report))
     {
@@ -131,17 +132,17 @@ static void wallet_history_update_entry(report_t* report, wallet_t* wallet, hist
     entry.gain = report->wallet->sell_total_gain;
 }
 
-static void wallet_history_add_new_entry(report_t* report, wallet_t* wallet)
+FOUNDATION_STATIC void wallet_history_add_new_entry(report_t* report, wallet_t* wallet)
 {
     time_t today = time_now();
 
     // Check if we already have an entry for today
-    for (auto& h : generics::fixed_array(wallet->history))
+    foreach (h, wallet->history)
     {
-        if (time_date_equal(today, h.date))
+        if (time_date_equal(today, h->date))
         {
-            wallet_history_update_entry(report, wallet, h);
-            h.show_edit_ui = true;
+            wallet_history_update_entry(report, wallet, *h);
+            h->show_edit_ui = true;
             return;
         }
     }
@@ -160,7 +161,7 @@ static void wallet_history_add_new_entry(report_t* report, wallet_t* wallet)
     wallet_history_sort(wallet);
 }
 
-static void wallet_history_delete_entry(report_t* report, history_t* h)
+FOUNDATION_STATIC void wallet_history_delete_entry(report_t* report, history_t* h)
 {
     size_t pos = h - &h->source->history[0];
     array_erase(h->source->history, pos);
@@ -169,7 +170,7 @@ static void wallet_history_delete_entry(report_t* report, history_t* h)
     report->dirty = true;
 }
 
-static void wallet_history_draw_toolbar(report_handle_t& selected_report_id)
+FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_report_id)
 {
     report_t* selected_report = report_get(selected_report_id);
 
@@ -218,7 +219,7 @@ static void wallet_history_draw_toolbar(report_handle_t& selected_report_id)
     ImGui::EndGroup();
 }
 
-static report_handle_t wallet_history_select_initial_report()
+FOUNDATION_STATIC report_handle_t wallet_history_select_initial_report()
 {
     time_t recent = 0;
     static report_handle_t selected_report_id = uuid_null();
@@ -242,7 +243,7 @@ static report_handle_t wallet_history_select_initial_report()
     return selected_report_id;
 }
 
-static cell_t wallet_history_column_date(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_date(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
 
@@ -269,31 +270,31 @@ static cell_t wallet_history_column_date(table_element_ptr_t element, const colu
     return h->date;
 }
 
-static cell_t wallet_history_column_funds(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_funds(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     return h->funds;
 }
 
-static cell_t wallet_history_column_broker_value(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_broker_value(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     return h->broker_value;
 }
 
-static cell_t wallet_history_column_investments(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_investments(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     return h->investments;
 }
 
-static cell_t wallet_history_column_total_value(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_total_value(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     return h->total_value;
 }
 
-static cell_t wallet_history_column_total_gain(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_total_gain(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     const double total_gain = h->total_value - h->investments;
@@ -301,13 +302,13 @@ static cell_t wallet_history_column_total_gain(table_element_ptr_t element, cons
     return math_ifzero(adjusted_total_gain, total_gain);
 }
 
-static cell_t wallet_history_column_assets(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_assets(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     return h->other_assets;
 }
 
-static double wallet_history_total_gain_p(const history_t* h)
+FOUNDATION_STATIC double wallet_history_total_gain_p(const history_t* h)
 {
     if (h->investments == 0)
         return NAN;
@@ -316,24 +317,24 @@ static double wallet_history_total_gain_p(const history_t* h)
     return math_ifzero(adjusted_total_gain, total_gain) / h->investments * 100.0;
 }
 
-static cell_t wallet_history_column_total_gain_p(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_total_gain_p(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     return wallet_history_total_gain_p(h);
 }
 
-static double wallet_history_wealth(const history_t* h)
+FOUNDATION_STATIC double wallet_history_wealth(const history_t* h)
 {
     return h->total_value + h->other_assets + h->gain;
 }
 
-static cell_t wallet_history_column_wealth(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_wealth(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     return wallet_history_wealth(h);
 }
 
-static const history_t* wallet_history_get_previous(const history_t* h)
+FOUNDATION_STATIC const history_t* wallet_history_get_previous(const history_t* h)
 {
     if (!h->source)
         return nullptr;
@@ -360,7 +361,7 @@ static const history_t* wallet_history_get_previous(const history_t* h)
     return p;
 }
 
-static cell_t wallet_history_column_change(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_change(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     const history_t* p = wallet_history_get_previous(h);
@@ -370,7 +371,7 @@ static cell_t wallet_history_column_change(table_element_ptr_t element, const co
     return (h->total_value + math_ifnan(h->gain, 0)) - (p->total_value + math_ifnan(p->gain, 0));
 }
 
-static double wallet_history_change_p(const history_t* h)
+FOUNDATION_STATIC double wallet_history_change_p(const history_t* h)
 {
     const history_t* p = wallet_history_get_previous(h);
     if (!p)
@@ -382,7 +383,7 @@ static double wallet_history_change_p(const history_t* h)
     return (h->total_value - p->total_value) / p->total_value * 100.0;
 }
 
-static cell_t wallet_history_column_change_p(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC cell_t wallet_history_column_change_p(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
     cell_t cv(wallet_history_change_p(h));
@@ -401,13 +402,13 @@ static cell_t wallet_history_column_change_p(table_element_ptr_t element, const 
     return cv;
 }
 
-static void wallet_history_edit_value(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void wallet_history_edit_value(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     history_t* h = (history_t*)element;
     h->show_edit_ui = true;
 }
 
-static table_t* wallet_history_create_table(report_t* report)
+FOUNDATION_STATIC table_t* wallet_history_create_table(report_t* report)
 {
     table_t* history_table = table_allocate(string_format_static_const("History###%s", string_table_decode(report->name)));
     history_table->flags |= ImGuiTableFlags_NoHostExtendY | ImGuiTableFlags_SizingFixedFit;
@@ -428,7 +429,7 @@ static table_t* wallet_history_create_table(report_t* report)
     return history_table;
 }
 
-static void report_render_history_edit_dialog(report_t* report, history_t* h)
+FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, history_t* h)
 {
     ImGui::SetNextWindowSize(ImVec2(imgui_get_font_ui_scale(430), imgui_get_font_ui_scale(480)), ImGuiCond_Once);
     string_const_t popup_id = string_format_static(STRING_CONST("Edit History (%.*s)###Editor_History_10"), STRING_FORMAT(string_from_date(h->date)));
@@ -510,23 +511,23 @@ static void report_render_history_edit_dialog(report_t* report, history_t* h)
     report_render_dialog_end();
 }
 
-static void wallet_history_min_max_date(wallet_t* wallet, time_t& min, time_t& max, double& space)
+FOUNDATION_STATIC void wallet_history_min_max_date(wallet_t* wallet, time_t& min, time_t& max, double& space)
 {
     min = time_now();
     max = 0;
     space = 1;
     time_t last = 0;
-    for (const auto& h : generics::fixed_array(wallet->history))
+    foreach (h, wallet->history)
     {
         if (last != 0)
-            space = math_round(time_elapsed_days(h.date, last));
-        last = h.date;
-        max = ::max(max, h.date);
-        min = ::min(min, h.date);
+            space = math_round(time_elapsed_days(h->date, last));
+        last = h->date;
+        max = ::max(max, h->date);
+        min = ::min(min, h->date);
     }
 }
 
-static int wallet_history_format_currency(double value, char* buff, int size, void* user_data)
+FOUNDATION_STATIC int wallet_history_format_currency(double value, char* buff, int size, void* user_data)
 {
     double abs_value = math_abs(value);
     if (abs_value >= 1e12)
@@ -541,7 +542,7 @@ static int wallet_history_format_currency(double value, char* buff, int size, vo
     return (int)string_format(buff, size, STRING_CONST("%.2lf $"), value).length;
 }
 
-static int wallet_history_format_date(double value, char* buff, int size, void* user_data)
+FOUNDATION_STATIC int wallet_history_format_date(double value, char* buff, int size, void* user_data)
 {
     time_t d = (time_t)value;
     if (d == 0 || d == -1)
@@ -551,7 +552,7 @@ static int wallet_history_format_date(double value, char* buff, int size, void* 
     return (int)string_copy(buff, size, STRING_ARGS(date_str)).length;
 }
 
-static int wallet_history_format_date_monthly(double value, char* buff, int size, void* user_data)
+FOUNDATION_STATIC int wallet_history_format_date_monthly(double value, char* buff, int size, void* user_data)
 {
     time_t d = (time_t)value;
     if (d == 0 || d == -1)
@@ -568,7 +569,7 @@ static int wallet_history_format_date_monthly(double value, char* buff, int size
     return (int)string_copy(buff, size, date_str.str, min(date_str.length, (size_t)7)).length;
 }
 
-static void wallet_history_draw_graph(report_t* report, wallet_t* wallet)
+FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wallet)
 {
     if (array_size(wallet->history) <= 1)
     {
@@ -588,8 +589,8 @@ static void wallet_history_draw_graph(report_t* report, wallet_t* wallet)
     if (array_size(wallet->history_dates) != array_size(wallet->history))
     {
         array_deallocate(wallet->history_dates);
-        for (const auto& h : generics::fixed_array(wallet->history))
-            array_push(wallet->history_dates, (double)h.date);
+        foreach (h, wallet->history)
+            array_push(wallet->history_dates, (double)h->date);
         array_sort(wallet->history_dates, a < b);
         double* hd = wallet->history_dates;
         for (int i = 0, end = array_size(hd); i < end - 1; ++i)
@@ -701,7 +702,7 @@ static void wallet_history_draw_graph(report_t* report, wallet_t* wallet)
     ImPlot::EndPlot();
 }
 
-static void wallet_history_draw_summary(report_handle_t report_id)
+FOUNDATION_STATIC void wallet_history_draw_summary(report_handle_t report_id)
 {
     report_t* report = report_get(report_id);
     if (report == nullptr || report->wallet == nullptr)

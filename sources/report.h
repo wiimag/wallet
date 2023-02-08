@@ -5,8 +5,6 @@
  
 #pragma once
 
-#include "wallet.h"
-
 #include <framework/config.h>
 #include <framework/string_table.h>
 #include <framework/option.h>
@@ -15,6 +13,7 @@
 
 struct title_t;
 struct table_t;
+struct wallet_t;
 
 typedef uuid_t report_handle_t;
 

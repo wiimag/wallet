@@ -6,7 +6,6 @@
 #pragma once
 
 #include <foundation/platform.h>
-#include <foundation/time.h>
 
 #if FOUNDATION_PLATFORM_WINDOWS
 #include <foundation/windows.h>

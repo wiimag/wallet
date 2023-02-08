@@ -11,6 +11,7 @@
 
 #include <framework/imgui.h>
 #include <framework/service.h>
+#include <framework/dispatcher.h>
 
 #include <foundation/hashstrings.h>
 

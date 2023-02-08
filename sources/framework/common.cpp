@@ -7,32 +7,20 @@
 
 #include "mnyfmt.h"
 #include "generics.h"
-#include "session.h"
 
-#include <foundation/string.h>
 #include <foundation/hash.h>
 #include <foundation/process.h>
-#include <foundation/memory.h>
-#include <foundation/math.h>
-#include <foundation/array.h>
-#include <foundation/fs.h>
 #include <foundation/stream.h>
 #include <foundation/path.h>
 #include <foundation/environment.h>
-
+ 
 #include <stack> 
-#include <ctype.h>
-#include <stdarg.h>
 
 #if FOUNDATION_PLATFORM_WINDOWS
     #include <foundation/windows.h>
     #include <Commdlg.h>
 
-    #include <stdio.h>
-    #include <fcntl.h>
-    #include <io.h>
     #include <iostream>
-    #include <fstream>
 
     extern HWND _window_handle;
 #endif
@@ -68,7 +56,7 @@ lines_t string_split_lines(const char* str, size_t len)
 {
     lines_t lines;
     const size_t line_occurence = string_line_count(str, len);
-    lines.items = (string_const_t*)memory_allocate(HASH_COMMON, line_occurence * sizeof(string_const_t), 0, 0);
+    lines.items = (string_const_t*)memory_allocate(0, line_occurence * sizeof(string_const_t), 0, 0);
     lines.count = string_explode(str, len, STRING_CONST(STRING_NEWLINE), lines.items, line_occurence, false);
     FOUNDATION_ASSERT(lines.count == line_occurence);
     return lines;
@@ -237,6 +225,11 @@ bool time_to_local(time_t at, tm* out_tm)
 time_t time_add_days(time_t t, int days)
 {
     return t + (time_one_day() * days);
+}
+
+time_t time_add_hours(time_t t, double hours)
+{
+    return t + (time_t)math_round(time_one_hour() * hours);
 }
 
 time_t time_work_day(time_t date, double rel)
@@ -441,32 +434,6 @@ const char* string_format_static_const(const char fmt[], ...)
     va_end(list);
 
     return fmt_result.str;
-}
-
-double math_average(const double* pn, size_t count, size_t stride /*= sizeof(double)*/)
-{
-    double total = 0;
-    for (size_t i = 0; i < count; ++i)
-    {
-        total += math_ifnan(*pn, 0.0);
-        pn = (double*)(((uint8_t*)pn) + stride);
-    }
-
-    return total / count;
-}
-
-double math_median_average(double* values, double& median, double& average)
-{
-    size_t count = array_size(values);
-    size_t n = count / 2;
-
-    double* value_end = values + count;
-    std::nth_element(values, values + n, value_end);
-    median = values[n];
-
-    double total = std::accumulate(values, value_end, 0.0);
-    average = total / count;
-    return (median + average) / 2.0;
 }
 
 string_t fs_read_text(const char* path, size_t path_length)

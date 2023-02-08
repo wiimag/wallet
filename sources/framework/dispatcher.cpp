@@ -7,16 +7,13 @@
 
 #include "common.h"
 #include "session.h"
-#include "glfw.h"
 #include "shared_mutex.h"
 #include "profiler.h"
+#include "glfw.h"
 
 #include <foundation/mutex.h>
-#include <foundation/array.h>
-#include <foundation/semaphore.h>
 #include <foundation/event.h>
 #include <foundation/hashstrings.h>
-#include <foundation/thread.h>
 
 struct event_listener_t
 {
@@ -151,9 +148,10 @@ void dispatcher_update()
     PERFORMANCE_TRACKER("dispatcher_update");
     if (!mutex_try_lock(_dispatcher_lock))
         return;
-    for (unsigned i = 0, end = array_size(_dispatcher_actions); i < end; ++i)
+    unsigned count = array_size(_dispatcher_actions);
+    for (unsigned i = 0; i < count; ++i)
         _dispatcher_actions[i]();
-    array_clear(_dispatcher_actions);
+    array_erase_ordered_range_safe(_dispatcher_actions, 0, count);
     mutex_unlock(_dispatcher_lock);
 }
 
@@ -348,7 +346,7 @@ TEST_SUITE("Dispatcher")
         SUBCASE("Default")
         {
             bool posted = false;
-            auto event_listener_id = dispatcher_register_event_listener(S("POSTED_1"), [&posted](const auto& args)
+            auto event_listener_id = dispatcher_register_event_listener(STRING_CONST("POSTED_1"), [&posted](const auto& args)
             { 
                 return (posted = true);
             });

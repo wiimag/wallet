@@ -6,14 +6,16 @@
 #include "pattern.h"
  
 #include "eod.h"
+#include "bulk.h"
 #include "settings.h"
 
 #include <framework/jobs.h>
 #include <framework/session.h>
-#include <framework/imgui.h>
 #include <framework/table.h>
 #include <framework/service.h>
 #include <framework/tabs.h>
+#include <framework/math.h>
+#include <framework/config.h>
 
 #include <algorithm>
 
@@ -1503,12 +1505,12 @@ FOUNDATION_STATIC void pattern_history_min_max_price(pattern_t* pattern, time_t 
     min = DBL_MAX;
     max = -DBL_MAX;
     time_t last = 0;
-    for (const auto& h : generics::fixed_array(pattern->stock->history))
+    foreach (h, pattern->stock->history)
     {
-        if (h.date < ref)
+        if (h->date < ref)
             break;
-        max = ::max(max, h.close);
-        min = ::min(min, h.close);
+        max = ::max(max, h->close);
+        min = ::min(min, h->close);
     }
 }
 
@@ -1638,13 +1640,13 @@ FOUNDATION_STATIC void pattern_activity_min_max_date(pattern_activity_t* activit
     max = 0;
     space = 1;
     time_t last = 0;
-    for (const auto& h : generics::fixed_array(activities))
+    foreach (h, activities)
     {
         if (last != 0)
-            space = math_round(time_elapsed_days(h.date, last));
-        last = h.date;
-        max = ::max(max, h.date);
-        min = ::min(min, h.date);
+            space = math_round(time_elapsed_days(h->date, last));
+        last = h->date;
+        max = ::max(max, h->date);
+        min = ::min(min, h->date);
     }
 }
 
@@ -1850,7 +1852,20 @@ void pattern_menu(pattern_handle_t handle)
     }
 }
 
-void pattern_render(pattern_handle_t handle)
+FOUNDATION_STATIC bool pattern_handle_shortcuts(pattern_t* pattern)
+{
+    FOUNDATION_ASSERT(pattern);
+
+    if (ImGui::Shortcut(ImGuiKey_Escape, 0, ImGuiInputFlags_RouteFocused))
+    {
+        pattern->opened = false;
+        return true;
+    }
+
+    return false;
+}
+
+FOUNDATION_STATIC void pattern_render(pattern_handle_t handle)
 {
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
 
@@ -1930,6 +1945,8 @@ void pattern_render(pattern_handle_t handle)
     }
 
     ImGui::EndTable();	
+
+    pattern_handle_shortcuts(pattern);
 }
 
 FOUNDATION_STATIC bool pattern_fetch_flex_low(pattern_handle_t handle, double& value)
@@ -2155,8 +2172,8 @@ FOUNDATION_STATIC void pattern_shutdown()
             }
 
             job_deallocate(pattern.lcf_job);
-            for (auto& e : generics::fixed_array(pattern.lcf))
-                array_deallocate(e.symbols);
+            foreach (e, pattern.lcf)
+                array_deallocate(e->symbols);
             array_deallocate(pattern.lcf);
             array_deallocate(pattern.flex);
         }

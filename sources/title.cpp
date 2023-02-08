@@ -1,18 +1,19 @@
 /*
  * Copyright 2022-2023 equals-forty-two.com All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
-
  */
+ 
 #include "title.h"
 
 #include "eod.h"
-#include "report.h" // FIXME: Break dependency
-#include "settings.h"
 #include "wallet.h"
-
-#include <foundation/string.h>
+ 
+#include <framework/math.h>
+#include <framework/query.h>
 
 #define FIELD_FILTERS_INTERNAL "::filters"
+
+#define HASH_TITLE static_hash_string("title", 5, 0xf0e1318ee776a40aULL)
 
 //
 // # PRIVATE
@@ -490,8 +491,6 @@ bool title_is_index(const title_t* t)
     return string_equal(STRING_ARGS(exchange), STRING_CONST("INDX"));
 }
 
-
-
 bool title_has_increased(const title_t* t, double* out_delta /*= nullptr*/, double since_seconds /*= 15.0 * 60.0*/, double* elapsed_seconds /*= nullptr*/)
 {
     double delta = NAN;
@@ -510,7 +509,7 @@ bool title_has_decreased(const title_t* t, double* out_delta /*= nullptr*/, doub
 
 title_t* title_allocate()
 {
-    return MEM_NEW(HASH_REPORT, title_t);
+    return MEM_NEW(HASH_TITLE, title_t);
 }
 
 void title_deallocate(title_t*& title)

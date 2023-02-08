@@ -6,13 +6,14 @@
 #include "report.h"
   
 #include "title.h"
+#include "wallet.h"
 
-#include "framework/imgui.h"
+#include <framework/imgui.h>
+#include <framework/common.h>
+#include <framework/generics.h>
+#include <framework/math.h>
 
 #include <foundation/random.h>
-
-#include <time.h>
-#include <algorithm>
  
 static void report_graph_limit(const char* label, double min, double max, double value)
 {

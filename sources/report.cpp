@@ -5,26 +5,27 @@
 
 #include "report.h"
 
-#include "pattern.h"
-#include "settings.h"
+#include "stock.h"
 #include "title.h"
+#include "settings.h"
 #include "symbols.h"
 #include "eod.h"
 #include "logo.h"
 #include "realtime.h"
-
+#include "wallet.h"
+#include "pattern.h"
+ 
 #include <framework/imgui.h>
 #include <framework/session.h>
 #include <framework/table.h>
 #include <framework/service.h>
 #include <framework/tabs.h>
+#include <framework/dispatcher.h>
+#include <framework/math.h>
 
-#include <foundation/fs.h>
 #include <foundation/uuid.h>
 #include <foundation/path.h>
-#include <foundation/thread.h>
- 
-#include <time.h>
+
 #include <algorithm>
 
 struct report_details_view_order_t
@@ -74,10 +75,11 @@ static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
 
 FOUNDATION_STATIC title_t* report_title_find(report_t* report, string_const_t code)
 {
-    for (auto& title : generics::fixed_array(report->titles))
+    foreach (pt, report->titles)
     {
-        if (string_equal(title->code, title->code_length, STRING_ARGS(code)))
-            return title;
+        title_t* t = *pt;
+        if (string_equal(t->code, t->code_length, STRING_ARGS(code)))
+            return t;
     }
 
     return nullptr;
@@ -85,12 +87,10 @@ FOUNDATION_STATIC title_t* report_title_find(report_t* report, string_const_t co
 
 FOUNDATION_STATIC report_handle_t report_get_handle(const report_t* report_ptr)
 {
-    int i = 0;
-    for (auto& p : generics::fixed_array(_reports))
+    foreach (p, _reports)
     {
-        if (&p == report_ptr)
-            return p.id;
-        ++i;
+        if (p == report_ptr)
+            return p->id;
     }
 
     return report_handle_t{0};
@@ -520,9 +520,14 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
 
             if (ImGui::IsItemHovered())
             {
-                ImGui::PushStyleColor(ImGuiCol_Text, 0xFFEEEEEE);
-                ImGui::SetTooltip("%.*s", (int)title->code_length, title->code);
-                ImGui::PopStyleColor();
+                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                    pattern_open(title->code, title->code_length);
+                else
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Text, 0xFFEEEEEE);
+                    ImGui::SetTooltip("%.*s", (int)title->code_length, title->code);
+                    ImGui::PopStyleColor();
+                }
             }
             
             const float space_left = ImGui::GetContentRegionAvail().x - logo_banner_width - (style.FramePadding.x * 2.0f);
@@ -657,6 +662,14 @@ FOUNDATION_STATIC cell_t report_column_get_name(table_element_ptr_t element, con
     return title->stock->name;
 }
 
+FOUNDATION_STATIC void report_title_pattern_open(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+    pattern_open(title->code, title->code_length);
+}
+
 FOUNDATION_STATIC void report_title_open_details_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
@@ -670,8 +683,17 @@ FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t
     title_t* title = *(title_t**)element;
     if (title == nullptr)
         return;
+
+    tm tm_now;
+    const time_t now = time_now();
+    int time_lapse_hours = 24;
+    if (time_to_local(now, &tm_now))
+    {
+        if (tm_now.tm_hour >= 10 && tm_now.tm_hour < 17)
+            time_lapse_hours = 8;
+    }
    
-    realtime_render_graph(title->code, title->code_length, time_add_days(time_now(), -1), 1300.0f, 600.0f);
+    realtime_render_graph(title->code, title->code_length, time_add_hours(time_now(), -time_lapse_hours), 1300.0f, 600.0f);
 }
 
 FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
@@ -1307,11 +1329,11 @@ FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* ti
 
     ImGui::PushStyleCompact();
     table_render(table, orders, array_size(orders), sizeof(report_details_view_order_t), 0.0f, 0.0f);
-    for (auto& order : generics::fixed_array(orders))
+    foreach (order, orders)
     {
-        if (order.deleted)
+        if (order->deleted)
         {
-            size_t index = &order - &orders[0];
+            size_t index = order - &orders[0];
             array_erase(orders, index);
         }
     }
@@ -1615,9 +1637,10 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
 
     bool fully_resolved = true;
     const int title_count = array_size(report->titles);
-    for (const auto& t : generics::fixed_array(report->titles))
+    foreach (pt, report->titles)
     {
-        if (title_is_index(t))
+        title_t* t = *pt;
+        if (!t || title_is_index(t))
             continue;
 
         const bool stock_resolved = t->stock && t->stock->has_resolve(REPORT_FETCH_LEVELS);
@@ -1640,8 +1663,8 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     if (!fully_resolved)
         return false;
 
-    for (const auto& title : generics::fixed_array(report->titles))
-        title_refresh(title);
+    foreach (title, report->titles)
+        title_refresh(*title);
     report_summary_update(report);
     log_infof(HASH_REPORT, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
     if (report->table)
@@ -1688,7 +1711,9 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
 
     table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE);
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE)
+        .set_selected_callback(report_title_pattern_open);
+
     table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), 
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE)
         .set_tooltip_callback(report_title_day_change_tooltip);
@@ -1734,7 +1759,8 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .width = 200.0f;
 
     table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER);
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER, 
+        COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER | COLUMN_MIDDLE_ALIGN);
 }
 
 FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_length, const config_handle_t& data)
@@ -2224,10 +2250,10 @@ report_handle_t report_allocate(const char* name, size_t name_length)
 
 report_t* report_get(report_handle_t report_handle)
 {
-    for (auto& r : generics::fixed_array(_reports))
+    foreach (r, _reports)
     {
-        if (uuid_equal(r.id, report_handle))
-            return &r;
+        if (uuid_equal(r->id, report_handle))
+            return r;
     }
     return nullptr;
 }
@@ -2342,10 +2368,10 @@ FOUNDATION_STATIC void report_initialize()
     fs_make_directory(STRING_ARGS(report_dir_path));
 
     string_t* paths = fs_matching_files(STRING_ARGS(report_dir_path), STRING_CONST("^.*\\.json$"), false);
-    for (const auto& e : generics::fixed_array(paths))
+    foreach (e, paths)
     {
         char report_path_buffer[1024];
-        string_t report_path = path_concat(STRING_CONST_CAPACITY(report_path_buffer), STRING_ARGS(report_dir_path), STRING_ARGS(e));
+        string_t report_path = path_concat(STRING_CONST_CAPACITY(report_path_buffer), STRING_ARGS(report_dir_path), STRING_ARGS(*e));
         report_load(string_to_const(report_path));
     }
     string_array_deallocate(paths);
@@ -2367,8 +2393,8 @@ FOUNDATION_STATIC void report_shutdown()
 
         table_deallocate(r.table);
 
-        for (auto title : generics::fixed_array(r.titles))
-            title_deallocate(title);
+        foreach (title, r.titles)
+            title_deallocate(*title);
         array_deallocate(r.titles);
         array_deallocate(r.transactions);
         wallet_deallocate(r.wallet);

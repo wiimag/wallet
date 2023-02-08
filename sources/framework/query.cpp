@@ -14,6 +14,7 @@
 #include "concurrent_queue.h"
 #include "profiler.h"
 #include "string_table.h"
+#include "dispatcher.h"
 
 #include <foundation/log.h>
 #include <foundation/hashstrings.h>

@@ -12,7 +12,9 @@
 #include <framework/session.h>
 #include <framework/service.h>
 #include <framework/profiler.h>
+#include <framework/config.h>
 
+#include <foundation/time.h>
 #include <foundation/random.h>
 
 #include <ctype.h> /* for isdigit, isspace */
@@ -153,7 +155,7 @@ string_const_t expr_result_string_join(const expr_result_t& e, const char* fmt)
 {
     const uint32_t element_count = e.element_count();
     if (element_count > 99)
-        return string_format_static(S("[too many values (%u)...]"), element_count);
+        return string_format_static(STRING_CONST("[too many values (%u)...]"), element_count);
     return string_join<const T>((const T*)e.ptr, e.element_count(), [fmt](const T& v)
         {
             static thread_local char buf[32];
@@ -1056,7 +1058,7 @@ FOUNDATION_STATIC int expr_eval_format_date_range_label(double value, char* buff
     if (math_real_is_nan(value))
         return 0;
 
-    const double diff = difftime(ev->last_run_time, (time_t)value);
+    const double diff = (double)ev->last_run_time - (time_t)value;
     value = diff / time_one_day();
 
     if (value >= 365)

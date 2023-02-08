@@ -13,6 +13,7 @@
 #include <framework/expr.h>
 #include <framework/service.h>
 #include <framework/table.h>
+#include <framework/dispatcher.h>
 
 #include <foundation/thread.h>
 
@@ -231,8 +232,9 @@ FOUNDATION_STATIC bool report_eval_report_field_test(
     if (!string_equal_nocase(property_name, string_length(property_name), STRING_ARGS(field_name)))
         return false;
         
-    for (auto t : generics::fixed_array(report->titles))
+    foreach (pt, report->titles)
     {
+        title_t* t = *pt;
         const stock_t* s = t->stock;
         if (!s || !s->has_resolve(FetchLevel::REALTIME))
             continue;
