@@ -770,15 +770,15 @@ FOUNDATION_STATIC bool pattern_flex_update(pattern_t* pattern)
     const double one_day = (double)time_one_day();
     for (int i = min(PATTERN_FLEX_RANGE_COUNT, array_size(s->history)) - 1; i >= 0; --i)
     {
-        const day_result_t& ed = s->history[i];
         pattern_flex_t f{};
+        const day_result_t& ed = s->history[i];
 
         f.history_index = i;
         f.days = math_round((pattern->date - ed.date) / one_day);
 
         if (first)
         {
-            f.change_p = (ed.adjusted_close / ed.open) - 1.0;
+            f.change_p = (ed.close / ed.open) - 1.0;
             first = false;
         }
         else

@@ -108,7 +108,8 @@
     <ClCompile Include="..\..\sources\pattern.cpp" />
     <ClCompile Include="..\..\sources\realtime.cpp" />
     <ClCompile Include="..\..\sources\report.cpp" />
-    <ClCompile Include="..\..\sources\reportgraph.cpp" />
+    <ClCompile Include="..\..\sources\report_orders.cpp" />
+    <ClCompile Include="..\..\sources\report_transactions.cpp" />
     <ClCompile Include="..\..\sources\report_expr.cpp" />
     <ClCompile Include="..\..\sources\settings.cpp" />
     <ClCompile Include="..\..\sources\stock.cpp" />

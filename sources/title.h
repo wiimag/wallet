@@ -18,6 +18,10 @@ const fetch_level_t TITLE_MINIMUM_FETCH_LEVEL =
     FetchLevel::EOD |
     FetchLevel::FUNDAMENTALS;
 
+const fetch_level_t INDEX_MINIMUM_FETCH_LEVEL =
+    FetchLevel::REALTIME |
+    FetchLevel::FUNDAMENTALS;
+
 FOUNDATION_ALIGNED_STRUCT(title_t, 8) 
 {
     char code[64]{ "" };
@@ -85,6 +89,10 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data);
 
 bool title_refresh(title_t* title);
 
+fetch_level_t title_minimum_fetch_level(const title_t* t);
+
+bool title_is_resolved(const title_t* t);
+
 bool title_update(title_t* t, double timeout = 3.0);
 
 bool title_is_index(const title_t* t);
@@ -94,3 +102,5 @@ bool title_has_decreased(const title_t* t, double* out_delta = nullptr, double s
 
 time_t title_get_last_transaction_date(const title_t* t, time_t* date = nullptr);
 time_t title_get_first_transaction_date(const title_t* t, time_t* date = nullptr);
+
+bool title_sold(const title_t* title);

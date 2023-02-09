@@ -29,18 +29,8 @@
 #define LR1(EXPRESSION) [=](auto& _1){ return EXPRESSION; }
 #define LR2(EXPRESSION) [=](auto& _1, auto& _2){ return EXPRESSION; }
 #define LR3(EXPRESSION) [=](auto& _1, auto& _2, auto& _3){ return EXPRESSION; }
-#define E1(P1, EXPRESSION) [=](P1 _1){ return EXPRESSION; }
-#define E2(P1, P2, EXPRESSION) [=](P1 _1, P2 _2){ return EXPRESSION; }
-#define E3(P1, P2, P3, EXPRESSION) [=](P1 _1, P2 _2, P3 _3){ return EXPRESSION; }
 
 #define R1(EXPRESSION) [=](auto& _1){ return EXPRESSION; }
-
-#define E21(FN, P1, P2) L1(FN(P1, P2))
-#define E31(FN, P1, P2, P3) L1(FN(P1, P2, P3))
-#define E32(FN, P1, P2, P3) L2(FN(P1, P2, P3))
-
-#define R21(FN, P1, P2) [=](auto& _1){ return FN(P1, P2); }
-#define R31(FN, P1, P2, P3) [=](auto& _1){ return FN(P1, P2, P3); }
 
 template <typename T>
 struct function;

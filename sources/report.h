@@ -183,3 +183,9 @@ void report_graph_render(report_t* report);
 /// 
 /// </summary>
 void report_graph_show_transactions(report_t* report);
+
+void report_render_buy_lot_dialog(report_t* report, title_t* title);
+
+void report_render_sell_lot_dialog(report_t* report, title_t* title);
+
+void report_render_title_details(report_t* report, title_t* title);

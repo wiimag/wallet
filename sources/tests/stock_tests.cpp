@@ -284,7 +284,7 @@ TEST_SUITE("Stocks")
         const day_result_t* actual_eod = stock_get_EOD(s, once_upon_a_time);
         REQUIRE_NE(actual_eod, nullptr);
         
-        const auto split_adjusted = stock_get_split_adjusted(code.str, code.length, once_upon_a_time);
+        const auto split_adjusted = stock_get_split(code.str, code.length, once_upon_a_time);
      
         CHECK_EQ(actual_eod->volume, split_adjusted.volume);
         CHECK_LT(actual_eod->close, actual_eod->adjusted_close);

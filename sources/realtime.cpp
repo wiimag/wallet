@@ -151,8 +151,8 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
                 stock.volume = r.volume;
                 stock.timestamp = r.timestamp;
 
-                log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime values %lld > %.*s > %lf (%" PRIsize ")"),
-                    (int64_t)r.timestamp, STRING_FORMAT(code), r.price, stream_size(_realtime->stream));
+                log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime values %.*s (%lld) > %lf (%" PRIsize " kb)"),
+                    STRING_FORMAT(code), (int64_t)r.timestamp, r.price, stream_size(_realtime->stream) / 1024ULL);
                 
                 if (realtime_stock_add_record(&stock, r))
                 {
@@ -275,7 +275,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
             array_push_memcpy(stock.records, &r);
             
             array_insert_memcpy(_realtime->stocks, ~fidx, &stock);
-            log_debugf(HASH_REALTIME, STRING_CONST("Registering new realtime stock %s (%" PRIhash ")"), stock.code, stock.key);
+            log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime stock %s (%" PRIhash ")"), stock.code, stock.key);
         }
         else
         {

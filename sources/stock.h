@@ -250,4 +250,12 @@ const day_result_t* stock_get_EOD(const stock_t* stock_data, time_t day_time, bo
  *  @param at           Query date
  *  @return The split adjusted data at the given date
  */
-day_result_t stock_get_split_adjusted(const char* code, size_t code_length, time_t at);
+day_result_t stock_get_split(const char* code, size_t code_length, time_t at);
+
+day_result_t stock_get_eod(const char* code, size_t code_length, time_t at);
+
+double stock_get_split_factor(const char* code, size_t code_length, time_t at);
+
+double stock_get_eod_price_factor(const char* code, size_t code_length, time_t at);
+
+double stock_get_split_adjusted_factor(const char* code, size_t code_length, time_t at);

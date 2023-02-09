@@ -101,7 +101,7 @@ FOUNDATION_STATIC bool title_fetch_ps(const title_t* t, double& value)
         return true;
     }
 
-    if (t->average_quantity == 0 && t->sell_total_quantity > 0)
+    if (title_sold(t))
     {
         // Return the prediction in case the stock was kept (when sold)
         value = ((t->sell_adjusted_price - s->current.adjusted_close) / s->current.adjusted_close) * 100.0;
@@ -119,7 +119,9 @@ FOUNDATION_STATIC bool title_fetch_buy_exchange_rate(const title_t* t, double& v
         return false;
 
     string_const_t title_currency = string_table_decode_const(s->currency);
-    value = math_ifnan(stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(t->wallet->preferred_currency), t->date_average), s->current.previous_close);
+    const double exchange_rate = stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(t->wallet->preferred_currency), t->date_average);
+    FOUNDATION_ASSERT(!math_real_is_nan(exchange_rate));
+    value = exchange_rate;
     return true;
 }
 
@@ -461,9 +463,25 @@ bool title_refresh(title_t* title)
     return true;
 }
 
+bool title_is_resolved(const title_t* t)
+{
+    const stock_t* s = t->stock;
+    if (s == nullptr)
+        return false;
+        
+    return s->has_resolve(title_minimum_fetch_level(t));
+}
+
+fetch_level_t title_minimum_fetch_level(const title_t* t)
+{
+    if (title_is_index(t))
+        return INDEX_MINIMUM_FETCH_LEVEL;
+    return TITLE_MINIMUM_FETCH_LEVEL;
+}
+
 bool title_update(title_t* t, double timeout /*= 3.0*/)
 {	    
-    bool resolved = stock_update(t->code, t->code_length, t->stock, TITLE_MINIMUM_FETCH_LEVEL, timeout);
+    bool resolved = stock_update(t->code, t->code_length, t->stock, title_minimum_fetch_level(t), timeout);
     if (!resolved)
         return false;
     
@@ -481,7 +499,7 @@ bool title_is_index(const title_t* t)
 
     const stock_t* s = t->stock;
     if (s == nullptr || s->exchange == 0)
-        return false;
+        return string_ends_with(t->code, t->code_length, STRING_CONST(".INDX"));
     string_const_t exchange = string_table_decode_const(t->stock->exchange);
     return string_equal(STRING_ARGS(exchange), STRING_CONST("INDX"));
 }
@@ -548,4 +566,9 @@ time_t title_get_first_transaction_date(const title_t* t, time_t* out_date /*= n
         *out_date = first_date;
 
     return first_date;
+}
+
+bool title_sold(const title_t* t)
+{
+    return t->sell_total_quantity > 0 && t->average_quantity == 0;
 }

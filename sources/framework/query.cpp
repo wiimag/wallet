@@ -325,6 +325,12 @@ FOUNDATION_STATIC bool query_is_cache_file_valid(const char* query, query_format
     if (!fs_is_file(STRING_ARGS(cache_file_path)))
         return false;
 
+    if (invalid_cache_query_after_seconds == 0)
+        return false;
+
+    if (invalid_cache_query_after_seconds == UINT64_MAX)
+        return true;
+
     // Check if we have a cache file for the given query that is not older than N hours
     const tick_t last_modified = fs_last_modified(STRING_ARGS(cache_file_path));
     const tick_t system_time = time_system();
@@ -441,7 +447,8 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
             if (cache_file_stream != nullptr)
             {
                 const size_t json_buffer_size = stream_size(cache_file_stream);
-                log_debugf(HASH_QUERY, STRING_CONST("Fetch from cache query %s at %.*s"), query, STRING_FORMAT(cache_file_path));
+                log_debugf(HASH_QUERY, STRING_CONST("Fetching query from cache %s (%" PRIsize ") at %.*s"), 
+                    query, json_buffer_size, STRING_FORMAT(cache_file_path));
 
                 string_t json_buffer = string_allocate(json_buffer_size + 1, json_buffer_size + 2);
                 scoped_string_t json_string = stream_read_string_buffer(cache_file_stream, json_buffer.str, json_buffer.length);

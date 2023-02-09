@@ -240,7 +240,7 @@
     <ClCompile Include="..\..\sources\bulk.cpp">
       <Filter>app</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\sources\reportgraph.cpp">
+    <ClCompile Include="..\..\sources\report_transactions.cpp">
       <Filter>app</Filter>
     </ClCompile>
     <ClCompile Include="..\..\sources\framework\service.cpp">
@@ -323,6 +323,9 @@
     </ClCompile>
     <ClCompile Include="..\..\sources\tests\stock_tests.cpp">
       <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\report_orders.cpp">
+      <Filter>app</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

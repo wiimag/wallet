@@ -292,10 +292,11 @@ FOUNDATION_STATIC void logo_build_stats(logo_image_t* image)
         new_height = max_y - min_y;
         
         const float ratio = (1.0f - new_height / (float)image->height) * 100.0f;
-        log_debugf(HASH_LOGO, STRING_CONST("LOGO BANNER %d (%X / %.3g) > %.3g > %s (%dx%d) > (%dx%d)"), 
-            image->channels, max_color, max_color_coverage, ratio, SYMBOL_CSTR(image->symbol), image->width, image->height, new_width, new_height);
         if (ratio > 20.0f && (new_width < 2 || new_width > 45) && new_height > 20)
         {
+            log_debugf(HASH_LOGO, STRING_CONST("Removing logo blank lines: %d (%X / %.3g) > %.3g > %s (%dx%d) > (%dx%d)"),
+                image->channels, max_color, max_color_coverage, ratio, SYMBOL_CSTR(image->symbol), image->width, image->height, new_width, new_height);
+
             // Remove "blank" lines from data.
             image->height = max_y - min_y + 1;
             image->data_texture = image->data + (min_y * image->width * image->channels);

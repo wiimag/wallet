@@ -299,7 +299,7 @@ FOUNDATION_STATIC void glfw_window_focus_callback(GLFWwindow* window, int focuse
     io.AddFocusEvent(focused != 0);
     signal_thread();
 
-    log_debugf(0, STRING_CONST("Application %s (%d)"), focused == 0 ? "unfocused" : "focused", focused);
+    //log_debugf(0, STRING_CONST("Application %s (%d)"), focused == 0 ? "unfocused" : "focused", focused);
 }
 
 FOUNDATION_STATIC void glfw_update_cursor_pos(GLFWwindow* window, double& x, double& y)

@@ -14,7 +14,7 @@
 #include "realtime.h"
 #include "wallet.h"
 #include "pattern.h"
- 
+
 #include <framework/imgui.h>
 #include <framework/session.h>
 #include <framework/table.h>
@@ -22,19 +22,13 @@
 #include <framework/tabs.h>
 #include <framework/dispatcher.h>
 #include <framework/math.h>
-
+ 
 #include <foundation/uuid.h>
 #include <foundation/path.h>
 
 #include <algorithm>
 
-struct report_details_view_order_t
-{
-    report_t* report;
-    title_t* title;
-    config_handle_t data;
-    bool deleted{ false };
-};
+#define E32(FN, P1, P2, P3) L2(FN(P1, P2, P3))
 
 typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_NONE = 0,
@@ -140,7 +134,7 @@ FOUNDATION_STATIC void report_filter_out_titles(report_t* report)
         for (int i = 0; i < report->active_titles; ++i)
         {
             title_t* title = report->titles[i];
-            if (title->average_quantity == 0 && title->sell_total_quantity > 0)
+            if (title_sold(title))
             {
                 title_t* b = report->titles[report->active_titles - 1];
                 report->titles[report->active_titles - 1] = title;
@@ -204,7 +198,7 @@ FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_
     {
         return (row->background_color = BACKGROUND_INDX_COLOR);
     }
-    else if (t->average_quantity == 0 && t->sell_total_quantity > 0)
+    else if (title_sold(t))
     {
         return (row->background_color = BACKGROUND_SOLD_COLOR);
     }
@@ -260,7 +254,7 @@ FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element
         return nullptr;
 
     // If all titles are sold, return the sold average price.
-    if (t->sell_total_quantity > 0 && t->average_quantity == 0)
+    if (title_sold(t))
         return math_ifnan(t->sell_adjusted_price, t->sell_total_price / t->sell_total_quantity);
 
     if (t->average_ask_price > 0)
@@ -351,7 +345,7 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
 
     case REPORT_FORMULA_BUY_PRICE:
     {
-        double adjusted_price = !ImGui::IsKeyDown(ImGuiKey_LeftCtrl) ?
+        double adjusted_price = !(ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) && ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) ?
             (math_ifzero(t->buy_adjusted_price, math_ifzero(t->average_price, t->buy_total_price / t->buy_total_quantity))) :
             t->average_price_rated;
         cell_t buy_price_cell(adjusted_price);
@@ -1113,421 +1107,6 @@ FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_
     report->show_add_title_ui = false;
 }
 
-FOUNDATION_STATIC void report_render_add_title_dialog(report_t* report)
-{
-    ImGui::SetNextWindowSize(ImVec2(1200, 600), ImGuiCond_Once);
-
-    string_const_t popup_id = string_format_static(STRING_CONST("Add Title (%.*s)##5"), STRING_FORMAT(string_table_decode_const(report->name)));
-    if (report_render_dialog_begin(popup_id, &report->show_add_title_ui, ImGuiWindowFlags_None))
-    {
-        if (ImGui::IsWindowAppearing())
-            ImGui::SetKeyboardFocusHere();
-        symbols_render_search(L1(report_render_add_title_from_ui(report, _1)));
-
-        report_render_dialog_end();
-    }
-}
-
-FOUNDATION_STATIC void report_trigger_update(report_t* report)
-{
-    report->dirty = true;
-    report->fully_resolved = 0;
-}
-
-FOUNDATION_STATIC void report_render_title_details(report_t* report, title_t* title)
-{
-    const bool show_ask_price = title->average_ask_price > 0 || title->average_quantity == 0;
-
-    ImGui::SetNextWindowSize(ImVec2(show_ask_price ? 1600.0f : 1400.0f, 600.0f), ImGuiCond_Once);
-
-    string_const_t id = string_format_static(STRING_CONST(ICON_MD_FORMAT_LIST_BULLETED " Orders %.*s (%.2lf $)###%.*s_2"), 
-        title->code_length, title->code, title->stock->current.adjusted_close, title->code_length, title->code);
-    if (!report_render_dialog_begin(id, &title->show_details_ui))
-        return;
-
-    static table_t* table = nullptr;
-    static report_details_view_order_t* orders = nullptr;
-    if (ImGui::IsWindowAppearing())
-    {
-        if (orders)
-            array_deallocate(orders);
-
-        if (table)
-            table_deallocate(table);
-
-        table = table_allocate(id.str);
-        table->flags |= ImGuiTableFlags_SizingFixedFit;
-
-        auto ctype = table_add_column(table, STRING_CONST("||Order Type"), [](table_element_ptr_t element, const column_t* column) 
-        { 
-            report_details_view_order_t* order = (report_details_view_order_t*)element;
-            return order->data["buy"].as_boolean() ? CTEXT("") : CTEXT(ICON_MD_SELL);
-        }, COLUMN_FORMAT_TEXT, COLUMN_MIDDLE_ALIGN | COLUMN_HIDE_HEADER_TEXT | COLUMN_SORTABLE)
-            .set_width(imgui_get_font_ui_scale(50.0f))
-            .set_tooltip_callback([](table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
-            {
-                report_details_view_order_t* order = (report_details_view_order_t*)element;
-                string_const_t tooltip = order->data["buy"].as_boolean() ? CTEXT("Buy") : CTEXT("Sell");
-                ImGui::Text("%.*s", STRING_FORMAT(tooltip));
-            });
-
-        table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), [](table_element_ptr_t element, const column_t* column)
-        {
-            tm tm_date;
-            report_details_view_order_t* order = (report_details_view_order_t*)element;
-            string_const_t date_str = order->data["date"].as_string();
-            time_t odate = string_to_date(STRING_ARGS(date_str), &tm_date);
-
-            if (column->flags & COLUMN_RENDER_ELEMENT)
-            {
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true))
-                {
-                    odate = mktime(&tm_date);
-                    date_str = string_from_date(odate);
-                    config_set(order->data, STRING_CONST("date"), STRING_ARGS(date_str));
-                    title_refresh(order->title);
-                }
-            }
-
-            return odate;
-        }, COLUMN_FORMAT_DATE, COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE | COLUMN_DEFAULT_SORT).set_width(imgui_get_font_ui_scale(220.0f));
-
-        table_add_column(table, STRING_CONST("Quantity " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Order Quantity"), [](table_element_ptr_t element, const column_t* column)
-        {
-            report_details_view_order_t* order = (report_details_view_order_t*)element;
-
-            double quantity = order->data["qty"].as_number();
-
-            if (column->flags & COLUMN_RENDER_ELEMENT)
-            {
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::InputDouble("##Quantity", &quantity, 10.0f, 100.0f, "%.0lf", ImGuiInputTextFlags_None))
-                {
-                    config_set(order->data, STRING_CONST("qty"), quantity);
-                    title_refresh(order->title);
-                    report_trigger_update(order->report);
-                }
-            }
-
-            return quantity;
-        }, COLUMN_FORMAT_NUMBER, COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE).set_width(imgui_get_font_ui_scale(190.0f));
-
-        table_add_column(table, STRING_CONST("Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Order Price"), [](table_element_ptr_t element, const column_t* column)
-        {
-            report_details_view_order_t* order = (report_details_view_order_t*)element;
-
-            double price = order->data["price"].as_number();
-
-            if (column->flags & COLUMN_RENDER_ELEMENT)
-            {
-                double price_scale = price / 10.0f;
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f,
-                    math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
-                {
-                    config_set(order->data, STRING_CONST("price"), price);
-                    title_refresh(order->title);
-                    report_trigger_update(order->report);
-                }
-            }
-
-            return price;
-        }, COLUMN_FORMAT_CURRENCY, COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE).set_width(imgui_get_font_ui_scale(240.0f));
-
-        table_add_column(table, STRING_CONST("Ask " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Ask Price"), [](table_element_ptr_t element, const column_t* column)
-        {
-            report_details_view_order_t* order = (report_details_view_order_t*)element;
-
-            double price = order->data["ask"].as_number();
-
-            if (column->flags & COLUMN_RENDER_ELEMENT)
-            {
-                double price_scale = price / 10.0f;
-                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                if (ImGui::InputDouble("##Ask", &price, price_scale, price_scale * 2.0f,
-                    math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
-                {
-                    config_set(order->data, STRING_CONST("ask"), price);
-                    title_refresh(order->title);
-                }
-            }
-
-            return price;
-        }, COLUMN_FORMAT_CURRENCY, (!show_ask_price ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE)
-            .set_width(imgui_get_font_ui_scale(240.0f));
-
-        table_add_column(table, STRING_CONST("           Gain " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain"), [](table_element_ptr_t element, const column_t* column)
-        {
-            report_details_view_order_t* order = (report_details_view_order_t*)element;
-            bool buy_order = order->data["buy"].as_boolean();
-            double price = order->data["price"].as_number();
-            double quantity = order->data["qty"].as_number();
-            double current = order->title->stock->current.adjusted_close;
-            double total_value = (price * quantity);
-
-            double gain = ((quantity * current) - (price * quantity)) * (buy_order ? 1.0 : -1.0);
-            if (math_real_is_nan(gain))
-                return "-";
-
-            double gain_p = (((quantity * current) - total_value) / total_value * 100.0) * (buy_order ? 1.0 : -1.0);
-            if (math_real_is_nan(gain_p))
-                return "-";
-
-            return string_format_static_const("%.2lf $ (%.2g %%)", gain, gain_p);
-        }, COLUMN_FORMAT_TEXT, COLUMN_RIGHT_ALIGN);
-
-        table_add_column(table, STRING_CONST("   Value " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"), [](table_element_ptr_t element, const column_t* column)
-        {
-            report_details_view_order_t* order = (report_details_view_order_t*)element;
-            bool buy_order = order->data["buy"].as_boolean();
-            double quantity = order->data["qty"].as_number();
-            if (buy_order)
-            {
-                double current = order->title->stock->current.adjusted_close;
-                return current * quantity;
-            }
-
-            double price = order->data["price"].as_number();
-            return price * quantity;
-        }, COLUMN_FORMAT_CURRENCY, COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE).set_width(imgui_get_font_ui_scale(180.0f));
-
-        table_add_column(table, STRING_CONST("||Actions"), [](table_element_ptr_t element, const column_t* column)
-        {
-            if (column->flags & COLUMN_RENDER_ELEMENT)
-            {
-                report_details_view_order_t* order = (report_details_view_order_t*)element;
-                if (ImGui::SmallButton(ICON_MD_DELETE_FOREVER))
-                {
-                    auto corders = order->title->data["orders"];
-                    if (config_remove(corders, order->data))
-                    {
-                        order->deleted = true;
-                        title_refresh(order->title);
-                        report_trigger_update(order->report);
-                    }
-                }
-            }
-            
-            return CTEXT("DELETE");
-        }, COLUMN_FORMAT_TEXT, COLUMN_CUSTOM_DRAWING | COLUMN_STRETCH | COLUMN_MIDDLE_ALIGN | COLUMN_HIDE_HEADER_TEXT);
-
-        for (auto corder : title->data["orders"])
-        {
-            report_details_view_order_t o{ report, title, corder };
-            array_push(orders, o);
-        }
-
-        array_sort(orders, a.data["date"].as_number() > b.data["date"].as_number());
-    }
-
-    ImGui::PushStyleCompact();
-    table_render(table, orders, array_size(orders), sizeof(report_details_view_order_t), 0.0f, 0.0f);
-    foreach (order, orders)
-    {
-        if (order->deleted)
-        {
-            size_t index = order - &orders[0];
-            array_erase(orders, index);
-        }
-    }
-    ImGui::PopStyleCompact();
-
-    if (report_render_dialog_end())
-    {
-        array_deallocate(orders);
-        orders = nullptr;
-
-        table_deallocate(table);
-        table = nullptr;
-    }
-}
-
-FOUNDATION_STATIC void report_render_buy_lot_dialog(report_t* report, title_t* title)
-{
-    string_const_t title_buy_popup_id = string_format_static(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##10"), title->code_length, title->code);
-    if (!report_render_dialog_begin(title_buy_popup_id, &title->show_buy_ui, ImGuiWindowFlags_NoResize))
-        return;
-
-    static double quantity = 100.0f;
-    static double price = 0.0f;
-    static double price_scale = 1.0f;
-    static tm tm_date;
-    static bool reset_date = true;
-
-    if (ImGui::IsWindowAppearing() || math_real_is_nan(price))
-    {
-        quantity = max(math_round(title->average_quantity * 0.1), 100);
-        price = title->stock->current.adjusted_close;
-        price_scale = price / 10.0f;
-        reset_date = true;
-
-        ImGui::SetDateToday(&tm_date);
-    }
-
-    ImVec2 content_size = ImVec2(imgui_get_font_ui_scale(890.0f), imgui_get_font_ui_scale(175.0f));
-    ImGui::MoveCursor(imgui_get_font_ui_scale(2.0f), imgui_get_font_ui_scale(10.0f));
-    if (ImGui::BeginChild("##Content", content_size, false))
-    {
-        const float control_width = (content_size.x - imgui_get_font_ui_scale(100.0f)) / 3;
-        ImGui::Columns(3);
-
-        if (ImGui::IsWindowAppearing())
-            ImGui::SetKeyboardFocusHere();
-        ImGui::Text("Quantity"); ImGui::NextColumn(); 
-        ImGui::Text("Date"); ImGui::NextColumn(); 
-        ImGui::Text("Price"); ImGui::NextColumn();
-
-        ImGui::Columns(3);
-
-        ImGui::SetNextItemWidth(control_width);
-        ImGui::InputDouble("##Quantity", &quantity, 10.0f, 100.0f, "%.0lf", ImGuiInputTextFlags_None);
-        if (quantity < 0)
-            quantity = 0;
-
-        ImGui::NextColumn();
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true, &reset_date))
-        {
-            const day_result_t* e = stock_get_EOD(title->stock, mktime(&tm_date), true);
-            if (e)
-                price = math_ifnan(e->adjusted_close, price);
-        }
-
-        ImGui::NextColumn();
-        ImGui::SetNextItemWidth(control_width);
-        ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
-        if (price < 0)
-            price = title->stock->current.adjusted_close;
-
-        ImGui::NextColumn();
-
-        ImGui::Columns(3);
-        ImGui::MoveCursor(0, imgui_get_font_ui_scale(10.0f));
-
-        double orig_buy_value = quantity * price;
-        double buy_value = orig_buy_value;
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputDouble("##BuyValue", &buy_value, price * 10.0, price * 100.0,
-            math_real_is_nan(price) ? "-" : (buy_value < 0.05 ? "%.3lf $" : "%.2lf $"), 
-            ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsNoBlank) || buy_value != orig_buy_value)
-        {
-            if (!math_real_is_nan(price))
-                quantity = math_round(buy_value / price);
-        }
-
-        ImGui::NextColumn();
-        ImGui::NextColumn();
-
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(211.0f));
-        if (ImGui::Button("Cancel"))
-            title->show_buy_ui = false;
-        ImGui::SameLine();
-        if (ImGui::Button("Apply"))
-        {
-            config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
-            config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);
-
-            string_const_t date_str = string_from_date(tm_date);
-            config_set(new_order, STRING_CONST("date"), STRING_ARGS(date_str));
-            config_set(new_order, STRING_CONST("buy"), true);
-            config_set(new_order, STRING_CONST("qty"), quantity);
-            config_set(new_order, STRING_CONST("price"), price);
-            title->show_buy_ui = false;
-
-            title_refresh(title);
-            report_trigger_update(report);
-        }
-    } ImGui::EndChild();
-
-    report_render_dialog_end(&title->show_buy_ui);
-}
-
-FOUNDATION_STATIC void report_render_sell_lot_dialog(report_t* report, title_t* title)
-{
-    string_const_t title_popup_id = string_format_static(STRING_CONST(ICON_MD_SELL " Sell %.*s##6"), title->code_length, title->code);
-    if (!report_render_dialog_begin(title_popup_id, &title->show_sell_ui, ImGuiWindowFlags_NoResize))
-        return;
-
-    static double quantity = 100.0f;
-    static double price = 0.0f;
-    static double price_scale = 1.0f;
-    static tm tm_date;
-    static bool reset_date = true;
-
-    if (ImGui::IsWindowAppearing() || math_real_is_nan(price))
-    {
-        quantity = title->average_quantity;
-        price = title->stock->current.adjusted_close;
-        price_scale = price / 10.0f;
-        reset_date = true;
-
-        ImGui::SetDateToday(&tm_date);
-    }
-
-    ImGui::MoveCursor(2, 10);
-    if (ImGui::BeginChild("##Content", ImVec2(860.0f, 175.0f), false))
-    {
-        const float control_width = 255.0f;
-        ImGui::Columns(3);
-
-        if (ImGui::IsWindowAppearing())
-            ImGui::SetKeyboardFocusHere();
-        ImGui::Text("Quantity"); ImGui::NextColumn();
-        ImGui::Text("Date"); ImGui::NextColumn();
-        ImGui::Text("Price"); ImGui::NextColumn();
-
-        ImGui::Columns(3);
-
-        ImGui::SetNextItemWidth(control_width);
-        ImGui::InputDouble("##Quantity", &quantity, 10.0f, 100.0f, "%.0lf", ImGuiInputTextFlags_None);
-        if (quantity < 0)
-            quantity = 0;
-
-        ImGui::NextColumn();
-        ImGui::SetNextItemWidth(control_width);
-        ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true, &reset_date);
-
-        ImGui::NextColumn();
-        ImGui::SetNextItemWidth(control_width);
-        ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
-        if (price < 0)
-            price = title->stock->current.adjusted_close;
-
-        ImGui::NextColumn();
-
-        ImGui::Columns(1);
-        ImGui::MoveCursor(20, 15);
-
-        ImGui::Text("Sell Value: %.2lf $", quantity * price);
-
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 226);
-
-        ImGui::MoveCursor(0, -5);
-        if (ImGui::Button("Cancel"))
-            title->show_sell_ui = false;
-        ImGui::SameLine();
-        ImGui::MoveCursor(0, -5);
-        if (ImGui::Button("Apply"))
-        {
-            config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
-            config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);
-
-            string_const_t date_str = string_from_date(tm_date);
-            config_set(new_order, STRING_CONST("date"), STRING_ARGS(date_str));
-            config_set(new_order, STRING_CONST("sell"), true);
-            config_set(new_order, STRING_CONST("qty"), quantity);
-            config_set(new_order, STRING_CONST("price"), price);
-            title->show_sell_ui = false;
-
-            title_refresh(title);
-            report_trigger_update(report);
-        }
-    } ImGui::EndChild();
-
-    report_render_dialog_end();
-}
-
 FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title, string_const_t apply_label, string_const_t initial_value, string_const_t hint, bool* show_ui)
 {
     if (!report_render_dialog_begin(title, show_ui, ImGuiWindowFlags_NoResize))
@@ -1593,6 +1172,21 @@ FOUNDATION_STATIC void report_render_rename_dialog(report_t* report)
         report_rename(report, name);
 }
 
+FOUNDATION_STATIC void report_render_add_title_dialog(report_t* report)
+{
+    ImGui::SetNextWindowSize(ImVec2(1200, 600), ImGuiCond_Once);
+
+    string_const_t popup_id = string_format_static(STRING_CONST("Add Title (%.*s)##5"), STRING_FORMAT(string_table_decode_const(report->name)));
+    if (report_render_dialog_begin(popup_id, &report->show_add_title_ui, ImGuiWindowFlags_None))
+    {
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetKeyboardFocusHere();
+        symbols_render_search(L1(report_render_add_title_from_ui(report, _1)));
+
+        report_render_dialog_end();
+    }
+}
+
 FOUNDATION_STATIC void report_render_dialogs(report_t* report)
 {
     if (report->show_add_title_ui)
@@ -1637,15 +1231,15 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
         if (!t || title_is_index(t))
             continue;
 
-        const bool stock_resolved = t->stock && t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL);
+        const bool stock_resolved = title_is_resolved(t);
         fully_resolved &= stock_resolved;
 
         if (!stock_resolved)
         {
             bool first_init = !t->stock;                
-            if (!stock_update(t->code, t->code_length, t->stock, TITLE_MINIMUM_FETCH_LEVEL, 10.0) && !first_init &&
+            if (!stock_update(t->code, t->code_length, t->stock, title_minimum_fetch_level(t), 10.0) && !first_init &&
                 !dispatcher_wait_for_wakeup_main_thread(1000 / title_count) &&
-                !t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL))
+                !title_is_resolved(t))
             {
                 log_debugf(HASH_REPORT, STRING_CONST("Refreshing %s is taking longer than expected"), t->code);
                 break;
@@ -1932,6 +1526,9 @@ void report_summary_update(report_t* report)
         const title_t* t = report->titles[i];
         FOUNDATION_ASSERT(t);
 
+        if (title_is_index(t))
+            continue;
+
         if (t->average_quantity > 0)
         {
             total_days += t->elapsed_days;
@@ -2028,7 +1625,7 @@ bool report_is_loading(report_t* report)
         const title_t* t = report->titles[i];
         if (title_is_index(t))
             continue;
-        if (!t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL))
+        if (!title_is_resolved(t))
             return true;
     }
 
@@ -2313,7 +1910,7 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
         if (title_is_index(t))
             continue;
 
-        if (!t->stock || !t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL))
+        if (!title_is_resolved(t))
         {
             log_debugf(HASH_REPORT, STRING_CONST("Syncing title %s"), t->code);
             title_update(t, 0);
@@ -2327,9 +1924,8 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
         title_t* t = report->titles[i];
         if (title_is_index(t))
             continue;
-
-        FOUNDATION_ASSERT(!!t->stock);
-        while (!t->stock->has_resolve(TITLE_MINIMUM_FETCH_LEVEL))
+            
+        while (!title_is_resolved(t))
         {
             if (time_elapsed(timer) > timeout_seconds)
                 return false;
