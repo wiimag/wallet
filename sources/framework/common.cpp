@@ -339,7 +339,7 @@ string_const_t string_from_currency(double value, const char* money_fmt /*= null
     if (fmv)
         return string_const(fmv, string_length(fmv));
 
-    return string_to_const(string_format(STRING_ARGS(fmt_buffer), money_fmt, money_fmt_length, value));
+    return string_to_const(string_format(fmt_buffer.str, fmt_buffer.length, STRING_CONST("%.2lf $"), value));
 }
 
 char from_hex(char ch)

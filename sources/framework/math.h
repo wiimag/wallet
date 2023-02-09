@@ -230,11 +230,11 @@ typedef struct mat4_t {
  *  @param default_value The default value to return if the given value is NAN.
  *  @return The given value if it is not NAN, otherwise returns the default value.
  */
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifnan(double n, double default_value)
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifnan(const double n, const double default_value)
 {
-    if (math_real_is_nan(n))
-        return default_value;
-    return n;
+    if (math_real_is_finite(n))
+        return n;
+    return default_value;
 }
 
 /*! @brief Returns the given value if it is not zero or NAN, otherwise returns the default value.
@@ -242,9 +242,21 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifnan(double n, double d
  *  @param default_value The default value to return if the given value is zero.
  *  @return The given value if it is not zero, otherwise returns the default value.
  */
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifzero(double n, double default_value)
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifzero(const double n, const double default_value)
 {
-    if (n == 0 || math_real_is_nan(n))
+    if (math_real_is_zero(n) || !math_real_is_finite(n))
+        return default_value;
+    return n;
+}
+
+/*! @brief Returns the given value if it is not negative or NAN, otherwise returns the default value.
+ *  @param n The value to check.
+ *  @param default_value The default value to return if the given value is negative.
+ *  @return The given value if it is not negative, otherwise returns the default value.
+ */
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifneg(const double n, const double default_value)
+{
+    if (n <= 0 || !math_real_is_finite(n))
         return default_value;
     return n;
 }

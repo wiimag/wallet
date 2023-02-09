@@ -248,7 +248,9 @@ FOUNDATION_STATIC void eod_update_window_title()
 
         string_const_t subscription = json["subscriptionType"].as_string();
         string_const_t branch_name{ subscription.str, subscription.length };
-        if (!is_main_branch)
+        if (main_is_running_tests())
+            branch_name = CTEXT("tests");
+        else if (!is_main_branch)
             branch_name = string_to_const(GIT_BRANCH);
 
         string_const_t license_name = json["name"].as_string();

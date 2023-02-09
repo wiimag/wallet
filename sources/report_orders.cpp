@@ -7,6 +7,7 @@
 
 #include "title.h"
 #include "stock.h"
+#include "wallet.h"
 
 #include <framework/imgui.h>
 #include <framework/table.h>
@@ -21,6 +22,7 @@ struct report_title_order_t
     config_handle_t data;
     bool deleted{ false };
 
+    double exchange_rate{ NAN };
     double close_price{ NAN };
     double split_price{ NAN };
     double adjusted_price{ NAN };
@@ -221,6 +223,21 @@ FOUNDATION_STATIC cell_t report_order_column_quantity(table_element_ptr_t elemen
     return quantity;
 }
 
+FOUNDATION_STATIC cell_t report_order_column_exchange_rate(table_element_ptr_t element, const column_t* column)
+{
+    report_title_order_t* order = (report_title_order_t*)element;
+
+    if (math_real_is_nan(order->exchange_rate))
+    {
+        string_const_t currency = SYMBOL_CONST(order->title->stock->currency);
+        order->exchange_rate = stock_exchange_rate(
+            STRING_ARGS(currency),
+            STRING_ARGS(order->report->wallet->preferred_currency),
+            report_order_get_date(order));
+    }
+    return order->exchange_rate;
+}
+
 FOUNDATION_STATIC cell_t report_order_column_split_price(table_element_ptr_t element, const column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
@@ -412,8 +429,12 @@ FOUNDATION_STATIC table_t* report_create_title_details_table(const bool title_is
         report_order_column_split_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
         .set_width(imgui_get_font_ui_scale(130.0f));
 
+    table_add_column(table, STRING_CONST("Rate " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"),
+        report_order_column_exchange_rate, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
+        .set_width(imgui_get_font_ui_scale(130.0f));
+
     table_add_column(table, STRING_CONST("Adjusted " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Adjusted Price"),
-        report_order_column_adjusted_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
+        report_order_column_adjusted_price, COLUMN_FORMAT_CURRENCY, COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
         .set_width(imgui_get_font_ui_scale(165.0f));
 
     table_add_column(table, STRING_CONST("Ask " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Ask Price"), report_order_column_ask_price,

@@ -85,7 +85,7 @@ FOUNDATION_STATIC double title_compute_ps(const title_t* t, const stock_t* s)
         average_nq = average_nq / average_nq_count;
     double R = s->dividends_yield.get_or_default(0);
 
-    return title_get_total_gain_p(t, s) * (1.0 + K) - average_nq + N + R;
+    return title_get_total_gain_p(t) * (1.0 + K) - average_nq + N + R;
 }
 
 FOUNDATION_STATIC bool title_fetch_ps(const title_t* t, double& value)
@@ -110,19 +110,6 @@ FOUNDATION_STATIC bool title_fetch_ps(const title_t* t, double& value)
         value = title_compute_ps(t, s);
 
     return !math_real_is_nan(value);
-}
-
-FOUNDATION_STATIC bool title_fetch_buy_exchange_rate(const title_t* t, double& value)
-{
-    const stock_t* s = t->stock;
-    if (s == nullptr || s->currency == 0)
-        return false;
-
-    string_const_t title_currency = string_table_decode_const(s->currency);
-    const double exchange_rate = stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(t->wallet->preferred_currency), t->date_average);
-    FOUNDATION_ASSERT(!math_real_is_nan(exchange_rate));
-    value = exchange_rate;
-    return true;
 }
 
 FOUNDATION_STATIC bool title_fetch_today_exchange_rate(const title_t* t, double& value)
@@ -186,43 +173,53 @@ FOUNDATION_STATIC bool title_fetch_ask_price(const title_t* t, double& value)
 // # PUBLIC API
 //
 
-double title_get_total_value(const title_t* t, const stock_t* s)
+double title_get_total_value(const title_t* t)
 {
-    const double adjusted_quantity = math_ifnan(t->buy_adjusted_quantity - t->sell_adjusted_quantity, t->average_quantity);
-    const double total_value = 
-        adjusted_quantity *
-        math_ifnan(s->current.adjusted_close, s->current.previous_close) *
-        math_ifnan(t->today_exchange_rate.fetch(), 1.0)
-        + t->total_dividends;
-    return math_ifnan(total_value, 0.0);
+    if (title_sold(t))
+        return t->sell_total_price_rated_adjusted;
+
+    const stock_t* s = t->stock;
+    if (s && s->has_resolve(FetchLevel::REALTIME))
+    {
+        const double total_value = t->total_dividends + t->average_quantity *
+                s->current.adjusted_close * t->today_exchange_rate.fetch();
+        return total_value;
+    }
+
+    return t->total_dividends + t->average_quantity * t->average_price * t->average_exchange_rate;
 }
 
 double title_get_total_investment(const title_t* t)
 {
-    return t->average_quantity * math_ifzero(t->average_price_rated, t->average_price * t->exchange_rate.fetch());
+    if (title_sold(t))
+        return t->buy_total_price_rated_adjusted;
+    return t->average_quantity * t->average_price_rated;
 }
 
-double title_get_total_gain(const title_t* t, const stock_t* s)
+double title_get_total_gain(const title_t* t)
 {
     if (t->average_quantity == 0 && t->sell_total_quantity == 0)
         return NAN;
     if (t->average_quantity == 0)
-        return (t->sell_total_price - t->buy_total_price) * math_ifnan(t->today_exchange_rate.fetch(), 1.0);
+        return (t->sell_total_price_rated - t->buy_total_price_rated);
 
-    return title_get_total_value(t, s) - title_get_total_investment(t);
+    return title_get_total_value(t) - title_get_total_investment(t);
 }
 
-double title_get_total_gain_p(const title_t* t, const stock_t* s)
+double title_get_total_gain_p(const title_t* t)
 {
     if (t->average_quantity == 0 && t->sell_total_quantity == 0)
         return NAN;
 
+    if (title_sold(t))
+    {
+        if (t->buy_total_price_rated > 0)
+            return (t->sell_total_price_rated - t->buy_total_price_rated) / t->buy_total_price_rated * 100.0;
+    }
+
     double total_investment = title_get_total_investment(t);
     if (total_investment != 0)
-        return title_get_total_gain(t, s) * 100.0 / total_investment;
-
-    if (t->buy_total_price > 0)
-        return (t->sell_total_price - t->buy_total_price) / t->buy_total_price * 100.0;
+        return title_get_total_gain(t) * 100.0 / total_investment;
 
     return 0.0;
 }
@@ -289,54 +286,90 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
     const config_tag_t& TITLE_QTY = config_get_tag(data, STRING_CONST("qty"));
     const config_tag_t& TITLE_PRICE = config_get_tag(data, STRING_CONST("price"));
 
-    string_const_t title_code = config_name(data);
     t->data = data;
     t->wallet = wallet;
-    t->code_length = string_copy(STRING_CONST_CAPACITY(t->code), STRING_ARGS(title_code)).length;
-    t->buy_total_quantity = 0;
-    t->buy_total_price = 0;
-    t->date_average = 0;
-    t->sell_total_quantity = 0;
-    t->sell_total_price = 0;	
-    t->average_quantity = 0;
-    t->average_ask_price = 0;
-    t->sell_total_price_rated = 0;
-    t->buy_total_price_rated = 0;
-    t->total_dividends = 0;
 
+    t->date_min = 0;
+    t->date_max = 0;
+    t->date_average = 0;
+    t->elapsed_days = 0;
+    
+    t->buy_total_count = 0;
+    t->sell_total_count = 0;
+    
+    t->buy_total_price = 0;
+    t->buy_total_quantity = 0;
+    
+    t->sell_total_price = 0;
+    t->sell_total_quantity = 0;
+    
+    t->buy_total_price_rated = 0;
+    t->sell_total_price_rated = 0;
+
+    t->buy_total_price_rated_adjusted = 0;
+    t->sell_total_price_rated_adjusted = 0;
+
+    t->buy_total_adjusted_qty = 0;
+    t->buy_total_adjusted_price = 0;
+    t->sell_total_adjusted_qty = 0;
+    t->sell_total_adjusted_price = 0;
+
+    t->buy_adjusted_price = 0;
+    t->sell_adjusted_price = 0;
+
+    t->average_price = 0;
+    t->average_quantity = 0;
+    t->average_price_rated = 0;
+
+    t->total_dividends = 0;
+    t->average_ask_price = 0;
+    t->average_exchange_rate = 1;
+
+    string_const_t title_code = config_name(data);
+    t->code_length = string_copy(STRING_CONST_CAPACITY(t->code), STRING_ARGS(title_code)).length;
+
+    // Initiate to resolve the title stock right away in case it has never been done before.
+    const auto fetch_level = title_minimum_fetch_level(t);
+    if (!t->stock)
+        t->stock = stock_request(t->code, t->code_length, fetch_level);
+
+    int valid_dates = 0;
     double total_ask_price = 0;
     double total_ask_count = 0;
     double total_buy_limit_price = 0;
+    double total_exchange_rate = 0;
+    double total_exchange_rate_count = 0;
     
-    double buy_single_count = 0;
-    double buy_single_total = 0;
+    const stock_t* s = title_is_resolved(t) ? t->stock : nullptr;
+    string_t preferred_currency = t->wallet->preferred_currency;
+    string_const_t stock_currency = s ? string_table_decode_const(s->currency) : string_null();
+    const double dividends_yield = s ? math_ifnan(s->dividends_yield.fetch(), 0) : 0.0;
 
-    double buy_total_adjusted_qty = 0;
-    double buy_total_adjusted_price = 0;
-    double sell_total_adjusted_qty = 0;
-    double sell_total_adjusted_price = 0;
-
-    int valid_dates = 0;
-    const stock_t* s = t->stock;
     for (auto order : data["orders"])
     {
         const bool buy = order[TITLE_BUY].as_boolean();
         const double qty = order[TITLE_QTY].as_number();
         const double price = order[TITLE_PRICE].as_number();
+        const double ask_price = order["ask"].as_number();
+        
         string_const_t date = order[TITLE_DATE].as_string();
-        time_t order_date = string_to_date(STRING_ARGS(date));
+        const time_t order_date = string_to_date(STRING_ARGS(date));
 
-        double dividends_yield = 0;
-        double exchange_rate = 1.0;
+        double order_split_factor = 1.0;
+        double order_exchange_rate = 1.0;
         const day_result_t* order_day_results = nullptr;
         if (s)
         {
             order_day_results = stock_get_EOD(s, order_date, true);
-            string_const_t stock_currency = string_table_decode_const(s->currency);
-            exchange_rate = math_ifzero(stock_exchange_rate(STRING_ARGS(stock_currency), STRING_ARGS(t->wallet->preferred_currency), order_date), exchange_rate);
-            dividends_yield = s->dividends_yield;
+            order_exchange_rate = stock_exchange_rate(STRING_ARGS(stock_currency), STRING_ARGS(preferred_currency), order_date);
+            order_exchange_rate = math_ifzero(order_exchange_rate, 1.0);
+            order_split_factor = stock_get_split_factor(STRING_ARGS(title_code), order_date);
         }
 
+        total_exchange_rate_count += qty;
+        total_exchange_rate += order_exchange_rate * qty;
+
+        // Compute date stats.
         if (order_date != 0)
         {
             if (t->date_min == 0 || t->date_min > order_date)
@@ -345,100 +378,83 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
             if (t->date_max == 0 || t->date_max < order_date)
                 t->date_max = order_date;
 
-            t->date_average += order_date;
             valid_dates++;
+            t->date_average += order_date;
         }
+        
+        if (ask_price > 0)
+        {
+            total_ask_count++;
+            total_ask_price += ask_price;
+            total_buy_limit_price += price;
+        }
+
+        const double split_quantity = qty / order_split_factor;
+        const double adjusted_factor = order_day_results ? math_ifnan(order_day_results->price_factor, 1.0) : 1.0;
+        const double split_adjusted_factor = order_split_factor / adjusted_factor;
 
         if (buy)
         {
-            buy_single_count++;
-            buy_single_total += price;
+            t->buy_total_count++;            
             t->buy_total_quantity += qty;
             t->buy_total_price += qty * price;
-            t->buy_total_price_rated += qty * price * exchange_rate;
-
-            double ask_price = order["ask"].as_number();
-            if (ask_price > 0)
-            {
-                total_buy_limit_price += price;
-                total_ask_price += ask_price;
-                total_ask_count++;
-            }
-
-            if (order_day_results)
-            {
-                double factor = math_ifnan(order_day_results->price_factor, 1.0);
-                buy_total_adjusted_qty += qty / factor;
-                buy_total_adjusted_price += (qty / factor) * price * factor;
-            }
+            t->buy_total_price_rated += qty * price * order_exchange_rate;
 
             // FIXME: Change how dividends are computed over time
-            t->total_dividends += (qty * price) * time_elapsed_days(order_date, time_now()) / 365.0 * dividends_yield * exchange_rate;
+            const double order_dividend_yielded = (qty * price) * time_elapsed_days(order_date, time_now()) / 365.0 * dividends_yield * order_exchange_rate;
+            t->total_dividends += order_dividend_yielded;
+            
+            const double adjusted_buy_cost = (qty * price / split_adjusted_factor);
+            t->buy_total_adjusted_qty += split_quantity;
+            t->buy_total_adjusted_price += adjusted_buy_cost;
+            t->buy_total_price_rated_adjusted += adjusted_buy_cost * order_exchange_rate;
+
+            log_debugf(HASH_TITLE, STRING_CONST("Title '%.*s' bought %.0lf (%d) shares at %.2lf $ (%.2lf $) on %.*s (Dividend Yielded: %.2lf $)"),
+                STRING_FORMAT(title_code), qty, math_round(split_quantity), price, adjusted_buy_cost, STRING_FORMAT(date), order_dividend_yielded);
         }
         else
         {
+            t->sell_total_count++;
             t->sell_total_quantity += qty;
             t->sell_total_price += qty * price;
-            t->sell_total_price_rated += qty * price * exchange_rate;
+            t->sell_total_price_rated += qty * price * order_exchange_rate;
 
-            if (order_day_results)
-            {
-                double factor = math_ifnan(order_day_results->price_factor, 1.0);
-                sell_total_adjusted_qty += qty / factor;
-                sell_total_adjusted_price += (qty / factor) * price * factor;
-            }
-
-            t->total_dividends -= (qty * price) * time_elapsed_days(order_date, time_now()) / 365.0 * dividends_yield * exchange_rate;
+            t->total_dividends -= (qty * price) * time_elapsed_days(order_date, time_now()) / 365.0 * dividends_yield * order_exchange_rate;
             if (t->total_dividends < 0)
                 t->total_dividends = 0;
+                
+            const double adjusted_sell_cost = qty * price;
+            t->sell_total_adjusted_qty += split_quantity;
+            t->sell_total_adjusted_price += adjusted_sell_cost;
+            t->sell_total_price_rated_adjusted += adjusted_sell_cost * order_exchange_rate;
         }
     }
 
-    if (sell_total_adjusted_price > 0)
-    {
-        t->sell_adjusted_quantity = (double)math_ceil(sell_total_adjusted_qty);
-        t->sell_adjusted_price = sell_total_adjusted_price / sell_total_adjusted_qty;
-    }
-    else if (buy_total_adjusted_qty > 0)
-    {
-        t->sell_adjusted_price = 0;
-        t->sell_adjusted_quantity = 0;
-    }
+    t->remaining_shares = t->buy_total_quantity - t->sell_total_quantity; // not adjusted
+    
+    t->average_exchange_rate = total_exchange_rate_count > 0 ? total_exchange_rate / total_exchange_rate_count : 0;
+    
+    t->buy_adjusted_price = t->buy_total_adjusted_qty > 0 ? t->buy_total_adjusted_price / t->buy_total_adjusted_qty : 0;
+    t->sell_adjusted_price = t->sell_total_adjusted_qty > 0 ? t->sell_total_adjusted_price / t->sell_total_adjusted_qty : 0;
 
-    if (buy_total_adjusted_qty > 0)
-    {
-        t->buy_adjusted_quantity = (double)math_ceil(buy_total_adjusted_qty);
-        t->buy_adjusted_price = buy_total_adjusted_price / buy_total_adjusted_qty;
-    }
+    t->average_buy_price = math_ifnan(t->buy_total_adjusted_price / t->buy_total_quantity, 0);
+    t->average_quantity = (double)math_round(math_ifzero(t->buy_total_adjusted_qty - t->sell_total_adjusted_qty, t->remaining_shares));
+    t->average_price = t->average_quantity > 0 ? math_ifzero(
+        (t->buy_total_adjusted_price - t->sell_total_adjusted_price) / t->average_quantity, 
+        (t->buy_total_price - t->sell_total_price) / t->remaining_shares
+    ) : t->average_buy_price;
 
-    if ((buy_total_adjusted_qty - sell_total_adjusted_qty) > 0)
-    {
-        double total_average_price = buy_total_adjusted_price / buy_total_adjusted_qty;
-        t->average_quantity = buy_total_adjusted_qty - sell_total_adjusted_qty;
-        t->average_price = (buy_total_adjusted_price - (sell_total_adjusted_qty * total_average_price)) / t->average_quantity;
-    }
-    else if ((t->buy_total_quantity - t->sell_total_quantity) > 0)
-    {
-        double total_average_price = t->buy_total_price / t->buy_total_quantity;
-        t->average_quantity = t->buy_total_quantity - t->sell_total_quantity;
-        t->average_price = (t->buy_total_price - (t->sell_total_quantity * total_average_price)) / t->average_quantity;
-    }
-    else if (buy_single_count > 0 && t->buy_total_quantity == 0)
-    {
-        t->average_price = buy_single_total / buy_single_count;
-    }
-
-    if ((t->buy_total_quantity - t->sell_total_quantity) <= 0)
-        t->average_quantity = 0;
+    t->average_buy_price_rated = math_ifnan(t->buy_total_price_rated_adjusted / t->buy_total_quantity, 0);
+    t->average_price_rated = t->average_quantity > 0 ? math_ifzero(
+        (t->buy_total_price_rated_adjusted - t->sell_total_price_rated_adjusted) / t->average_quantity,
+        (t->buy_total_price_rated - t->sell_total_price_rated) / t->remaining_shares
+    ) : t->average_buy_price_rated;
 
     if (valid_dates > 0)
     {
         t->date_average /= valid_dates;
         t->elapsed_days = time_elapsed_days(t->date_min, t->average_quantity == 0 ? t->date_max : time_now());
     }
-
-    if (t->average_quantity > 0)
-        t->average_price_rated = (t->buy_total_price_rated - t->sell_total_price_rated) / t->average_quantity;
 
     if (total_ask_count > 0)
     {
@@ -447,10 +463,14 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
         t->average_ask_price = total_ask_price / total_ask_count;
     }
 
+    log_debugf(HASH_TITLE, STRING_CONST("Title '%.*s' initialized: %lf x %.2lf $"),
+        STRING_FORMAT(title_code), t->average_quantity, t->average_price);
+
     t->ps.reset([t](double& value){ return title_fetch_ps(t, value); });
     t->ask_price.reset([t](double& value){ return title_fetch_ask_price(t, value); });
-    t->exchange_rate.reset([t](double& value) { return title_fetch_buy_exchange_rate(t, value); });
     t->today_exchange_rate.reset([t](double& value){ return title_fetch_today_exchange_rate(t, value); });
+
+    FOUNDATION_ASSERT(math_real_is_finite(t->sell_total_adjusted_qty));
 }
 
 bool title_refresh(title_t* title)
@@ -571,4 +591,19 @@ time_t title_get_first_transaction_date(const title_t* t, time_t* out_date /*= n
 bool title_sold(const title_t* t)
 {
     return t->sell_total_quantity > 0 && t->average_quantity == 0;
+}
+
+bool title_has_transactions(const title_t* t)
+{
+    return (t->buy_total_quantity > 0 || t->sell_total_quantity > 0);
+}
+
+double title_get_bought_price(const title_t* t)
+{
+    return math_ifzero(t->buy_total_price / t->buy_total_quantity, t->average_price);
+}
+
+double title_get_sell_gain_rated(const title_t* t)
+{
+    return t->sell_total_price_rated - ((t->buy_total_price_rated / t->buy_total_quantity) * t->sell_total_quantity);
 }

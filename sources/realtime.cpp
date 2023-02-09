@@ -137,6 +137,9 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
 
         if (r.timestamp == 0 || math_real_is_nan(r.price))
             continue;
+
+        if (_realtime->stream == nullptr)
+            break;
         
         SHARED_READ_LOCK(_realtime->stocks_mutex);
         
@@ -711,7 +714,10 @@ FOUNDATION_STATIC void realtime_shutdown()
     session_set_bool("realtime_show_window", _realtime->show_window);
     session_set_integer("realtime_time_lapse_days", _realtime->time_lapse);
 
+    SHARED_WRITE_LOCK(_realtime->stocks_mutex);
+
     stream_deallocate(_realtime->stream);
+    _realtime->stream = nullptr;
     thread_signal(_realtime->background_thread);
     thread_deallocate(_realtime->background_thread);
     table_deallocate(_realtime->table);

@@ -26,36 +26,57 @@ FOUNDATION_ALIGNED_STRUCT(title_t, 8)
 {
     char code[64]{ "" };
     size_t code_length{ 0 };
+
+    stock_handle_t stock{ 0 };
+    wallet_t* wallet{ nullptr };
     config_handle_t data{ nullptr };
 
-    double buy_total_price{ 0 };
-    double buy_total_quantity{ 0 };
-    double buy_total_price_rated{ 0 };
+    // Trace how many buy and sell orders have been made
+    double buy_total_count{ NAN };
+    double sell_total_count{ NAN };
 
-    double sell_total_price{ 0 };
-    double sell_total_quantity{ 0 };
-    double sell_total_price_rated{ 0 };
+    // Trace buy total amounts without split or price adjusted (raw quantities)
+    double buy_total_price{ NAN };
+    double buy_total_quantity{ NAN };
+
+    // Trace sell total amounts without split or price adjusted (raw quantities)
+    double sell_total_price{ NAN };
+    double sell_total_quantity{ NAN };
+
+    // Price with preferred exchange rate (i.e. USD > CAD), but without split
+    // Quantities are the same as for raw quantities above (i.e. ##buy_total_quantity, ##sell_total_quantity)
+    double buy_total_price_rated{ NAN };
+    double sell_total_price_rated{ NAN };
+
+    double buy_total_price_rated_adjusted{ NAN };
+    double sell_total_price_rated_adjusted{ NAN };
+
+    // Price and quantity adjusted with split
+    double buy_total_adjusted_qty{ NAN };
+    double buy_total_adjusted_price{ NAN };
+    double sell_total_adjusted_qty{ NAN };
+    double sell_total_adjusted_price{ NAN };
 
     double buy_adjusted_price{ NAN };
-    double buy_adjusted_quantity{ NAN };
     double sell_adjusted_price{ NAN };
-    double sell_adjusted_quantity{ NAN };
 
-    double average_price{ 0 };
-    double average_price_rated{ 0 };
-    double average_quantity{ 0 };
-    double average_ask_price{ 0 };
-
-    double total_dividends{ 0 };
-
+    // Average price (adjusted but not exchange rated)
+    double average_price{ NAN };
+    double average_price_rated{ NAN };
+    double average_quantity{ NAN };
+    double average_buy_price{ NAN };
+    double average_buy_price_rated{ NAN };
+    double remaining_shares{ NAN };
+    
+    double total_dividends{ NAN };
+    double average_ask_price{ NAN };
+    double average_exchange_rate{ 1 };
+    
     time_t date_min{ 0 };
     time_t date_max{ 0 };
     time_t date_average{ 0 };
-    double elapsed_days{ 0 };
-
-    wallet_t* wallet{ nullptr };
-    stock_handle_t stock{ 0 };
-    double_option_t exchange_rate{ 1.0 };
+    double elapsed_days{ NAN };
+    
     double_option_t today_exchange_rate{ 1.0 };
     double_option_t ps{ DNAN };
     double_option_t ask_price{ DNAN };
@@ -73,11 +94,11 @@ double title_get_total_investment(const title_t* t);
 
 double title_get_day_change(const title_t* t, const stock_t* s);
 
-double title_get_total_value(const title_t* t, const stock_t* s);
+double title_get_total_value(const title_t* t);
 
-double title_get_total_gain(const title_t* t, const stock_t* s);
+double title_get_total_gain(const title_t* t);
 
-double title_get_total_gain_p(const title_t* t, const stock_t* s);
+double title_get_total_gain_p(const title_t* t);
 
 double title_get_yesterday_change(const title_t* t, const stock_t* s);
 
@@ -104,3 +125,9 @@ time_t title_get_last_transaction_date(const title_t* t, time_t* date = nullptr)
 time_t title_get_first_transaction_date(const title_t* t, time_t* date = nullptr);
 
 bool title_sold(const title_t* title);
+
+bool title_has_transactions(const title_t* title);
+
+double title_get_bought_price(const title_t* title);
+
+double title_get_sell_gain_rated(const title_t* title);

@@ -33,15 +33,11 @@
 typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_NONE = 0,
     REPORT_FORMULA_TITLE,
-    REPORT_FORMULA_TITLE_DATE,
     REPORT_FORMULA_CURRENCY,
     REPORT_FORMULA_PRICE,
     REPORT_FORMULA_DAY_CHANGE,
     REPORT_FORMULA_YESTERDAY_CHANGE,
     REPORT_FORMULA_BUY_QUANTITY,
-    REPORT_FORMULA_BUY_PRICE,
-    REPORT_FORMULA_TOTAL_INVESTMENT,
-    REPORT_FORMULA_TOTAL_VALUE,
     REPORT_FORMULA_TOTAL_GAIN,
     REPORT_FORMULA_TOTAL_GAIN_P,
     REPORT_FORMULA_TOTAL_FUNDAMENTAL,
@@ -247,6 +243,38 @@ FOUNDATION_STATIC void report_table_setup(report_handle_t report_handle, table_t
     table->row_end = report_table_row_end;
 }
 
+FOUNDATION_STATIC bool report_column_show_alternate_data()
+{
+    return ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) && ImGui::IsKeyDown(ImGuiKey_LeftCtrl);
+}
+
+FOUNDATION_STATIC cell_t report_column_get_buy_price(table_element_ptr_t element, const column_t* column)
+{
+    const title_t* t = *(title_t**)element;
+    if (t == nullptr || title_is_index(t))
+        return nullptr;
+
+    const bool show_alternate_buy_price = report_column_show_alternate_data();
+
+    if (!show_alternate_buy_price && title_sold(t))
+        return cell_t(t->buy_adjusted_price);
+
+    const double adjusted_price = math_ifzero(show_alternate_buy_price ? t->average_price_rated : t->average_price, t->buy_adjusted_price);
+
+    cell_t buy_price_cell(adjusted_price);
+    if (t->average_price_rated > adjusted_price)
+    {
+        buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
+        buy_price_cell.style.text_color = TEXT_WARN_COLOR;
+    }
+    else if (t->average_price_rated < 0)
+    {
+        buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
+        buy_price_cell.style.text_color = TEXT_GOOD_COLOR;
+    }
+    return buy_price_cell;
+}
+
 FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element, const column_t* column)
 {
     title_t* t = *(title_t**)element;
@@ -255,7 +283,7 @@ FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element
 
     // If all titles are sold, return the sold average price.
     if (title_sold(t))
-        return math_ifnan(t->sell_adjusted_price, t->sell_total_price / t->sell_total_quantity);
+        return t->sell_adjusted_price;
 
     if (t->average_ask_price > 0)
     {
@@ -302,9 +330,9 @@ FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_con
     const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (t->elapsed_days - t->wallet->average_days) / 20.0 / 100.0);
     if (!math_real_is_nan(avg))
     {
-        if (t->average_quantity == 0 && math_ifnan(t->sell_adjusted_quantity, 0) > 0)
+        if (t->average_quantity == 0 && math_ifnan(t->sell_total_adjusted_qty, 0) > 0)
         {
-            const double sell_gain_diff = (t->sell_adjusted_price - t->stock->current.adjusted_close) * t->sell_adjusted_quantity;
+            const double sell_gain_diff = (t->sell_adjusted_price - t->stock->current.adjusted_close) * t->sell_total_adjusted_qty;
             ImGui::TextColored(ImColor(sell_gain_diff < 0 ? TEXT_BAD_COLOR : TOOLTIP_TEXT_COLOR), " %s %.*s ",
                 sell_gain_diff > 0 ? "Saved" : "Lost", STRING_FORMAT(string_from_currency(math_abs(sell_gain_diff), "999 999 999 $")));
         }
@@ -337,42 +365,17 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
     case REPORT_FORMULA_TITLE:
         return t->code;
 
-    case REPORT_FORMULA_TITLE_DATE:
-        return t->date_average;
-
     case REPORT_FORMULA_BUY_QUANTITY:
-        return t->buy_total_quantity - t->sell_total_quantity;
-
-    case REPORT_FORMULA_BUY_PRICE:
-    {
-        double adjusted_price = !(ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) && ImGui::IsKeyDown(ImGuiKey_LeftCtrl)) ?
-            (math_ifzero(t->buy_adjusted_price, math_ifzero(t->average_price, t->buy_total_price / t->buy_total_quantity))) :
-            t->average_price_rated;
-        cell_t buy_price_cell(adjusted_price);
-        if (t->average_quantity == 0 || (t->average_price * max(t->exchange_rate.fetch(), t->today_exchange_rate.fetch())) < t->average_price_rated)
-        {
-            buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
-            buy_price_cell.style.text_color = TEXT_WARN_COLOR;
-        }
-        else if ((t->buy_total_price / t->buy_total_quantity) > (t->buy_adjusted_price * (1.0 + math_abs(t->stock->current.change_p) / 100.0)))
-        {
-            buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
-            buy_price_cell.style.text_color = TEXT_GOOD_COLOR;
-        }
-        return buy_price_cell;
-    }
+        return (double)math_round(t->average_quantity);
 
     case REPORT_FORMULA_ELAPSED_DAYS:
         return t->elapsed_days;
-
-    case REPORT_FORMULA_TOTAL_INVESTMENT:
-        return title_get_total_investment(t);
 
     case REPORT_FORMULA_PS:
         return t->ps.fetch();
 
     case REPORT_FORMULA_EXCHANGE_RATE:
-        return t->exchange_rate.fetch();
+        return t->average_exchange_rate;
     }
 
     // Stock accessors
@@ -390,9 +393,8 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
         case REPORT_FORMULA_DAY_CHANGE:	return stock_data->current.change_p;
 
         case REPORT_FORMULA_DAY_GAIN:			return title_get_day_change(t, stock_data);
-        case REPORT_FORMULA_TOTAL_VALUE:		return title_get_total_value(t, stock_data);
-        case REPORT_FORMULA_TOTAL_GAIN:			return title_get_total_gain(t, stock_data);
-        case REPORT_FORMULA_TOTAL_GAIN_P:		return title_get_total_gain_p(t, stock_data);
+        case REPORT_FORMULA_TOTAL_GAIN:			return title_get_total_gain(t);
+        case REPORT_FORMULA_TOTAL_GAIN_P:		return title_get_total_gain_p(t);
         case REPORT_FORMULA_YESTERDAY_CHANGE:	return title_get_yesterday_change(t, stock_data);
 
         default:
@@ -460,7 +462,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         const ImVec2& space = cell_rect.GetSize();
         const ImVec2& text_size = ImGui::CalcTextSize(formatted_code);
         const float button_width = text_size.y;
-        const bool has_orders = (title->buy_total_quantity > 0 || title->sell_total_quantity > 0);
+        const bool has_orders = title_has_transactions(title);
 
         ImGui::PushStyleCompact();
         int logo_banner_width = 0, logo_banner_height = 0, logo_banner_channels = 0;
@@ -642,12 +644,41 @@ FOUNDATION_STATIC cell_t report_column_get_fundamental_value(table_element_ptr_t
     return config_value_as_string(filter_value);
 }
 
+FOUNDATION_STATIC cell_t report_column_get_total_investment(table_element_ptr_t element, const column_t* column)
+{
+    title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return nullptr;
+
+    if (report_column_show_alternate_data())
+        return title->buy_total_price_rated;
+
+    return title_get_total_investment(title);
+}
+
+FOUNDATION_STATIC cell_t report_column_get_total_value(table_element_ptr_t element, const column_t* column)
+{
+    title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return nullptr;
+
+    return title_get_total_value(title);
+}
+
 FOUNDATION_STATIC cell_t report_column_get_name(table_element_ptr_t element, const column_t* column)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
         return nullptr;
     return title->stock->name;
+}
+
+FOUNDATION_STATIC cell_t report_column_get_date(table_element_ptr_t element, const column_t* column)
+{
+    const title_t* t = *(title_t**)element;
+    if (t == nullptr)
+        return nullptr;
+    return t->date_average;
 }
 
 FOUNDATION_STATIC void report_title_pattern_open(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
@@ -799,7 +830,7 @@ FOUNDATION_STATIC void report_title_total_gain_p_alerts_formatter(table_element_
     if (title == nullptr)
         return;
 
-    const double current_gain_p = title_get_total_gain_p(title, title->stock);
+    const double current_gain_p = title_get_total_gain_p(title);
     if (current_gain_p >= title->wallet->profit_ask * 100.0)
     {
         style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
@@ -839,20 +870,42 @@ FOUNDATION_STATIC void report_title_total_gain_p_alerts_formatter(table_element_
     }
 }
 
-FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_gain_total_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
-    title_t* title = *(title_t**)element;
-    if (title == nullptr)
+    const title_t* t = *(const title_t**)element;
+    if (t == nullptr)
         return;
 
-    const double avg = math_ifzero(title->average_price, title->stock->current.adjusted_close);
+    ImGui::Text(" Total Investment %12s ", string_from_currency(title_get_total_investment(t)).str);
+    ImGui::Text(" Total Value      %12s ", string_from_currency(title_get_total_value(t)).str);
+
+    if (t->average_exchange_rate != 1.0 && t->average_quantity > 0)
+    {
+        ImGui::Text(" Exchange Gain    %12s ", string_from_currency(t->average_exchange_rate * t->average_quantity).str);
+    }
+}
+
+FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    const title_t* t = *(const title_t**)element;
+    if (t == nullptr)
+        return;
+
+    const double bought_price = title_get_bought_price(t);
     ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-        " (%s $) Bought Price: %.2lf $ \n"
-        " (%.*s $) Average Cost: %.3lf $ \n"
-        " (Split) Adjusted Price: %.2lf $ ",
-        string_table_decode(title->stock->currency), math_ifzero(title->buy_total_price / title->buy_total_quantity, title->average_price),
-        STRING_FORMAT(title->wallet->preferred_currency), math_ifzero(title->average_price_rated, 0),
-        math_ifzero(title->buy_adjusted_price, 0));
+        " (%s $) Bought Price: %.2lf $ ",
+        string_table_decode(t->stock->currency), bought_price);
+
+    ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
+        " (%.*s $) Average Cost: %.3lf $ ",
+        STRING_FORMAT(t->wallet->preferred_currency), math_ifzero(t->average_price_rated, 0));
+
+    if (t->buy_adjusted_price != bought_price)
+    {
+        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
+            " (Split) Adjusted Price: %.2lf $ ",
+            math_ifzero(t->buy_adjusted_price, 0));
+    }
 }
 
 FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
@@ -1012,7 +1065,8 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     report_render_summary_info(report, "Avg. Days", report->wallet->average_days, integer_fmt);
 
     ImGui::TableNextRow();
-    const double today_exchange_rate = stock_exchange_rate(STRING_CONST("USD"), STRING_ARGS(string_const(SETTINGS.preferred_currency)));
+    string_const_t user_preferred_currency = string_const(SETTINGS.preferred_currency);
+    const double today_exchange_rate = stock_exchange_rate(STRING_CONST("USD"), STRING_ARGS(user_preferred_currency));
     report_render_summary_info(report, string_format_static_const("USD%s", SETTINGS.preferred_currency), today_exchange_rate, currency_fmt);
     if (ImGui::IsItemHovered())
     {
@@ -1025,7 +1079,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
             if (string_equal(SYMBOL_CONST(t->stock->currency), string_const("USD")))
             {
                 average_count++;
-                average_rate += t->exchange_rate.fetch();
+                average_rate += t->average_exchange_rate;
             }
         }
         average_rate /= average_count;
@@ -1272,7 +1326,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         report_column_get_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
 
     table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), 
-        L2(report_column_get_value(_1, _2, REPORT_FORMULA_TITLE_DATE)), COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
+        report_column_get_date, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
         .set_selected_callback(report_title_open_details_view);
 
     table_add_column(table, STRING_CONST("  " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"), 
@@ -1280,7 +1334,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .set_selected_callback(report_title_open_details_view);
 
     table_add_column(table, STRING_CONST("   Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE)
+        report_column_get_buy_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE)
         .set_selected_callback(report_title_open_buy_view)
         .set_tooltip_callback(report_title_adjusted_price_tooltip);
 
@@ -1329,13 +1383,14 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .set_tooltip_callback(report_title_dividends_total_tooltip);
 
     table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_INVESTMENT), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+        report_column_get_total_investment, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
     table_add_column(table, STRING_CONST("      V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_VALUE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+        report_column_get_total_value, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
 
     table_add_column(table, STRING_CONST("   Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"), 
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE)
-        .set_style_formatter(report_title_total_gain_alerts_formatter);
+        .set_style_formatter(report_title_total_gain_alerts_formatter)
+        .set_tooltip_callback(report_title_gain_total_tooltip);
     table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "), 
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
         .set_style_formatter(report_title_total_gain_p_alerts_formatter);
@@ -1535,14 +1590,17 @@ void report_summary_update(report_t* report)
             total_active_titles++;
         }
 
-        total_investment += math_ifnan(title_get_total_investment(t), 0);
+        const bool title_is_sold = title_sold(t);
+        if (!title_is_sold)
+            total_investment += title_get_total_investment(t);
 
         const stock_t* s = t->stock;
         const bool stock_valid = s && !math_real_is_nan(s->current.change_p);
         // Make sure the stock is still valid today, it might have been delisted.
         if (stock_valid)
         {
-            total_value += title_get_total_value(t, s);
+            if (!title_is_sold)
+                total_value += title_get_total_value(t);
             average_nq += s->current.change_p / 100.0;
             average_nq_count++;
 
@@ -1556,7 +1614,7 @@ void report_summary_update(report_t* report)
 
             title_resolved_count++;
         }
-        else
+        else if (!title_is_sold)
         {
             total_value += t->average_quantity * t->average_price;
         }
@@ -1567,14 +1625,14 @@ void report_summary_update(report_t* report)
 
         if (stock_valid && t->sell_total_quantity > 0)
         {
-            const double sell_gain_if_kept = (s->current.adjusted_close - t->sell_adjusted_price) * t->sell_adjusted_quantity;
+            const double sell_gain_if_kept = (s->current.adjusted_close - t->sell_adjusted_price) * t->sell_total_adjusted_qty;
             const double sell_p = (s->current.adjusted_close - t->sell_adjusted_price) / t->sell_adjusted_price;
             if (!math_real_is_nan(sell_p))
             {
                 total_sell_gain_if_kept_p += sell_p;
                 total_sell_gain_if_kept += sell_gain_if_kept;
                 total_title_sell_count++;
-                total_sell_gain_rated += t->sell_total_price_rated - ((t->buy_total_price_rated / t->buy_total_quantity) * t->sell_total_quantity);
+                total_sell_gain_rated += title_get_sell_gain_rated(t);
             }
         }
     }

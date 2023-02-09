@@ -676,7 +676,15 @@ bool stock_update(const char* code, size_t code_length, stock_handle_t& handle, 
 }
 
 day_result_t stock_get_eod(const char* code, size_t code_length, time_t at)
-{
+{    
+    const stock_t* s = stock_request(code, code_length, FetchLevel::EOD);
+    if (s && s->has_resolve(FetchLevel::EOD))
+    {
+        const day_result_t* ed = stock_get_EOD(s, at, true);
+        if (ed)
+            return *ed;
+    }
+
     day_result_t d{};
     string_const_t ticker = { code, code_length };
     string_const_t date_str = string_from_date(at);
@@ -710,6 +718,7 @@ day_result_t stock_get_eod(const char* code, size_t code_length, time_t at)
     return d;
 }
 
+// TODO: Cache these technical results and provide a quick access to them
 day_result_t stock_get_split(const char* code, size_t code_length, time_t at)
 {
     day_result_t d{};
@@ -744,12 +753,17 @@ day_result_t stock_get_split(const char* code, size_t code_length, time_t at)
     return d;
 }
 
+double stock_get_eod_price_factor(const char* code, size_t code_length, time_t at)
+{
+    return stock_get_eod(code, code_length, at).price_factor;
+}
+
 double stock_get_split_factor(const char* code, size_t code_length, time_t at)
 {
     day_result_t eod = stock_get_eod(code, code_length, at);
     day_result_t split = stock_get_split(code, code_length, at);
 
-    return split.close / eod.close;
+    return math_ifzero(split.close / eod.close, 1.0);
 }
 
 double stock_get_split_adjusted_factor(const char* code, size_t code_length, time_t at)
@@ -757,12 +771,7 @@ double stock_get_split_adjusted_factor(const char* code, size_t code_length, tim
     day_result_t eod = stock_get_eod(code, code_length, at);
     day_result_t split = stock_get_split(code, code_length, at);
 
-    return split.close / eod.adjusted_close;
-}
-
-double stock_get_eod_price_factor(const char* code, size_t code_length, time_t at)
-{
-    return stock_get_eod(code, code_length, at).price_factor;
+    return math_ifzero(split.close / eod.adjusted_close, 1.0);
 }
 
 //
