@@ -470,7 +470,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         if (logo_is_banner(title->code, title->code_length, 
                 logo_banner_width, logo_banner_height, logo_banner_channels, logo_banner_color, fill_color) &&
                 can_show_banner && 
-                (logo_banner_width / (logo_banner_height / text_size.y)) > space.x * 0.3f)
+                space.x > 225.0f)
         {
             const float ratio = logo_banner_height / text_size.y;
             logo_banner_height = text_size.y;
@@ -876,12 +876,14 @@ FOUNDATION_STATIC void report_title_gain_total_tooltip(table_element_ptr_const_t
     if (t == nullptr)
         return;
 
+    const double total_value = title_get_total_value(t);
     ImGui::Text(" Total Investment %12s ", string_from_currency(title_get_total_investment(t)).str);
-    ImGui::Text(" Total Value      %12s ", string_from_currency(title_get_total_value(t)).str);
+    ImGui::Text(" Total Value      %12s ", string_from_currency(total_value).str);
 
     if (t->average_exchange_rate != 1.0 && t->average_quantity > 0)
     {
-        ImGui::Text(" Exchange Gain    %12s ", string_from_currency(t->average_exchange_rate * t->average_quantity).str);
+        const double exchange_diff = t->today_exchange_rate.fetch() - t->average_exchange_rate;
+        ImGui::Text(" Exchange Gain    %12s ", string_from_currency(exchange_diff * total_value).str);
     }
 }
 
@@ -1275,7 +1277,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     if (time_elapsed(report->fully_resolved) < 1.0)
         return false;
 
-    TIME_TRACKER(50.0, "report_initial_sync");
+    //TIME_TRACKER(50.0, "report_initial_sync");
 
     bool fully_resolved = true;
     const int title_count = array_size(report->titles);
@@ -1764,7 +1766,7 @@ bool report_render_dialog_begin(string_const_t name, bool* show_ui, unsigned int
         return false;
     _last_show_ui_ptr = show_ui;
 
-    if (*show_ui && shortcut_executed(256/*GLFW_KEY_ESCAPE*/))
+    if (*show_ui && shortcut_executed(ImGuiKey_Escape))
     {
         *show_ui = false;
     }

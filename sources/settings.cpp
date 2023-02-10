@@ -109,8 +109,9 @@ void settings_draw()
         ImGui::TextUnformatted("Font scaling");
 
         ImGui::NextColumn();
-        if (ImGui::InputFloat("##FontScaling", &SETTINGS.font_scaling, 0.5, 0, "%.2lf", ImGuiInputTextFlags_AutoSelectAll))
+        if (ImGui::InputFloat("##FontScaling", &SETTINGS.font_scaling, 0.25, 0, "%.2lf", ImGuiInputTextFlags_AutoSelectAll))
         {
+            imgui_set_font_ui_scale(SETTINGS.font_scaling);
         }
 
         ImGui::NextColumn();

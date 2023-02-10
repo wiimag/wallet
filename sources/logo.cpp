@@ -226,7 +226,7 @@ FOUNDATION_STATIC void logo_build_stats(logo_image_t* image)
     image->most_common_color = rgb_to_abgr(max_color);
     
     const float max_color_coverage = max_count / (image->width * image->height * 1.0f) * 100.0f;
-    const bool discard_bg_color = max_color_coverage > 85.0f;
+    const bool discard_bg_color = true;//max_color_coverage > 85.0f;
     // Find the image size by excluding transparent pixels        
     {
         uint32_t min_x = 0;
@@ -258,8 +258,12 @@ FOUNDATION_STATIC void logo_build_stats(logo_image_t* image)
                 }
                 else
                 {
+                    const uint8_t r = pixels[0];
+                    const uint8_t g = pixels[1];
+                    const uint8_t b = pixels[2];
+
                     const uint32_t c = (pixels[0] << 16) | (pixels[1] << 8) | pixels[2];
-                    discard = (c > 0xEEEEEE) || (c < 0x111111) || (discard_bg_color && c == max_color);
+                    discard = (r > 0xEE && g > 0xEE && b > 0xEE) || (r < 0x11 && g < 0x11 && b < 0x11) || (discard_bg_color && c == max_color);
                 }
 
                 if (!discard)
@@ -290,9 +294,9 @@ FOUNDATION_STATIC void logo_build_stats(logo_image_t* image)
         image->max_x = max_x;
         image->max_y = max_y;
         new_height = max_y - min_y;
-        
+
         const float ratio = (1.0f - new_height / (float)image->height) * 100.0f;
-        if (ratio > 20.0f && (new_width < 2 || new_width > 45) && new_height > 20)
+        if (ratio > 20.0f && /*(new_width <= 5 || new_width >= 34) &&*/ new_height > 20 && ((float)image->width / (max_y - min_y + 1) > 2.24f))
         {
             log_debugf(HASH_LOGO, STRING_CONST("Removing logo blank lines: %d (%X / %.3g) > %.3g > %s (%dx%d) > (%dx%d)"),
                 image->channels, max_color, max_color_coverage, ratio, SYMBOL_CSTR(image->symbol), image->width, image->height, new_width, new_height);
@@ -534,14 +538,26 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& _size /
         const float hratio = rendered_size.x / width;
         rendered_size.y = height * hratio;
     }
-    const ImVec2& spos = ImGui::GetCursorScreenPos();
+    ImVec2 spos = ImGui::GetCursorScreenPos();
     const ImU32 bg_logo_banner_color = imgui_color_text_for_background(banner_color);
     const ImRect logo_rect(spos, spos + rendered_size);
     ImDrawList* dl = ImGui::GetWindowDrawList();
     if (channels == 4 && background)
         dl->AddRectFilled(logo_rect.Min, logo_rect.Max, bg_logo_banner_color); // ABGR
 
-    dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min, logo_rect.Max);
+    // Fit the width and height in the rendered size by keeping the aspect ratio and centering the image
+    const float hratio = rendered_size.x / width;
+    const float vratio = rendered_size.y / height;
+    const float ratio = hratio < vratio ? hratio : vratio;
+    const float w = width * ratio;
+    const float h = height * ratio;
+    const float x = (rendered_size.x - w) * 0.5f;
+    const float y = (rendered_size.y - h) * 0.5f;
+    dl->PushClipRect(logo_rect.Min, logo_rect.Max, true);
+    dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min + ImVec2(x, y), logo_rect.Min + ImVec2(x + w, y + h));
+    dl->PopClipRect();
+    
+    //dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min, logo_rect.Max);
     if (fill_rect)
         *fill_rect = logo_rect;
     if (show_tooltip && ImGui::IsWindowFocused() && ImGui::IsMouseHoveringRect(logo_rect.Min, logo_rect.Max))
@@ -578,7 +594,7 @@ bool logo_is_banner(const char* symbol, size_t symbol_length, int& banner_width,
         image_bg_color = image->most_common_color;
         fill_color = logo_get_fill_color(image);
 
-        if ((float)image->width > image->height * 1.75f)
+        if ((float)image->width / image->height > 2.24f)
             return true;
     }
 

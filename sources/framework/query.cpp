@@ -430,7 +430,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
 
 bool query_execute_json(const char* query, query_format_t format, string_t body, const query_callback_t& callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
-    TIME_TRACKER(500.0, "query_execute_json(%s)", query);
+    //TIME_TRACKER(500.0, "query_execute_json(%s)", query);
     MEMORY_TRACKER(HASH_QUERY);
 
     static thread_local char query_copy_buffer[2048];
@@ -478,7 +478,6 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
         else
         {
             log_debugf(HASH_QUERY, STRING_CONST("Updating query %s"), query);
-            warning_logged = true;
         }
     }
 
@@ -487,7 +486,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
         return false;
 
     if (!warning_logged)
-        log_debugf(HASH_QUERY, STRING_CONST("Execute query %s"), query);
+        log_infof(HASH_QUERY, STRING_CONST("Executing query %s"), query);
     if ((has_body_content ? req.post(query, body) : req.execute(query)) || format == FORMAT_JSON_WITH_ERROR)
     {
         json_object_t json = json_parse(req.json);
@@ -501,7 +500,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
             if (cache_file_stream == nullptr)
                 return false;
 
-            log_debugf(0, STRING_CONST("Writing query file %.*s"), STRING_FORMAT(cache_file_path));
+            log_debugf(0, STRING_CONST("Writing query %.*s to %.*s"), STRING_FORMAT(query_copy), STRING_FORMAT(cache_file_path));
             stream_write_string(cache_file_stream, json.buffer, strlen(json.buffer));
             stream_deallocate(cache_file_stream);
         }

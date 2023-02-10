@@ -408,9 +408,6 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
             t->buy_total_adjusted_qty += split_quantity;
             t->buy_total_adjusted_price += adjusted_buy_cost;
             t->buy_total_price_rated_adjusted += adjusted_buy_cost * order_exchange_rate;
-
-            log_debugf(HASH_TITLE, STRING_CONST("Title '%.*s' bought %.0lf (%d) shares at %.2lf $ (%.2lf $) on %.*s (Dividend Yielded: %.2lf $)"),
-                STRING_FORMAT(title_code), qty, math_round(split_quantity), price, adjusted_buy_cost, STRING_FORMAT(date), order_dividend_yielded);
         }
         else
         {
@@ -462,9 +459,6 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
             t->average_price = total_buy_limit_price / total_ask_count;
         t->average_ask_price = total_ask_price / total_ask_count;
     }
-
-    log_debugf(HASH_TITLE, STRING_CONST("Title '%.*s' initialized: %lf x %.2lf $"),
-        STRING_FORMAT(title_code), t->average_quantity, t->average_price);
 
     t->ps.reset([t](double& value){ return title_fetch_ps(t, value); });
     t->ask_price.reset([t](double& value){ return title_fetch_ask_price(t, value); });

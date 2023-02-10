@@ -46,7 +46,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
     {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("History");
-        ImGui::MoveCursor(available_space - imgui_get_font_ui_scale(158.0f), 0, true);
+        ImGui::MoveCursor(available_space - imgui_get_font_ui_scale(140.0f), 0, true);
         if (ImGui::Checkbox("##History", &wallet->track_history))
             updated |= true;
         if (ImGui::IsItemHovered())
@@ -59,8 +59,8 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Target %");
-        ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(128.0f), 0, true);
-        ImGui::SetNextItemWidth(control_width);
+        ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(26.0f), 0, true);
+        ImGui::SetNextItemWidth(imgui_get_font_ui_scale(96.0f));
         double p100 = wallet->main_target * 100.0;
         if (ImGui::InputDouble("##Target%", &p100, 0, 0, "%.3g %%", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
         {
@@ -79,8 +79,8 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         char currency[64];
         string_copy(STRING_CONST_CAPACITY(currency), STRING_ARGS(wallet->preferred_currency));
 
-        ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(128.0f), 0, true);
-        ImGui::SetNextItemWidth(control_width);
+        ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(26.0f), 0, true);
+        ImGui::SetNextItemWidth(imgui_get_font_ui_scale(96.0f));
         if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_CONST_CAPACITY(currency), ImGuiInputTextFlags_AutoSelectAll))
         {
             char* old = wallet->preferred_currency.str;
@@ -96,7 +96,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Fund");
-        ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(70.0f), 0, true);
+        ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(60.0f), 0, true);
         ImGui::SetNextItemWidth(control_width);
         if (ImGui::InputDouble("##Fund", &wallet->funds, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
             updated |= true;

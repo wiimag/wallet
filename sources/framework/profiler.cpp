@@ -286,7 +286,7 @@ void profiler_menu_timer()
         tick_t elapsed_ticks = time_diff(last_frame_tick, time_current());
 
         static unsigned index = 0;
-        static double elapsed_times[30] = { 0.0 };
+        static double elapsed_times[16] = { 0.0 };
         elapsed_times[index++ % ARRAY_COUNT(elapsed_times)] = time_ticks_to_milliseconds(elapsed_ticks);
         const double smooth_elapsed_time = math_average(elapsed_times, ARRAY_COUNT(elapsed_times));
         const double tick_elapsed_time = main_tick_elapsed_time_ms();

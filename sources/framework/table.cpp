@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 equals-forty-two.com All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
@@ -819,7 +819,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
 
 FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
 {
-    TIME_TRACKER(0.008, "Render table %.*s", STRING_FORMAT(table->name));
+    //TIME_TRACKER(0.008, "Render table %.*s", STRING_FORMAT(table->name));
 
     ImGuiListClipper clipper;
     clipper.Begin(table->rows_visible_count, table->row_fixed_height);

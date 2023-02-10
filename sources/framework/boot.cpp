@@ -985,7 +985,7 @@ FOUNDATION_STATIC void setup_imgui(GLFWwindow* window)
     
     imgui_glfw_init(window, true);
 
-    float xscale = session_get_float("font_scaling"), yscale = 1.0f;
+    float xscale = session_get_float("font_scaling1"), yscale = 1.0f;
     GLFWmonitor* monitor = glfw_find_window_monitor(window);
     glfwGetMonitorContentScale(monitor, &xscale, &yscale);
     if (xscale > 1)

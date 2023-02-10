@@ -479,7 +479,7 @@ void report_render_title_details(report_t* report, title_t* title)
     ImGui::SetNextWindowSize(ImVec2(show_ask_price ? window_base_size + 200.0f : window_base_size, 650.0f), ImGuiCond_Once);
 
     string_const_t id = report_title_order_window_id(title);
-    if (!report_render_dialog_begin(id, &title->show_details_ui))
+    if (!report_render_dialog_begin(id, &title->show_details_ui, ImGuiWindowFlags_NoCollapse))
         return;
 
     static table_t* table = nullptr;
@@ -528,7 +528,7 @@ void report_render_title_details(report_t* report, title_t* title)
 void report_render_buy_lot_dialog(report_t* report, title_t* title)
 {
     string_const_t title_buy_popup_id = string_format_static(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##10"), title->code_length, title->code);
-    if (!report_render_dialog_begin(title_buy_popup_id, &title->show_buy_ui, ImGuiWindowFlags_NoResize))
+    if (!report_render_dialog_begin(title_buy_popup_id, &title->show_buy_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
         return;
 
     static double quantity = 100.0f;
@@ -601,7 +601,7 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         ImGui::NextColumn();
         ImGui::NextColumn();
 
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(211.0f));
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(184.0f));
         if (ImGui::Button("Cancel"))
             title->show_buy_ui = false;
         ImGui::SameLine();
@@ -628,7 +628,7 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
 void report_render_sell_lot_dialog(report_t* report, title_t* title)
 {
     string_const_t title_popup_id = string_format_static(STRING_CONST(ICON_MD_SELL " Sell %.*s##6"), title->code_length, title->code);
-    if (!report_render_dialog_begin(title_popup_id, &title->show_sell_ui, ImGuiWindowFlags_NoResize))
+    if (!report_render_dialog_begin(title_popup_id, &title->show_sell_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
         return;
 
     static double quantity = 100.0f;
@@ -648,9 +648,9 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
     }
 
     ImGui::MoveCursor(2, 10);
-    if (ImGui::BeginChild("##Content", ImVec2(860.0f, 175.0f), false))
+    if (ImGui::BeginChild("##Content", ImVec2(imgui_get_font_ui_scale(860.0f), imgui_get_font_ui_scale(155.0f)), false))
     {
-        const float control_width = 255.0f;
+        const float control_width = imgui_get_font_ui_scale(255.0f);
         ImGui::Columns(3);
 
         if (ImGui::IsWindowAppearing())
@@ -683,7 +683,7 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
 
         ImGui::Text("Sell Value: %.2lf $", quantity * price);
 
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - 226);
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(188));
 
         ImGui::MoveCursor(0, -5);
         if (ImGui::Button("Cancel"))

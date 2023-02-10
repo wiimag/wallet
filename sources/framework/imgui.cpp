@@ -130,10 +130,12 @@ bool imgui_draw_splitter(const char* id,
     float initial_propertion,
     bool preserve_proportion)
 {
-    char splitter_session_key[256];
     ImVec2 space = ImGui::GetContentRegionAvail();
-    const float space_left = (orientation == IMGUI_SPLITTER_HORIZONTAL ? space.x : space.y);
+    if (space.x <= 0 || space.y <= 0)
+        return false;
 
+    char splitter_session_key[256];
+    const float space_left = (orientation == IMGUI_SPLITTER_HORIZONTAL ? space.x : space.y);
     string_format(STRING_CONST_CAPACITY(splitter_session_key), STRING_CONST("%s_splitter_pos"), id);
     float splitter_pos = session_get_float(splitter_session_key, initial_propertion > 0.0f ? space_left * initial_propertion : space_left / 2.0f);
     if (!imgui_draw_splitter(id, &splitter_pos, left_callback, right_callback, orientation, frame_flags, preserve_proportion))
@@ -158,12 +160,12 @@ bool imgui_draw_splitter(const char* id, float* splitter_pos,
 
     if (!right_callback)
     {		
-        if (ImGui::BeginChild(id, space, true, frame_flags))
+        //if (ImGui::BeginChild(id, space, true, frame_flags))
         {
             const ImRect view_rect = ImRect(screen_position, ImVec2(screen_position.x + space.x, screen_position.y + space.y));
             left_callback(view_rect);
         }
-        ImGui::EndChild();
+        //ImGui::EndChild();
         return false;
     }
 
@@ -313,14 +315,13 @@ float imgui_get_font_ui_scale(float value /*= 1.0f*/)
 {
     if (math_float_is_zero(_global_font_scaling))
         _global_font_scaling = session_get_float("font_scaling", 1.0f);
-    return _global_font_scaling * value;
+    return _global_font_scaling * value * ImGui::GetIO().FontGlobalScale;
 }
 
 void imgui_set_font_ui_scale(float scale)
 {
-    FOUNDATION_ASSERT(scale <= 0.1f);
-    _global_font_scaling = scale;
-    session_set_float("font_scaling", _global_font_scaling);
+    ImGui::GetIO().FontGlobalScale = 1.0f + (scale - _global_font_scaling);
+    session_set_float("font_scaling", scale);
 }
 
 ImRect imgui_get_available_rect()
