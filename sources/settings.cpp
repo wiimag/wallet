@@ -82,7 +82,7 @@ void settings_draw()
         }
 
         ImGui::NextColumn();
-        const ImVec2 logo_banner_size = ImVec2(imgui_get_font_ui_scale(200.0f), imgui_get_font_ui_scale(40.0f));
+        ImVec2 logo_banner_size = ImVec2(imgui_get_font_ui_scale(200.0f), imgui_get_font_ui_scale(40.0f));
         if (SETTINGS.show_logo_banners)
         {
             logo_render(STRING_CONST("KHC.US"), logo_banner_size, true, false);

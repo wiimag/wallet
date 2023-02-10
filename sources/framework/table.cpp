@@ -782,6 +782,10 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
                 column.tooltip(element, &column, &cell);
                 ImGui::EndTooltip();
             }
+            else if (column.flags & COLUMN_NUMBER_ABBREVIATION && cell.format == COLUMN_FORMAT_NUMBER && cell.number > 999)
+            {
+                ImGui::SetTooltip("%lg", cell.number);
+            }
         }
 
         // Handle contextual menu

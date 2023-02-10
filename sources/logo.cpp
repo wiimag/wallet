@@ -181,7 +181,7 @@ FOUNDATION_STATIC bool logo_thumbnail_is_cached(logo_image_t* image)
     return false;
 }
 
-FOUNDATION_STATIC void logo_build_stats(logo_image_t* image)
+FOUNDATION_STATIC void logo_process_image(logo_image_t* image)
 {
     FOUNDATION_ASSERT(image && image->data);
     
@@ -296,7 +296,7 @@ FOUNDATION_STATIC void logo_build_stats(logo_image_t* image)
         new_height = max_y - min_y;
 
         const float ratio = (1.0f - new_height / (float)image->height) * 100.0f;
-        if (ratio > 20.0f && /*(new_width <= 5 || new_width >= 34) &&*/ new_height > 20 && ((float)image->width / (max_y - min_y + 1) > 2.24f))
+        if (ratio > 20.0f && new_height > 20 && ((float)image->width / (max_y - min_y + 1) > 2.24f))
         {
             log_debugf(HASH_LOGO, STRING_CONST("Removing logo blank lines: %d (%X / %.3g) > %.3g > %s (%dx%d) > (%dx%d)"),
                 image->channels, max_color, max_color_coverage, ratio, SYMBOL_CSTR(image->symbol), image->width, image->height, new_width, new_height);
@@ -366,7 +366,7 @@ FOUNDATION_STATIC int logo_image_download(void* payload)
         return image->data ? (image->status = STATUS_OK) : (image->status = STATUS_ERROR_LOAD_FAILURE);
     }
 
-    logo_build_stats(image);
+    logo_process_image(image);
 
     // Load image as a texture
     FOUNDATION_ASSERT(!bgfx::isValid(image->texture));
@@ -499,7 +499,7 @@ FOUNDATION_STATIC ImU32 logo_get_fill_color(const logo_image_t* image)
 // # PUBLIC API
 //
 
-bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& _size /*= ImVec2(0, 0)*/, bool background /*= false*/, bool show_tooltip /*= true*/, ImRect* fill_rect /*= nullptr*/)
+bool logo_render(const char* symbol, size_t symbol_length, ImVec2& rendered_size, bool background /*= false*/, bool show_tooltip /*= true*/, ImRect* fill_rect /*= nullptr*/)
 {
     MEMORY_TRACKER(HASH_LOGO);
 
@@ -531,7 +531,6 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& _size /
     if (!bgfx::isValid(texture))
         return false;
 
-    ImVec2 rendered_size = _size;
     if (rendered_size.x == 0)
     {
         rendered_size.x = ImGui::GetContentRegionAvail().x;
@@ -539,25 +538,34 @@ bool logo_render(const char* symbol, size_t symbol_length, const ImVec2& _size /
         rendered_size.y = height * hratio;
     }
     ImVec2 spos = ImGui::GetCursorScreenPos();
-    const ImU32 bg_logo_banner_color = imgui_color_text_for_background(banner_color);
+    spos.y = (float)math_ceil(spos.y + 0.5f);
+
+    if (channels == 3)
+        rendered_size.y = (float)math_floor(rendered_size.y + 0.5f);
     const ImRect logo_rect(spos, spos + rendered_size);
+
+    const ImU32 bg_logo_banner_color = imgui_color_text_for_background(banner_color);
     ImDrawList* dl = ImGui::GetWindowDrawList();
+
+    dl->PushClipRect(logo_rect.Min, logo_rect.Max, true);
     if (channels == 4 && background)
         dl->AddRectFilled(logo_rect.Min, logo_rect.Max, bg_logo_banner_color); // ABGR
 
     // Fit the width and height in the rendered size by keeping the aspect ratio and centering the image
-    const float hratio = rendered_size.x / width;
-    const float vratio = rendered_size.y / height;
+    const float hratio = rendered_size.x / (width);
+    const float vratio = rendered_size.y / (height);
     const float ratio = hratio < vratio ? hratio : vratio;
-    const float w = width * ratio;
-    const float h = height * ratio;
-    const float x = (rendered_size.x - w) * 0.5f;
+    const float w = math_floor(width * ratio);
+    const float x = 0.0f;//(rendered_size.x - w) * 0.5f;
+    const float h = math_floor(height * ratio);
     const float y = (rendered_size.y - h) * 0.5f;
-    dl->PushClipRect(logo_rect.Min, logo_rect.Max, true);
-    dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min + ImVec2(x, y), logo_rect.Min + ImVec2(x + w, y + h));
+
+    const float yoffset = channels == 3 ? 0.0 : 2.0f;
+    const float hoffset = channels == 3 ? 0.0 : 4.0f;
+
+    dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min + ImVec2(x, y - yoffset), logo_rect.Min + ImVec2(x + w, y + h - hoffset));
     dl->PopClipRect();
     
-    //dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min, logo_rect.Max);
     if (fill_rect)
         *fill_rect = logo_rect;
     if (show_tooltip && ImGui::IsWindowFocused() && ImGui::IsMouseHoveringRect(logo_rect.Min, logo_rect.Max))
@@ -654,8 +662,8 @@ bool logo_render_banner(const char* symbol, size_t symbol_length, const ImRect& 
         const float height_scale = logo_banner_channels == 4 ? 1.0f : rect.GetHeight() / logo_banner_height;
         if (logo_banner_channels == 3)
             ImGui::MoveCursor(-style.FramePadding.x, -style.FramePadding.y - 1.0f, false);
-        if (!logo_render(STRING_ARGS(code),
-            ImVec2(logo_banner_width * height_scale, logo_banner_height * height_scale), false, false))
+        ImVec2 logo_size = ImVec2(logo_banner_width * height_scale, logo_banner_height * height_scale);
+        if (!logo_render(STRING_ARGS(code), logo_size, false, false))
         {
             ImGui::TextUnformatted(STRING_RANGE(code));
         }
@@ -695,11 +703,11 @@ bool logo_render_banner(const char* symbol, size_t symbol_length, const ImRect& 
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             selected = true;
 
-        float logo_size = imgui_get_font_ui_scale(32.0f);
+        ImVec2 logo_size(imgui_get_font_ui_scale(32.0f), imgui_get_font_ui_scale(32.0f));
         float space_left = rect.GetWidth() - code_width;
-        ImGui::MoveCursor(space_left - logo_size + imgui_get_font_ui_scale(4.0f), 0, true);
-        logo_render(STRING_ARGS(code), ImVec2(logo_size, logo_size), true, true);
-        ImGui::Dummy(ImVec2(logo_size, logo_size));
+        ImGui::MoveCursor(space_left - logo_size.x + imgui_get_font_ui_scale(4.0f), 0, true);
+        logo_render(STRING_ARGS(code), logo_size, true, true);
+        ImGui::Dummy(logo_size);
 
         if (logo_banner_width > 0)
             ImGui::PopStyleColor();

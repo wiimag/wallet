@@ -100,6 +100,9 @@ FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, u
         SHARED_READ_LOCK(_db_lock);
         stock_t* entry = &_db_stocks[index];
 
+        if (entry->current.date != 0 && entry->current.date != d.date)
+            array_push(entry->previous, entry->current);
+
         if (entry->current.date != d.date && !math_real_is_nan(d.close))
         {
             entry->current = d;
@@ -692,6 +695,9 @@ day_result_t stock_get_eod(const char* code, size_t code_length, time_t at)
 
 day_result_t stock_get_split(const char* code, size_t code_length, time_t at)
 {
+    if (math_abs(time_elapsed_days(at, time_now())) < 2)
+        return stock_get_eod(code, code_length, at);
+
     // TODO: Cache these technical results and provide a quick access to them
     day_result_t d{};
     string_const_t ticker = { code, code_length };
@@ -732,9 +738,12 @@ double stock_get_eod_price_factor(const char* code, size_t code_length, time_t a
 
 double stock_get_split_factor(const char* code, size_t code_length, time_t at)
 {
+    if (math_abs(time_elapsed_days(at, time_now())) <= 3)
+        return 1.0;
+
     day_result_t eod = stock_get_eod(code, code_length, at);
     if ((math_abs(eod.adjusted_close - eod.close) / min(eod.close, eod.adjusted_close)) < 1.0)
-        return eod.price_factor;
+        return 1.0;
         
     day_result_t split = stock_get_split(code, code_length, at);
     return math_ifzero(split.close / eod.close, 1.0);

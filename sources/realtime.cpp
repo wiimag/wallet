@@ -421,7 +421,8 @@ FOUNDATION_STATIC cell_t realtime_table_draw_title(table_element_ptr_t element, 
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         ImRect logo_rect;
-        if (!logo_render(s->code, string_length(s->code), {}, true, false, &logo_rect))
+        ImVec2 logo_size{};
+        if (!logo_render(s->code, string_length(s->code), logo_size, true, false, &logo_rect))
             ImGui::TextUnformatted(s->code);
         else
         {
