@@ -190,6 +190,7 @@ struct function<R(Args...)>
 
     FOUNDATION_FORCEINLINE R operator()(Args... args) const
     {
+        FOUNDATION_ASSERT(this->handler);
         if (closure_size == 0)
             return ((functor_t)this->handler)(std::forward<Args>(args)...);
         return this->handler(get_closure_ptr(), std::forward<Args>(args)...);
@@ -197,6 +198,8 @@ struct function<R(Args...)>
 
     FOUNDATION_FORCEINLINE R invoke(Args... args) const
     {
+        if (this->handler == nullptr)
+            return R();
         if (closure_size == 0)
             return ((functor_t)this->handler)(std::forward<Args>(args)...);
         return this->handler(get_closure_ptr(), std::forward<Args>(args)...);

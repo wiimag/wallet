@@ -293,6 +293,70 @@ thread_start(thread_t* thread) {
 	return true;
 }
 
+FOUNDATION_STATIC void thread_close_all_windows(thread_t* thread)
+{
+#if FOUNDATION_PLATFORM_WINDOWS
+    // Get all windows for the specified thread.
+    // If the thread is the main thread, get all windows for the current process.
+    DWORD thread_id = thread->osid;
+    if (!thread_id)
+        thread_id = GetCurrentThreadId();
+    DWORD process_id = GetCurrentProcessId();
+    HWND window = nullptr;
+    while ((window = FindWindowEx(nullptr, window, nullptr, nullptr)) != nullptr) {
+        DWORD window_thread_id = GetWindowThreadProcessId(window, nullptr);
+        if (window_thread_id == thread_id) {
+            // Post WM_CLOSE to the window
+            PostMessage(window, WM_CLOSE, 0, 0);
+        }
+    }
+    
+#endif
+}
+
+bool
+thread_abort(thread_t* thread)
+{
+	FOUNDATION_ASSERT(thread);
+	thread_signal(thread);
+#if FOUNDATION_PLATFORM_WINDOWS
+    if (thread->handle) {
+		thread_close_all_windows(thread);
+		thread_signal(thread);
+        DWORD wait_result = WaitForSingleObject((HANDLE)thread->handle, 100);
+		if (wait_result != 0) {
+			if (TerminateThread((HANDLE)thread->handle, -1)) {
+                CloseHandle((HANDLE)thread->handle);
+                atomic_store32(&thread->state, 5, memory_order_release);
+				thread->handle = 0;
+            }
+		} else {
+			CloseHandle((HANDLE)thread->handle);
+			atomic_store32(&thread->state, 4, memory_order_release);
+			thread->handle = 0;
+		}
+    }
+    
+#elif FOUNDATION_PLATFORM_POSIX
+    void* result = 0;
+    if (thread->handle) {
+		int join_result = pthread_tryjoin_np((pthread_t)thread->handle, &result);
+		if (join_result != 0) {
+            pthread_cancel((pthread_t)thread->handle);
+            pthread_join((pthread_t)thread->handle, &result);
+			atomic_store32(&thread->state, 5, memory_order_release);
+		}
+		else
+			atomic_store32(&thread->state, 4, memory_order_release);        
+		thread->handle = 0;
+    }
+#else
+	#error Not implemented
+#endif
+
+	return atomic_load32(&thread->state, memory_order_acquire) == 5;
+}
+
 void*
 thread_join(thread_t* thread) {
 #if FOUNDATION_PLATFORM_WINDOWS

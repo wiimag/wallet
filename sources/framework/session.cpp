@@ -141,8 +141,8 @@ void session_setup(const char* root_path)
     // Load config// Attempt to backup the active session if not running tests.
     if (!main_is_running_tests() && fs_is_directory(STRING_ARGS(user_dir)))
         session_backup(STRING_ARGS(user_dir));
-
-    if (fs_make_directory(STRING_ARGS(user_dir)))
+        
+    if (main_is_graphical_mode() && fs_make_directory(STRING_ARGS(user_dir)))
         ImGui::LoadIniSettingsFromDisk(session_get_user_file_path(STRING_CONST(IMGUI_FILE_NAME)).str);
     
     session_load_config();
@@ -178,7 +178,8 @@ void session_save()
     if (!fs_is_directory(STRING_ARGS(user_dir)))
         return;
 
-    ImGui::SaveIniSettingsToDisk(session_get_user_file_path(STRING_CONST(IMGUI_FILE_NAME)).str);
+    if (main_is_graphical_mode())
+        ImGui::SaveIniSettingsToDisk(session_get_user_file_path(STRING_CONST(IMGUI_FILE_NAME)).str);
     
     config_write_file(session_get_file_path(), _session_config,
           CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS |

@@ -19,6 +19,10 @@ ITaskbarList3* g_task_bar_list = nullptr;
 void progress_initialize()
 {
     #if FOUNDATION_PLATFORM_WINDOWS
+
+        if (_window_handle == nullptr)
+            return;
+    
         CoCreateInstance(
             CLSID_TaskbarList, NULL, CLSCTX_ALL,
             IID_ITaskbarList3, (void**)&g_task_bar_list);
@@ -33,6 +37,10 @@ void progress_initialize()
 void progress_stop()
 {
     #if FOUNDATION_PLATFORM_WINDOWS
+
+        if (_window_handle == nullptr)
+            return;
+
         FOUNDATION_ASSERT(g_task_bar_list);
 
         FlashWindow(_window_handle, FALSE);
@@ -64,7 +72,7 @@ void progress_finalize()
 void progress_set(size_t current, size_t total)
 {
     #if FOUNDATION_PLATFORM_WINDOWS
-        if (!g_task_bar_list)
+        if (!g_task_bar_list || _window_handle == nullptr)
             return;
         g_task_bar_list->SetProgressValue(_window_handle, current, total);
     #elif FOUNDATION_PLATFORM_MACOS

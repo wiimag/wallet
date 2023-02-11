@@ -317,6 +317,7 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
         }
         else if (!logged_skip_eod_data)
         {
+            SHARED_READ_LOCK(_db_lock);
             string_const_t ticker = SYMBOL_CONST(_db_stocks[index].code);
             log_debugf(HASH_STOCK, STRING_CONST("Skipping EOD result for %.*s on %.*s using %.*s"), 
                 STRING_FORMAT(ticker), STRING_FORMAT(date_str), STRING_FORMAT(json.query));

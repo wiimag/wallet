@@ -922,3 +922,12 @@ time_t time_make(int year, int month, int day, int hour, int minute, int second,
     t.tm_isdst = -1;
     return mktime(&t);
 }
+
+bool time_is_weekend()
+{
+    tm tm_now;
+    const time_t now = time_now();
+    if (!time_to_local(now, &tm_now))
+        return false;
+    return (tm_now.tm_wday == 0) || (tm_now.tm_wday == 6);
+}

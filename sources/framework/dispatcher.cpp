@@ -15,6 +15,16 @@
 #include <foundation/event.h>
 #include <foundation/hashstrings.h>
 
+struct dispatcher_thread_t
+{
+    thread_t* thread;
+    
+    void* result;
+    void* payload;
+    function<void* (void*)> thread_fn;
+    function<void(void*)> complted_fn;
+};
+
 struct event_listener_t
 {
     dispatcher_event_listener_id_t id;
@@ -53,7 +63,7 @@ static event_listener_t* _event_listeners = nullptr;
 // # PRIVATE
 //
 
-FOUNDATION_STATIC bool dispatcher_process_events()
+FOUNDATION_EXTERN bool dispatcher_process_events()
 {
     PERFORMANCE_TRACKER("dispatcher_process_events");
 
@@ -288,6 +298,65 @@ bool dispatcher_wait_for_wakeup_main_thread(int timeout_ms)
     return _main_thread_wake_up_event.wait(timeout_ms) == 0;
 }
 
+FOUNDATION_STATIC void dispatch_execute_thread_completed(dispatcher_thread_t* dt)
+{
+    FOUNDATION_ASSERT(dt);
+    
+    thread_signal(dt->thread);
+    dt->complted_fn.invoke(dt->result);
+
+    thread_deallocate(dt->thread);
+
+    dt->thread_fn.~function();
+    dt->complted_fn.~function();
+    memory_deallocate(dt);
+}
+
+dispatcher_thread_id dispatch_thread(const function<void*(void*)>& thread_fn, const function<void(void*)> complted_fn /*= nullptr*/, void* payload /*= nullptr*/)
+{
+    FOUNDATION_ASSERT(thread_fn);
+    
+    dispatcher_thread_t* dispatcher_thread = (dispatcher_thread_t*)memory_allocate(
+        0, sizeof(dispatcher_thread_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+
+    dispatcher_thread->payload = payload;
+    dispatcher_thread->thread_fn = thread_fn;
+    dispatcher_thread->complted_fn = complted_fn;
+
+    dispatcher_thread->thread = thread_allocate([](void* thread_data)->void*
+    {
+        dispatcher_thread_t* dt = (dispatcher_thread_t*)thread_data;
+        FOUNDATION_ASSERT(dt);
+        
+        void* result_ptr = dt->thread_fn.invoke(dt->payload);
+        dt->result = result_ptr;
+
+        dispatch(L0(dispatch_execute_thread_completed(dt))); 
+        
+        return result_ptr;
+        
+    }, dispatcher_thread, STRING_CONST("Dispatcher Thread"), THREAD_PRIORITY_NORMAL, 0);
+
+    bool thread_started = thread_start(dispatcher_thread->thread);
+    FOUNDATION_ASSERT(thread_started);
+    return dispatcher_thread;
+}
+
+bool dispatcher_thread_stop(dispatcher_thread_id thread_id)
+{
+    if (thread_id == 0)
+        return false;
+
+    bool thread_aborted = false;
+    dispatcher_thread_t* dt = (dispatcher_thread_t*)thread_id;
+    if (thread_is_running(dt->thread))
+        thread_aborted = thread_abort(dt->thread);
+        
+    if (thread_aborted)
+        dispatch_execute_thread_completed(dt);    
+    return thread_aborted;
+}
+
 //
 // # SYSTEM
 //
@@ -311,126 +380,3 @@ void dispatcher_shutdown()
     _dispatcher_lock = nullptr;
     _dispatcher_actions = nullptr;
 }
-
-#if BUILD_DEVELOPMENT
-
-//
-// # TESTS
-//
-
-#include <tests/test_utils.h>
-
-#include <doctest/doctest.h>
-
-TEST_SUITE("Dispatcher")
-{
-    TEST_CASE("Register")
-    {
-        SUBCASE("Default")
-        {
-            auto event_listener_id = dispatcher_register_event_listener("TEST_1", [](const auto& _1) { return false; });
-            CHECK_NE(event_listener_id, INVALID_DISPATCHER_EVENT_LISTENER_ID);
-            REQUIRE(dispatcher_unregister_event_listener(event_listener_id));
-        }
-
-        SUBCASE("Easy (No return value for handler)")
-        {
-            auto event_listener_id = dispatcher_register_event_listener_easy("EASY_1", [](const auto& _2) {});
-            CHECK_NE(event_listener_id, INVALID_DISPATCHER_EVENT_LISTENER_ID);
-            REQUIRE(dispatcher_unregister_event_listener(event_listener_id));
-        }
-    }
-
-    TEST_CASE("Post Event")
-    {
-        SUBCASE("Default")
-        {
-            bool posted = false;
-            auto event_listener_id = dispatcher_register_event_listener(STRING_CONST("POSTED_1"), [&posted](const auto& args)
-            { 
-                return (posted = true);
-            });
-            CHECK_NE(event_listener_id, INVALID_DISPATCHER_EVENT_LISTENER_ID);
-
-            dispatcher_post_event("POSTED_1", nullptr, 0);
-            dispatcher_process_events();
-
-            REQUIRE(posted);
-            REQUIRE(dispatcher_unregister_event_listener(event_listener_id));
-        }
-
-        SUBCASE("Easy (No return value for handler)")
-        {
-            bool posted = false;
-            auto event_listener_id = dispatcher_register_event_listener_easy("EASY_33", [&posted](const auto& args)
-            {
-                posted = true;
-            });
-            CHECK_NE(event_listener_id, INVALID_DISPATCHER_EVENT_LISTENER_ID);
-            
-            dispatcher_post_event("EASY_33", nullptr, 0);
-            dispatcher_process_events();
-
-            REQUIRE(posted);
-            REQUIRE(dispatcher_unregister_event_listener(event_listener_id));
-        }
-
-        SUBCASE("Post Event With Payload")
-        {
-            #define EVENT_POST_42_HASH static_hash_string("POST_42", 7, 0x981017af1d50240bULL)
-
-            hash_t posted = HASH_EMPTY_STRING;
-            auto postee = [&posted](const dispatcher_event_args_t& args)
-            {
-                return (posted = string_hash(args.c_str(), args.size));
-            };
-
-            auto event_listener_id = dispatcher_register_event_listener(EVENT_POST_42_HASH, postee);
-            CHECK_NE(event_listener_id, INVALID_DISPATCHER_EVENT_LISTENER_ID);
-
-            static char answer[42] = "life, the universe, and everything";
-            dispatcher_post_event(EVENT_POST_42_HASH, STRING_CONST_CAPACITY(answer));
-            dispatcher_process_events();
-
-            REQUIRE_EQ(posted, string_hash(STRING_CONST_CAPACITY(answer)));
-            REQUIRE(dispatcher_unregister_event_listener(event_listener_id));
-        }
-    }
-
-    TEST_CASE("Main Thread Dispatch")
-    {
-        static bool main_thread_dispatched = false;
-
-        TEST_RENDER_FRAME([]()
-        {
-            if (ImGui::SmallButton("DispatchCheck"))
-                dispatch([](){ main_thread_dispatched = true; });
-        }, L0(CLICK_UI("DispatchCheck")));
-
-        REQUIRE_UI("DispatchCheck");
-        TEST_RENDER_FRAME([]() { /* tick in order for main thread to dispatch last frame events */});
-
-        REQUIRE(main_thread_dispatched);
-    }
-
-    TEST_CASE("Button Event Trigger" * doctest::may_fail(true))
-    {
-        static bool event_sent = false;
-        auto eid = dispatcher_register_event_listener("UI_EVENT", L1(event_sent = true));
-
-        TEST_RENDER_FRAME([]()
-        {
-            if (ImGui::Button("Post Event"))
-                dispatcher_post_event("UI_EVENT");
-        }, L0(CLICK_UI("Post Event")));
-
-        REQUIRE_UI("Post Event");
-
-        TEST_RENDER_FRAME([](){ /* tick in order for ui event to be dispatched */});
-        CHECK(dispatcher_unregister_event_listener(eid));
-
-        REQUIRE(event_sent);
-    }
-}
-
-#endif

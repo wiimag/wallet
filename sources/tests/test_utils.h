@@ -26,7 +26,7 @@
 extern void main_dispatcher();
 extern GLFWwindow* main_test_window();
 extern bool main_poll(GLFWwindow* window);
-extern void main_process(GLFWwindow* window, app_render_handler_t render, app_render_handler_t begin, app_render_handler_t end);
+extern void main_render(GLFWwindow* window, const app_render_handler_t& render, const app_render_handler_t& begin, const app_render_handler_t& end);
 
 /// <summary>
 /// Output constant string to test printing text

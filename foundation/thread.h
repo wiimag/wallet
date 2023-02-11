@@ -77,6 +77,12 @@ corresponding call to #thread_start
 FOUNDATION_API void*
 thread_join(thread_t* thread);
 
+/*! Force kill the thread. Must be paired with a corresponding call to #thread_start
+\param thread Thread
+\return True if the thread was terminated */
+FOUNDATION_API bool
+thread_abort(thread_t* thread);
+
 /*! Query if thread has started execution
 \param thread Thread
 \return true if started, false if not */

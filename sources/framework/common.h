@@ -36,6 +36,7 @@ template<typename T> T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
 template<typename R, typename T, typename U> R max(T a, U b) { return (((R)(a) > (R)(b)) ? (R)(a) : (R)(b)); }
 
 typedef struct GLFWwindow GLFWwindow;
+typedef function<void(GLFWwindow* window)> app_update_handler_t;
 typedef function<void(GLFWwindow* window, int frame_width, int frame_height)> app_render_handler_t;
 
 // ## STRUCTURES
@@ -394,6 +395,10 @@ bool time_date_equal(time_t da, time_t db);
 bool time_to_local(time_t t, tm* out_tm);
 time_t time_make(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int millisecond = 0);
 
+/*! @brief Checks if the current time in a weekend day.
+ */
+bool time_is_weekend();
+
 FOUNDATION_FORCEINLINE constexpr time_t const time_one_hour()
 {
     constexpr const time_t one_day = 60 * 60;
@@ -492,6 +497,9 @@ void execute_tool(const string_const_t& name, string_const_t* argv, size_t argc,
 
 void on_thread_exit(function<void()> func);
 
+extern bool main_is_batch_mode();
+extern bool main_is_graphical_mode();
+extern bool main_is_interactive_mode();
 extern bool main_is_running_tests();
 extern double main_tick_elapsed_time_ms();
 

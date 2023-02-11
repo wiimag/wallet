@@ -46,6 +46,14 @@ FOUNDATION_STATIC const char* ensure_key_loaded()
     return EOD_KEY;
 }
 
+FOUNDATION_STATIC uint64_t eod_fix_invalid_cache_query_after_seconds(uint64_t& invalid_cache_query_after_seconds)
+{
+    // No need to refresh information on the weekend as often since the stock market doesn't move at this time.
+    if (invalid_cache_query_after_seconds != UINT64_MAX && time_is_weekend())
+        invalid_cache_query_after_seconds *= 32;
+    return invalid_cache_query_after_seconds;
+}
+
 string_t eod_get_key()
 {
     ensure_key_loaded();
@@ -215,7 +223,7 @@ bool eod_fetch(const char* api, const char* ticker, query_format_t format, const
 bool eod_fetch(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 15ULL * 60ULL*/)
 {
     string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
-    return query_execute_json(url.str, format, json_callback, invalid_cache_query_after_seconds);
+    return query_execute_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
 }
 
 bool eod_fetch_async(const char* api, const char* ticker, query_format_t format, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
@@ -231,11 +239,14 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
 bool eod_fetch_async(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
     string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
-    return query_execute_async_json(url.str, format, json_callback, invalid_cache_query_after_seconds);
+    return query_execute_async_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
 }
 
 FOUNDATION_STATIC void eod_update_window_title()
 {
+    if (main_is_batch_mode())
+        return;
+        
     GLFWwindow* window = main_window();
     FOUNDATION_ASSERT(window);
 

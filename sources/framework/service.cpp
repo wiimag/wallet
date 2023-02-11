@@ -15,6 +15,7 @@
 #define HASH_SERVICE_TABS (static_hash_string("service_tabs", 12, 0xeee279126075ccf8ULL))
 #define HASH_SERVICE_MENU (static_hash_string("service_menu", 12, 0x597ea6b5d910db56ULL))
 #define HASH_SERVICE_WINDOW (static_hash_string("service_window", 14, 0x576d11d2f45d4892ULL))
+#define HASH_SERVICE_UPDATE (static_hash_string("service_update", 14, 0x576d11d2f45d4892ULL))
 #define HASH_SERVICE_MENU_STATUS (static_hash_string("service_menu_status", 19, 0x200f262941438cb4ULL))
 
 struct service_handler_t
@@ -99,6 +100,14 @@ void service_initialize()
     for (size_t i = 0, end = _service_count; i != end; ++i)
     {
         service_t& s = _services[i];
+
+        if (s.priority >= SERVICE_PRIORITY_UI && main_is_batch_mode())
+        {
+            s.shutdown = nullptr;
+            log_infof(s.key, STRING_CONST("Service %s skipped (batch mode)"), s.name);
+            continue;
+        }
+        
         {
             PERFORMANCE_TRACKER_FORMAT("service::%s", s.name);
             s.initialize();
@@ -140,21 +149,37 @@ void service_register_handler(hash_t service_key, hash_t handler_key, const serv
 
 void service_register_menu(hash_t service_key, const service_invoke_handler_t& menu_handler)
 {
+    if (main_is_batch_mode())
+        return;
+
     service_register_handler(service_key, HASH_SERVICE_MENU, menu_handler);
 }
 
 void service_register_tabs(hash_t service_key, const service_invoke_handler_t& tabs_handler)
 {
+    if (main_is_batch_mode())
+        return;
+
     service_register_handler(service_key, HASH_SERVICE_TABS, tabs_handler);
 }
 
 void service_register_window(hash_t service_key, const service_invoke_handler_t& window_handler)
 {
+    if (main_is_batch_mode())
+        return;
+
     service_register_handler(service_key, HASH_SERVICE_WINDOW, window_handler);
+}
+
+void service_register_update(hash_t service_key, const service_invoke_handler_t& update_handler)
+{
+    service_register_handler(service_key, HASH_SERVICE_UPDATE, update_handler);
 }
 
 void service_register_menu_status(hash_t service_key, const service_invoke_handler_t& menu_status_handler)
 {
+    if (main_is_batch_mode())
+        return;
     service_register_handler(service_key, HASH_SERVICE_MENU_STATUS, menu_status_handler);
 }
 
@@ -189,6 +214,11 @@ void service_foreach_tabs()
 }
 
 void service_foreach_window()
+{
+    service_foreach(HASH_SERVICE_WINDOW);
+}
+
+void service_update()
 {
     service_foreach(HASH_SERVICE_WINDOW);
 }

@@ -117,6 +117,7 @@
     <ClCompile Include="..\..\sources\tests\boot_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\config_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\database_tests.cpp" />
+    <ClCompile Include="..\..\sources\tests\dispatcher_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\generics_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\imgui_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\stock_tests.cpp" />

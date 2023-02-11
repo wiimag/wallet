@@ -539,7 +539,7 @@ FOUNDATION_STATIC expr_result_t report_eval_list_fields(const expr_func_t* f, ve
         if (json.root->type == JSON_ARRAY)
             report_eval_read_object_fields(json, &json.tokens[json.root->child], &field_names);
 
-    }, 15 * 60 * 60ULL);
+    }, 96 * 60 * 60ULL);
 
     return expr_eval_list(field_names);
 }

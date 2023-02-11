@@ -18,15 +18,16 @@ typedef void (*service_shutdown_handler_t)(void);
 
 typedef function<void()> service_invoke_handler_t;
 
-#define SERVICE_PRIORITY_CRITICAL   -10
-#define SERVICE_PRIORITY_SYSTEM      -2
-#define SERVICE_PRIORITY_REALTIME    -1
-#define SERVICE_PRIORITY_BASE         0
-#define SERVICE_PRIORITY_HIGH         1
-#define SERVICE_PRIORITY_MODULE       2
-#define SERVICE_PRIORITY_LOW          3
-#define SERVICE_PRIORITY_UI           5
-#define SERVICE_PRIORITY_TESTS       10
+#define SERVICE_PRIORITY_CRITICAL   (-10)
+#define SERVICE_PRIORITY_SYSTEM      (-2)
+#define SERVICE_PRIORITY_REALTIME    (-1)
+#define SERVICE_PRIORITY_BASE         (0)
+#define SERVICE_PRIORITY_HIGH         (1)
+#define SERVICE_PRIORITY_MODULE       (2)
+#define SERVICE_PRIORITY_LOW          (3)
+#define SERVICE_PRIORITY_TESTS       (10)
+#define SERVICE_PRIORITY_UI_HEADLESS (19)
+#define SERVICE_PRIORITY_UI          (20)
 
 #define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, ...)   \
     static Service __##NAME##_service(#NAME, HASH_##NAME, [](){ \
@@ -60,9 +61,11 @@ void service_register_menu(hash_t service_key, const service_invoke_handler_t& m
 void service_register_menu_status(hash_t service_key, const service_invoke_handler_t& menu_status_handler);
 void service_register_tabs(hash_t service_key, const service_invoke_handler_t& tabs_handler);
 void service_register_window(hash_t service_key, const service_invoke_handler_t& window_handler);
+void service_register_update(hash_t service_key, const service_invoke_handler_t& update_handler);
 
 void service_foreach(hash_t handler_key);
 void service_foreach_menu();
 void service_foreach_menu_status();
 void service_foreach_tabs();
 void service_foreach_window();
+void service_update();

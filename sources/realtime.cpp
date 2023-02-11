@@ -747,4 +747,4 @@ FOUNDATION_STATIC void realtime_shutdown()
     MEM_DELETE(_realtime);
 }
 
-DEFINE_SERVICE(REALTIME, realtime_initialize, realtime_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_SERVICE(REALTIME, realtime_initialize, realtime_shutdown, SERVICE_PRIORITY_UI_HEADLESS);

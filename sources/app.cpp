@@ -437,6 +437,11 @@ extern void app_shutdown()
     string_table_shutdown();
 }
 
+extern void app_update(GLFWwindow* window)
+{
+    service_update();
+}
+
 extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
 {
     ImGui::SetNextWindowPos(ImVec2(0, 0));

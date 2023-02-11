@@ -63,6 +63,10 @@ static bool _show_stats = false;
 static double _smooth_elapsed_time_ms = 0.0f;
 #endif
 
+// Indicates if the application is running in daemon/batch mode which usually run headless.
+static bool _batch_mode = false;
+static bool _process_should_exit = false;
+
 FOUNDATION_STATIC const char* glfw_get_clipboard_text(void* user_data)
 {
     return glfwGetClipboardString((GLFWwindow*)user_data);
@@ -1053,6 +1057,36 @@ FOUNDATION_STATIC void setup_main_window_icon(GLFWwindow* window)
     #endif
 }
 
+FOUNDATION_STATIC void main_handle_debug_break()
+{
+    if (!environment_command_line_arg("debug-break"))
+        return;
+    
+    if (system_debugger_attached())
+        exception_raise_debug_break();
+    else
+    {
+        log_warn(0, WARNING_STANDARD, STRING_CONST("Waiting for debugger to attach..."));
+        
+        static dispatcher_thread_id wait_thread_id = 0;
+        if (main_is_graphical_mode())
+        {
+            wait_thread_id = dispatch_fire([]()
+            {
+                system_message_box(STRING_CONST("Attach Debugger (Debug Break)"),
+                    STRING_CONST("You can attach debugger now and press OK to continue..."), false);
+                wait_thread_id = 0;
+            });
+        }
+
+        while (!system_debugger_attached() && !_process_should_exit && wait_thread_id != 0)
+            thread_sleep(1000);
+
+        if (wait_thread_id)
+            dispatcher_thread_stop(wait_thread_id);
+    }
+}
+
 extern int main_initialize()
 {
     extern int app_initialize(GLFWwindow * window);
@@ -1081,7 +1115,7 @@ extern int main_initialize()
         string_const_t exe_dir = environment_executable_directory();
         environment_set_current_working_directory(STRING_ARGS(exe_dir));
     #endif
-
+    
     #if BUILD_DEVELOPMENT
     _run_tests = environment_command_line_arg("run-tests");
 
@@ -1091,18 +1125,30 @@ extern int main_initialize()
         log_set_suppress(0, ERRORLEVEL_DEBUG);
     #endif
 
-    GLFWwindow* window = setup_main_window();
-    if (!window)
-    {
-        log_error(0, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Fail to create main window context."));
-        return ERROR_SYSTEM_CALL_FAIL;
-    }
+    // Check if running batch mode (which is incompatible with running tests)
+    _batch_mode = !_run_tests && environment_command_line_arg("batch-mode");
 
     dispatcher_initialize();
+    main_handle_debug_break();
 
-    setup_main_window_icon(window);
-    setup_bgfx(window);
-    setup_imgui(window);
+    GLFWwindow* window = nullptr;
+    if (main_is_batch_mode())
+    {
+        log_set_suppress(0, ERRORLEVEL_NONE);
+    }
+    else
+    {
+        GLFWwindow* window = setup_main_window();
+        if (!window)
+        {
+            log_error(0, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Fail to create main window context."));
+            return ERROR_SYSTEM_CALL_FAIL;
+        }
+
+        setup_main_window_icon(window);
+        setup_bgfx(window);
+        setup_imgui(window);
+    }
 
     return app_initialize(window);
 }
@@ -1110,6 +1156,21 @@ extern int main_initialize()
 extern GLFWwindow* main_window()
 {
     return _glfw_window;
+}
+
+extern bool main_is_batch_mode()
+{
+    return _batch_mode;
+}
+
+extern bool main_is_graphical_mode()
+{
+    return !_batch_mode;
+}
+
+extern bool main_is_interactive_mode()
+{
+    return !_batch_mode && !_run_tests;
 }
 
 extern bool main_is_running_tests()
@@ -1130,11 +1191,57 @@ extern double main_tick_elapsed_time_ms()
 #endif
 }
 
-extern void main_process(GLFWwindow* window, app_render_handler_t render, app_render_handler_t begin, app_render_handler_t end)
+FOUNDATION_STATIC void main_process_system_events(GLFWwindow* window)
 {
-    PERFORMANCE_TRACKER("main_process");
+    system_process_events();
+
+    // Process all pending events in the event stream
+    event_t* event = nullptr;
+    event_stream_t* stream = system_event_stream();
+    event_block_t* block = event_stream_process(stream);
+    while ((event = event_next(block, event))) 
+    {
+        switch (event->id) 
+        {
+        case FOUNDATIONEVENT_START:
+            break;
+
+        case FOUNDATIONEVENT_TERMINATE:
+            _process_should_exit = true;
+            if (window)
+                glfwSetWindowShouldClose(window, 1);
+            break;
+
+        case FOUNDATIONEVENT_FOCUS_GAIN:
+        case FOUNDATIONEVENT_FOCUS_LOST:
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+extern void main_update(GLFWwindow* window, const app_update_handler_t& update)
+{
+    PERFORMANCE_TRACKER("main_update");
+
+    session_update();
+    dispatcher_update();
+
+    main_process_system_events(window);
+
+    // Update application
+    if (update)
+        update(window);
+}
+
+extern void main_render(GLFWwindow* window, const app_render_handler_t& render, const app_render_handler_t& begin, const app_render_handler_t& end)
+{
+    PERFORMANCE_TRACKER("main_render");
 
     int frame_width = 1, frame_height = 1;
+    const bool graphical_mode = !main_is_batch_mode();
     
     if (window)
     {
@@ -1148,11 +1255,8 @@ extern void main_process(GLFWwindow* window, app_render_handler_t render, app_re
             begin(window, frame_width, frame_height);
     }
 
-    session_update();
-    dispatcher_update();
-
     // Render application
-    if (render)
+    if (window && render)
     {
         PERFORMANCE_TRACKER("app_render");
         render(window, frame_width, frame_height);
@@ -1166,7 +1270,7 @@ extern void main_process(GLFWwindow* window, app_render_handler_t render, app_re
         ImGui::Render();
     }
 
-    if (end)
+    if (window && end)
         end(window, frame_width, frame_height);
 
     // Render everything
@@ -1186,9 +1290,13 @@ extern void main_process(GLFWwindow* window, app_render_handler_t render, app_re
 extern void main_tick(GLFWwindow* window)
 {
     PERFORMANCE_TRACKER("main_tick");
+    extern void app_update(GLFWwindow* window);
     extern void app_render(GLFWwindow* window, int display_w, int display_h);
 
-    main_process(window, app_render, nullptr, nullptr);
+    main_update(window, app_update);
+
+    if (window)
+        main_render(window, app_render, nullptr, nullptr);
 }
 
 extern bool main_poll(GLFWwindow* window)
@@ -1212,7 +1320,7 @@ extern int main_run(void* context)
         return main_tests(context, current_window);
     #endif
 
-    const bool exit_after_first_tick = environment_command_line_arg("exit");
+    _process_should_exit = environment_command_line_arg("exit");
 
     uint64_t frame_counter = 1;
     while (main_poll(current_window))
@@ -1229,7 +1337,7 @@ extern int main_run(void* context)
         _smooth_elapsed_time_ms = math_average(elapsed_times, ARRAY_COUNT(elapsed_times));
         #endif
         
-        if (exit_after_first_tick)
+        if (_process_should_exit)
             return 0;
 
         profile_end_frame(frame_counter++);
