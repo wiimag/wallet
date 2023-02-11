@@ -866,9 +866,11 @@ FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
     #if BUILD_DEVELOPMENT
     struct BgfxCallbackHandler : bgfx::CallbackI
     {
-        bool ignore_logs = false;
+        bool ignore_logs = true;
         BgfxCallbackHandler()
         {
+            if (environment_command_line_arg("verbose"))
+                ignore_logs = false;
             ignore_logs = environment_command_line_arg("bgfx-ignore-logs");
         }
         virtual ~BgfxCallbackHandler(){};
@@ -1116,28 +1118,34 @@ extern int main_initialize()
         string_const_t exe_dir = environment_executable_directory();
         environment_set_current_working_directory(STRING_ARGS(exe_dir));
     #endif
+
+    const bool run_eval_mode = environment_command_line_arg("eval");
     
     #if BUILD_DEVELOPMENT
     _run_tests = environment_command_line_arg("run-tests");
+    #endif
 
     if (environment_command_line_arg("debug") || environment_command_line_arg("verbose"))
         log_set_suppress(0, ERRORLEVEL_NONE);
     else
+    {
         log_set_suppress(0, ERRORLEVEL_DEBUG);
-    #endif
+     
+        if (environment_command_line_arg("X"))
+        {
+            log_enable_prefix(false);
+            log_enable_stdout(true);
+        }
+    }
 
     // Check if running batch mode (which is incompatible with running tests)
-    _batch_mode = !_run_tests && environment_command_line_arg("batch-mode");
+    _batch_mode = !_run_tests && (environment_command_line_arg("batch-mode") || run_eval_mode);
 
     dispatcher_initialize();
     main_handle_debug_break();
 
     GLFWwindow* window = nullptr;
-    if (main_is_batch_mode())
-    {
-        log_set_suppress(0, ERRORLEVEL_NONE);
-    }
-    else
+    if (main_is_graphical_mode())
     {
         GLFWwindow* window = setup_main_window();
         if (!window)

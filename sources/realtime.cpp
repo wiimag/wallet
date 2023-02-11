@@ -257,7 +257,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         }
     }
     
-    while (stream_version == REALTIME_STREAM_VERSION && !stream_eos(_realtime->stream))
+    while (!thread_try_wait(0) && stream_version == REALTIME_STREAM_VERSION && !stream_eos(_realtime->stream))
     {
         stock_realtime_t stock;
         stock_realtime_record_t r;
@@ -309,14 +309,15 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         }
     }
 
+    bool quit_thread = false;
     unsigned int wait_time = 1;
     static string_const_t* codes = nullptr;
-    while (!thread_try_wait(wait_time))
+    while (!quit_thread && !thread_try_wait(wait_time))
     {
+        const time_t now = time_now();
         time_t oldest = INT64_MAX;
-        if (mutex.shared_lock())
         {
-            time_t now = time_now();
+            SHARED_READ_LOCK(mutex);
             for (size_t i = 0, end = array_size(_realtime->stocks); i < end; ++i)
             {
                 const stock_realtime_t& stock = _realtime->stocks[i];
@@ -331,47 +332,58 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
                 if (stock.timestamp != 0 && stock.timestamp < oldest)
                     oldest = stock.timestamp;
             }
-            mutex.shared_unlock();
+        }
 
-            size_t batch_size = 0;
-            string_const_t batch[32];
-            for (size_t i = 0, end = array_size(codes); i < end; ++i)
+        if (thread_try_wait(0))
+            break;
+
+        size_t batch_size = 0;
+        string_const_t batch[32];
+        for (size_t i = 0, end = array_size(codes) && !quit_thread; i < end; ++i)
+        {
+            if (thread_try_wait(0))
             {
-                batch[batch_size++] = codes[i];
-                if (batch_size == ARRAY_COUNT(batch) || i == end - 1)
-                {
-                    range_view<string_const_t> view = { &batch[0], batch_size };
-                    string_const_t code_list = string_join(view.begin(), view.end(), [](const auto& s) { return s; }, CTEXT(","));
+                quit_thread = true;
+                break;
+            }
                     
-                    // Send batch
-                    string_const_t url = eod_build_url("real-time", batch[0].str, FORMAT_JSON, "s", code_list.str);
-                    log_infof(HASH_REALTIME, STRING_CONST("Fetching realtime stock data for %.*s\n%.*s"), STRING_FORMAT(code_list), STRING_FORMAT(url));
-                    if (!query_execute_json(url.str, FORMAT_JSON_WITH_ERROR, realtime_fetch_query_data))
-                        break;
+            batch[batch_size++] = codes[i];
+            if (batch_size == ARRAY_COUNT(batch) || i == end - 1)
+            {
+                range_view<string_const_t> view = { &batch[0], batch_size };
+                string_const_t code_list = string_join(view.begin(), view.end(), [](const auto& s) { return s; }, CTEXT(","));
+                    
+                // Send batch
+                string_const_t url = eod_build_url("real-time", batch[0].str, FORMAT_JSON, "s", code_list.str);
+                log_infof(HASH_REALTIME, STRING_CONST("Fetching realtime stock data for %.*s\n%.*s"), STRING_FORMAT(code_list), STRING_FORMAT(url));
+                if (!query_execute_json(url.str, FORMAT_JSON_WITH_ERROR, realtime_fetch_query_data))
+                    break;
 
-                    if (thread_try_wait(wait_time / to_uint(end)))
-                        goto realtime_background_thread_fn_quit;
-
-                    batch_size = 0;
+                if (thread_try_wait(wait_time / to_uint(end)))
+                {
+                    quit_thread = true;
+                    break;
                 }
-            }
 
-            array_clear(codes);
+                batch_size = 0;
+            }
+        }
+
+        array_clear(codes);
+        if (_realtime->stream)
             stream_flush(_realtime->stream);
-            if (oldest != INT64_MAX)
-            {
-                double wait_minutes = time_elapsed_days(oldest, now) * 24.0 * 60.0;
-                wait_minutes = max(0.0, 15.0 - wait_minutes);
-                wait_time = max(60000U, to_uint(math_trunc(wait_minutes * 60.0 * 1000.0)));
-            }
-            else
-            {
-                wait_time = 15 * 60000U;
-            }
+        if (oldest != INT64_MAX)
+        {
+            double wait_minutes = time_elapsed_days(oldest, now) * 24.0 * 60.0;
+            wait_minutes = max(0.0, 15.0 - wait_minutes);
+            wait_time = max(60000U, to_uint(math_trunc(wait_minutes * 60.0 * 1000.0)));
+        }
+        else
+        {
+            wait_time = 15 * 60000U;
         }
     }
     
-realtime_background_thread_fn_quit:
     array_deallocate(codes);    
     return 0;
 }
@@ -732,11 +744,14 @@ FOUNDATION_STATIC void realtime_shutdown()
     session_set_bool("realtime_show_window", _realtime->show_window);
     session_set_integer("realtime_time_lapse_days", _realtime->time_lapse);
 
-    SHARED_WRITE_LOCK(_realtime->stocks_mutex);
-
-    stream_deallocate(_realtime->stream);
-    _realtime->stream = nullptr;
-    thread_signal(_realtime->background_thread);
+    {
+        SHARED_WRITE_LOCK(_realtime->stocks_mutex);
+        stream_deallocate(_realtime->stream);
+        _realtime->stream = nullptr;
+    }
+    
+    while (!thread_try_join(_realtime->background_thread, 1, nullptr))
+        thread_signal(_realtime->background_thread);
     thread_deallocate(_realtime->background_thread);
     table_deallocate(_realtime->table);
 

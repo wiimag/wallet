@@ -854,3 +854,8 @@ string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx,
 
 void eval_render_evaluators();
 
+/*! Log expression result to the console
+ \param expression_string   The expression string
+ \param result              The result of the expression
+ */
+void expr_log_evaluation_result(string_const_t expression_string, const expr_result_t& result);

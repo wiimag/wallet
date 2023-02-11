@@ -13,9 +13,12 @@
 #include <framework/service.h>
 #include <framework/profiler.h>
 #include <framework/config.h>
+#include <framework/dispatcher.h>
 
 #include <foundation/time.h>
 #include <foundation/random.h>
+#include <foundation/process.h>
+#include <foundation/system.h>
 
 #include <ctype.h> /* for isdigit, isspace */
 
@@ -2385,6 +2388,51 @@ bool eval_set_global_var(const char* name, double value)
     return true;
 }
 
+void expr_log_evaluation_result(string_const_t expression_string, const expr_result_t& result)
+{
+    if (result.type == EXPR_RESULT_ARRAY && result.element_count() > 1 && result.list[0].type == EXPR_RESULT_POINTER)
+    {
+        if (expression_string.length)
+            log_infof(HASH_EXPR, STRING_CONST("%.*s\n"), STRING_FORMAT(expression_string));
+        //_console_concat_messages = true;
+        for (unsigned i = 0; i < result.element_count(); ++i)
+            expr_log_evaluation_result({ nullptr, 0 }, result.element_at(i));
+        //_console_concat_messages = false;
+    }
+    else if (result.type == EXPR_RESULT_POINTER && result.element_count() == 16 && result.element_size() == sizeof(float))
+    {
+        const float* m = (const float*)result.ptr;
+        log_infof(HASH_EXPR, STRING_CONST("%.*s %s \n" \
+            "\t[%7.4g, %7.4g, %7.4g, %7.4g\n" \
+            "\t %7.4g, %7.4g, %7.4g, %7.4g\n" \
+            "\t %7.4g, %7.4g, %7.4g, %7.4g\n" \
+            "\t %7.4g, %7.4g, %7.4g, %7.4g ]\n"), STRING_FORMAT(expression_string), expression_string.length > 0 ? "=>" : "",
+            m[0], m[1], m[2], m[3],
+            m[4], m[5], m[6], m[7],
+            m[8], m[9], m[10], m[11],
+            m[12], m[13], m[14], m[15]);
+    }
+    else
+    {
+        string_const_t result_string = expr_result_to_string(result);
+        if (expression_string.length)
+        {
+            if (expression_string.length + result_string.length > 64)
+            {
+                log_infof(HASH_EXPR, STRING_CONST("%.*s =>\n\t%.*s"), STRING_FORMAT(expression_string), STRING_FORMAT(result_string));
+            }
+            else
+            {
+                log_infof(HASH_EXPR, STRING_CONST("%.*s => %.*s"), STRING_FORMAT(expression_string), STRING_FORMAT(result_string));
+                if (main_is_interactive_mode())
+                    ImGui::SetClipboardText(result_string.str);
+            }
+        }
+        else
+            log_infof(HASH_EXPR, STRING_CONST("\t%.*s"), STRING_FORMAT(result_string));
+    }
+}
+
 FOUNDATION_STATIC void eval_initialize()
 {
     const auto json_flags =
@@ -2443,6 +2491,38 @@ FOUNDATION_STATIC void eval_initialize()
     }
 
     service_register_window(HASH_EXPR, eval_render_evaluators);
+
+    string_const_t eval_expression;
+    if (environment_command_line_arg("eval", &eval_expression))
+    {
+        static char command_line_eval_expression[2048] = "";
+        string_copy(STRING_CONST_CAPACITY(command_line_eval_expression), STRING_ARGS(eval_expression));
+        dispatch([]()
+        {
+            string_const_t expression_string = string_to_const(command_line_eval_expression);
+            expr_result_t result = eval(expression_string);
+            if (EXPR_ERROR_CODE == 0)
+            {
+                if (environment_command_line_arg("X"))
+                {
+                    string_const_t result_string = result.as_string();
+                    log_info(0, STRING_ARGS(result_string));
+                }
+                else
+                {
+                    expr_log_evaluation_result(expression_string, result);
+                }
+            }
+            else if (EXPR_ERROR_CODE != 0)
+            {
+                log_errorf(HASH_EXPR, ERROR_SCRIPT, STRING_CONST("[%d] %.*s -> %.*s"),
+                    EXPR_ERROR_CODE, STRING_FORMAT(expression_string), (int)string_length(EXPR_ERROR_MSG), EXPR_ERROR_MSG);
+            }
+            
+            system_post_event(FOUNDATIONEVENT_TERMINATE);
+            //process_exit(0);
+        });
+    }
 }
 
 FOUNDATION_STATIC void eval_shutdown()

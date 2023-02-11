@@ -112,7 +112,7 @@ void string_table_shutdown()
 {
     if (GLOBAL_STRING_TABLE)
     {
-        log_infof(HASH_STRING_TABLE, STRING_CONST("String table size: %.3g kb"), GLOBAL_STRING_TABLE->allocated_bytes / 1024.0);
+        log_debugf(HASH_STRING_TABLE, STRING_CONST("String table size: %.3g kb"), GLOBAL_STRING_TABLE->allocated_bytes / 1024.0);
         string_table_deallocate(GLOBAL_STRING_TABLE);
         GLOBAL_STRING_TABLE = nullptr;
     }

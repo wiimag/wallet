@@ -15,3 +15,4 @@ void console_clear();
 /*! Open and show the console window.
  */
 void console_show();
+

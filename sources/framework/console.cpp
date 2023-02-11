@@ -259,50 +259,6 @@ FOUNDATION_STATIC void console_render_toolbar()
     ImGui::EndGroup();
 }
 
-FOUNDATION_STATIC void console_log_evaluation_result(string_const_t expression_string, const expr_result_t& result)
-{
-    if (result.type == EXPR_RESULT_ARRAY && result.element_count() > 1 && result.list[0].type == EXPR_RESULT_POINTER)
-    {
-        if (expression_string.length)
-            log_infof(HASH_EXPR, STRING_CONST("%.*s\n"), STRING_FORMAT(expression_string));
-        _console_concat_messages = true;
-        for (unsigned i = 0; i < result.element_count(); ++i)
-            console_log_evaluation_result({ nullptr, 0 }, result.element_at(i));
-        _console_concat_messages = false;
-    }
-    else if (result.type == EXPR_RESULT_POINTER && result.element_count() == 16 && result.element_size() == sizeof(float))
-    {
-        const float* m = (const float*)result.ptr;
-        log_infof(HASH_EXPR, STRING_CONST("%.*s %s \n" \
-            "\t[%7.4g, %7.4g, %7.4g, %7.4g\n" \
-            "\t %7.4g, %7.4g, %7.4g, %7.4g\n" \
-            "\t %7.4g, %7.4g, %7.4g, %7.4g\n" \
-            "\t %7.4g, %7.4g, %7.4g, %7.4g ]\n"), STRING_FORMAT(expression_string), expression_string.length > 0 ? "=>" : "",
-            m[0], m[1], m[2], m[3],
-            m[4], m[5], m[6], m[7],
-            m[8], m[9], m[10], m[11],
-            m[12], m[13], m[14], m[15]);
-    }
-    else
-    {
-        string_const_t result_string = expr_result_to_string(result);
-        if (expression_string.length)
-        {
-            if (expression_string.length + result_string.length > 64)
-            {
-                log_infof(HASH_EXPR, STRING_CONST("%.*s =>\n\t%.*s"), STRING_FORMAT(expression_string), STRING_FORMAT(result_string));
-            }
-            else
-            {
-                log_infof(HASH_EXPR, STRING_CONST("%.*s => %.*s"), STRING_FORMAT(expression_string), STRING_FORMAT(result_string));
-                ImGui::SetClipboardText(result_string.str);
-            }
-        }
-        else
-            log_infof(HASH_EXPR, STRING_CONST("\t%.*s"), STRING_FORMAT(result_string));
-    }
-}
-
 FOUNDATION_STATIC void console_render_evaluator()
 {
     static bool focus_text_field = true;
@@ -369,7 +325,9 @@ FOUNDATION_STATIC void console_render_evaluator()
         expr_result_t result = eval(expression_string);
         if (EXPR_ERROR_CODE == 0)
         {
-            console_log_evaluation_result(expression_string, result);
+            _console_concat_messages = true;
+            expr_log_evaluation_result(expression_string, result);
+            _console_concat_messages = false;
         }
         else if (EXPR_ERROR_CODE != 0)
         {

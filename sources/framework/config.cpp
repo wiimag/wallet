@@ -1679,7 +1679,7 @@ bool config_write_file(string_const_t _file_path, config_handle_t data, config_o
         stream_t* sjson_file_stream = fs_open_file(STRING_ARGS(file_path), STREAM_CREATE | STREAM_OUT | STREAM_TRUNCATE);
         if (sjson_file_stream)
         {
-            log_infof(0, STRING_CONST("Writing config file %.*s"), STRING_FORMAT(file_path));
+            log_debugf(0, STRING_CONST("Writing config file %.*s"), STRING_FORMAT(file_path));
             stream_write_string(sjson_file_stream, sjson, sjson_length - 1);
             stream_deallocate(sjson_file_stream);
         }

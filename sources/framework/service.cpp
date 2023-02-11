@@ -104,15 +104,15 @@ void service_initialize()
         if (s.priority >= SERVICE_PRIORITY_UI && main_is_batch_mode())
         {
             s.shutdown = nullptr;
-            log_infof(s.key, STRING_CONST("Service %s skipped (batch mode)"), s.name);
+            log_debugf(s.key, STRING_CONST("Service %s skipped (batch mode)"), s.name);
             continue;
         }
         
         {
-            PERFORMANCE_TRACKER_FORMAT("service::%s", s.name);
+            PERFORMANCE_TRACKER_FORMAT("Service::%s", s.name);
             s.initialize();
         }
-        log_infof(s.key, STRING_CONST("Service %s initialized"), s.name);
+        log_debugf(s.key, STRING_CONST("Service %s initialized"), s.name);
     }
 
     _services_initialize = true;
@@ -128,7 +128,7 @@ void service_shutdown()
         if (s.shutdown)
         {
             s.shutdown();
-            log_infof(s.key, STRING_CONST("Service %s shutdown"), s.name);
+            log_debugf(s.key, STRING_CONST("Service %s shutdown"), s.name);
         }
 
         array_deallocate(s.handlers);
