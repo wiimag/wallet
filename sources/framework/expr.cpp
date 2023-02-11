@@ -2495,12 +2495,19 @@ FOUNDATION_STATIC void eval_initialize()
     string_const_t eval_expression;
     if (environment_command_line_arg("eval", &eval_expression))
     {
-        static char command_line_eval_expression[2048] = "";
-        string_copy(STRING_CONST_CAPACITY(command_line_eval_expression), STRING_ARGS(eval_expression));
+        static string_t command_line_eval_expression = string_clone(STRING_ARGS(eval_expression));
         dispatch([]()
         {
+            if (fs_is_file(STRING_ARGS(command_line_eval_expression)))
+            {
+                string_t ftxt = fs_read_text(STRING_ARGS(command_line_eval_expression));
+                string_deallocate(command_line_eval_expression.str);
+                command_line_eval_expression = ftxt;
+            }
+            
             string_const_t expression_string = string_to_const(command_line_eval_expression);
-            expr_result_t result = eval(expression_string);
+
+            expr_result_t result = eval(STRING_ARGS(expression_string));
             if (EXPR_ERROR_CODE == 0)
             {
                 if (environment_command_line_arg("X"))
@@ -2518,6 +2525,8 @@ FOUNDATION_STATIC void eval_initialize()
                 log_errorf(HASH_EXPR, ERROR_SCRIPT, STRING_CONST("[%d] %.*s -> %.*s"),
                     EXPR_ERROR_CODE, STRING_FORMAT(expression_string), (int)string_length(EXPR_ERROR_MSG), EXPR_ERROR_MSG);
             }
+
+            string_deallocate(command_line_eval_expression.str);
             
             system_post_event(FOUNDATIONEVENT_TERMINATE);
             //process_exit(0);

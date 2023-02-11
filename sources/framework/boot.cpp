@@ -870,8 +870,10 @@ FOUNDATION_STATIC void setup_bgfx(GLFWwindow* window)
         BgfxCallbackHandler()
         {
             if (environment_command_line_arg("verbose"))
+            {
                 ignore_logs = false;
-            ignore_logs = environment_command_line_arg("bgfx-ignore-logs");
+                ignore_logs = environment_command_line_arg("bgfx-ignore-logs");
+            }
         }
         virtual ~BgfxCallbackHandler(){};
 
@@ -1115,8 +1117,8 @@ extern int main_initialize()
         log_enable_stdout(process_redirect_io_to_console() || environment_command_line_arg("build-machine"));
 
         // Always set executable directory as the initial working directory.
-        string_const_t exe_dir = environment_executable_directory();
-        environment_set_current_working_directory(STRING_ARGS(exe_dir));
+        //string_const_t exe_dir = environment_executable_directory();
+        //environment_set_current_working_directory(STRING_ARGS(exe_dir));
     #endif
 
     const bool run_eval_mode = environment_command_line_arg("eval");
