@@ -293,7 +293,7 @@ thread_start(thread_t* thread) {
 	return true;
 }
 
-FOUNDATION_STATIC void thread_close_all_windows(thread_t* thread)
+void thread_close_all_windows(thread_t* thread)
 {
 #if FOUNDATION_PLATFORM_WINDOWS
     // Get all windows for the specified thread.
@@ -318,43 +318,74 @@ bool
 thread_abort(thread_t* thread)
 {
 	FOUNDATION_ASSERT(thread);
+
+	if (!thread->handle)
+		return false;
+
 	thread_signal(thread);
-#if FOUNDATION_PLATFORM_WINDOWS
-    if (thread->handle) {
+	if (!thread_try_join(thread, 100, nullptr))
 		thread_close_all_windows(thread);
-		thread_signal(thread);
-        DWORD wait_result = WaitForSingleObject((HANDLE)thread->handle, 100);
-		if (wait_result != 0) {
+
+	thread_signal(thread);
+	if (!thread_try_join(thread, 100, nullptr)) {
+		#if FOUNDATION_PLATFORM_WINDOWS
+            
 			if (TerminateThread((HANDLE)thread->handle, -1)) {
-                CloseHandle((HANDLE)thread->handle);
-                atomic_store32(&thread->state, 5, memory_order_release);
+				CloseHandle((HANDLE)thread->handle);
+				atomic_store32(&thread->state, 5, memory_order_release);
 				thread->handle = 0;
-            }
-		} else {
-			CloseHandle((HANDLE)thread->handle);
-			atomic_store32(&thread->state, 4, memory_order_release);
-			thread->handle = 0;
-		}
-    }
-    
-#elif FOUNDATION_PLATFORM_POSIX
-    void* result = 0;
-    if (thread->handle) {
-		int join_result = pthread_tryjoin_np((pthread_t)thread->handle, &result);
-		if (join_result != 0) {
-            pthread_cancel((pthread_t)thread->handle);
-            pthread_join((pthread_t)thread->handle, &result);
+			}
+
+		#elif FOUNDATION_PLATFORM_POSIX
+		
+			void* result = 0;
+			pthread_cancel((pthread_t)thread->handle);
+			pthread_join((pthread_t)thread->handle, &result);
 			atomic_store32(&thread->state, 5, memory_order_release);
-		}
-		else
-			atomic_store32(&thread->state, 4, memory_order_release);        
-		thread->handle = 0;
-    }
-#else
-	#error Not implemented
-#endif
+			
+		#else
+		
+			#error Not implemented
+			
+		#endif
+	}
 
 	return atomic_load32(&thread->state, memory_order_acquire) == 5;
+}
+
+bool
+thread_try_join(thread_t* thread, uint32_t wait_milliseconds, void** exit_code) 
+{
+    FOUNDATION_ASSERT(thread);
+    thread_signal(thread);
+#if FOUNDATION_PLATFORM_WINDOWS
+    if (!thread->handle)
+		return false;
+		
+    DWORD wait_result = WaitForSingleObject((HANDLE)thread->handle, wait_milliseconds);
+    if (wait_result != 0)
+		return false;
+    CloseHandle((HANDLE)thread->handle);
+    atomic_store32(&thread->state, 4, memory_order_release);
+    thread->handle = 0;
+    if (exit_code)
+        *exit_code = thread->result;
+	return true;
+
+#elif FOUNDATION_PLATFORM_POSIX
+    if (thread->handle) {
+        int join_result = pthread_tryjoin_np((pthread_t)thread->handle, &exit_code);
+        if (join_result != 0)
+			return false;
+        pthread_cancel((pthread_t)thread->handle);
+        pthread_join((pthread_t)thread->handle, &exit_code);
+        atomic_store32(&thread->state, 4, memory_order_release);
+        thread->handle = 0;
+		return true;
+    }
+#else
+#error Not implemented
+#endif
 }
 
 void*

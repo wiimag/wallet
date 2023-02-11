@@ -77,6 +77,22 @@ corresponding call to #thread_start
 FOUNDATION_API void*
 thread_join(thread_t* thread);
 
+/*! Try to join an execution thread and free system resources. Must be paired with a
+ *  corresponding call to #thread_start.
+ \param thread Thread
+ \param wait_milliseconds Time in milliseconds to wait for thread to finish, 0 means no wait
+ \param exit_code Pointer to store thread exit code
+ */
+FOUNDATION_API bool
+thread_try_join(thread_t* thread, uint32_t wait_milliseconds, void** exit_code);
+
+/*! Try to close all system windows associated to the given thread.
+ \param thread Thread
+ \remark This is a best effort operation, and may not succeed on all platforms.
+ */
+FOUNDATION_API void 
+thread_close_all_windows(thread_t* thread);
+
 /*! Force kill the thread. Must be paired with a corresponding call to #thread_start
 \param thread Thread
 \return True if the thread was terminated */

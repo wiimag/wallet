@@ -345,9 +345,9 @@ fi
 if [ $RUN -eq 1 ]; then
 
     if [ ${machine} == "MinGw" ]; then
-        ./build/${SHORT_NAME}.exe $POSITIONAL_ARGS
+        ./build/${SHORT_NAME}.exe ${POSITIONAL_ARGS[@]}
     elif [ ${machine} == "Mac" ]; then
-        ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} $POSITIONAL_ARGS
+        ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} ${POSITIONAL_ARGS[@]}
     fi
 
     retval=$?

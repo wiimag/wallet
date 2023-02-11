@@ -1068,6 +1068,7 @@ FOUNDATION_STATIC void main_handle_debug_break()
     {
         log_warn(0, WARNING_STANDARD, STRING_CONST("Waiting for debugger to attach..."));
         
+        static bool debug_break_continue = false;
         static dispatcher_thread_id wait_thread_id = 0;
         if (main_is_graphical_mode())
         {
@@ -1076,12 +1077,12 @@ FOUNDATION_STATIC void main_handle_debug_break()
                 system_message_box(STRING_CONST("Attach Debugger (Debug Break)"),
                     STRING_CONST("You can attach debugger now and press OK to continue..."), false);
                 wait_thread_id = 0;
+                debug_break_continue = true;
             });
         }
 
-        while (!system_debugger_attached() && !_process_should_exit && wait_thread_id != 0)
+        while (!system_debugger_attached() && !_process_should_exit && !debug_break_continue)
             thread_sleep(1000);
-
         if (wait_thread_id)
             dispatcher_thread_stop(wait_thread_id);
     }
@@ -1349,20 +1350,19 @@ extern int main_run(void* context)
 extern void main_finalize()
 {
     extern void app_shutdown();
-
-    #if BUILD_DEVELOPMENT
-    if (!_run_tests)
-    #endif
-    {
+    
+    if (_glfw_window && main_is_interactive_mode())
         glfw_save_window_geometry(_glfw_window);
-    }
 
     app_shutdown();
     dispatcher_shutdown();
 
-    bgfx_shutdown();
-    imgui_shutdown();
-    glfw_shutdown();
+    if (main_is_graphical_mode())
+    {
+        bgfx_shutdown();
+        imgui_shutdown();
+        glfw_shutdown();
+    }
 
     if (log_stdout())
         process_release_console();

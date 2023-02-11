@@ -158,6 +158,6 @@ on thread exit for foundation threads. */
 FOUNDATION_API void
 system_thread_finalize(void);
 
-/*! Checks if the systeme is a running a dark theme */
+/*! Checks if the system is a running a dark theme */
 FOUNDATION_API bool
 system_is_dark_theme();

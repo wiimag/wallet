@@ -19,7 +19,6 @@ struct dispatcher_thread_t
 {
     thread_t* thread;
     
-    void* result;
     void* payload;
     function<void* (void*)> thread_fn;
     function<void(void*)> complted_fn;
@@ -303,7 +302,7 @@ FOUNDATION_STATIC void dispatch_execute_thread_completed(dispatcher_thread_t* dt
     FOUNDATION_ASSERT(dt);
     
     thread_signal(dt->thread);
-    dt->complted_fn.invoke(dt->result);
+    dt->complted_fn.invoke(dt->thread->result);
 
     thread_deallocate(dt->thread);
 
@@ -329,12 +328,9 @@ dispatcher_thread_id dispatch_thread(const function<void*(void*)>& thread_fn, co
         FOUNDATION_ASSERT(dt);
         
         void* result_ptr = dt->thread_fn.invoke(dt->payload);
-        dt->result = result_ptr;
-
         dispatch(L0(dispatch_execute_thread_completed(dt))); 
         
-        return result_ptr;
-        
+        return result_ptr;        
     }, dispatcher_thread, STRING_CONST("Dispatcher Thread"), THREAD_PRIORITY_NORMAL, 0);
 
     bool thread_started = thread_start(dispatcher_thread->thread);
