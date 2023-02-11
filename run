@@ -33,6 +33,7 @@ is_number() {
 # Parse common command line arguments
 #
 
+POSITIONAL_ARGS=()
 RUN=1 # Indicate if the default build should be run at the end
 BUILD=0
 BUILD_DEBUG=0
@@ -46,7 +47,7 @@ PRINT=0
 PRINT_LARGEFILES=0
 HELP=0
 VERBOSE=0
-POSITIONAL_ARGS=()
+DIFF=0
 
 while [[ $# -gt 0 ]]; do
   #echo "\$1:\"$1\" \$2:\"$2\""
@@ -113,6 +114,10 @@ while [[ $# -gt 0 ]]; do
       TESTS=1
       shift # past argument
       ;;
+    d|diff)
+      DIFF=1
+      shift # past argument
+      ;;
     s|start)
       RUN=1
       START=1
@@ -130,37 +135,64 @@ done
 #
 if [ $HELP -eq 1 ]; then
 
-    echo "  Usage: $progname [${bold}b${normal}uild [debug|release|deploy]] "
-    echo "             [${bold}t${normal}ests] " 
-    echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
-    echo "             [${bold}p${normal}rint [largefiles] "
-    echo "             [${bold}s${normal}tart] [--option=<value>] ...additional arguments passed to last command"
-    echo ""
-    echo "  Commands:"
-    echo "    ${bold}b${normal}uild [debug|release]  Build the solution in debug or release (release if used by default)"
-    echo "    ${bold}t${normal}ests                  Run application tests (i.e. using --run-tests)"
-    echo "    ${bold}o${normal}pen [workspace]       Open the application solution workspace (i.e. Visual Studio or Xcode IDE)"
-    echo "    ${bold}p${normal}rint [largefiles|...] Print various solution information or stats"
-    echo "    ${bold}s${normal}tart                  Launch the application after running other commands "
-    echo ""
-    echo "    If no commands are specified, we start the application by default, i.e. './run')"
-    echo ""
-    echo "    Commands can be chained one after the other, i.e. './run build tests --success=true --verbose'"
-    echo ""
-    echo "  Optional arguments:"
-    echo "   -h, --help            Show this help message and exit"
-    echo "   -n, --name <name>     Specify the solution name (used to open the workspace are launch the exe on Windows)"
-    echo "   -a, --app-name <name> Specify the App name to launch application on MacOS"
-    echo "   --verbose             Increase the verbosity of the bash script"
-    echo ""
-    echo "  Examples:"
-    echo "    ./run build                         Build the solution"
-    echo "    ./run build tests start             Build then run tests and finally lanch the application"
-    echo "    ./run build tests --success=true    Build then run tests passing the --success=true argument to test framework"
-    echo "    ./run print largefiles 50           Print top 50 largest files in the repo."
-    echo ""
-    exit 0
+  echo "  Usage: $progname [${bold}b${normal}uild [debug|release|deploy]] "
+  echo "             [${bold}t${normal}ests] " 
+  echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
+  echo "             [${bold}p${normal}rint [largefiles] "
+  echo "             [${bold}d${normal}iff [main|release/1.0.0|...] "
+  echo "             [${bold}s${normal}tart] [--option=<value>] ...additional arguments passed to last command"
+  echo ""
+  echo "  Commands:"
+  echo "    ${bold}b${normal}uild [debug|release]  Build the solution in debug or release (release if used by default)"
+  echo "    ${bold}t${normal}ests                  Run application tests (i.e. using --run-tests)"
+  echo "    ${bold}o${normal}pen [workspace]       Open the application solution workspace (i.e. Visual Studio or Xcode IDE)"
+  echo "    ${bold}p${normal}rint [largefiles|...] Print various solution information or stats"
+  echo "    ${bold}d${normal}iff [...]             Diff the current branch with the specified remote branch (i.e. main, release/1.0.0, etc.)"
+  echo "    ${bold}s${normal}tart                  Launch the application after running other commands "
+  echo ""
+  echo "    If no commands are specified, we start the application by default, i.e. './run')"
+  echo ""
+  echo "    Commands can be chained one after the other, i.e. './run build tests --success=true --verbose'"
+  echo ""
+  echo "  Optional arguments:"
+  echo "   -h, --help            Show this help message and exit"
+  echo "   -n, --name <name>     Specify the solution name (used to open the workspace are launch the exe on Windows)"
+  echo "   -a, --app-name <name> Specify the App name to launch application on MacOS"
+  echo "   --verbose             Increase the verbosity of the bash script"
+  echo ""
+  echo "  Examples:"
+  echo "    ./run build                         Build the solution"
+  echo "    ./run build tests start             Build then run tests and finally lanch the application"
+  echo "    ./run build tests --success=true    Build then run tests passing the --success=true argument to test framework"
+  echo "    ./run print largefiles 50           Print top 50 largest files in the repo."
+  echo "    ./run diff                          Diff the current branch with the main branch (default)"
+  echo "    ./run diff release/1.0              Diff the current branch with the remote release 1.0 branch"
+  echo ""
+  exit 0
 
+fi
+
+if [ $VERBOSE -eq 1 ]; then
+
+  # Print all set variables
+  echo "APP_NAME: $APP_NAME"
+  echo "SHORT_NAME: $SHORT_NAME"
+  echo "BUILD: $BUILD"
+  echo "  BUILD_DEBUG: $BUILD_DEBUG"
+  echo "  BUILD_RELEASE: $BUILD_RELEASE"
+  echo "  BUILD_DEPLOY: $BUILD_DEPLOY"
+  echo "OPEN: $OPEN"
+  echo "  OPEN_WORKSPACE: $OPEN_WORKSPACE"
+  echo "PRINT: $PRINT"
+  echo "  PRINT_LARGEFILES: $PRINT_LARGEFILES"
+  echo "TESTS: $TESTS"
+  echo "DIFF: $DIFF"
+  echo "START: $START"
+  echo "HELP: $HELP"
+  echo "VERBOSE: $VERBOSE"
+
+  # Echo positional args
+  echo "Positional arguments: ${POSITIONAL_ARGS[@]}"
 fi
 
 #
@@ -168,26 +200,52 @@ fi
 #
 if [ $BUILD -eq 1 ]; then
 
-    if [ $machine == "MinGw" ]; then
-        if [ $BUILD_DEBUG -eq 1 ]; then
-            ./scripts/build_win_debug.bat $POSITIONAL_ARGS
-        elif  [ $BUILD_DEPLOY -eq 1 ]; then
-            ./scripts/build_win_deploy.bat $POSITIONAL_ARGS
-        else
-            ./scripts/build_win_release.bat $POSITIONAL_ARGS
-        fi
-    elif [ ${machine} == "Mac" ]; then
-        if [ $BUILD_DEBUG -eq 1 ]; then
-            ./scripts/build_osx_debug.sh $POSITIONAL_ARGS
-        else
-            ./scripts/build_osx_release.sh $POSITIONAL_ARGS
-        fi
+  if [ $machine == "MinGw" ]; then
+    if [ $BUILD_DEBUG -eq 1 ]; then
+      ./scripts/build_win_debug.bat $POSITIONAL_ARGS
+    elif  [ $BUILD_DEPLOY -eq 1 ]; then
+      ./scripts/build_win_deploy.bat $POSITIONAL_ARGS
+    else
+      ./scripts/build_win_release.bat $POSITIONAL_ARGS
     fi
+  elif [ ${machine} == "Mac" ]; then
+    if [ $BUILD_DEBUG -eq 1 ]; then
+      ./scripts/build_osx_debug.sh $POSITIONAL_ARGS
+    else
+      ./scripts/build_osx_release.sh $POSITIONAL_ARGS
+    fi
+  fi
 
+  retval=$?
+  if [ $retval -ne 0 ]; then
+      echo
+      echo "===BUILD FAILED ($retval)==="
+      echo
+      exit $retval
+  fi
+
+  RUN=0
+fi
+
+#
+# GIT DIFF
+#
+if [ $DIFF -eq 1 ]; then
+
+    # Check if we have a remote branch to diff against and make sure the argument doesn't start with -- or -
+    if [ ${#POSITIONAL_ARGS[@]} -eq 0 ] || [[ ${POSITIONAL_ARGS[0]} == --* ]] || [[ ${POSITIONAL_ARGS[0]} == -* ]]; then
+        # Insert main at position 0 and push other arguments
+        POSITIONAL_ARGS=("${POSITIONAL_ARGS[@]:0:0}" "main" "${POSITIONAL_ARGS[@]:0}")
+    fi
+    
+    # Diff the current branch with the specified remote branch
+    git difftool -d "origin/${POSITIONAL_ARGS[0]}" ${POSITIONAL_ARGS[@]:1}
+
+    # Check return value
     retval=$?
     if [ $retval -ne 0 ]; then
         echo
-        echo "===BUILD FAILED ($retval)==="
+        echo "===DIFF FAILED ($retval)==="
         echo
         exit $retval
     fi
