@@ -11,6 +11,7 @@
 #include "stock.h"
 #include "pattern.h"
 #include "settings.h"
+#include "logo.h"
 
 #include <framework/common.h>
 #include <framework/function.h>
@@ -232,7 +233,15 @@ FOUNDATION_STATIC void symbols_search(symbol_t** symbols, string_const_t search_
 FOUNDATION_STATIC cell_t symbol_get_code(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
-    return cell_t(string_table_decode(symbol->code));
+
+    string_const_t code = string_table_decode_const(symbol->code);
+    if (column->flags & COLUMN_RENDER_ELEMENT)
+    {
+        const ImRect& cell_rect = table_current_cell_rect();
+        logo_render_banner(STRING_ARGS(code), cell_rect, nullptr);
+    }
+
+    return code;
 }
 
 FOUNDATION_STATIC cell_t symbol_get_name(void* element, const column_t* column)
@@ -474,13 +483,14 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
         };
     }
 
-    auto& symbol_column = table_add_column(table, STRING_CONST("Symbol"), symbol_get_code, COLUMN_FORMAT_TEXT, COLUMN_FREEZE | COLUMN_SORTABLE)
-        .set_style_formatter(symbol_code_color);
+    auto& symbol_column = table_add_column(table, STRING_CONST("Symbol"), symbol_get_code, 
+        COLUMN_FORMAT_TEXT, COLUMN_FREEZE | COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING);
 
     if (!selector)
         symbol_column.set_selected_callback(symbol_code_selected);
 
     column_t& c_name = table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"), symbol_get_name, COLUMN_FORMAT_TEXT, COLUMN_DYNAMIC_VALUE | COLUMN_SORTABLE | (selector ? COLUMN_STRETCH : COLUMN_OPTIONS_NONE));
+    c_name.set_style_formatter(symbol_code_color);
     c_name.tooltip = symbol_description_tooltip;
 
     table_add_column(table, STRING_CONST(ICON_MD_FLAG " Country"), symbol_get_country, COLUMN_FORMAT_TEXT, COLUMN_HIDE_DEFAULT | COLUMN_SORTABLE);

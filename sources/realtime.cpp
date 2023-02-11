@@ -42,6 +42,7 @@ struct stock_realtime_t
     time_t timestamp;
     double price;
     double volume;
+    bool   refresh{ false };
 
     stock_realtime_record_t* records{ nullptr };
 };
@@ -84,7 +85,11 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
      
     int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
     if (fidx >= 0)
+    {        
+        // Mark the stock as to be refreshed
+        _realtime->stocks[fidx].refresh = true;
         return false;
+    }
     
     stock_realtime_t stock;
     string_copy(STRING_CONST_CAPACITY(stock.code), code.str, code.length);
@@ -93,6 +98,7 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
     stock.price = DNAN;
     stock.volume = 0;
     stock.records = nullptr;
+    stock.refresh = true;
 
     fidx = ~fidx;
     array_insert_memcpy(_realtime->stocks, fidx, &stock);
@@ -264,6 +270,12 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         if (r.timestamp <= 0 || math_real_is_nan(r.price))
             continue;
 
+        if (time_elapsed_days(r.timestamp, time_now()) > 31)
+        {
+            log_debugf(HASH_REALTIME, STRING_CONST("Ignoring realtime stock record %s (%lld) as it is too old."), stock.code, r.timestamp);
+            continue;
+        }
+
         const size_t code_length = string_length(stock.code);
         stock.key = hash(stock.code, code_length);
 
@@ -275,8 +287,9 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
             stock.timestamp = r.timestamp;
             stock.volume = r.volume;
             stock.records = nullptr;
+            stock.refresh = false;
             array_push_memcpy(stock.records, &r);
-            
+
             array_insert_memcpy(_realtime->stocks, ~fidx, &stock);
             log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime stock %s (%" PRIhash ")"), stock.code, stock.key);
         }
@@ -307,6 +320,10 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
             for (size_t i = 0, end = array_size(_realtime->stocks); i < end; ++i)
             {
                 const stock_realtime_t& stock = _realtime->stocks[i];
+
+                if (stock.refresh == false)
+                    continue;
+
                 const double minutes = time_elapsed_days(stock.timestamp, now) * 24.0 * 60.0;
                 if (minutes > 5)
                     array_push(codes, string_const(stock.code, string_length(stock.code)));
@@ -602,7 +619,7 @@ FOUNDATION_STATIC void realtime_render_window_tootlbar()
     bool show_all = _realtime->time_lapse == 0;
     if (ImGui::Checkbox("Show all records", &show_all))
     {
-        _realtime->time_lapse = show_all ? 0 : session_get_integer("realtime_time_lapse_days", 24);
+        _realtime->time_lapse = show_all ? 0 : max(1, session_get_integer("realtime_time_lapse_days", 24));
     }
 
     if (!show_all)
