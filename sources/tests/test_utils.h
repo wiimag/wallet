@@ -26,6 +26,7 @@
 extern void main_dispatcher();
 extern GLFWwindow* main_test_window();
 extern bool main_poll(GLFWwindow* window);
+extern void main_update(GLFWwindow* window, const app_update_handler_t& render);
 extern void main_render(GLFWwindow* window, const app_render_handler_t& render, const app_render_handler_t& begin, const app_render_handler_t& end);
 
 /// <summary>

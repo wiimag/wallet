@@ -329,9 +329,12 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
     t->code_length = string_copy(STRING_CONST_CAPACITY(t->code), STRING_ARGS(title_code)).length;
 
     // Initiate to resolve the title stock right away in case it has never been done before.
-    const auto fetch_level = title_minimum_fetch_level(t);
-    if (!t->stock)
-        t->stock = stock_request(t->code, t->code_length, fetch_level);
+    if (main_is_interactive_mode())
+    {
+        const auto fetch_level = title_minimum_fetch_level(t);
+        if (!t->stock)
+            t->stock = stock_request(t->code, t->code_length, fetch_level);
+    }
 
     int valid_dates = 0;
     double total_ask_price = 0;
