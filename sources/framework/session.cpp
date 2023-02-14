@@ -277,6 +277,13 @@ string_const_t session_get_string(const char* keyname, const char* default_value
     return _session_config[keyname].as_string(default_value, string_length(default_value));
 }
 
+string_const_t session_get_string(const char* keyname, char* buf, size_t size, const char* default_value /*= nullptr*/)
+{
+    string_const_t str_value = session_get_string(keyname, default_value);
+    string_t str = string_copy(buf, size, STRING_ARGS(str_value));
+    return string_to_const(str);
+}
+
 bool session_set_bool(const char* keyname, bool value)
 {
     return session_set_integer(keyname, value ? 1 : 0);

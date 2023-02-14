@@ -1423,7 +1423,7 @@ string_t config_parse_string(string_const_t json, int& index, config_option_flag
             ++index;
             if (q == '"' || q == '\\' || q == '/')
             {
-                s = array_push(s, c);
+                s = array_push(s, q);
             }
             else if (q == 'b') { s = array_push(s, '\b'); }
             else if (q == 'f') { s = array_push(s, '\f'); }

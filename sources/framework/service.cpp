@@ -15,7 +15,7 @@
 #define HASH_SERVICE_TABS (static_hash_string("service_tabs", 12, 0xeee279126075ccf8ULL))
 #define HASH_SERVICE_MENU (static_hash_string("service_menu", 12, 0x597ea6b5d910db56ULL))
 #define HASH_SERVICE_WINDOW (static_hash_string("service_window", 14, 0x576d11d2f45d4892ULL))
-#define HASH_SERVICE_UPDATE (static_hash_string("service_update", 14, 0x576d11d2f45d4892ULL))
+#define HASH_SERVICE_UPDATE (static_hash_string("service_update", 14, 0xbaa2a5e8e56e258aULL))
 #define HASH_SERVICE_MENU_STATUS (static_hash_string("service_menu_status", 19, 0x200f262941438cb4ULL))
 
 struct service_handler_t
@@ -220,6 +220,6 @@ void service_foreach_window()
 
 void service_update()
 {
-    service_foreach(HASH_SERVICE_WINDOW);
+    service_foreach(HASH_SERVICE_UPDATE);
 }
 

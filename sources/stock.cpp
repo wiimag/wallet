@@ -50,6 +50,55 @@ FOUNDATION_STATIC void stock_grow_db()
     hashtable64_deallocate(old_table);
 }
 
+template <size_t field_length>
+FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, const char(&field)[field_length], double& value)
+{
+    if (_db_stocks == nullptr || stock_index >= array_size(_db_stocks))
+        return false;
+
+    SHARED_READ_LOCK(_db_lock);
+    const stock_t* s = &_db_stocks[stock_index];
+    if (s == nullptr)
+        return false;
+        
+    const char* ticker = string_table_decode(s->code);
+    time_t since_last_year = time_add_days(time_now(), -465);
+    string_const_t date_str = string_from_date(since_last_year);
+    const char* url = eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", ticker, "from", date_str.str).str;
+    return query_execute_async_json(url, FORMAT_JSON_CACHE, [stock_index, field](const json_object_t& json)
+    {
+        if (json.root == nullptr)
+            return;
+
+        double value_total = 0;
+        double value_count = 0;
+        auto earnings = json["earnings"];
+        for (auto e : earnings)
+        {
+            const double v = e[field].as_number();
+            if (math_real_is_finite(v))
+            {
+                value_total += v;
+                value_count++;
+            }
+        }
+
+        const double value_avg = value_count > 0 ? value_total / value_count : 0;
+        
+        SHARED_READ_LOCK(_db_lock);
+        stock_t* s = &_db_stocks[stock_index];
+
+        if (string_equal(field, field_length-1, STRING_CONST("actual")))
+            s->earning_trend_actual = value_avg;
+        else if (string_equal(field, field_length-1, STRING_CONST("estimate")))
+            s->earning_trend_estimate = value_avg;
+        else if (string_equal(field, field_length-1, STRING_CONST("difference")))
+            s->earning_trend_difference = value_avg;
+        else if (string_equal(field, field_length-1, STRING_CONST("percent")))
+            s->earning_trend_percent = value_avg;
+    }, 15 * 24 * 3600ULL);
+}
+
 FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string_table_symbol_t& value)
 {
     if (_db_stocks == nullptr || stock_index >= array_size(_db_stocks))
@@ -142,6 +191,10 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     entry.ws_target = hightlights["WallStreetTargetPrice"].as_number();
     entry.revenue_per_share_ttm = hightlights["RevenuePerShareTTM"].as_number();
     entry.profit_margin = hightlights["ProfitMargin"].as_number();
+
+    // This figure, diluted EPS, is calculated by dividing net income net of preferred dividends 
+    // by a weighted average of total shares outstanding plus additional common shares that would 
+    // have been outstanding if the dilutive common share would have been issued for the trailing 12 months.
     entry.diluted_eps_ttm = hightlights["DilutedEpsTTM"].as_number();
 
     const json_object_t& valuation = json["Valuation"];
@@ -401,7 +454,11 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         // Initialize stock entries
         entry->id = handle.id;
         entry->code = handle.code;
-        entry->description.reset([index](string_table_symbol_t& value) {  return stock_fetch_description(index, value); });
+        entry->earning_trend_actual.reset(LR1(stock_fetch_earnings_trend(index, "actual", _1)));
+        entry->earning_trend_estimate.reset(LR1(stock_fetch_earnings_trend(index, "estimate", _1)));
+        entry->earning_trend_difference.reset(LR1(stock_fetch_earnings_trend(index, "difference", _1)));
+        entry->earning_trend_percent.reset(LR1(stock_fetch_earnings_trend(index, "percent", _1)));
+        entry->description.reset(LR1(stock_fetch_description(index, _1)));
 
         FOUNDATION_ASSERT(handle.id != 0);
         if (!hashtable64_set(_db_hashes, handle.id, index))

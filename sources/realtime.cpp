@@ -94,7 +94,7 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
     stock_realtime_t stock;
     string_copy(STRING_CONST_CAPACITY(stock.code), code.str, code.length);
     stock.key = key;
-    stock.timestamp = time_now();
+    stock.timestamp = 0;
     stock.price = DNAN;
     stock.volume = 0;
     stock.records = nullptr;
@@ -339,7 +339,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
 
         size_t batch_size = 0;
         string_const_t batch[32];
-        for (size_t i = 0, end = array_size(codes) && !quit_thread; i < end; ++i)
+        for (size_t i = 0, end = array_size(codes); i < end && !quit_thread; ++i)
         {
             if (thread_try_wait(0))
             {

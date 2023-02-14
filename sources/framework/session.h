@@ -87,7 +87,16 @@ float session_get_float(const char* keyname, float default_value = 0.0f);
 /// <param name="keyname"></param>
 /// <param name="default_value"></param>
 /// <returns></returns>
-string_const_t session_get_string(const char* keyname, const char* default_value = NULL);
+string_const_t session_get_string(const char* keyname, const char* default_value = nullptr);
+
+/*! Returns the string value of a user setting.
+ \param keyname         The name of the setting to retrieve.
+ \param buf             The buffer to store the string value.
+ \param size            The size of the buffer.
+ \param default_value   The default value to return if the setting does not exist.
+ \return The string value of the setting.
+ */
+string_const_t session_get_string(const char* keyname, char* buf, size_t size, const char* default_value = nullptr);
 
 /// <summary>
 /// Sets the boolean value of a user setting.

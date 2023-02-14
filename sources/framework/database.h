@@ -18,7 +18,8 @@ hash_t hash(const T& value)
     return hash(&value, FOUNDATION_ALIGNOF(T));
 }
 
-template<typename T, hash_t(*HASHER)(const T& v) = [](const T& v) { return hash(v); } >
+template<typename T, 
+    hash_t(*HASHER)(const T& v) = [](const T& v) { return hash(v); }>
 struct database
 {
     T* elements;
@@ -289,7 +290,25 @@ struct database
 
     bool select(hash_t key, const function<void(const T& value)>& selector) const
     {
-        return update(key, [&selector](const T& value) { selector(value); }, true);
+        const uint64_t index = hashtable64_get(hashes, key);
+        if (index == 0)
+            return false;
+
+        if (!mutex.shared_lock())
+        {
+            FOUNDATION_ASSERT_FAIL("Failed to get shared lock");
+            return false;
+        }
+
+        if (index > array_size(elements))
+        {
+            FOUNDATION_ASSERT_FAIL("Index is out of bound");
+            mutex.shared_unlock();
+            return false;
+        }
+        
+        selector.invoke(elements[index - 1]);
+        return mutex.shared_unlock();
     }
 
     bool update(hash_t key, const function<void(T& value)>& selector, bool quick_and_unsafe = false) const

@@ -782,7 +782,8 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
                 column.tooltip(element, &column, &cell);
                 ImGui::EndTooltip();
             }
-            else if (column.flags & COLUMN_NUMBER_ABBREVIATION && cell.format == COLUMN_FORMAT_NUMBER && cell.number > 999)
+            else if (((column.flags & COLUMN_NUMBER_ABBREVIATION) && cell.format == COLUMN_FORMAT_NUMBER && cell.number > 999) ||
+                     ((column.flags & COLUMN_ROUND_NUMBER) && column.format == COLUMN_FORMAT_PERCENTAGE))
             {
                 ImGui::SetTooltip("%lg", cell.number);
             }

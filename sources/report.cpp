@@ -350,6 +350,38 @@ FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_con
     }
 }
 
+FOUNDATION_STATIC cell_t report_column_earning_actual(table_element_ptr_t element, const column_t* column)
+{
+    title_t* t = *(title_t**)element;
+    if (t == nullptr || title_is_index(t))
+        return nullptr;
+    return t->stock->earning_trend_actual.fetch();
+}
+
+FOUNDATION_STATIC cell_t report_column_earning_estimate(table_element_ptr_t element, const column_t* column)
+{
+    title_t* t = *(title_t**)element;
+    if (t == nullptr || title_is_index(t))
+        return nullptr;
+    return t->stock->earning_trend_estimate.fetch();
+}
+
+FOUNDATION_STATIC cell_t report_column_earning_difference(table_element_ptr_t element, const column_t* column)
+{
+    title_t* t = *(title_t**)element;
+    if (t == nullptr || title_is_index(t))
+        return nullptr;
+    return t->stock->earning_trend_difference.fetch();
+}
+
+FOUNDATION_STATIC cell_t report_column_earning_percent(table_element_ptr_t element, const column_t* column)
+{
+    title_t* t = *(title_t**)element;
+    if (t == nullptr || title_is_index(t))
+        return nullptr;
+    return (double)math_round(t->stock->earning_trend_percent.fetch());
+}
+
 FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, const column_t* column, report_column_formula_t formula)
 {
     title_t* t = *(title_t**)element;
@@ -601,7 +633,11 @@ FOUNDATION_STATIC cell_t report_column_get_change_value(table_element_ptr_t elem
     if (!stock_data)
         return DNAN;
 
-    return title_get_range_change_p(title, stock_data, rel_days, rel_days < -365);
+    const double v = title_get_range_change_p(title, stock_data, rel_days, rel_days < -365);
+
+    if (rel_days < -10 || rel_days > 10)
+        return (double)math_round(v);
+    return v;
 }
 
 FOUNDATION_STATIC bool report_column_is_numeric(column_format_t format)
@@ -1362,6 +1398,18 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE)
         .set_selected_callback(report_title_pattern_open);
 
+    table_add_column(table, STRING_CONST("E. Actual " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Actual"),
+        report_column_earning_actual, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+
+    table_add_column(table, STRING_CONST("E. Estimate " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Estimate"),
+        report_column_earning_estimate, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+
+    table_add_column(table, STRING_CONST("E. Diff. " ICON_MD_TRENDING_NEUTRAL "||" ICON_MD_TRENDING_NEUTRAL " Earning Difference"),
+        report_column_earning_difference, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+
+    table_add_column(table, STRING_CONST("EPS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Trend"),
+        report_column_earning_percent, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+
     table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), 
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE)
         .set_tooltip_callback(report_title_day_change_tooltip);
@@ -1398,7 +1446,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .set_style_formatter(report_title_total_gain_alerts_formatter)
         .set_tooltip_callback(report_title_gain_total_tooltip);
     table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER)
         .set_style_formatter(report_title_total_gain_p_alerts_formatter);
 
     table_add_column(table, STRING_CONST(ICON_MD_INVENTORY " Type    "), 

@@ -108,6 +108,10 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     size_t history_count{ 0 };
     day_result_t* previous{ nullptr };
 
+    double_option_t earning_trend_actual{ DNAN };
+    double_option_t earning_trend_estimate{ DNAN };
+    double_option_t earning_trend_difference{ DNAN };
+    double_option_t earning_trend_percent{ DNAN };
     double_option_t dividends_yield { DNAN };
     string_option_t description { STRING_TABLE_NULL_SYMBOL };
 

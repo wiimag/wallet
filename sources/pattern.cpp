@@ -213,10 +213,10 @@ FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_co
         table_cell_right_aligned_label(STRING_ARGS(v1), STRING_ARGS(v1_url));
 
     ImGui::TableNextColumn();
-    ImGui::SetWindowFontScale(0.7f);
+    ImGui::SetWindowFontScale(0.6f);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.0f);
     if (!string_is_null(v2)) table_cell_middle_aligned_label(STRING_ARGS(v2));
-    ImGui::SetWindowFontScale(0.9f);
+    ImGui::SetWindowFontScale(0.8f);
 
     ImGui::TableNextColumn();
     if (!string_is_null(v3)) table_cell_right_aligned_label(STRING_ARGS(v3));
@@ -477,6 +477,19 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         pattern_render_stats_line(CTEXT("Beta"), 
             pattern_format_percentage(s->beta * 100.0),
             pattern_format_percentage(s->dma_200 / s->dma_50 * 100.0));
+
+        const double eps_diff = s->earning_trend_difference.fetch();
+        const double eps_percent = s->earning_trend_percent.fetch();
+        ImGui::PushStyleColor(ImGuiCol_Text, eps_diff <= 0.1 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
+        pattern_render_stats_line(CTEXT("Earnings"),
+            pattern_format_currency(s->diluted_eps_ttm),
+            pattern_format_percentage(eps_percent));
+        ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(" Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n"
+                                  "           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% ", 
+                s->diluted_eps_ttm, s->earning_trend_actual.fetch(), s->earning_trend_estimate.fetch(), s->earning_trend_difference.fetch(), eps_percent, 
+                s->diluted_eps_ttm / s->current.close * 100.0);
         
         if (s->pe != 0)
         {
@@ -1836,6 +1849,16 @@ void pattern_menu(pattern_handle_t handle)
 
             if (ImGui::MenuItem("EOD", nullptr, nullptr, true))
                 open_in_shell(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
+
+            if (ImGui::MenuItem("Trends", nullptr, nullptr, true))
+                open_in_shell(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
+
+            if (ImGui::MenuItem("Earnings", nullptr, nullptr, true))
+            {
+                time_t since_last_year = time_add_days(time_now(), -465);
+                string_const_t date_str = string_from_date(since_last_year);
+                open_in_shell(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
+            }
 
             if (ImGui::MenuItem("Technical", nullptr, nullptr, true))
                 open_in_shell(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);

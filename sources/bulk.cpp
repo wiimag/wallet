@@ -596,9 +596,11 @@ FOUNDATION_STATIC void bulk_render()
 
 FOUNDATION_STATIC void bulk_render_tabs()
 {
+    if (!SETTINGS.show_bulk_eod)
+        return;
+
     tab_set_color(TAB_COLOR_OTHER);
-    if (SETTINGS.show_bulk_eod)
-        tab_draw(ICON_MD_BATCH_PREDICTION " Last Day", &SETTINGS.show_bulk_eod, bulk_render);
+    tab_draw(ICON_MD_BATCH_PREDICTION " Last Day", &SETTINGS.show_bulk_eod, bulk_render);
 }
 
 // 

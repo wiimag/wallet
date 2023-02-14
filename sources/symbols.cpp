@@ -657,6 +657,11 @@ FOUNDATION_STATIC void symbols_render_menus()
         ImGui::MenuItem("CVE Symbols", nullptr, &SETTINGS.show_symbols_CVE);
         ImGui::MenuItem("NEO Symbols", nullptr, &SETTINGS.show_symbols_NEO);
         ImGui::MenuItem("US Symbols", nullptr, &SETTINGS.show_symbols_US);
+
+        ImGui::Separator();
+        if (ImGui::MenuItem("IPOs", nullptr, nullptr, true))
+            open_in_shell(eod_build_url("calendar", "ipos", FORMAT_JSON).str);
+
         ImGui::EndMenu();
     }
 

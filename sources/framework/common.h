@@ -155,20 +155,24 @@ string_const_t string_join(Iter begin, Iter end, const function<string_const_t(c
     if (!string_is_null(open_token))
         join_list_string = string_allocate_concat(nullptr, 0, STRING_ARGS(open_token));
 
+    int added = 0;
     for (Iter it = begin; it != end; ++it)
     {
-        b_list = join_list_string;
+        string_const_t e_str = iter(*it);
+        if (string_is_null(e_str))
+            continue;
 
-        if (it != begin)
+        b_list = join_list_string;
+        if (added > 0)
         {
             join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(sep));
             string_deallocate(b_list.str);
         }
 
-        string_const_t e_str = iter(*it);
         b_list = join_list_string;
         join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(e_str));
         string_deallocate(b_list.str);
+        added++;
     }
 
     if (!string_is_null(close_token))
@@ -609,7 +613,6 @@ template<typename T> using alias = T;
     ptr = nullptr;          \
 }
 
-
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr int32_t to_int(size_t v)
 {
     FOUNDATION_ASSERT_MSGFORMAT(v <= INT_MAX, "%" PRIsize " > %d", v, INT_MAX);
@@ -634,4 +637,19 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t rgb_to_abgr(const
     const uint8_t g = (v & 0x0000FF00) >> 8;
     const uint8_t b = (v & 0x000000FF);
     return (alpha << 24) | (b << 16) | (g << 8) | (r);
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t h1, hash_t h2)
+{
+    return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t h1, hash_t h2, hash_t h3)
+{
+    return hash_combine(hash_combine(h1, h2), h3);
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t h1, hash_t h2, hash_t h3, hash_t h4)
+{
+    return hash_combine(hash_combine(h1, h2), hash_combine(h3, h4));
 }

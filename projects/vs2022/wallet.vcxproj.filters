@@ -181,6 +181,9 @@
     <ClInclude Include="..\..\sources\framework\database.h">
       <Filter>framework</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sources\indicators.h">
+      <Filter>app</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sources\stock.cpp">
@@ -329,6 +332,9 @@
     </ClCompile>
     <ClCompile Include="..\..\sources\tests\dispatcher_tests.cpp">
       <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\indicators.cpp">
+      <Filter>app</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
