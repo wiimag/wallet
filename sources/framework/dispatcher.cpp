@@ -46,7 +46,11 @@ typedef enum DispatcherEventId : int32_t {
     DISPATCHER_POST_EVENT,
 } dispatcher_event_id_t;
 
-typedef function<void()> dispatcher_handler_t;
+struct dispatcher_handler_t
+{
+    function<void()> handler{ nullptr };
+    tick_t trigger_at{ 0 };
+};
 
 static int _wait_frame_throttling = 0;
 static event_handle _wait_active_signal;
@@ -139,15 +143,19 @@ void dispatcher_poll(GLFWwindow* window)
     }
 }
 
-bool dispatch(const function<void()>& callback)
+bool dispatch(const function<void()>& callback, uint32_t delay_milliseconds /*= 0*/)
 {
+    const tick_t ticks_per_milliseconds = time_ticks_per_second() / 1000LL;
+
     signal_thread();
-    if (mutex_lock(_dispatcher_lock))
-    {
-        array_push_memcpy(_dispatcher_actions, &callback);
-        mutex_unlock(_dispatcher_lock);
-        return true;
-    }
+    if (!mutex_lock(_dispatcher_lock))
+        return false;
+        
+    dispatcher_handler_t d{};
+    d.handler = callback;
+    d.trigger_at = time_current() + ticks_per_milliseconds * delay_milliseconds;
+    array_push_memcpy(_dispatcher_actions, &d);
+    return mutex_unlock(_dispatcher_lock);
 
     return false;
 }
@@ -158,8 +166,19 @@ void dispatcher_update()
     if (!mutex_try_lock(_dispatcher_lock))
         return;
     unsigned count = array_size(_dispatcher_actions);
+    const tick_t now = time_current();
     for (unsigned i = 0; i < count; ++i)
-        _dispatcher_actions[i]();
+    {
+        if (_dispatcher_actions[i].trigger_at <= now)
+        {
+            _dispatcher_actions[i].handler.invoke();
+            _dispatcher_actions[i].handler.~function();
+        }
+        else
+        {
+            array_push_memcpy(_dispatcher_actions, &_dispatcher_actions[i]);
+        }
+    }
     array_erase_ordered_range_safe(_dispatcher_actions, 0, count);
     mutex_unlock(_dispatcher_lock);
 }

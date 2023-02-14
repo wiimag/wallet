@@ -113,7 +113,8 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     double_option_t earning_trend_difference{ DNAN };
     double_option_t earning_trend_percent{ DNAN };
     double_option_t dividends_yield { DNAN };
-    string_option_t description { STRING_TABLE_NULL_SYMBOL };
+    string_option_t short_name { STRING_TABLE_NULL_SYMBOL };
+    string_option_t description{ STRING_TABLE_NULL_SYMBOL };
 
     //! @brief Checks if the stock is either already resolved or is in the process of being resolved.
     //! @param required_level The level of resolution required.
@@ -162,9 +163,19 @@ struct stock_handle_t
     
     mutable const stock_t* ptr{ nullptr };
 
-    const stock_t* operator*() const
+    const stock_t* get() const
     {
-        bool stock_request(const stock_handle_t & handle, const stock_t** out_stock);
+        const stock_t* s = resolve();
+        if (s != nullptr)
+            return s;
+
+        static const stock_t NIL{};
+        return &NIL;
+    }
+
+    const stock_t* resolve() const
+    {        
+        extern bool stock_request(const stock_handle_t & handle, const stock_t** out_stock);
         
         if (id == 0)
             return nullptr;
@@ -181,21 +192,10 @@ struct stock_handle_t
         return this->operator*() != nullptr;
     }
 
-    FOUNDATION_FORCEINLINE operator const stock_t* () const { return this->operator*(); }
-
+    FOUNDATION_FORCEINLINE const stock_t* operator*() const { return resolve(); }
+    FOUNDATION_FORCEINLINE operator const stock_t* () const { return resolve(); }
     FOUNDATION_FORCEINLINE stock_t* operator->() { return (stock_t*)get(); }
     FOUNDATION_FORCEINLINE const stock_t* operator->() const { return get(); }
-
-    FOUNDATION_FORCEINLINE const stock_t* get() const
-    {
-        const stock_t* s = this->operator*();
-        if (s == nullptr)
-        {
-            static const stock_t NIL{};
-            return &NIL;
-        }
-        return s;
-    }
 };
 
 /// <summary>
@@ -263,3 +263,11 @@ double stock_get_split_factor(const char* code, size_t code_length, time_t at);
 double stock_get_eod_price_factor(const char* code, size_t code_length, time_t at);
 
 double stock_get_split_adjusted_factor(const char* code, size_t code_length, time_t at);
+
+string_const_t stock_get_name(const char* code, size_t code_length);
+
+string_const_t stock_get_short_name(const char* code, size_t code_length);
+
+string_const_t stock_get_name(const stock_handle_t& handle);
+
+string_const_t stock_get_short_name(const stock_handle_t& handle);

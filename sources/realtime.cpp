@@ -173,6 +173,9 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
             }
         }
     }
+
+    if (_realtime->stream)
+        stream_flush(_realtime->stream);
 }
 
 FOUNDATION_STATIC stream_t* realtime_open_stream()
@@ -188,14 +191,23 @@ FOUNDATION_STATIC stream_t* realtime_open_stream()
     return stream;
 }
 
+FOUNDATION_STATIC void realtime_write_stream_header(stream_t* stream)
+{
+    stream_write(stream, "REAL", 4);
+    stream_write_int32(stream, REALTIME_STREAM_VERSION);
+
+    // Write 56 bytes of padding
+    char padding[56] = { '\0' };
+    stream_write(stream, padding, sizeof(padding));
+}
+
 FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
 {
     // Create a new stream
     stream_t* migrate_stream = fs_temporary_file();
     FOUNDATION_ASSERT(migrate_stream);
 
-    stream_write(migrate_stream, "REAL", 4);
-    stream_write(migrate_stream, &to, sizeof(to));
+    realtime_write_stream_header(migrate_stream);
 
     char temp_path_buffer[BUILD_MAX_PATHLEN];
     string_const_t temp_path_const = stream_path(migrate_stream);
@@ -238,10 +250,8 @@ FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
     FOUNDATION_ASSERT(_realtime->stream);
 }
 
-FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
-{
-    shared_mutex& mutex = _realtime->stocks_mutex;
-
+FOUNDATION_STATIC void realtime_stream_stock_entries()
+{    
     // Read stream version
     int stream_version = 0;
     if (!stream_eos(_realtime->stream))
@@ -256,7 +266,12 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
                 realtime_migrate_stream(stream_version, REALTIME_STREAM_VERSION);
         }
     }
-    
+    else
+    {
+        realtime_write_stream_header(_realtime->stream);
+    }
+
+    shared_mutex& mutex = _realtime->stocks_mutex;
     while (!thread_try_wait(0) && stream_version == REALTIME_STREAM_VERSION && !stream_eos(_realtime->stream))
     {
         stock_realtime_t stock;
@@ -267,7 +282,10 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         stream_read(_realtime->stream, &r.price, sizeof(r.price));
         stream_read(_realtime->stream, &r.volume, sizeof(r.volume));
 
-        if (r.timestamp <= 0 || math_real_is_nan(r.price))
+        if ((stock.code[0] < 'A' || stock.code[0] > 'Z') && stock.code[0] != '.' && stock.code[0] != '-')
+            continue;
+
+        if (r.timestamp <= 0 || math_real_is_nan(r.price) || r.price <= 0)
             continue;
 
         if (time_elapsed_days(r.timestamp, time_now()) > 31)
@@ -282,7 +300,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         SHARED_WRITE_LOCK(mutex);
         int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), stock.key);
         if (fidx < 0)
-        { 
+        {
             stock.price = r.price;
             stock.timestamp = r.timestamp;
             stock.volume = r.volume;
@@ -308,14 +326,19 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
             }
         }
     }
+}
 
+FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
+{
+    shared_mutex& mutex = _realtime->stocks_mutex;
+    
+    realtime_stream_stock_entries();
+    
     bool quit_thread = false;
-    unsigned int wait_time = 1;
-    static string_const_t* codes = nullptr;
-    while (!quit_thread && !thread_try_wait(wait_time))
+    static string_t* codes = nullptr;
+    while (!quit_thread && !thread_try_wait(60000U))
     {
         const time_t now = time_now();
-        time_t oldest = INT64_MAX;
         {
             SHARED_READ_LOCK(mutex);
             for (size_t i = 0, end = array_size(_realtime->stocks); i < end; ++i)
@@ -327,10 +350,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
 
                 const double minutes = time_elapsed_days(stock.timestamp, now) * 24.0 * 60.0;
                 if (minutes > 5)
-                    array_push(codes, string_const(stock.code, string_length(stock.code)));
-
-                if (stock.timestamp != 0 && stock.timestamp < oldest)
-                    oldest = stock.timestamp;
+                    array_push(codes, string_clone(stock.code, string_length(stock.code)));
             }
         }
 
@@ -338,10 +358,10 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
             break;
 
         size_t batch_size = 0;
-        string_const_t batch[32];
+        string_t batch[32];
         for (size_t i = 0, end = array_size(codes); i < end && !quit_thread; ++i)
         {
-            if (thread_try_wait(0))
+            if (thread_try_wait(2000))
             {
                 quit_thread = true;
                 break;
@@ -350,8 +370,8 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
             batch[batch_size++] = codes[i];
             if (batch_size == ARRAY_COUNT(batch) || i == end - 1)
             {
-                range_view<string_const_t> view = { &batch[0], batch_size };
-                string_const_t code_list = string_join(view.begin(), view.end(), [](const auto& s) { return s; }, CTEXT(","));
+                range_view<string_t> view = { &batch[0], batch_size };
+                string_const_t code_list = string_join(view.begin(), view.end(), [](const auto& s) { return string_to_const(s); }, CTEXT(","));
                     
                 // Send batch
                 string_const_t url = eod_build_url("real-time", batch[0].str, FORMAT_JSON, "s", code_list.str);
@@ -359,29 +379,12 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
                 if (!query_execute_json(url.str, FORMAT_JSON_WITH_ERROR, realtime_fetch_query_data))
                     break;
 
-                if (thread_try_wait(wait_time / to_uint(end)))
-                {
-                    quit_thread = true;
-                    break;
-                }
-
                 batch_size = 0;
             }
         }
 
+        string_array_deallocate_elements(codes);
         array_clear(codes);
-        if (_realtime->stream)
-            stream_flush(_realtime->stream);
-        if (oldest != INT64_MAX)
-        {
-            double wait_minutes = time_elapsed_days(oldest, now) * 24.0 * 60.0;
-            wait_minutes = max(0.0, 15.0 - wait_minutes);
-            wait_time = max(60000U, to_uint(math_trunc(wait_minutes * 60.0 * 1000.0)));
-        }
-        else
-        {
-            wait_time = 15 * 60000U;
-        }
     }
     
     array_deallocate(codes);    

@@ -90,9 +90,7 @@ FOUNDATION_STATIC title_t* report_title_add(report_t* report, string_const_t cod
     auto title_data = config_set_object(titles_data, STRING_ARGS(code));
     config_set_array(title_data, STRING_CONST("orders"));
     
-    title = title_allocate();
-    title_init(report->wallet, title, title_data);
-
+    title = title_allocate(report->wallet, title_data);
     report->titles = array_insert(report->titles, report->active_titles, title);
     report->active_titles++;
 
@@ -1509,8 +1507,7 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
     for (auto title_data : ctitles)
     {
         string_const_t code = config_name(title_data);
-        title_t* title = title_allocate();
-        title_init(report->wallet, title, title_data);
+        title_t* title = title_allocate(report->wallet, title_data);
         titles = array_push(titles, title);
     }
     report->titles = titles;
@@ -1555,10 +1552,10 @@ FOUNDATION_STATIC void report_render_menus()
                 log_warnf(HASH_REPORT, WARNING_UNSUPPORTED, STRING_CONST("TODO"));
 
             bool first_report_that_can_be_opened = true;
-            size_t report_count = ::report_count();
-            for (int handle = 0; handle < report_count; ++handle)
+            report_t** reports = report_sort_alphabetically();
+            for (int i = 0, end = array_size(reports); i < end; ++i)
             {
-                report_t* report = report_get_at(handle);
+                report_t* report = reports[i];
                 if (!report->opened)
                 {
                     if (first_report_that_can_be_opened)
@@ -1571,6 +1568,7 @@ FOUNDATION_STATIC void report_render_menus()
                         nullptr, &report->opened);
                 }
             }
+            array_deallocate(reports);
 
             ImGui::EndMenu();
         }
@@ -1765,8 +1763,10 @@ bool report_refresh(report_t* report)
 
 void report_menu(report_t* report)
 {
-    if (shortcut_executed(293/*GLFW_KEY_F4*/))
+    if (shortcut_executed(ImGuiKey_F4))
         report_toggle_show_summary(report);
+    else if (shortcut_executed(true, ImGuiKey_S))
+        report_save(report);
 
     if (ImGui::BeginPopupContextItem())
     {
@@ -1786,7 +1786,7 @@ void report_menu(report_t* report)
     {
         if (ImGui::BeginMenu("Report"))
         {
-            if (ImGui::MenuItem("Add title"))
+            if (ImGui::MenuItem(ICON_MD_ADD " Add title"))
                 report->show_add_title_ui = true;
 
             ImGui::Separator();
@@ -1797,15 +1797,16 @@ void report_menu(report_t* report)
                 report_summary_update(report);
             ImGui::MenuItem(ICON_MD_AUTO_GRAPH " Show transactions", nullptr, &report->show_order_graph);
 
-            if (ImGui::MenuItem(ICON_MD_REFRESH " Refresh", "F5"))
-                report_refresh(report);
+            ImGui::Separator();
 
             if (report->save)
             {
-                ImGui::Separator();
-                if (ImGui::MenuItem("Save"))
+                if (ImGui::MenuItem(ICON_MD_SAVE " Save", ICON_MD_KEYBOARD_COMMAND "+S"))
                     report_save(report);
             }
+
+            if (ImGui::MenuItem(ICON_MD_REFRESH " Refresh", "F5"))
+                report_refresh(report);
 
             ImGui::EndMenu();
         }
@@ -2061,6 +2062,25 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
 
     log_infof(HASH_REPORT, STRING_CONST("Report %s synced completed in %.3g seconds"), SYMBOL_CSTR(report->name), time_elapsed(timer));
     return true;
+}
+
+title_t* report_add_title(report_t* report, const char* code, size_t code_length)
+{
+    return report_title_add(report, string_const(code, code_length));
+}
+
+report_t** report_sort_alphabetically()
+{
+    report_t** sorted_reports = nullptr;
+    foreach(r, _reports)
+        array_push(sorted_reports, r);
+
+    return array_sort_by(sorted_reports, [](const report_t* a, const report_t* b)
+    {
+        string_const_t ra = string_table_decode_const(a->name);
+        string_const_t rb = string_table_decode_const(b->name);
+        return string_compare(STRING_ARGS(ra), STRING_ARGS(rb));
+    });
 }
 
 // 

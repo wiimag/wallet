@@ -21,7 +21,7 @@ const fetch_level_t TITLE_MINIMUM_FETCH_LEVEL =
 const fetch_level_t INDEX_MINIMUM_FETCH_LEVEL =
     FetchLevel::REALTIME |
     FetchLevel::FUNDAMENTALS;
-
+    
 FOUNDATION_ALIGNED_STRUCT(title_t, 8) 
 {
     char code[64]{ "" };
@@ -86,7 +86,7 @@ FOUNDATION_ALIGNED_STRUCT(title_t, 8)
     bool show_details_ui{ false };
 };
 
-title_t* title_allocate();
+title_t* title_allocate(wallet_t* wallet = nullptr, const config_handle_t& data = nullptr);
 
 void title_deallocate(title_t*& title);
 
@@ -106,7 +106,7 @@ double title_get_range_change_p(const title_t* t, const stock_t* s, int rel_days
 
 config_handle_t title_get_fundamental_config_value(title_t* title, const char* filter_name, size_t filter_name_length);
 
-void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data);
+void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data);
 
 bool title_refresh(title_t* title);
 

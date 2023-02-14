@@ -257,25 +257,30 @@ template<typename T> size_t array_offset(const T* arr, const T* element)
     return pointer_diff(element, arr) / sizeof(T);
 }
 
-#if NOT_WORKING
+#define array_sort(ARRAY, EXPRESSION) std::sort(ARRAY, ARRAY + array_size(ARRAY), [=](const auto& a, const auto& b){ return EXPRESSION; });
+
 template<typename T>
-void array_sort(T* arr, const function<bool(const T& a, const T& b)>& less_comparer)
+T array_sort_by(T arr, const function<int(const typename std::remove_pointer<T>::type& a, const typename std::remove_pointer<T>::type& b)>& comparer)
 {
-    qsort_r(arr, array_size(arr), sizeof(T), (void*)&less_comparer, [](void* context, const void* va, const void* vb)
+#if FOUNDATION_PLATFORM_WINDOWS
+    qsort_s(arr, array_size(arr), sizeof(T), [](void* context, const void* va, const void* vb)
+#else
+    qsort_r(arr, array_size(arr), sizeof(T), (void*)&comparer, [](void* context, const void* va, const void* vb)
+#endif
     {
-        const function<int(const T&, const T&)>& less_comparer = *(function<int(const T&, const T&)>*)context;
+        const function<int(const T&, const T&)>& comparer = *(function<int(const T&, const T&)>*)context;
         const T& a = *(const T*)va;
         const T& b = *(const T*)vb;
-        
-        if (less_comparer(a, b))
-            return -1;
-        
-        return memcmp(va, vb, sizeof(T));
-    });
-}
+        return comparer(a, b);
+
+#if FOUNDATION_PLATFORM_WINDOWS
+    }, (void*)&comparer);
 #else
-#define array_sort(ARRAY, EXPRESSION) std::sort(ARRAY, ARRAY + array_size(ARRAY), [=](const auto& a, const auto& b){ return EXPRESSION; });
+    });
 #endif
+
+    return arr;
+}
 
 template<typename T, typename U>
 bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& compare_equal, const U& v)

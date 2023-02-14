@@ -498,6 +498,15 @@ string_find_last_not_of(const char* str, size_t length, const char* key, size_t 
 FOUNDATION_API bool
 string_ends_with(const char* str, size_t length, const char* suffix, size_t suffix_length);
 
+/*! Compare two string (case sensitive)
+\param lhs First string
+\param lhs_length Length of first string
+\param rhs Second string
+\param rhs_length Length of second string
+\return 0 if equal, negative if lhs is less than rhs, positive if lhs is greater than rhs */
+FOUNDATION_API int 
+string_compare(const char* lhs, size_t lhs_length, const char* rhs, size_t rhs_length);
+
 /*! Query if strings are equal (case sensitive)
 \param lhs First string
 \param lhs_length Length of first string

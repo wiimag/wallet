@@ -364,3 +364,12 @@ string_const_t string_table_to_string_const(string_table_t* st, string_table_sym
     const char* str = st->strings(symbol);
     return string_const(str, string_length(str));
 }
+
+bool string_table_symbol_equal(string_table_symbol_t symbol, const char* str, size_t str_length)
+{
+    if (symbol == STRING_TABLE_NULL_SYMBOL)
+        return (str == nullptr || str_length == 0);
+
+    string_const_t symbol_string = string_table_decode_const(symbol);
+    return string_equal(STRING_ARGS(symbol_string), str, str_length);
+}

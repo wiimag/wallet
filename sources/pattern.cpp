@@ -8,6 +8,7 @@
 #include "eod.h"
 #include "bulk.h"
 #include "settings.h"
+#include "report.h"
 
 #include <framework/jobs.h>
 #include <framework/session.h>
@@ -369,7 +370,13 @@ FOUNDATION_STATIC string_const_t pattern_google_finance_url(const pattern_t* pat
     return string_to_const(url);
 }
 
-FOUNDATION_STATIC string_const_t pattern_google_new_url(const pattern_t* pattern)
+FOUNDATION_STATIC string_const_t pattern_lapresse_news_url(const pattern_t* pattern)
+{
+    string_const_t name = stock_get_short_name(pattern->stock);
+    return string_format_static(STRING_CONST("https://www.google.com/search?q=%.*s+site:lapresse.ca&tbs=qdr:w"), STRING_FORMAT(name));
+}
+
+FOUNDATION_STATIC string_const_t pattern_google_news_url(const pattern_t* pattern)
 {
     const stock_t* s = pattern->stock;
     if (s == nullptr)
@@ -425,9 +432,12 @@ FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
     pattern_render_planning_line(pattern_price(pattern), pattern, 3);
     pattern_render_planning_line(pattern_currency_conversion(pattern), pattern, 4);
 
-    pattern_render_planning_line(CTEXT(""), pattern, 5);
+    if (s && string_table_symbol_equal(s->exchange, STRING_CONST("TO")))
+        pattern_render_planning_url(CTEXT("La Presse"), pattern_lapresse_news_url(pattern), pattern, 5, false);
+    else
+        pattern_render_planning_line(CTEXT(""), pattern, 5);
     pattern_render_planning_url(CTEXT("Google"), pattern_google_finance_url(pattern), pattern, 6);
-    pattern_render_planning_url(CTEXT("News"), pattern_google_new_url(pattern), pattern, 7);
+    pattern_render_planning_url(CTEXT("News"), pattern_google_news_url(pattern), pattern, 7);
     pattern_render_planning_line(CTEXT(""), pattern, 8, true);
     pattern_render_planning_line(CTEXT(""), pattern, 9, true);
     pattern_render_planning_line(CTEXT(""), pattern, 10, true);
@@ -1507,7 +1517,8 @@ FOUNDATION_STATIC void pattern_render_graph_analysis(pattern_t* pattern, pattern
 
 FOUNDATION_STATIC void pattern_refresh(pattern_t* pattern)
 {
-    pattern->stock->resolved_level = FetchLevel::NONE;
+    string_const_t code = SYMBOL_CONST(pattern->code);
+    pattern->stock = stock_request(STRING_ARGS(code), FETCH_ALL);
     array_deallocate(pattern->flex);
     for (auto& m : pattern->marks)
         m.fetched = false;
@@ -1840,6 +1851,34 @@ FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
 
 void pattern_menu(pattern_handle_t handle)
 {
+    if (ImGui::BeginPopupContextItem())
+    {
+        if (ImGui::BeginMenu("Add"))
+        {
+            // Gather all reports and sort them by alphabetical order
+            report_t** reports = report_sort_alphabetically();            
+
+            // Add a Add To menu item for each report
+            for (size_t i = 0, end = array_size(reports); i < end; ++i)
+            {
+                report_t* report = reports[i];
+                string_const_t report_name = string_table_decode_const(report->name);
+                if (ImGui::MenuItem(report_name.str))
+                {
+                    pattern_t* pattern = (pattern_t*)pattern_get(handle);
+                    string_const_t title_code = string_table_decode_const(pattern->code);
+                    report_add_title(report, STRING_ARGS(title_code));
+                    report->opened = true;
+                }
+            }
+            array_deallocate(reports);
+            
+            ImGui::EndMenu();
+        }
+
+        ImGui::EndPopup();
+    }
+
     if (ImGui::BeginMenuBar())
     {
         if (ImGui::BeginMenu("Pattern"))

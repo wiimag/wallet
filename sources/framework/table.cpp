@@ -626,6 +626,17 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
     ImGui::PopStyleColor(2);
 }
 
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool table_column_is_number_value_trimmed(const column_t& column, const cell_t& cell)
+{
+    if ((column.flags & COLUMN_NUMBER_ABBREVIATION) && column.format == COLUMN_FORMAT_NUMBER && cell.number > 999)
+        return true;
+        
+    if ((column.flags & COLUMN_ROUND_NUMBER) && column.format == COLUMN_FORMAT_PERCENTAGE)
+        return true;
+
+   return false;
+}
+
 FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_index, int column_count)
 {
     const auto font_height = table_default_row_height();
@@ -649,11 +660,11 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
 
     const float row_cursor_y = ImGui::GetCursorPosY();
 
-#if ENABLE_ROW_HEIGHT_MIDDLE
-    float middle_row_cursor_position = row_cursor_y;
-    if (row.height > 0 && font_height < row.height)
-        middle_row_cursor_position += (row.height - font_height) / 2.0f;
-#endif
+    #if ENABLE_ROW_HEIGHT_MIDDLE
+        float middle_row_cursor_position = row_cursor_y;
+        if (row.height > 0 && font_height < row.height)
+            middle_row_cursor_position += (row.height - font_height) / 2.0f;
+    #endif
 
     float max_cell_height = 0;
     ImGuiTable* ct = ImGui::GetCurrentTable();
@@ -782,8 +793,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
                 column.tooltip(element, &column, &cell);
                 ImGui::EndTooltip();
             }
-            else if (((column.flags & COLUMN_NUMBER_ABBREVIATION) && cell.format == COLUMN_FORMAT_NUMBER && cell.number > 999) ||
-                     ((column.flags & COLUMN_ROUND_NUMBER) && column.format == COLUMN_FORMAT_PERCENTAGE))
+            else if (table_column_is_number_value_trimmed(column, cell))
             {
                 ImGui::SetTooltip("%lg", cell.number);
             }

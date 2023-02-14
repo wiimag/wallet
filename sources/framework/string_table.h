@@ -101,7 +101,7 @@ void string_table_deallocate(string_table_t* st);
 
 /// <summary>
 /// Initializes an empty string table in the specified memory area. `bytes` is
-/// the total ammount of memory allocated at the pointer and `average_strlen` is
+/// the total amount of memory allocated at the pointer and `average_strlen` is
 /// the expected average length of the strings that will be added.
 /// </summary>
 /// <param name="st"></param>
@@ -178,8 +178,24 @@ string_const_t string_table_to_string_const(string_table_t* st, string_table_sym
 /// <returns></returns>
 string_table_symbol_t string_table_encode(const char* s, size_t length = 0);
 
+/*! Store a string in the global string table shared by all systems in the application.
+ *  @param s The string to store in the global string table.
+ *  @return String symbol for the escaped encoded string.
+ * 
+ *  @remark #value is not deallocated or modified.
+ */
 string_table_symbol_t string_table_encode(string_t value);
+
+/*! Store a string in the global string table shared by all systems in the application.
+ *  @param s The string to store in the global string table
+ *  @return String symbol for the escaped encoded string.
+ */
 string_table_symbol_t string_table_encode(string_const_t value);
+
+/*! Store a string in the global string table shared by all systems in the application. 
+ *  @param s The string to store in the global string table
+ *  @return String symbol for the unescaped encoded string.
+ */
 string_table_symbol_t string_table_encode_unescape(string_const_t value);
 
 /// <summary>
@@ -191,19 +207,26 @@ string_table_symbol_t string_table_encode_unescape(string_const_t value);
 /// <param name="symbol"></param>
 /// <returns></returns>
 const char* string_table_decode(string_table_symbol_t symbol);
+
+/*! Returns the string content for a given symbol in the global application string table. 
+ *  @param symbol The symbol to resolve
+ *  @return The string content for the symbol
+ */
 string_const_t string_table_decode_const(string_table_symbol_t symbol);
 
-/// <summary>
-/// Compact the global string table.
-/// </summary>
+/*! Compact the global string table. */
 void string_table_compress();
 
-/// <summary>
-/// Initialize the shared global string table.
-/// </summary>
+/*! Initialize the shared global string table. */
 void string_table_initialize();
 
-/// <summary>
-/// Release the memory used by the global string table.
-/// </summary>
+/*! Release the memory used by the global string table. */
 void string_table_shutdown();
+
+/*! Checks if symbols is equal to #str
+ *  @param symbol       The symbol to resolve and check
+ *  @param str          The string to compare to
+ *  @param str_length   The length of the string to compare to
+ *  @return True if the symbol resolves to the string, false otherwise.
+ */
+bool string_table_symbol_equal(string_table_symbol_t symbol, const char* str, size_t str_length);

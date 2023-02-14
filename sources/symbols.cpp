@@ -651,16 +651,16 @@ FOUNDATION_STATIC void symbols_render_menus()
     {
         ImGui::MenuItem("Indexes", nullptr, &SETTINGS.show_symbols_INDX);
         ImGui::MenuItem("Last Day", nullptr, &SETTINGS.show_bulk_eod);
-
-        ImGui::Separator();
-        ImGui::MenuItem("TO Symbols", nullptr, &SETTINGS.show_symbols_TO);
-        ImGui::MenuItem("CVE Symbols", nullptr, &SETTINGS.show_symbols_CVE);
-        ImGui::MenuItem("NEO Symbols", nullptr, &SETTINGS.show_symbols_NEO);
-        ImGui::MenuItem("US Symbols", nullptr, &SETTINGS.show_symbols_US);
+        if (ImGui::MenuItem("La Presse", nullptr, nullptr, true))
+            open_in_shell("https://www.google.com/search?q=bourse+site:lapresse.ca&tbas=0&source=lnt&tbs=qdr:w&sa=X&biw=1920&bih=902&dpr=2");
 
         ImGui::Separator();
         if (ImGui::MenuItem("IPOs", nullptr, nullptr, true))
             open_in_shell(eod_build_url("calendar", "ipos", FORMAT_JSON).str);
+        ImGui::MenuItem("TO Symbols", nullptr, &SETTINGS.show_symbols_TO);
+        ImGui::MenuItem("CVE Symbols", nullptr, &SETTINGS.show_symbols_CVE);
+        ImGui::MenuItem("NEO Symbols", nullptr, &SETTINGS.show_symbols_NEO);
+        ImGui::MenuItem("US Symbols", nullptr, &SETTINGS.show_symbols_US);      
 
         ImGui::EndMenu();
     }

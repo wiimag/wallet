@@ -60,6 +60,18 @@ struct config_handle_t
 {
     config_t* config;
     config_index_t index;
+    
+    config_handle_t(std::nullptr_t = nullptr) noexcept
+        : config(nullptr)
+        , index((config_index_t)-1)
+    {
+    }
+
+    config_handle_t(config_t* config, config_index_t index) noexcept
+        : config(config)
+        , index(index)
+    {
+    }
 
     operator config_value_t* () const;
     config_handle_t operator[] (config_index_t index) const;
@@ -105,7 +117,7 @@ struct config_handle_t
     bool as_boolean(bool default_value = false) const;
     double as_number(double default_value = NAN) const;
     string_const_t as_string(const char* default_string = nullptr, size_t default_string_length = 0, const char* fmt = nullptr) const;
-    template<typename T = int> T as_integer() const { return (T)as_number(); }
+    template<typename T = int> T as_integer() const { return (T)math_trunc(as_number()); }
 };
 
 config_handle_t config_null();

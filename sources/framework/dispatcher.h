@@ -69,7 +69,7 @@ void dispatcher_shutdown();
 /// </summary>
 /// <param name="callback">Callback to execute on the main thread</param>
 /// <returns>Returns true if the callback was properly dispatched.</returns>
-bool dispatch(const function<void()>& callback);
+bool dispatch(const function<void()>& callback, uint32_t delay_milliseconds = 0);
 
 /// <summary>
 /// Process events and run dispatched calls.

@@ -278,13 +278,14 @@ config_handle_t title_get_fundamental_config_value(title_t* title, const char* f
     return config_null();
 }
 
-void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
+void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
 {
     // Compute title quantity and average price
-    const config_tag_t& TITLE_DATE = config_get_tag(data, STRING_CONST("date"));
-    const config_tag_t& TITLE_BUY = config_get_tag(data, STRING_CONST("buy"));
-    const config_tag_t& TITLE_QTY = config_get_tag(data, STRING_CONST("qty"));
-    const config_tag_t& TITLE_PRICE = config_get_tag(data, STRING_CONST("price"));
+    const config_tag_t TITLE_DATE = config_get_tag(data, STRING_CONST("date"));
+    const config_tag_t TITLE_BUY = config_get_tag(data, STRING_CONST("buy"));
+    const config_tag_t TITLE_QTY = config_get_tag(data, STRING_CONST("qty"));
+    const config_tag_t TITLE_PRICE = config_get_tag(data, STRING_CONST("price"));
+    const config_tag_t TITLE_ASK_PRICE = config_get_tag(data, STRING_CONST("ask"));
 
     t->data = data;
     t->wallet = wallet;
@@ -329,7 +330,7 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
     t->code_length = string_copy(STRING_CONST_CAPACITY(t->code), STRING_ARGS(title_code)).length;
 
     // Initiate to resolve the title stock right away in case it has never been done before.
-    if (main_is_interactive_mode())
+    if (main_is_interactive_mode() && t->wallet && t->wallet->track_history)
     {
         const auto fetch_level = title_minimum_fetch_level(t);
         if (!t->stock)
@@ -353,8 +354,7 @@ void title_init(wallet_t* wallet, title_t* t, const config_handle_t& data)
         const bool buy = order[TITLE_BUY].as_boolean();
         const double qty = order[TITLE_QTY].as_number();
         const double price = order[TITLE_PRICE].as_number();
-        const double ask_price = order["ask"].as_number();
-        
+        const double ask_price = order[TITLE_ASK_PRICE].as_number();
         string_const_t date = order[TITLE_DATE].as_string();
         const time_t order_date = string_to_date(STRING_ARGS(date));
 
@@ -476,7 +476,7 @@ bool title_refresh(title_t* title)
     if (s == nullptr)
         return false;
 
-    title_init(title->wallet, title, title->data);
+    title_init(title, title->wallet, title->data);
     return true;
 }
 
@@ -537,9 +537,12 @@ bool title_has_decreased(const title_t* t, double* out_delta /*= nullptr*/, doub
     return delta < 0;
 }
 
-title_t* title_allocate()
+title_t* title_allocate(wallet_t* wallet /*= nullptr*/, const config_handle_t& data /*= nullptr*/)
 {
-    return MEM_NEW(HASH_TITLE, title_t);
+    title_t* new_title = MEM_NEW(HASH_TITLE, title_t);
+    if (wallet || data)
+        title_init(new_title, wallet, data);
+    return new_title;
 }
 
 void title_deallocate(title_t*& title)

@@ -99,6 +99,28 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
     }, 15 * 24 * 3600ULL);
 }
 
+FOUNDATION_STATIC bool stock_fetch_short_name(stock_index_t stock_index, string_table_symbol_t& value)
+{
+    if (_db_stocks == nullptr || stock_index >= array_size(_db_stocks))
+        return false;
+
+    SHARED_READ_LOCK(_db_lock);
+    const stock_t* s = &_db_stocks[stock_index];
+    
+    if (!s->has_resolve(FetchLevel::FUNDAMENTALS))
+        return false;
+
+    string_const_t name = SYMBOL_CONST(s->name);
+
+    static thread_local char short_name_buffer[64];
+    string_t short_name = string_copy(short_name_buffer, sizeof(short_name_buffer), name.str, name.length);
+
+    short_name = string_replace(short_name.str, short_name.length, sizeof(short_name_buffer), STRING_CONST("Inc"), nullptr, 0, true);
+    short_name = string_replace(short_name.str, short_name.length, sizeof(short_name_buffer), STRING_CONST("Systems"), nullptr, 0, true);
+    value = string_table_encode(string_trim(string_to_const(short_name)));
+    return true;
+}
+
 FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string_table_symbol_t& value)
 {
     if (_db_stocks == nullptr || stock_index >= array_size(_db_stocks))
@@ -282,8 +304,9 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
         }
         else
         {
-            log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Missing EOD data to fetch technical results %d for %s"), 
-                access_level, ticker);
+            const uint32_t postpone_time_ms = min((uint32_t)(1000.0 - time_elapsed(entry->last_update_time) * 1000.0), 1000U);
+            log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Missing EOD data to fetch technical results %d for %s (%u)"), 
+                access_level, ticker, postpone_time_ms);
 
             if (!entry->is_resolving(FetchLevel::EOD, 0))
             {
@@ -300,14 +323,13 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
             }
             else
             {
-                // TODO: Add dispatch overload with delayed timer
                 dispatch([access_level, index]()
                 {
                     SHARED_READ_LOCK(_db_lock);
                     const stock_t* entry = &_db_stocks[index];
                     string_const_t ticker = SYMBOL_CONST(entry->code);
                     stock_request(STRING_ARGS(ticker), access_level);
-                });
+                }, postpone_time_ms);
             }
         }
     }
@@ -459,6 +481,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         entry->earning_trend_difference.reset(LR1(stock_fetch_earnings_trend(index, "difference", _1)));
         entry->earning_trend_percent.reset(LR1(stock_fetch_earnings_trend(index, "percent", _1)));
         entry->description.reset(LR1(stock_fetch_description(index, _1)));
+        entry->short_name.reset(LR1(stock_fetch_short_name(index, _1)));
 
         FOUNDATION_ASSERT(handle.id != 0);
         if (!hashtable64_set(_db_hashes, handle.id, index))
@@ -538,6 +561,14 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
     }
 
     return status;
+}
+
+stock_index_t stock_index(const char* symbol, size_t symbol_length)
+{
+    FOUNDATION_ASSERT(_db_hashes);
+    
+    const hash_t id = hash(symbol, symbol_length);
+    return (stock_index_t)hashtable64_get(_db_hashes, id);
 }
 
 bool stock_request(const stock_handle_t& handle, const stock_t** out_stock)
@@ -815,6 +846,43 @@ double stock_get_split_adjusted_factor(const char* code, size_t code_length, tim
         
     day_result_t split = stock_get_split(code, code_length, at);
     return math_ifzero(split.close / eod.adjusted_close, 1.0);
+}
+
+string_const_t stock_get_name(const char* code, size_t code_length)
+{
+    SHARED_READ_LOCK(_db_lock);
+    stock_index_t index = stock_index(code, code_length);
+    if (index == 0)
+        return {};
+        
+    return SYMBOL_CONST(_db_stocks[index].name);
+}
+
+string_const_t stock_get_short_name(const char* code, size_t code_length)
+{
+    SHARED_READ_LOCK(_db_lock);
+    stock_index_t index = stock_index(code, code_length);
+    if (index == 0)
+        return {};
+
+    string_table_symbol_t symbol;
+    if (!stock_fetch_short_name(index, symbol))
+        return {};
+    _db_stocks[index].short_name = symbol;
+    return SYMBOL_CONST(symbol);
+}
+
+string_const_t stock_get_name(const stock_handle_t& handle)
+{
+    const stock_t* s = handle.resolve();
+    if (s == nullptr)
+        return {};
+    return SYMBOL_CONST(s->name);
+}
+
+string_const_t stock_get_short_name(const stock_handle_t& handle)
+{
+    return SYMBOL_CONST(handle->short_name.fetch());
 }
 
 //
