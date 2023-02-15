@@ -465,7 +465,7 @@ struct expr_result_t
 
     expr_result_t operator*(const expr_result_t& rhs) const
     {
-        if (type == EXPR_RESULT_NULL)
+        if (is_null() || rhs.is_null())
             return NIL;
 
         if (type == EXPR_RESULT_NUMBER)
@@ -484,7 +484,7 @@ struct expr_result_t
 
     expr_result_t operator/(const expr_result_t& rhs) const
     {
-        if (type == EXPR_RESULT_NULL)
+        if (is_null() || rhs.is_null())
             return NIL;
 
         if (type == EXPR_RESULT_NUMBER)
@@ -496,11 +496,11 @@ struct expr_result_t
 
     expr_result_t operator+(const expr_result_t& rhs) const
     {
+        if (is_null() || rhs.is_null())
+            return NIL;
+
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value + rhs.as_number(0.0));
-
-        if (type == EXPR_RESULT_NULL)
-            return NIL;
 
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
@@ -527,6 +527,9 @@ struct expr_result_t
 
     expr_result_t operator-(const expr_result_t& rhs) const
     {
+        if (is_null() || rhs.is_null())
+            return NIL;
+
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value - rhs.as_number(0.0));
 

@@ -60,6 +60,8 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
     const stock_t* s = &_db_stocks[stock_index];
     if (s == nullptr)
         return false;
+
+    value = NAN;
         
     const char* ticker = string_table_decode(s->code);
     time_t since_last_year = time_add_days(time_now(), -465);

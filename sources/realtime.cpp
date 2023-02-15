@@ -133,22 +133,25 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
     
     for (auto e : res)
     {
-        string_const_t code = e["code"].as_string();
-        const hash_t key = hash(STRING_ARGS(code));
-
         stock_realtime_record_t r;
         r.price = e["close"].as_number();
-        r.volume = e["volume"].as_number(0);
-        r.timestamp = (time_t)e["timestamp"].as_number(0);
-
-        if (r.timestamp == 0 || math_real_is_nan(r.price))
+        if (math_real_is_nan(r.price))
             continue;
+
+        r.timestamp = (time_t)e["timestamp"].as_number(0);
+        if (r.timestamp == 0)
+            continue;
+
+        r.volume = e["volume"].as_number(0);
 
         if (_realtime->stream == nullptr)
             break;
+
+        string_const_t code = e["code"].as_string();
+        const hash_t key = hash(STRING_ARGS(code));
         
         SHARED_READ_LOCK(_realtime->stocks_mutex);
-        
+     
         int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
         if (fidx >= 0)
         {
@@ -343,7 +346,7 @@ FOUNDATION_STATIC void realtime_stream_stock_entries()
         {
             stock_realtime_t& stock_ref = _realtime->stocks[fidx];
 
-            if (realtime_stock_add_record(&stock_ref, r) && r.timestamp > stock_ref.timestamp)
+            if (realtime_stock_add_record(&stock_ref, r))
             {
                 if (r.timestamp > stock_ref.timestamp)
                 {
@@ -388,13 +391,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         size_t batch_size = 0;
         string_t batch[32];
         for (size_t i = 0, end = array_size(codes); i < end && !quit_thread; ++i)
-        {
-            if (thread_try_wait(2000))
-            {
-                quit_thread = true;
-                break;
-            }
-                    
+        {                    
             batch[batch_size++] = codes[i];
             if (batch_size == ARRAY_COUNT(batch) || i == end - 1)
             {
@@ -408,6 +405,12 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
                     break;
 
                 batch_size = 0;
+
+                if (thread_try_wait(2000))
+                {
+                    quit_thread = true;
+                    break;
+                }
             }
         }
 

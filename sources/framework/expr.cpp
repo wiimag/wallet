@@ -895,6 +895,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_round(const expr_func_t* f, vec_expr_t
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
 
     const double r = expr_eval(&args->buf[0]).as_number();
+
+    if (!math_real_is_finite(r))
+        return r;
+
     if (args->len == 1)
         return (double)math_round(r);
 

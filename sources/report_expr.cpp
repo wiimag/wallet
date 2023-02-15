@@ -110,6 +110,10 @@ static struct {
     { "cci",    SL2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
 
     { "dividends",  SL2(_2->dividends_yield.fetch()), nullptr, FetchLevel::FUNDAMENTALS },
+    { "earning_trend_actual",  SL2(_2->earning_trend_actual.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_trend_estimate",  SL2(_2->earning_trend_estimate.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_trend_difference",  SL2(_2->earning_trend_difference.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_trend_percent",  SL2(_2->earning_trend_percent.fetch()), nullptr, FetchLevel::NONE },
 
     { "name",           SL2(string_table_decode(_2->name)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
     { "description",    SL2(string_table_decode(_2->description.fetch())), nullptr, FetchLevel::FUNDAMENTALS },
