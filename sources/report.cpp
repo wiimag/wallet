@@ -60,9 +60,29 @@ struct report_expression_column_t
     column_format_t format{ COLUMN_FORMAT_TEXT };
 };
 
+struct report_expression_cache_value_t
+{
+    hash_t key;
+    tick_t time;
+    column_format_t format;
+
+    union {
+        time_t date;
+        double number;
+        string_table_symbol_t symbol;
+    };
+};
+
 static report_t* _reports = nullptr;
 static bool* _last_show_ui_ptr = nullptr;
 static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const report_expression_cache_value_t& value)
+{
+    return value.key;
+}
+
+database<report_expression_cache_value_t>* _report_expression_cache;
 
 // 
 // # PRIVATE
@@ -666,26 +686,6 @@ FOUNDATION_STATIC cell_t report_column_get_dividends_yield(table_element_ptr_t e
         
     return s->dividends_yield.fetch() * 100.0f;
 }
-
-struct report_expression_cache_value_t
-{
-    hash_t key;
-    tick_t time;
-    column_format_t format;
-    
-    union {
-        time_t date;
-        double number;
-        string_table_symbol_t symbol;
-    };
-};
-
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const report_expression_cache_value_t& value)
-{
-    return value.key;
-}
-
-database<report_expression_cache_value_t>* _report_expression_cache;
 
 FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t element, const column_t* column, 
                                                            report_handle_t report_handle, const report_expression_column_t* ec)
@@ -2075,6 +2075,7 @@ bool report_refresh(report_t* report)
         }
     }
 
+    _report_expression_cache->clear();
     return report->fully_resolved == 0;
 }
 
