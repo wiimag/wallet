@@ -7,6 +7,8 @@
 
 #include <foundation/math.h>
 
+#include <ctype.h>
+
 json_object_t json_parse(const string_t& str)
 {
     return json_object_t(str);
@@ -19,6 +21,16 @@ const json_token_t* json_find_token(const json_object_t& json, const char* key, 
     return json_find_token(json.buffer, json.tokens, *json.root, key, key_length);
 }
 
+FOUNDATION_FORCEINLINE static bool alldigits(const char* str, size_t length)
+{
+    for (size_t i = 0; i < length; ++i)
+    {
+        if (!isdigit(str[i]))
+            return false;
+    }
+    return true;
+}
+
 const json_token_t* json_find_token(const char* json, const json_token_t* tokens, const json_token_t& obj, const char* key, size_t key_length /*= 0*/)
 {
     if (!key || tokens == nullptr)
@@ -27,11 +39,26 @@ const json_token_t* json_find_token(const char* json, const json_token_t* tokens
     if (obj.type == JSON_UNDEFINED || obj.type == JSON_STRING || obj.type == JSON_PRIMITIVE)
         return nullptr;
 
+    if (key_length == 0)
+        key_length = string_length(key);
+    if (key_length > 0 && key[0] > 0 && isdigit(key[0]) && alldigits(key, key_length))
+    {
+        unsigned index = string_to_uint(key, key_length, false);
+        unsigned int c = obj.child;
+        while (c != 0)
+        {
+            const json_token_t& t = tokens[c];
+            if (index == 0)
+                return &t;
+            c = t.sibling;
+            index--;
+        }
+    }
+        
     if (obj.type == JSON_OBJECT)
     {
         unsigned int c = obj.child;
-        if (key_length == 0)
-            key_length = string_length(key);
+        
         while (c != 0)
         {
             const json_token_t& t = tokens[c];

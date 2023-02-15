@@ -245,7 +245,29 @@ FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
     stream_deallocate(migrate_stream);
     stream_deallocate(_realtime->stream);
     if (fs_copy_file(STRING_ARGS(temp_path), STRING_ARGS(current_stream_path)))
+    {
         _realtime->stream = realtime_open_stream();
+        
+        // Read header
+        char file_format[4] = { '\0' };
+        stream_read(_realtime->stream, file_format, sizeof(file_format));
+        if (!string_equal(file_format, 4, STRING_CONST("REAL")))
+        {
+            log_errorf(HASH_REALTIME, ERROR_INVALID_VALUE, STRING_CONST("Failed to migrate realtime stream"));
+            return;
+        }
+
+        int stream_version;
+        stream_read(_realtime->stream, &stream_version, sizeof(stream_version));
+        if (stream_version != REALTIME_STREAM_VERSION)
+        {
+            log_errorf(HASH_REALTIME, ERROR_INVALID_VALUE, STRING_CONST("Failed to migrate realtime stream"));
+            return;
+        }
+
+        // Skip padding
+        stream_seek(_realtime->stream, 56, STREAM_SEEK_CURRENT);
+    }
 
     FOUNDATION_ASSERT(_realtime->stream);
 }
@@ -264,6 +286,12 @@ FOUNDATION_STATIC void realtime_stream_stock_entries()
         {
             if (stream_version != REALTIME_STREAM_VERSION)
                 realtime_migrate_stream(stream_version, REALTIME_STREAM_VERSION);
+            else
+            {
+                // Read padding
+                char padding[56] = { '\0' };
+                stream_read(_realtime->stream, padding, sizeof(padding));
+            }
         }
     }
     else

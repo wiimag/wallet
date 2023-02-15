@@ -14,6 +14,7 @@
 struct title_t;
 struct table_t;
 struct wallet_t;
+struct report_expression_column_t;
 
 /*! Represents a report handle that can be used to resolve a report pointer later on. */
 typedef uuid_t report_handle_t;
@@ -75,6 +76,8 @@ struct report_t
     bool show_add_title_ui{ false };
     bool show_rename_ui{ false };
     bool show_order_graph{ false };
+
+    report_expression_column_t* expression_columns{ nullptr };
 };
 
 /*! Allocate a new report. The newly allocated report will be released automatically when shutting down.

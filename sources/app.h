@@ -10,14 +10,20 @@
 typedef function<bool(void*)> app_dialog_handler_t;
 typedef function<void(void*)> app_dialog_close_handler_t;
 
-/// <summary>
-/// Returns the application title.
-/// </summary>
+/*! Returns the application title. */
 const char* app_title();
 
-/// <summary>
-/// Creates and open a dialog window.
-/// </summary>
+/*! Creates and open a dialog window.
+ *
+ * @param title         The title of the dialog.
+ * @param handler       The handler to be called when the dialog is opened.
+ * @param width         The width of the dialog.
+ * @param height        The height of the dialog.
+ * @param can_resize    Whether the dialog can be resized.
+ * @param close_handler The handler to be called when the dialog is closed.
+ * @param user_data     The user data to be passed to the handlers.
+ *
+ */
 void app_open_dialog(
     const char* title, 
     app_dialog_handler_t&& handler, 

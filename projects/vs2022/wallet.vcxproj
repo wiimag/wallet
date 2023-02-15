@@ -145,6 +145,7 @@
     <ClInclude Include="..\..\external\stb\stb_textedit.h" />
     <ClInclude Include="..\..\external\stb\stb_truetype.h" />
     <ClInclude Include="../../sources/resource.h" />
+    <ClInclude Include="..\..\sources\app.h" />
     <ClInclude Include="..\..\sources\bulk.h" />
     <ClInclude Include="..\..\sources\eod.h" />
     <ClInclude Include="..\..\sources\events.h" />

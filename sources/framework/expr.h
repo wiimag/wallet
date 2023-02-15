@@ -179,14 +179,14 @@ struct expr_result_t
 
     expr_result_type_t type{ EXPR_RESULT_NULL };
 
+    // @index will be used as a flags if type is EXPR_RESULT_POINTER, see @EXPR_POINTER_CONTENT
+    size_t index{ NO_INDEX };
+
     union {
         double value{ 0 };
         const expr_result_t* list;
         void* ptr;
     };
-
-    // @index will be used as a flags if type is EXPR_RESULT_POINTER, see @EXPR_POINTER_CONTENT
-    size_t index{ NO_INDEX };
 
     expr_result_t(expr_result_type_t type = EXPR_RESULT_NULL)
         : type(type)
@@ -216,7 +216,7 @@ struct expr_result_t
     expr_result_t(const char* FOUNDATION_RESTRICT str)
         : type(str ? EXPR_RESULT_SYMBOL : EXPR_RESULT_NULL)
         , index(string_length(str))
-        , value(string_table_encode(str, string_length(str)))
+        , value(string_table_encode(str, index))
     {
     }
 
@@ -465,6 +465,9 @@ struct expr_result_t
 
     expr_result_t operator*(const expr_result_t& rhs) const
     {
+        if (type == EXPR_RESULT_NULL)
+            return NIL;
+
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value * rhs.as_number(0.0));
 
@@ -481,6 +484,9 @@ struct expr_result_t
 
     expr_result_t operator/(const expr_result_t& rhs) const
     {
+        if (type == EXPR_RESULT_NULL)
+            return NIL;
+
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value / rhs.as_number(1.0));
 

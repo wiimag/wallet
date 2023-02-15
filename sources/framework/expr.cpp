@@ -309,7 +309,7 @@ string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, cons
     if (arg.type != OP_VAR || arg.token.length == 0)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid argument %.*s: %s", STRING_FORMAT(arg.token), message);
 
-    return arg.token;
+    return expr_eval(&args->buf[idx]).as_string();
 }
 
 string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message)

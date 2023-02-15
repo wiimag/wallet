@@ -402,6 +402,20 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
             value.type = EXPR_RESULT_SYMBOL;
             value.value = string_table_encode(ref.as_string());
         }
+        else if (ref.root->type == JSON_ARRAY)
+        {
+            expr_result_t* child_fields = nullptr;
+
+            for (const auto& e : ref)
+            {
+                if (e.root->type == JSON_PRIMITIVE)
+                    array_push(child_fields, e.as_number());
+                else
+                    array_push(child_fields, e.as_string());
+            }
+
+            value = expr_eval_list(child_fields);
+        }
         else if (ref.root->type == JSON_OBJECT)
         {
             expr_result_t* child_fields = nullptr;
@@ -409,15 +423,14 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
             for (const auto& e : ref)
             {
                 string_const_t id = e.id();
-                string_const_t evalue = e.as_string();
 
-                char value_preview_buffer[64];
-                string_t value_preview = string_format(STRING_CONST_CAPACITY(value_preview_buffer), STRING_CONST("%.*s = %.*s"), 
-                    min(48, (int)id.length), id.str, STRING_FORMAT(evalue));
-                string_table_symbol_t store_value_symbol = string_table_encode(value_preview);
-                
-                expr_result_t r { EXPR_RESULT_SYMBOL, store_value_symbol, value_preview.length };
-                array_push(child_fields, r);
+                if (e.root->type == JSON_PRIMITIVE)
+                    array_push(child_fields, expr_eval_pair(id, e.as_number()));
+                else
+                {
+                    string_const_t evalue = e.as_string();
+                    array_push(child_fields, expr_eval_pair(id, evalue));
+                }
             }
 
             value = expr_eval_list(child_fields);

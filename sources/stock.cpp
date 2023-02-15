@@ -247,12 +247,12 @@ FOUNDATION_STATIC void stock_read_technical_results(const json_object_t& json, s
     stock_t* s = &_db_stocks[index];
     day_result_t* history = s->history;
     int h = 0, h_end = array_size(history);
+    bool applied_to_current = false;
     for (size_t i = 0; i < json.root->value_length; ++i)
     {
         const auto& e = json[i];
         const time_t date = string_to_date(STRING_ARGS(e["date"].as_string()));
 
-        bool applied_to_current = false;
         for (; h != h_end;)
         {
             day_result_t* ed = &history[h];
@@ -374,7 +374,7 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
             d.adjusted_close = jday["adjusted_close"].as_number();
 
             d.price_factor = d.adjusted_close / d.close;
-            if (!math_real_is_nan(d.price_factor))
+            if (math_real_is_nan(first_price_factor) && !math_real_is_nan(d.price_factor))
                 first_price_factor = d.price_factor;            
             
             d.change = d.close - d.open;
