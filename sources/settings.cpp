@@ -85,13 +85,13 @@ void settings_draw()
         ImVec2 logo_banner_size = ImVec2(imgui_get_font_ui_scale(200.0f), imgui_get_font_ui_scale(40.0f));
         if (SETTINGS.show_logo_banners)
         {
-            logo_render(STRING_CONST("KHC.US"), logo_banner_size, true, false);
+            logo_render_banner(STRING_CONST("KHC.US"), logo_banner_size, true, false);
 
             ImGui::MoveCursor(logo_banner_size.x + 10.0f, 0.0f, false);
-            logo_render(STRING_CONST("LUMN.US"), logo_banner_size, true, false);
+            logo_render_banner(STRING_CONST("LUMN.US"), logo_banner_size, true, false);
 
             ImGui::MoveCursor(logo_banner_size.x + 10.0f, 0.0f, false);
-            logo_render(STRING_CONST("FTS.TO"), logo_banner_size, true, false);
+            logo_render_banner(STRING_CONST("FTS.TO"), logo_banner_size, true, false);
         }
         else 
         {

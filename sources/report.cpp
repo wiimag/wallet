@@ -508,7 +508,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         ImGui::PushStyleCompact();
         int logo_banner_width = 0, logo_banner_height = 0, logo_banner_channels = 0;
         ImU32 logo_banner_color = 0xFFFFFFFF, fill_color = 0xFFFFFFFF;
-        if (logo_is_banner(title->code, title->code_length, 
+        if (logo_has_banner(title->code, title->code_length, 
                 logo_banner_width, logo_banner_height, logo_banner_channels, logo_banner_color, fill_color) &&
                 can_show_banner && 
                 space.x > 225.0f)
@@ -541,7 +541,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             ImVec2 logo_size(max_width, max_height);
             if (logo_banner_channels == 3)
                 ImGui::MoveCursor(-style.FramePadding.x, -style.FramePadding.y - 1.0f, false);
-            if (!logo_render(title->code, title->code_length, logo_size, false, false))
+            if (!logo_render_banner(title->code, title->code_length, logo_size, false, false))
             {
                 ImGui::TextUnformatted(formatted_code);
             }
@@ -600,7 +600,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             float space_left = ImGui::GetContentRegionAvail().x - code_width;
             ImGui::MoveCursor(space_left - button_width - logo_size + 10.0f, 0, true);
             ImVec2 logo_size_v = ImVec2(logo_size, logo_size);
-            if (ImGui::GetCursorPos().x < code_width || !logo_render(title->code, title->code_length, logo_size_v, true, true))
+            if (ImGui::GetCursorPos().x < code_width || !logo_render_icon(title->code, title->code_length, logo_size_v, true, true))
                 ImGui::Dummy(ImVec2(logo_size, logo_size));
             else
                 ImGui::Dummy(ImVec2(logo_size, logo_size));
@@ -1193,7 +1193,8 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
     {
         string_const_t column_name = string_format_static(STRING_CONST("%s||" ICON_MD_VIEW_COLUMN " %s (%.*s)"),
             c->name, c->name, min(16, (int)string_length(c->expression)), c->expression);
-        table_add_column(table, STRING_ARGS(column_name), LC2(report_column_evaluate_expression(_1, _2, report_handle, c)), c->format, COLUMN_SORTABLE | COLUMN_SEARCHABLE | COLUMN_HIDE_DEFAULT);
+        table_add_column(table, STRING_ARGS(column_name), LC2(report_column_evaluate_expression(_1, _2, report_handle, c)), c->format, 
+            COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | (c->format == COLUMN_FORMAT_TEXT ? COLUMN_SEARCHABLE : COLUMN_OPTIONS_NONE));
     }
 }
 
