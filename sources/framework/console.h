@@ -7,12 +7,19 @@
 
 #pragma once
 
-/// <summary>
-/// Clear the console logs.
-/// </summary>
+/*! Clear the console logs. */
 void console_clear();
 
-/*! Open and show the console window.
- */
+/*! Open and show the console window. */
 void console_show();
+
+/*! Hide the console window. */
+void console_hide();
+
+/*! Set the console expression. 
+ * 
+ * @param expression        The expression to be set in the console expression input field.
+ * @param expression_length The length of the expression.
+ */
+void console_set_expression(const char* expression, size_t expression_length);
 

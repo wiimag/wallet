@@ -875,7 +875,9 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
                 ImGui::OpenPopup(id.str);
             if (ImGui::BeginPopupContextItem(id.str))
             {
+                ImGui::BeginGroup();
                 table->context_menu(nullptr, nullptr, nullptr);
+                ImGui::EndGroup();
                 ImGui::EndPopup();
             }
             ImGui::PopID();

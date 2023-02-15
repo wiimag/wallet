@@ -474,7 +474,7 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     string_const_t field_name = string_to_const(string_copy(STRING_CONST_CAPACITY(field_name_buffer), STRING_ARGS(field_name_temp)));
 
     tick_t s = time_current();
-    while (!report_sync_titles(report))
+    while (title_filter.length == 0 && !report_sync_titles(report))
     {
         if (time_elapsed(s) > 30.0f)
             throw ExprError(EXPR_ERROR_EVALUATION_TIMEOUT, "Sync timeout, retry later...", STRING_FORMAT(report_name));

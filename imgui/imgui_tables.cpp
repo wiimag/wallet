@@ -2854,7 +2854,18 @@ float ImGui::TableGetHeaderRowHeight()
     {
         ImGuiTableColumnFlags flags = TableGetColumnFlags(column_n);
         if ((flags & ImGuiTableColumnFlags_IsEnabled) && !(flags & ImGuiTableColumnFlags_NoHeaderLabel))
-            row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(column_n)).y);
+        {
+            // ###############################################################################
+            /// # BEGIN PATCH 2022-10-14 (Use the characters || to distinguish between the displayed label and the tooltip label)
+            const char* text_start = TableGetColumnName(column_n);
+            const char* text_end = text_start + strlen(text_start);
+            const char* tooltip_sep = strstr(text_start, "||");
+            if (tooltip_sep)
+                text_end = tooltip_sep;
+            /// # END PATCH 2022-10-14
+            // ###############################################################################
+            row_height = ImMax(row_height, CalcTextSize(text_start, text_end).y);
+        }
     }
     row_height += GetStyle().CellPadding.y * 2.0f;
     return row_height;
