@@ -33,6 +33,26 @@ typedef enum class FetchLevel /*: unsigned int*/ {
 } fetch_level_t;
 DEFINE_ENUM_FLAGS(FetchLevel);
 
+
+FOUNDATION_ALIGNED_STRUCT(stock_realtime_record_t, 8)
+{
+    time_t timestamp;
+    double price;
+    double volume;
+};
+
+FOUNDATION_ALIGNED_STRUCT(stock_realtime_t, 8)
+{
+    hash_t key;
+    char   code[16];
+    time_t timestamp;
+    double price;
+    double volume;
+    bool   refresh{ false };
+
+    stock_realtime_record_t* records{ nullptr };
+};
+
 FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
 {
     time_t date{ 0 };

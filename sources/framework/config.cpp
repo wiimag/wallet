@@ -709,6 +709,22 @@ config_handle_t config_set_null(config_handle_t h, const char* key, size_t key_l
     return h;
 }
 
+config_handle_t config_array_clear(config_handle_t v)
+{
+    config_value_t* obj = v;
+    if (!obj)
+        return NIL;
+
+    if (obj->type != CONFIG_VALUE_ARRAY)
+        return NIL;
+        
+    config_value_t* values = v.config->values;
+    obj->child = 0;
+    obj->child_count = 0;
+    
+    return v;
+}
+
 config_handle_t config_array_insert(config_handle_t array_handle, size_t index, config_value_type_t type /*= CONFIG_VALUE_NIL*/, const char* name /*= nullptr*/, size_t name_length /*= 0*/)
 {
     config_value_t* obj = array_handle;

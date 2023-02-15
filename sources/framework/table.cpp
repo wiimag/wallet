@@ -628,6 +628,9 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool table_column_is_number_value_trimmed(const column_t& column, const cell_t& cell)
 {
+    if (!math_real_is_finite(cell.number))
+        return false;
+
     if ((column.flags & COLUMN_NUMBER_ABBREVIATION) && column.format == COLUMN_FORMAT_NUMBER && cell.number > 999)
         return true;
         
@@ -640,7 +643,6 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool table_column_is_number_value_tr
 FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_index, int column_count)
 {
     const auto font_height = table_default_row_height();
-    //const auto font_height = ImGui::GetFontSize() - imgui_get_font_ui_scale(4.0f);
     
     row_t& row = table->rows[element_index];
     table_element_ptr_t element = row.element;
@@ -873,7 +875,9 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
                 ImGui::OpenPopup(id.str);
             if (ImGui::BeginPopupContextItem(id.str))
             {
+                ImGui::BeginGroup();
                 table->context_menu(nullptr, nullptr, nullptr);
+                ImGui::EndGroup();
                 ImGui::EndPopup();
             }
             ImGui::PopID();
@@ -916,6 +920,15 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
     table_render_sort_rows(table);
 
     table_render_elements(table, column_count);
+}
+
+void table_clear_columns(table_t* table)
+{
+    const size_t column_count = sizeof(table->columns) / sizeof(table->columns[0]);
+    for (int i = 0; i < column_count; ++i)
+    {
+        table->columns[i].used = false;
+    }
 }
 
 column_t& table_add_column(table_t* table,

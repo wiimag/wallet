@@ -28,25 +28,6 @@
 #define REALTIME_STREAM_VERSION (1)
 #define HASH_REALTIME static_hash_string("realtime", 8, 0x29e09dfa4716c805ULL)
 
-struct stock_realtime_record_t
-{
-    time_t timestamp;
-    double price;
-    double volume;
-};
-
-struct stock_realtime_t
-{
-    hash_t key;
-    char   code[16];
-    time_t timestamp;
-    double price;
-    double volume;
-    bool   refresh{ false };
-
-    stock_realtime_record_t* records{ nullptr };
-};
-
 static struct REALTIME_MODULE {
     stream_t* stream{ nullptr };
     thread_t* background_thread{ nullptr };
@@ -75,34 +56,54 @@ FOUNDATION_FORCEINLINE bool operator>(const stock_realtime_t& s, const hash_t& k
     return s.key > key;
 }
 
+FOUNDATION_STATIC bool realtime_stock_add_record(stock_realtime_t* stock, const stock_realtime_record_t& record)
+{
+    const int fidx = array_binary_search(stock->records, array_size(stock->records), record.timestamp);
+    if (fidx >= 0)
+        return false;
+
+    if (stock->timestamp < record.timestamp)
+    {
+        stock->price = record.price;
+        stock->volume = record.volume;
+        stock->timestamp = record.timestamp;
+    }
+
+    array_insert_memcpy(stock->records, ~fidx, &record);
+    return true;
+}
+
 FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t& args)
 {
-    FOUNDATION_ASSERT(args.size <= 16);
-    string_const_t code { (const char*)args.data, args.size };
-    const hash_t key = hash(code.str, code.length);
+    FOUNDATION_ASSERT(args.size == sizeof(stock_realtime_t));
+    stock_realtime_t* stock_realtime = (stock_realtime_t*)args.data;
+    
+    string_const_t code{ stock_realtime->code, string_length(stock_realtime->code) };
+    stock_realtime->key = hash(code.str, code.length);
+
+    stock_realtime_record_t r;
+    r.price = stock_realtime->price;
+    r.volume = stock_realtime->volume;
+    r.timestamp = stock_realtime->timestamp;
         
     SHARED_WRITE_LOCK(_realtime->stocks_mutex);
      
-    int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
+    int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), stock_realtime->key);
     if (fidx >= 0)
     {        
+        stock_realtime = &_realtime->stocks[fidx];
         // Mark the stock as to be refreshed
-        _realtime->stocks[fidx].refresh = true;
-        return false;
+        stock_realtime->refresh = true;
+        return realtime_stock_add_record(&_realtime->stocks[fidx], r);
     }
     
-    stock_realtime_t stock;
-    string_copy(STRING_CONST_CAPACITY(stock.code), code.str, code.length);
-    stock.key = key;
-    stock.timestamp = 0;
-    stock.price = DNAN;
-    stock.volume = 0;
-    stock.records = nullptr;
-    stock.refresh = true;
+    stock_realtime->refresh = true;
+    stock_realtime->records = nullptr;
+    realtime_stock_add_record(stock_realtime, r);
 
     fidx = ~fidx;
-    array_insert_memcpy(_realtime->stocks, fidx, &stock);
-    log_debugf(HASH_REALTIME, STRING_CONST("Registering new realtime stock %.*s (%" PRIhash ")"), STRING_FORMAT(code), key);
+    array_insert_memcpy(_realtime->stocks, fidx, stock_realtime);
+    log_debugf(HASH_REALTIME, STRING_CONST("Registering new realtime stock %.*s (%" PRIhash ")"), STRING_FORMAT(code), stock_realtime->key);
     return true;
 }
 
@@ -116,16 +117,6 @@ FOUNDATION_FORCEINLINE bool operator>(const stock_realtime_record_t& r, const ti
     return r.timestamp > key;
 }
 
-FOUNDATION_STATIC bool realtime_stock_add_record(stock_realtime_t* stock, const stock_realtime_record_t& record)
-{
-    const int fidx = array_binary_search(stock->records, array_size(stock->records), record.timestamp);
-    if (fidx >= 0)
-        return false;
-
-    array_insert_memcpy(stock->records, ~fidx, &record);
-    return true;   
-}
-
 FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
 {
     if (res.error_code > 0)
@@ -133,43 +124,39 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
     
     for (auto e : res)
     {
-        string_const_t code = e["code"].as_string();
-        const hash_t key = hash(STRING_ARGS(code));
-
         stock_realtime_record_t r;
         r.price = e["close"].as_number();
-        r.volume = e["volume"].as_number(0);
-        r.timestamp = (time_t)e["timestamp"].as_number(0);
-
-        if (r.timestamp == 0 || math_real_is_nan(r.price))
+        if (math_real_is_nan(r.price))
             continue;
+
+        r.timestamp = (time_t)e["timestamp"].as_number(0);
+        if (r.timestamp == 0)
+            continue;
+
+        r.volume = e["volume"].as_number(0);
 
         if (_realtime->stream == nullptr)
             break;
+
+        string_const_t code = e["code"].as_string();
+        const hash_t key = hash(STRING_ARGS(code));
         
         SHARED_READ_LOCK(_realtime->stocks_mutex);
-        
+     
         int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
         if (fidx >= 0)
         {
             stock_realtime_t& stock = _realtime->stocks[fidx];
-
-            if (r.timestamp > stock.timestamp)
+                
+            if (realtime_stock_add_record(&stock, r))
             {
-                stock.price = r.price;
-                stock.volume = r.volume;
-                stock.timestamp = r.timestamp;
-
                 log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime values %.*s (%lld) > %lf (%" PRIsize " kb)"),
                     STRING_FORMAT(code), (int64_t)r.timestamp, r.price, stream_size(_realtime->stream) / 1024ULL);
-                
-                if (realtime_stock_add_record(&stock, r))
-                {
-                    stream_write(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
-                    stream_write(_realtime->stream, stock.code, sizeof(stock.code));
-                    stream_write(_realtime->stream, &r.price, sizeof(r.price));
-                    stream_write(_realtime->stream, &r.volume, sizeof(r.volume));
-                }
+                        
+                stream_write(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
+                stream_write(_realtime->stream, stock.code, sizeof(stock.code));
+                stream_write(_realtime->stream, &r.price, sizeof(r.price));
+                stream_write(_realtime->stream, &r.volume, sizeof(r.volume));
             }
         }
     }
@@ -245,7 +232,29 @@ FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
     stream_deallocate(migrate_stream);
     stream_deallocate(_realtime->stream);
     if (fs_copy_file(STRING_ARGS(temp_path), STRING_ARGS(current_stream_path)))
+    {
         _realtime->stream = realtime_open_stream();
+        
+        // Read header
+        char file_format[4] = { '\0' };
+        stream_read(_realtime->stream, file_format, sizeof(file_format));
+        if (!string_equal(file_format, 4, STRING_CONST("REAL")))
+        {
+            log_errorf(HASH_REALTIME, ERROR_INVALID_VALUE, STRING_CONST("Failed to migrate realtime stream"));
+            return;
+        }
+
+        int stream_version;
+        stream_read(_realtime->stream, &stream_version, sizeof(stream_version));
+        if (stream_version != REALTIME_STREAM_VERSION)
+        {
+            log_errorf(HASH_REALTIME, ERROR_INVALID_VALUE, STRING_CONST("Failed to migrate realtime stream"));
+            return;
+        }
+
+        // Skip padding
+        stream_seek(_realtime->stream, 56, STREAM_SEEK_CURRENT);
+    }
 
     FOUNDATION_ASSERT(_realtime->stream);
 }
@@ -264,6 +273,12 @@ FOUNDATION_STATIC void realtime_stream_stock_entries()
         {
             if (stream_version != REALTIME_STREAM_VERSION)
                 realtime_migrate_stream(stream_version, REALTIME_STREAM_VERSION);
+            else
+            {
+                // Read padding
+                char padding[56] = { '\0' };
+                stream_read(_realtime->stream, padding, sizeof(padding));
+            }
         }
     }
     else
@@ -313,17 +328,7 @@ FOUNDATION_STATIC void realtime_stream_stock_entries()
         }
         else
         {
-            stock_realtime_t& stock_ref = _realtime->stocks[fidx];
-
-            if (realtime_stock_add_record(&stock_ref, r) && r.timestamp > stock_ref.timestamp)
-            {
-                if (r.timestamp > stock_ref.timestamp)
-                {
-                    stock_ref.price = r.price;
-                    stock_ref.volume = r.volume;
-                    stock_ref.timestamp = r.timestamp;
-                }
-            }
+            realtime_stock_add_record(&_realtime->stocks[fidx], r);
         }
     }
 }
@@ -360,13 +365,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         size_t batch_size = 0;
         string_t batch[32];
         for (size_t i = 0, end = array_size(codes); i < end && !quit_thread; ++i)
-        {
-            if (thread_try_wait(2000))
-            {
-                quit_thread = true;
-                break;
-            }
-                    
+        {                    
             batch[batch_size++] = codes[i];
             if (batch_size == ARRAY_COUNT(batch) || i == end - 1)
             {
@@ -380,6 +379,12 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
                     break;
 
                 batch_size = 0;
+
+                if (thread_try_wait(2000))
+                {
+                    quit_thread = true;
+                    break;
+                }
             }
         }
 
@@ -454,7 +459,7 @@ FOUNDATION_STATIC cell_t realtime_table_draw_title(table_element_ptr_t element, 
     {
         ImRect logo_rect;
         ImVec2 logo_size{};
-        if (!logo_render(s->code, string_length(s->code), logo_size, true, false, &logo_rect))
+        if (!logo_render_banner(s->code, string_length(s->code), logo_size, true, false, &logo_rect))
             ImGui::TextUnformatted(s->code);
         else
         {

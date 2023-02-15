@@ -5,6 +5,7 @@
 
 #include "report.h"
 
+#include "app.h"
 #include "stock.h"
 #include "title.h"
 #include "settings.h"
@@ -22,6 +23,9 @@
 #include <framework/tabs.h>
 #include <framework/dispatcher.h>
 #include <framework/math.h>
+#include <framework/expr.h>
+#include <framework/database.h>
+#include <framework/console.h>
  
 #include <foundation/uuid.h>
 #include <foundation/path.h>
@@ -49,9 +53,36 @@ typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_ASK,
 } report_column_formula_t;
 
+struct report_expression_column_t
+{
+    char name[64];
+    char expression[256];
+    column_format_t format{ COLUMN_FORMAT_TEXT };
+};
+
+struct report_expression_cache_value_t
+{
+    hash_t key;
+    tick_t time;
+    column_format_t format;
+
+    union {
+        time_t date;
+        double number;
+        string_table_symbol_t symbol;
+    };
+};
+
 static report_t* _reports = nullptr;
 static bool* _last_show_ui_ptr = nullptr;
 static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const report_expression_cache_value_t& value)
+{
+    return value.key;
+}
+
+database<report_expression_cache_value_t>* _report_expression_cache;
 
 // 
 // # PRIVATE
@@ -497,7 +528,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         ImGui::PushStyleCompact();
         int logo_banner_width = 0, logo_banner_height = 0, logo_banner_channels = 0;
         ImU32 logo_banner_color = 0xFFFFFFFF, fill_color = 0xFFFFFFFF;
-        if (logo_is_banner(title->code, title->code_length, 
+        if (logo_has_banner(title->code, title->code_length, 
                 logo_banner_width, logo_banner_height, logo_banner_channels, logo_banner_color, fill_color) &&
                 can_show_banner && 
                 space.x > 225.0f)
@@ -530,7 +561,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             ImVec2 logo_size(max_width, max_height);
             if (logo_banner_channels == 3)
                 ImGui::MoveCursor(-style.FramePadding.x, -style.FramePadding.y - 1.0f, false);
-            if (!logo_render(title->code, title->code_length, logo_size, false, false))
+            if (!logo_render_banner(title->code, title->code_length, logo_size, false, false))
             {
                 ImGui::TextUnformatted(formatted_code);
             }
@@ -589,7 +620,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             float space_left = ImGui::GetContentRegionAvail().x - code_width;
             ImGui::MoveCursor(space_left - button_width - logo_size + 10.0f, 0, true);
             ImVec2 logo_size_v = ImVec2(logo_size, logo_size);
-            if (ImGui::GetCursorPos().x < code_width || !logo_render(title->code, title->code_length, logo_size_v, true, true))
+            if (ImGui::GetCursorPos().x < code_width || !logo_render_icon(title->code, title->code_length, logo_size_v, true, true))
                 ImGui::Dummy(ImVec2(logo_size, logo_size));
             else
                 ImGui::Dummy(ImVec2(logo_size, logo_size));
@@ -654,6 +685,63 @@ FOUNDATION_STATIC cell_t report_column_get_dividends_yield(table_element_ptr_t e
         return DNAN;
         
     return s->dividends_yield.fetch() * 100.0f;
+}
+
+FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t element, const column_t* column, 
+                                                           report_handle_t report_handle, const report_expression_column_t* ec)
+{
+    title_t* title = *(title_t**)element;
+    if (title == nullptr || title_is_index(title))
+        return DNAN;
+        
+    report_t* report = report_get(report_handle);
+    string_const_t report_name = SYMBOL_CONST(report->name);
+    const size_t expression_length = string_length(ec->expression);
+    hash_t key = hash_combine(
+        string_hash(STRING_ARGS(report_name)), 
+        string_hash(title->code, title->code_length), 
+        string_hash(ec->expression, expression_length));
+
+    report_expression_cache_value_t cvalue;
+    if (_report_expression_cache->select(key, cvalue))
+    {
+        if (cvalue.format == ec->format)
+        {
+            if (ec->format == COLUMN_FORMAT_DATE)
+                return cvalue.date;
+            if (ec->format == COLUMN_FORMAT_CURRENCY || ec->format == COLUMN_FORMAT_NUMBER || ec->format == COLUMN_FORMAT_PERCENTAGE)
+                return cvalue.number;
+            return SYMBOL_CONST(cvalue.symbol);
+        }
+    }
+
+    if (!title_is_resolved(title) || report_is_loading(report))
+        return DNAN;
+
+    cvalue.key = key;
+    cvalue.format = ec->format;
+    cvalue.time = time_current();
+    
+    eval_set_or_create_global_var(STRING_CONST("$TITLE"), expr_result_t(title->code));
+    auto result = eval(ec->expression, expression_length);
+    if (ec->format == COLUMN_FORMAT_CURRENCY || ec->format == COLUMN_FORMAT_NUMBER || ec->format == COLUMN_FORMAT_PERCENTAGE)
+    { 
+        cvalue.number = result.as_number();
+        if (math_real_is_finite(cvalue.number))
+            _report_expression_cache->put(cvalue);
+        return cvalue.number;
+    }
+    if (ec->format == COLUMN_FORMAT_DATE)
+    {
+        cvalue.date = (time_t)result.as_number();
+        _report_expression_cache->put(cvalue);
+        return cvalue.date;
+    }
+    
+    string_const_t str_value = result.as_string();
+    cvalue.symbol = string_table_encode(str_value);
+    _report_expression_cache->put(cvalue);
+    return str_value;
 }
 
 FOUNDATION_STATIC cell_t report_column_get_fundamental_value(table_element_ptr_t element, const column_t* column, const char* filter_name, size_t filter_name_length)
@@ -979,14 +1067,333 @@ FOUNDATION_STATIC void report_title_open_sell_view(table_element_ptr_const_t ele
         title->show_sell_ui = true;
 }
 
+FOUNDATION_STATIC const char* report_expression_column_format_name(column_format_t format)
+{
+    switch (format)
+    {
+    case COLUMN_FORMAT_CURRENCY:
+        return "Currency";
+    case COLUMN_FORMAT_DATE:
+        return "Date";
+    case COLUMN_FORMAT_PERCENTAGE:
+        return "Percent";
+    case COLUMN_FORMAT_NUMBER:
+        return "Number";
+    default:
+        return "String";
+    }
+}
+
+FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_handle, table_t* table)
+{
+    auto& ctitle = table_add_column(table, STRING_CONST("Title"),
+        report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
+        .set_context_menu_callback(L3(report_column_title_context_menu(report_handle, _1, _2, _3)));
+
+    table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"),
+        report_column_get_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+
+    table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"),
+        report_column_get_date, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
+        .set_selected_callback(report_title_open_details_view);
+
+    table_add_column(table, STRING_CONST("  " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION)
+        .set_selected_callback(report_title_open_details_view);
+
+    table_add_column(table, STRING_CONST("   Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"),
+        report_column_get_buy_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE)
+        .set_selected_callback(report_title_open_buy_view)
+        .set_tooltip_callback(report_title_adjusted_price_tooltip);
+
+    table_add_column(table, STRING_CONST(" Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
+        .set_selected_callback(report_title_open_details_view)
+        .set_tooltip_callback(report_title_live_price_tooltip)
+        .set_style_formatter(report_title_price_alerts_formatter);
+
+    table_add_column(table, STRING_CONST("   Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"),
+        report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
+        .set_selected_callback(report_title_open_sell_view)
+        .set_tooltip_callback(report_title_ask_price_gain_tooltip);
+
+    table_add_column(table, STRING_CONST("   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. "),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+
+    table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE)
+        .set_selected_callback(report_title_pattern_open);
+
+#if 0
+    table_add_column(table, STRING_CONST("E. Actual " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Actual"),
+        report_column_earning_actual, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+
+    table_add_column(table, STRING_CONST("E. Estimate " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Estimate"),
+        report_column_earning_estimate, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+
+    table_add_column(table, STRING_CONST("E. Diff. " ICON_MD_TRENDING_NEUTRAL "||" ICON_MD_TRENDING_NEUTRAL " Earning Difference"),
+        report_column_earning_difference, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+#endif
+
+    table_add_column(table, STRING_CONST("EPS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Trend"),
+        report_column_earning_percent, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+
+    table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE)
+        .set_tooltip_callback(report_title_day_change_tooltip);
+
+    table_add_column(table, STRING_CONST("  Y. " ICON_MD_CALENDAR_VIEW_DAY "||" ICON_MD_CALENDAR_VIEW_DAY " Yesterday % "),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_YESTERDAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week"),
+        E32(report_column_get_change_value, _1, _2, -7), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"),
+        E32(report_column_get_change_value, _1, _2, -31), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("  3M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 3 months"),
+        E32(report_column_get_change_value, _1, _2, -90), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"),
+        E32(report_column_get_change_value, _1, _2, -365), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
+    table_add_column(table, STRING_CONST("10Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 10 years"),
+        E32(report_column_get_change_value, _1, _2, -365 * 10), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
+
+    table_add_column(table, STRING_CONST(ICON_MD_FLAG "||" ICON_MD_FLAG " Currency"),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_CURRENCY), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CENTER_ALIGN);
+    table_add_column(table, STRING_CONST("   " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_EXCHANGE_RATE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE);
+
+    table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"),
+        L2(report_column_get_dividends_yield(_1, _2)), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ZERO_USE_DASH)
+        .set_tooltip_callback(report_title_dividends_total_tooltip);
+
+    table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"),
+        report_column_get_total_investment, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(table, STRING_CONST("      V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"),
+        report_column_get_total_value, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+
+    table_add_column(table, STRING_CONST("   Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE)
+        .set_style_formatter(report_title_total_gain_alerts_formatter)
+        .set_tooltip_callback(report_title_gain_total_tooltip);
+    table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER)
+        .set_style_formatter(report_title_total_gain_p_alerts_formatter);
+
+    table_add_column(table, STRING_CONST(ICON_MD_INVENTORY " Type    "),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TYPE), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+    table_add_column(table, STRING_CONST(ICON_MD_STORE " Sector"),
+        E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SEARCHABLE)
+        .width = 200.0f;
+
+    table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"),
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER,
+        COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER | COLUMN_MIDDLE_ALIGN);
+
+    // Add custom expression columns
+    report_t* report = report_get(report_handle);
+    foreach(c, report->expression_columns)
+    {
+        string_const_t column_name = string_format_static(STRING_CONST("%s||" ICON_MD_VIEW_COLUMN " %s (%.*s)"),
+            c->name, c->name, min(16, (int)string_length(c->expression)), c->expression);
+        table_add_column(table, STRING_ARGS(column_name), LC2(report_column_evaluate_expression(_1, _2, report_handle, c)), c->format, 
+            COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | (c->format == COLUMN_FORMAT_TEXT ? COLUMN_SEARCHABLE : COLUMN_OPTIONS_NONE));
+    }
+}
+
+FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
+{
+    report_t* report = (report_t*)user_data;
+    FOUNDATION_ASSERT(report);
+
+    if (!ImGui::BeginTable("Columns", 4, ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY))
+        return false;
+
+    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_None);
+    ImGui::TableSetupColumn("Expression||Macros:\n"
+        "$TITLE: Represents the active title symbol code, i.e. \"ZM.US\"\n"
+        "$REPORT: Represents the active report name, i.e. \"MyReport\"\n\n"
+        "Double click the input field to edit and test in the console window", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Format", ImGuiTableColumnFlags_None);
+    ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoResize, imgui_get_font_ui_scale(40.0f));
+
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableHeadersRow();
+
+    bool update_table = false;
+
+    foreach(c, report->expression_columns)
+    {
+        ImGui::TableNextRow();
+
+        ImGui::PushID(c);
+        
+        // Name field
+        if (ImGui::TableNextColumn())
+        {
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::InputText("##Name", c->name, sizeof(c->name), ImGuiInputTextFlags_EnterReturnsTrue))
+            {
+                update_table = true;
+            }
+        }
+        
+        // Expression field
+        if (ImGui::TableNextColumn())
+        {
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::InputText("##Expression", c->expression, sizeof(c->expression));
+            if (ImGui::IsMouseDoubleClicked(0) && ImGui::IsItemHovered())
+            {
+                console_set_expression(c->expression, string_length(c->expression));
+            }
+        }
+
+        // Format selector
+        if (ImGui::TableNextColumn())
+        {
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::BeginCombo("##Format", report_expression_column_format_name(c->format)))
+            {
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_TEXT), c->format == COLUMN_FORMAT_TEXT, ImGuiSelectableFlags_None))
+                {
+                    c->format = COLUMN_FORMAT_TEXT;
+                    update_table = true;
+                }
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_NUMBER), c->format == COLUMN_FORMAT_NUMBER, ImGuiSelectableFlags_None))
+                {
+                    c->format = COLUMN_FORMAT_NUMBER;
+                    update_table = true;
+                }
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_CURRENCY), c->format == COLUMN_FORMAT_CURRENCY, ImGuiSelectableFlags_None))
+                {
+                    c->format = COLUMN_FORMAT_CURRENCY;
+                    update_table = true;
+                }
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_PERCENTAGE), c->format == COLUMN_FORMAT_PERCENTAGE, ImGuiSelectableFlags_None))
+                {
+                    c->format = COLUMN_FORMAT_PERCENTAGE;
+                    update_table = true;
+                }
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_DATE), c->format == COLUMN_FORMAT_DATE, ImGuiSelectableFlags_None))
+                {
+                    c->format = COLUMN_FORMAT_DATE;
+                    update_table = true;
+                }
+                ImGui::EndCombo();
+            }
+        }
+
+        // Delete expression action
+        if (ImGui::TableNextColumn() && ImGui::Button(ICON_MD_DELETE_FOREVER, { ImGui::GetContentRegionAvail().x, 0 }))
+        {
+            array_erase_ordered_safe(report->expression_columns, i);
+            update_table = true;
+            ImGui::PopID();
+            break;
+        }
+
+        ImGui::PopID();
+    }
+
+    {
+        ImGui::PushID("NewColumn");
+
+        bool add = false;
+        static char name[64] = "";
+        static char expression[256] = "";
+        static column_format_t format = COLUMN_FORMAT_TEXT;
+
+        // Column name
+        if (ImGui::TableNextColumn())
+        {
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::InputTextWithHint("##Name", "Column name", name, sizeof(name));
+        }
+
+        // Expression
+        if (ImGui::TableNextColumn())
+        {
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::InputTextWithHint("##Expression", "Expression i.e. S(GFL.TO, open)", expression, sizeof(expression), ImGuiInputTextFlags_EnterReturnsTrue))
+            {
+                add = true;
+            }
+        }
+
+        // Format selector
+        if (ImGui::TableNextColumn())
+        {
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            if (ImGui::BeginCombo("##Format", report_expression_column_format_name(format)))
+            {
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_TEXT), false, ImGuiSelectableFlags_None))
+                    format = COLUMN_FORMAT_TEXT;
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_NUMBER), false, ImGuiSelectableFlags_None))
+                    format = COLUMN_FORMAT_NUMBER;
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_CURRENCY), false, ImGuiSelectableFlags_None))
+                    format = COLUMN_FORMAT_CURRENCY;
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_PERCENTAGE), false, ImGuiSelectableFlags_None))
+                    format = COLUMN_FORMAT_PERCENTAGE;
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_DATE), false, ImGuiSelectableFlags_None))
+                    format = COLUMN_FORMAT_DATE;
+                ImGui::EndCombo();
+            }
+        }
+
+        // Add action
+        if (ImGui::TableNextColumn())
+        {
+            ImGui::BeginDisabled(name[0] == 0 || expression[0] == 0);
+            if (ImGui::Button(ICON_MD_ADD, ImVec2(ImGui::GetContentRegionAvail().x, 0)) || add)
+            {
+                report_expression_column_t ec{};
+                string_copy(STRING_CONST_CAPACITY(ec.name), name, string_length(name));
+                string_copy(STRING_CONST_CAPACITY(ec.expression), expression, string_length(expression));
+                ec.format = format;
+                array_push(report->expression_columns, ec);
+                update_table = true;
+
+                name[0] = 0;
+                expression[0] = 0;
+            }
+            ImGui::EndDisabled();
+        }
+
+        ImGui::PopID();
+    }
+
+    if (update_table)
+    {
+        report->dirty = true;
+        table_clear_columns(report->table);
+        report_table_add_default_columns(report_get_handle(report), report->table);
+    }
+
+    ImGui::EndTable();
+    return true;
+}
+
+FOUNDATION_STATIC void report_open_expression_columns_dialog(report_t* report)
+{
+    app_open_dialog(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns", report_render_expression_columns_dialog, 900U, 400U, true, nullptr, report);
+}
+
 FOUNDATION_STATIC void report_table_context_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     if (element == nullptr)
     {
         report_t* report = report_get(report_handle);
-        ImGui::MoveCursor(8.0f, 4.0f);
-        if (ImGui::MenuItem("Add title"))
+        if (ImGui::MenuItem(ICON_MD_ADD " Add title"))
             report->show_add_title_ui = true;
+
+        if (ImGui::MenuItem(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns"))
+            report_open_expression_columns_dialog(report);
     }
     else
     {
@@ -1356,108 +1763,6 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     return fully_resolved;
 }
 
-FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_handle, table_t* table)
-{
-    auto& ctitle = table_add_column(table, STRING_CONST("Title"), 
-        report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
-        .set_context_menu_callback(L3(report_column_title_context_menu(report_handle, _1, _2, _3)));
-
-    table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"), 
-        report_column_get_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-
-    table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), 
-        report_column_get_date, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
-        .set_selected_callback(report_title_open_details_view);
-
-    table_add_column(table, STRING_CONST("  " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION)
-        .set_selected_callback(report_title_open_details_view);
-
-    table_add_column(table, STRING_CONST("   Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"), 
-        report_column_get_buy_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE)
-        .set_selected_callback(report_title_open_buy_view)
-        .set_tooltip_callback(report_title_adjusted_price_tooltip);
-
-    table_add_column(table, STRING_CONST(" Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
-        .set_selected_callback(report_title_open_details_view)
-        .set_tooltip_callback(report_title_live_price_tooltip)
-        .set_style_formatter(report_title_price_alerts_formatter);
-
-    table_add_column(table, STRING_CONST("   Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"), 
-        report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
-        .set_selected_callback(report_title_open_sell_view)
-        .set_tooltip_callback(report_title_ask_price_gain_tooltip);
-
-    table_add_column(table, STRING_CONST("   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. "), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-
-    table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE)
-        .set_selected_callback(report_title_pattern_open);
-
-    table_add_column(table, STRING_CONST("E. Actual " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Actual"),
-        report_column_earning_actual, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-
-    table_add_column(table, STRING_CONST("E. Estimate " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Estimate"),
-        report_column_earning_estimate, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-
-    table_add_column(table, STRING_CONST("E. Diff. " ICON_MD_TRENDING_NEUTRAL "||" ICON_MD_TRENDING_NEUTRAL " Earning Difference"),
-        report_column_earning_difference, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-
-    table_add_column(table, STRING_CONST("EPS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Trend"),
-        report_column_earning_percent, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-
-    table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE)
-        .set_tooltip_callback(report_title_day_change_tooltip);
-
-    table_add_column(table, STRING_CONST("  Y. " ICON_MD_CALENDAR_VIEW_DAY "||" ICON_MD_CALENDAR_VIEW_DAY " Yesterday % "), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_YESTERDAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week"), 
-        E32(report_column_get_change_value, _1, _2, -7), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"), 
-        E32(report_column_get_change_value, _1, _2, -31), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("  3M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 3 months"), 
-        E32(report_column_get_change_value, _1, _2, -90), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"), 
-        E32(report_column_get_change_value, _1, _2, -365), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
-    table_add_column(table, STRING_CONST("10Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 10 years"), 
-        E32(report_column_get_change_value, _1, _2, -365 * 10), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
-
-    table_add_column(table, STRING_CONST(ICON_MD_FLAG "||" ICON_MD_FLAG " Currency"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_CURRENCY), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CENTER_ALIGN);
-    table_add_column(table, STRING_CONST("   " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_EXCHANGE_RATE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE);
-
-    table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"), 
-        L2(report_column_get_dividends_yield(_1, _2)), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ZERO_USE_DASH)
-        .set_tooltip_callback(report_title_dividends_total_tooltip);
-
-    table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"), 
-        report_column_get_total_investment, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-    table_add_column(table, STRING_CONST("      V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"), 
-        report_column_get_total_value, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-
-    table_add_column(table, STRING_CONST("   Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE)
-        .set_style_formatter(report_title_total_gain_alerts_formatter)
-        .set_tooltip_callback(report_title_gain_total_tooltip);
-    table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER)
-        .set_style_formatter(report_title_total_gain_p_alerts_formatter);
-
-    table_add_column(table, STRING_CONST(ICON_MD_INVENTORY " Type    "), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TYPE), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-    table_add_column(table, STRING_CONST(ICON_MD_STORE " Sector"), 
-        E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SEARCHABLE)
-        .width = 200.0f;
-
-    table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"), 
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER, 
-        COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER | COLUMN_MIDDLE_ALIGN);
-}
-
 FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_length, const config_handle_t& data)
 {
     if (_reports == nullptr)
@@ -1500,6 +1805,18 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
     report->show_summary = data["show_summary"].as_boolean();
     report->show_sold_title = data["show_sold_title"].as_boolean();
     report->opened = data["opened"].as_boolean(true);
+
+    for (auto e : data["columns"])
+    {
+        string_const_t name = e["name"].as_string();
+        string_const_t expr = e["expression"].as_string();
+        column_format_t format = (column_format_t)e["format"].as_number();
+        report_expression_column_t ec{};
+        string_copy(ec.name, sizeof(ec.name), name.str, name.length);
+        string_copy(ec.expression, sizeof(ec.expression), expr.str, expr.length);
+        ec.format = format;
+        array_push(report->expression_columns, ec);
+    }
 
     // Load titles
     title_t** titles = nullptr;
@@ -1758,6 +2075,7 @@ bool report_refresh(report_t* report)
         }
     }
 
+    _report_expression_cache->clear();
     return report->fully_resolved == 0;
 }
 
@@ -1786,8 +2104,11 @@ void report_menu(report_t* report)
     {
         if (ImGui::BeginMenu("Report"))
         {
-            if (ImGui::MenuItem(ICON_MD_ADD " Add title"))
+            if (ImGui::MenuItem(ICON_MD_ADD " Add Title"))
                 report->show_add_title_ui = true;
+
+            if (ImGui::MenuItem(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns"))
+                report_open_expression_columns_dialog(report);
 
             ImGui::Separator();
 
@@ -1896,6 +2217,16 @@ void report_save(report_t* report)
     config_set(report->data, "show_sold_title", report->show_sold_title);
     config_set(report->data, "opened", report->opened);
 
+    auto cv_columns = config_set_array(report->data, STRING_CONST("columns"));
+    config_array_clear(cv_columns);
+    foreach(c, report->expression_columns)
+    {
+        auto cv_column = config_array_push(cv_columns, CONFIG_VALUE_OBJECT);
+        config_set(cv_column, "name", c->name, string_length(c->name));
+        config_set(cv_column, "expression", c->expression, string_length(c->expression));
+        config_set(cv_column, "format", (double)c->format);
+    }
+
     wallet_save(report->wallet, config_set_object(report->data, STRING_CONST("wallet")));
 
     string_const_t report_file_path = report_get_save_file_path(report);
@@ -1929,6 +2260,8 @@ void report_render(report_t* report)
             ImGui::PopStyleVar();
         };   
     }
+
+    eval_set_or_create_global_var(STRING_CONST("$REPORT"), expr_result_t(SYMBOL_CSTR(report->name)));
     
     imgui_draw_splitter("Report", [report](const ImRect& rect)
     {
@@ -2106,10 +2439,14 @@ FOUNDATION_STATIC void report_initialize()
     service_register_tabs(HASH_REPORT, report_render_tabs);
     service_register_menu(HASH_REPORT, report_render_menus);
     service_register_window(HASH_REPORT, report_render_windows);
+
+    _report_expression_cache = MEM_NEW(HASH_REPORT, std::remove_pointer<decltype(_report_expression_cache)>::type);
 }
 
 FOUNDATION_STATIC void report_shutdown()
 {
+    MEM_DELETE(_report_expression_cache);
+    
     for (int i = 0, end = array_size(_reports); i < end; ++i)
     {
         report_t& r = _reports[i];
@@ -2124,6 +2461,7 @@ FOUNDATION_STATIC void report_shutdown()
         array_deallocate(r.transactions);
         wallet_deallocate(r.wallet);
         config_deallocate(r.data);
+        array_deallocate(r.expression_columns);
     }
     array_deallocate(_reports);
     _reports = nullptr;

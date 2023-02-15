@@ -78,11 +78,46 @@ static struct {
     { "buy",    SL2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
     { "day",    SL2(title_get_day_change(_1, _2)), IS_NOT_A_NUMBER },
 
+    { "buy_total_adjusted_qty",    SL2(_1->buy_total_adjusted_qty), IS_NOT_A_NUMBER },
+    { "buy_total_adjusted_price",    SL2(_1->buy_total_adjusted_price), IS_NOT_A_NUMBER },
+    { "sell_total_adjusted_qty",    SL2(_1->sell_total_adjusted_qty), IS_NOT_A_NUMBER },
+    { "sell_total_adjusted_price",    SL2(_1->sell_total_adjusted_price), IS_NOT_A_NUMBER },
+
+    { "buy_total_price",    SL2(_1->buy_total_price), IS_NOT_A_NUMBER },
+    { "buy_total_quantity",    SL2(_1->buy_total_quantity), IS_NOT_A_NUMBER },
+
+    { "sell_total_price",    SL2(_1->sell_total_price), IS_NOT_A_NUMBER },
+    { "sell_total_quantity",    SL2(_1->sell_total_quantity), IS_NOT_A_NUMBER },
+
+    { "buy_total_price_rated_adjusted",    SL2(_1->buy_total_price_rated_adjusted), IS_NOT_A_NUMBER },
+    { "sell_total_price_rated_adjusted",    SL2(_1->sell_total_price_rated_adjusted), IS_NOT_A_NUMBER },
+
+    { "buy_total_price_rated",    SL2(_1->buy_total_price_rated), IS_NOT_A_NUMBER },
+    { "sell_total_price_rated",    SL2(_1->sell_total_price_rated), IS_NOT_A_NUMBER },
+
+    { "buy_adjusted_price",    SL2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
+    { "sell_adjusted_price",    SL2(_1->sell_adjusted_price), IS_NOT_A_NUMBER },
+
+    { "average_price",    SL2(_1->average_price), IS_NOT_A_NUMBER },
+    { "average_price_rated",    SL2(_1->average_price_rated), IS_NOT_A_NUMBER },
+    { "average_quantity",    SL2(_1->average_quantity), IS_NOT_A_NUMBER },
+    { "average_buy_price",    SL2(_1->average_buy_price), IS_NOT_A_NUMBER },
+    { "average_buy_price_rated",    SL2(_1->average_buy_price_rated), IS_NOT_A_NUMBER },
+    { "remaining_shares",    SL2(_1->remaining_shares), IS_NOT_A_NUMBER },
+    { "total_dividends",    SL2(_1->total_dividends), IS_NOT_A_NUMBER },
+    { "average_ask_price",    SL2(_1->average_ask_price), IS_NOT_A_NUMBER },
+    { "average_exchange_rate",    SL2(_1->average_exchange_rate), IS_NOT_A_NUMBER },
+
+    { "date_min",    SL2((double)_1->date_min), IS_NOT_A_NUMBER },
+    { "date_max",    SL2((double)_1->date_max), IS_NOT_A_NUMBER },
+    { "date_average",    SL2((double)_1->date_average), IS_NOT_A_NUMBER},
+
     { "title",  SL2(_1->code), SL1(_1.index == 0) },
     { "ps",     SL2(_1->ps.fetch()), IS_NOT_A_NUMBER },
     { "ask",    SL2(_1->ask_price.fetch()), nullptr },
+    { "today_exchange_rate",    SL2(_1->today_exchange_rate.fetch()), nullptr },
 
-    // Stock only (Start at index 8 <== !!!UPDATE INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
+    // Stock only (Start at index 35 <== !!!UPDATE INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
 
     { "price",      SL2(_2->current.adjusted_close), nullptr, FetchLevel::REALTIME },
     { "date",       SL2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
@@ -110,6 +145,10 @@ static struct {
     { "cci",    SL2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
 
     { "dividends",  SL2(_2->dividends_yield.fetch()), nullptr, FetchLevel::FUNDAMENTALS },
+    { "earning_trend_actual",  SL2(_2->earning_trend_actual.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_trend_estimate",  SL2(_2->earning_trend_estimate.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_trend_difference",  SL2(_2->earning_trend_difference.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_trend_percent",  SL2(_2->earning_trend_percent.fetch()), nullptr, FetchLevel::NONE },
 
     { "name",           SL2(string_table_decode(_2->name)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
     { "description",    SL2(string_table_decode(_2->description.fetch())), nullptr, FetchLevel::FUNDAMENTALS },
@@ -282,7 +321,7 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock(const expr_func_t* f, vec
     if (args->len == 2)
     {
         // Handle default case getting latest information
-        for (int i = 8; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
+        for (int i = 35; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
         {
             const auto& pe = report_field_property_evalutors[i];
             if (report_eval_report_field_test(pe.property_name, stock_handle, field_name, pe.handler, pe.filter_out, &results, pe.required_level))
@@ -402,6 +441,20 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
             value.type = EXPR_RESULT_SYMBOL;
             value.value = string_table_encode(ref.as_string());
         }
+        else if (ref.root->type == JSON_ARRAY)
+        {
+            expr_result_t* child_fields = nullptr;
+
+            for (const auto& e : ref)
+            {
+                if (e.root->type == JSON_PRIMITIVE)
+                    array_push(child_fields, e.as_number());
+                else
+                    array_push(child_fields, e.as_string());
+            }
+
+            value = expr_eval_list(child_fields);
+        }
         else if (ref.root->type == JSON_OBJECT)
         {
             expr_result_t* child_fields = nullptr;
@@ -409,15 +462,14 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
             for (const auto& e : ref)
             {
                 string_const_t id = e.id();
-                string_const_t evalue = e.as_string();
 
-                char value_preview_buffer[64];
-                string_t value_preview = string_format(STRING_CONST_CAPACITY(value_preview_buffer), STRING_CONST("%.*s = %.*s"), 
-                    min(48, (int)id.length), id.str, STRING_FORMAT(evalue));
-                string_table_symbol_t store_value_symbol = string_table_encode(value_preview);
-                
-                expr_result_t r { EXPR_RESULT_SYMBOL, store_value_symbol, value_preview.length };
-                array_push(child_fields, r);
+                if (e.root->type == JSON_PRIMITIVE)
+                    array_push(child_fields, expr_eval_pair(id, e.as_number()));
+                else
+                {
+                    string_const_t evalue = e.as_string();
+                    array_push(child_fields, expr_eval_pair(id, evalue));
+                }
             }
 
             value = expr_eval_list(child_fields);
@@ -461,7 +513,7 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     string_const_t field_name = string_to_const(string_copy(STRING_CONST_CAPACITY(field_name_buffer), STRING_ARGS(field_name_temp)));
 
     tick_t s = time_current();
-    while (!report_sync_titles(report))
+    while (title_filter.length == 0 && !report_sync_titles(report))
     {
         if (time_elapsed(s) > 30.0f)
             throw ExprError(EXPR_ERROR_EVALUATION_TIMEOUT, "Sync timeout, retry later...", STRING_FORMAT(report_name));

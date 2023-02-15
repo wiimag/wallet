@@ -21,16 +21,6 @@
 
 #define HASH_CONSOLE static_hash_string("console", 7, 0xf4408b2738af51e7ULL)
 
-static bool _console_window_opened = false;
-static bool _logger_focus_last_message = false;
-static char _log_search_filter[256]{ 0 };
-static int _filtered_message_count = -1;
-static size_t _next_log_message_id = 1;
-static string_t _selected_msg;
-static generics::fixed_loop<string_t, 20, [](string_t& s){ string_deallocate(s.str); }> _saved_expressions;
-static string_table_t* _console_string_table = nullptr;
-static bool _console_concat_messages = false;
-
 struct log_message_t
 {
     size_t id{ 0 };
@@ -43,6 +33,17 @@ struct log_message_t
     hash_t context;
 };
 
+static bool _console_window_opened = false;
+static bool _logger_focus_last_message = false;
+static char _log_search_filter[256]{ 0 };
+static int _filtered_message_count = -1;
+static size_t _next_log_message_id = 1;
+static string_t _selected_msg;
+static generics::fixed_loop < string_t, 20, [](string_t& s) { string_deallocate(s.str); } > _saved_expressions;
+static string_table_t* _console_string_table = nullptr;
+static bool _console_concat_messages = false;
+static char _console_expression_buffer[4096]{ "" };
+static bool _console_expression_explicitly_set = false;
 static mutex_t* _message_lock = nullptr;
 static log_message_t* _messages = nullptr;
 
@@ -83,7 +84,6 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
     }
 
     {
-        scoped_mutex_t lock(_message_lock);
         log_message_t m{ _next_log_message_id++, string_hash(msg, length), severity };
         m.context = context;
 
@@ -92,27 +92,30 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
         string_const_t context_name = hash_to_string(context);
         const size_t hash_code_start = string_find(msg, length, '<', 12);
         const size_t hash_code_end = string_find(msg, length, '>', hash_code_start);
+
+        scoped_mutex_t lock(_message_lock);
         if (context_name.length != 0 && hash_code_start != STRING_NPOS && hash_code_end != STRING_NPOS)
         {
             string_t formatted_msg = string_allocate_format(STRING_CONST("%.*s %11.*s : %.*s"), 
                 (int)hash_code_start, msg,
                 STRING_FORMAT(context_name),
                 (int)(length - hash_code_end - 1), msg + hash_code_end + 2);
+
             m.msg_symbol = console_string_encode(formatted_msg.str, formatted_msg.length);
             string_deallocate(formatted_msg.str);
         }
         else
         #endif
         {
-            string_t formatted_msg = string_allocate_format(STRING_CONST("%.*s"), (int)length, msg);
-            m.msg_symbol = console_string_encode(formatted_msg.str, formatted_msg.length);
-            string_deallocate(formatted_msg.str);
+            m.msg_symbol = console_string_encode(msg, length);
         }
 
         char preview_buffer[256];
-        string_const_t preview = string_remove_line_returns(STRING_CONST_CAPACITY(preview_buffer), msg, length);
+        string_const_t log_msg = string_table_to_string_const(_console_string_table, m.msg_symbol);
+        string_const_t preview = string_remove_line_returns(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(log_msg));
+
         m.preview_symbol = console_string_encode(STRING_ARGS(preview));
-        array_push(_messages, m);
+        array_push_memcpy(_messages, &m);
     }
 
     _logger_focus_last_message = true;
@@ -123,8 +126,6 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
 {
     const size_t log_count = array_size(_messages);
     const int loop_count = _filtered_message_count <= 0 ? (int)log_count : _filtered_message_count;
-    const float selectable_item_height = imgui_get_font_ui_scale(30.0f);
-    const ImVec2 row_size = ImVec2(0.0f, selectable_item_height);
     ImGuiListClipper clipper;
     clipper.Begin(loop_count);
     while (clipper.Step())
@@ -148,7 +149,7 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
                 string_const_t msg_str = log.preview_symbol != STRING_TABLE_NULL_SYMBOL ? 
                     string_table_to_string_const(_console_string_table,log.preview_symbol) :
                     string_table_to_string_const(_console_string_table, log.msg_symbol);
-                if (ImGui::Selectable(msg_str.str, &log.selectable, ImGuiSelectableFlags_DontClosePopups, row_size))
+                if (ImGui::Selectable(msg_str.str, &log.selectable, ImGuiSelectableFlags_DontClosePopups, {0, 0}))
                 {
                     string_deallocate(_selected_msg.str);
                     string_const_t csmm = string_table_to_string_const(_console_string_table, log.msg_symbol);
@@ -262,15 +263,15 @@ FOUNDATION_STATIC void console_render_toolbar()
 FOUNDATION_STATIC void console_render_evaluator()
 {
     static bool focus_text_field = true;
-    static char expression_buffer[4096]{ "" };
 
     if (ImGui::IsWindowAppearing())
     {
-        if (_saved_expressions.size())
+        if (!_console_expression_explicitly_set && _saved_expressions.size())
         {
             const string_t last_expression = _saved_expressions.current();
-            string_copy(STRING_CONST_CAPACITY(expression_buffer), STRING_ARGS(last_expression));
+            string_copy(STRING_CONST_CAPACITY(_console_expression_buffer), STRING_ARGS(last_expression));
         }
+        _console_expression_explicitly_set = false;
     }
 
     static char input_id[32] = "##Expression";
@@ -279,14 +280,14 @@ FOUNDATION_STATIC void console_render_evaluator()
         if (ImGui::Shortcut(ImGuiKey_UpArrow | ImGuiMod_Alt))
         {
             const string_t& last_expression = _saved_expressions.move(-1);
-            string_t ec = string_copy(STRING_CONST_CAPACITY(expression_buffer), STRING_ARGS(last_expression));
+            string_t ec = string_copy(STRING_CONST_CAPACITY(_console_expression_buffer), STRING_ARGS(last_expression));
             string_format(STRING_CONST_CAPACITY(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
             focus_text_field = true;
         }
         else if (ImGui::Shortcut(ImGuiKey_DownArrow | ImGuiMod_Alt))
         {
             const string_t& last_expression = _saved_expressions.move(+1);
-            string_t ec = string_copy(STRING_CONST_CAPACITY(expression_buffer), STRING_ARGS(last_expression));
+            string_t ec = string_copy(STRING_CONST_CAPACITY(_console_expression_buffer), STRING_ARGS(last_expression));
             string_format(STRING_CONST_CAPACITY(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
             focus_text_field = true;
         }
@@ -298,7 +299,7 @@ FOUNDATION_STATIC void console_render_evaluator()
     }
     
     bool evaluate = false;
-    if (ImGui::InputTextMultiline(input_id, STRING_CONST_CAPACITY(expression_buffer),
+    if (ImGui::InputTextMultiline(input_id, STRING_CONST_CAPACITY(_console_expression_buffer),
         ImVec2(imgui_get_font_ui_scale(-98.0f), -1), 
         ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine | ImGuiInputTextFlags_AllowTabInput |
         (focus_text_field ? ImGuiInputTextFlags_AutoSelectAll : ImGuiInputTextFlags_None)))
@@ -318,16 +319,16 @@ FOUNDATION_STATIC void console_render_evaluator()
 
     if (evaluate)
     {
-        string_const_t expression_string = string_const(expression_buffer, string_length(expression_buffer));
+        string_const_t expression_string = string_const(_console_expression_buffer, string_length(_console_expression_buffer));
         if (!_saved_expressions.includes<string_const_t>(L2(string_equal_ignore_whitespace(STRING_ARGS(_1), STRING_ARGS(_2))), expression_string))
             _saved_expressions.push(string_clone(STRING_ARGS(expression_string)));
 
         expr_result_t result = eval(expression_string);
         if (EXPR_ERROR_CODE == 0)
         {
-            _console_concat_messages = true;
+            //_console_concat_messages = true;
             expr_log_evaluation_result(expression_string, result);
-            _console_concat_messages = false;
+            //_console_concat_messages = false;
         }
         else if (EXPR_ERROR_CODE != 0)
         {
@@ -403,6 +404,18 @@ void console_clear()
 void console_show()
 {
     _console_window_opened = true;
+}
+
+void console_hide()
+{
+    _console_window_opened = false;
+}
+
+void console_set_expression(const char* expression, size_t expression_length)
+{
+    string_copy(STRING_CONST_CAPACITY(_console_expression_buffer), expression, expression_length);
+    _console_expression_explicitly_set = true;
+    console_show();
 }
 
 //

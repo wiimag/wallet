@@ -304,6 +304,8 @@ column_t& table_add_column(table_t* table,
     return table_add_column(table, name, N, fetch_value_handler, format, flags);
 }
 
+void table_clear_columns(table_t* table);
+
 void table_cell_right_aligned_column_label(const char* label, void* payload);
 
 void table_cell_right_aligned_label(const char* label, size_t label_length, const char* url = nullptr, size_t url_length = 0, float offset = 0.0f);

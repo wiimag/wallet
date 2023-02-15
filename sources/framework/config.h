@@ -177,6 +177,7 @@ config_handle_t config_set_null(config_handle_t v, const char* key, size_t key_l
 string_const_t config_name(config_handle_t obj);
 size_t config_size(config_handle_t obj);
 
+config_handle_t config_array_clear(config_handle_t v);
 config_handle_t config_array_push(config_handle_t v, config_value_type_t type = CONFIG_VALUE_NIL, const char* name = nullptr, size_t name_length = 0);
 config_handle_t config_array_push(config_handle_t v, bool value);
 config_handle_t config_array_push(config_handle_t v, double number);
