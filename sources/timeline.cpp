@@ -5,6 +5,7 @@
 
 #include "timeline.h"
 
+#include "app.h"
 #include "title.h"
 #include "report.h"
 #include "wallet.h"
@@ -24,6 +25,13 @@ typedef enum class TimelineTransactionType
     DIVIDEND,
     EXCHANGE_RATE
 } timeline_transaction_type_t;
+
+struct plot_axis_format_t
+{
+    bool print_short_value{ true };
+    time_t last_year{ 0 };
+    ImPlotRect limits;
+};
 
 struct timeline_transaction_t
 {
@@ -70,11 +78,20 @@ struct timeline_t
     double total_investment{ 0 };
 };
 
-static struct TIMELINE_MODULE {
+struct timeline_report_t
+{
+    timeline_t* days{ nullptr };
+    timeline_transaction_t* transactions{ nullptr };
     
+    string_t title{};
+    string_const_t preferred_currency{};
+};
 
-
-} *_timeline;
+struct timeline_plot_day_t
+{
+    const timeline_t* timeline;
+    const function<double(const timeline_t* day)>& fn;
+};
 
 //
 // # PRIVATE
@@ -357,14 +374,15 @@ FOUNDATION_STATIC timeline_t* timeline_build(const timeline_transaction_t* trans
     timeline_t* days = nullptr;
     foreach(t, transactions)
     {
-        string_const_t date_string = string_from_date(t->date);
-
+        #if BUILD_DEBUG
         // Print transactions
+        string_const_t date_string = string_from_date(t->date);
         log_infof(HASH_TIMELINE, STRING_CONST("[%3u] Transaction: %s%-15s %.*s %7.0lf x %7.2lf $ x %5.4lg = %8.2lf $ (%.2lf, %.4lf)"),
             i, t->type == TimelineTransactionType::BUY ? "+" : "-",
             t->code, STRING_FORMAT(date_string),
             t->qty, t->price, t->exchange_rate, t->qty * t->price * t->exchange_rate,
             t->split_factor, t->adjusted_factor);
+        #endif
 
         int fidx = array_binary_search(days, array_size(days), t->date);
         if (fidx < 0)
@@ -386,15 +404,15 @@ FOUNDATION_STATIC timeline_t* timeline_build(const timeline_transaction_t* trans
         #endif
     }
 
+    #if BUILD_DEBUG
+    foreach(d, days)
     {
-        foreach(d, days)
-        {
-            string_const_t date_string = string_from_date(d->date);
-            log_infof(HASH_TIMELINE, STRING_CONST("Timeline: [%2u] %.*s -> Funds: %8.2lf $ -> Investment: %9.2lf $ -> Gain: %8.2lf $ (%8.2lf $) -> Total: %8.2lf $ (%8.2lf $)"),
-                array_size(d->stocks), STRING_FORMAT(date_string),
-                d->total_fund, d->total_investment, d->total_gain, d->total_dividends, d->total_value, d->total_value + d->total_gain + d->total_dividends + d->total_fund);
-        }
+        string_const_t date_string = string_from_date(d->date);
+        log_infof(HASH_TIMELINE, STRING_CONST("Timeline: [%2u] %.*s -> Funds: %8.2lf $ -> Investment: %9.2lf $ -> Gain: %8.2lf $ (%8.2lf $) -> Total: %8.2lf $ (%8.2lf $)"),
+            array_size(d->stocks), STRING_FORMAT(date_string),
+            d->total_fund, d->total_investment, d->total_gain, d->total_dividends, d->total_value, d->total_value + d->total_gain + d->total_dividends + d->total_fund);
     }
+    #endif
 
     return days;
 }
@@ -407,18 +425,266 @@ FOUNDATION_STATIC void timeline_deallocate(timeline_t*& timeline)
     timeline = nullptr;
 }
 
+FOUNDATION_STATIC timeline_report_t* timeline_report_allocate(const report_t* report)
+{
+    timeline_report_t* timeline_report = (timeline_report_t*)memory_allocate(HASH_TIMELINE, sizeof(timeline_report_t), 0, MEMORY_PERSISTENT);
+    timeline_report->days = nullptr;
+    timeline_report->transactions = nullptr;
+    
+    string_const_t report_name = SYMBOL_CONST(report->name);
+    timeline_report->title = string_allocate_format(STRING_CONST("Timeline %.*s"), STRING_FORMAT(report_name));
+    timeline_report->preferred_currency = string_to_const(report->wallet->preferred_currency);
+
+    return timeline_report;
+}
+
+FOUNDATION_STATIC void timeline_report_deallocate(timeline_report_t*& timeline_report)
+{
+    string_deallocate(timeline_report->title.str);
+    timeline_deallocate(timeline_report->days);
+    array_deallocate(timeline_report->transactions);
+    memory_deallocate(timeline_report);
+    timeline_report = nullptr;
+}
+
+FOUNDATION_STATIC void timeline_report_plot_day_value(const char* title, const timeline_t* timeline, function<double(const timeline_t* day)>&& fn, float line_weight = 2.0f, bool default_hide = false)
+{
+    timeline_plot_day_t plot{ timeline, fn };
+    
+    ImPlot::SetAxis(ImAxis_Y1);
+    ImPlot::HideNextItem(default_hide, ImPlotCond_Once);
+
+    ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, line_weight);
+    ImPlot::PlotLineG(title, [](int idx, void* user_data)->ImPlotPoint
+    {
+        timeline_plot_day_t* plot = (timeline_plot_day_t*)user_data;
+        const timeline_t* t = plot->timeline + idx;
+        const double x = (double)t->date;
+        const double y = plot->fn(t);
+        return ImPlotPoint(x, y);
+    }, &plot, array_size(timeline), ImPlotLineFlags_SkipNaN);
+    ImPlot::PopStyleVar(1);
+}
+
+FOUNDATION_STATIC void timeline_report_plot_day_bar_value(const char* title, const timeline_t* timeline, function<double(const timeline_t* day)>&& fn, double bar_size = 24 * 60 * 60.0, bool default_hide = false)
+{
+    timeline_plot_day_t plot{ timeline, fn };
+
+    if (bar_size == 0)
+        bar_size = 24 * 60 * 60.0;
+    
+    ImPlot::SetAxis(ImAxis_Y2);
+    ImPlot::HideNextItem(default_hide, ImPlotCond_Once);
+
+    ImPlot::PlotBarsG(title, [](int idx, void* user_data)->ImPlotPoint
+    {
+        timeline_plot_day_t* plot = (timeline_plot_day_t*)user_data;
+        const timeline_t* t = plot->timeline + idx;
+        const double x = (double)t->date;
+        const double y = plot->fn(t);
+        return ImPlotPoint(x, y);
+    }, &plot, array_size(timeline), bar_size, ImPlotBarsFlags_None);
+}
+
+FOUNDATION_STATIC void timeline_report_graph_limit(const char* label, double min, double max, double value)
+{
+    const double range[]{ min, max };
+    const double limit[]{ value, value };
+    ImPlot::PlotLine(label, range, limit, ARRAY_COUNT(limit), ImPlotLineFlags_NoClip);
+}
+
+FOUNDATION_STATIC int timeline_report_graph_date_format(double value, char* buff, int size, void* user_data)
+{
+    const time_t time = (time_t)value;
+    const plot_axis_format_t& f = *(plot_axis_format_t*)user_data;
+
+    if (size > 0)
+        buff[0] = '\0';
+
+    if (f.print_short_value)
+    {
+        tm tm_year = *localtime(&time);
+        if (tm_year.tm_mon == 0 && tm_year.tm_mday < 5)
+            return 0;
+
+        if (tm_year.tm_mon == 11 && tm_year.tm_mday > 26)
+            return 0;
+
+        string_const_t value_str = string_from_date(time);
+        return (int)string_copy(buff, size, value_str.str + 5, 5).length;
+    }
+
+    string_const_t value_str = string_from_date(time);
+    return (int)string_copy(buff, size, value_str.str, value_str.length).length;
+}
+
+FOUNDATION_STATIC int timeline_report_graph_total_amount_format(double value, char* buff, int size, void* user_data)
+{
+    const plot_axis_format_t& f = *(plot_axis_format_t*)user_data;
+    if (f.print_short_value)
+    {
+        const double abs_value = math_abs(value);
+
+        #if 0 // Will I ever be that rich?
+        if (abs_value >= 1e12)
+            return (int)string_format(buff, size, STRING_CONST("$ %3.3gT"), value / 1e12).length;
+        if (abs_value >= 1e9)
+            return (int)string_format(buff, size, STRING_CONST("$ %3.3gB"), value / 1e9).length;
+        #endif
+
+        if (abs_value >= 1e6)
+            return (int)string_format(buff, size, STRING_CONST("$ %3.3gM"), value / 1e6).length;
+
+        if (abs_value >= 1e3)
+            return (int)string_format(buff, size, STRING_CONST("$ %3.3gK"), value / 1e3).length;
+
+        return (int)string_format(buff, size, STRING_CONST("$ %.0lf"), value).length;
+    }
+
+    string_const_t value_str = string_from_currency(value, "9 999 999 $");
+    return (int)string_copy(buff, size, STRING_ARGS(value_str)).length;
+}
+
+FOUNDATION_STATIC bool timeline_report_graph(void* user_data)
+{
+    timeline_report_t* report = (timeline_report_t*)user_data;
+
+    if (array_size(report->days) <= 2)
+    {
+        ImGui::TextUnformatted("No transactions to display");
+        return true;
+    }
+
+    const ImVec2 graph_offset = {-1,-1};//ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
+    if (!ImPlot::BeginPlot("Timeline", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
+        return false;
+
+    if (ImGui::IsWindowAppearing())
+        dispatch(L0(ImPlot::SetNextAxesToFit()));
+
+    plot_axis_format_t axis_format{};
+    const double min_d = (double)report->days[0].date;
+    const double max_d = (double)array_last(report->days)->date;
+
+    ImPlot::SetupLegend(ImPlotLocation_NorthWest, /*ImPlotLegendFlags_Horizontal | ImPlotLegendFlags_Outside |*/ ImPlotLegendFlags_None);
+
+    ImPlot::SetupAxis(ImAxis_X1, "##Date", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight /*| ImPlotAxisFlags_RangeFit*/);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min_d, max_d + time_one_day() * 5.0);
+    ImPlot::SetupAxisFormat(ImAxis_X1, timeline_report_graph_date_format, &axis_format);
+
+    ImPlot::SetupAxis(ImAxis_Y1, "##TotalAmounts", ImPlotAxisFlags_LockMin | ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_Opposite);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0, INFINITY);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, timeline_report_graph_total_amount_format, &axis_format);
+
+    ImPlot::SetupAxis(ImAxis_Y2, "##SmallAmounts", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight);
+    ImPlot::SetupAxisFormat(ImAxis_Y2, timeline_report_graph_total_amount_format, &axis_format);
+
+    ImPlot::SetupFinish();
+
+    const ImPlotRect& limits = ImPlot::GetPlotLimits();
+    axis_format.limits = limits;
+    axis_format.print_short_value = false;
+
+//     struct plot_context_t
+//     {
+//         report_transaction_t* transactions{ nullptr };
+//         title_t* active_title{ nullptr };
+//         bool shown{ false };
+//     };
+// 
+//     report_graph_limit("Value", min_d, max_d, report->total_value);
+//     report_graph_limit("Funds", min_d, max_d, report->wallet->funds);
+// 
+//     if (array_size(report->wallet->history) > 0)
+//         report_graph_limit("Broker", min_d, max_d, array_last(report->wallet->history)->broker_value);
+// 
+//     plot_context_t c{ report->transactions };
+// 
+//     for (const auto& t : generics::fixed_array(report->titles))
+//     {
+//         if (title_is_index(t))
+//             continue;
+// 
+//         c.active_title = t;
+//         c.shown = false;
+// 
+//         for (const auto& x : generics::fixed_array(report->transactions))
+//         {
+//             const bool in_limits = limits.X.Contains((float)x.date) && limits.Y.Contains((float)x.acc);
+//             if (x.buy && x.title == t && in_limits)
+//             {
+//                 const float cc = (float)t->code[0] + (float)t->code[t->code_length >= 1 ? 1 : 0] + (float)t->code[t->code_length >= 2 ? 2 : 0];
+//                 ImPlot::Annotation((double)x.date, x.acc, ImColor::HSV(cc / 360.0f, 0.5f, 0.5f, 0.7f), ImVec2((float)x.rx, (float)x.ry), true, "%s", t->code);
+//                 break;
+//             }
+//         }
+// 
+//         for (const auto& x : generics::fixed_array(report->transactions))
+//         {
+//             const bool in_limits = limits.X.Contains((float)x.date) && limits.Y.Contains((float)x.acc);
+//             if (x.buy == false && x.title == t && in_limits)
+//             {
+//                 const float cc = (float)t->code[0] + (float)t->code[t->code_length >= 1 ? 1 : 0] + (float)t->code[t->code_length >= 2 ? 2 : 0];
+//                 ImPlot::Annotation((double)x.date, x.acc, ImColor::HSV(350 / 360.0f, cc, cc, 0.7f), ImVec2((float)x.rx, (float)x.ry), true, "%s", t->code);
+//                 break;
+//             }
+//         }
+//     }
+// 
+
+    timeline_report_plot_day_bar_value("Funds", report->days, L1(_1->total_fund), 0, true);
+    timeline_report_plot_day_bar_value("Gain", report->days, L1(_1->total_gain + _1->total_dividends));
+    timeline_report_plot_day_bar_value("Sells", report->days, L1(_1->total_gain), 0, true);
+    timeline_report_plot_day_bar_value("Dividends", report->days, L1(_1->total_dividends), 0, true);
+
+    timeline_report_plot_day_value("Stock Value", report->days, L1(_1->total_value), 2.0f, true);
+
+    timeline_report_plot_day_value("+Gain", report->days, L1(_1->total_value + _1->total_gain), 1.0f, true);
+    timeline_report_plot_day_value("+Funds", report->days, L1(_1->total_value + _1->total_fund), 1.0f, true);
+    timeline_report_plot_day_value("+Dividends", report->days, L1(_1->total_value + _1->total_dividends), 1.0f, true);
+
+    timeline_report_plot_day_value("Investments", report->days, L1(_1->total_investment), 2.0f);
+    timeline_report_plot_day_value("Total Value", report->days, L1(_1->total_value + _1->total_fund + _1->total_gain + _1->total_dividends), 3.0f);
+    
+    const time_t min_time = (time_t)limits.X.Min + time_one_day() * 5;
+    const int year_range = math_ceil(time_elapsed_days((time_t)min_time, (time_t)max_d) / 365.0);
+
+    tm tm_year = *localtime(&min_time);
+    tm_year.tm_yday = 0;
+    tm_year.tm_mday = 1;
+    tm_year.tm_mon = 0;
+    ImPlot::TagX((double)min_time, ImColor::HSV(155 / 360.0f, 0.75f, 0.5f), "%d", 1900 + tm_year.tm_year);
+    for (int i = 0, end = year_range; i != end; ++i)
+    {
+        tm_year.tm_year++;
+        double y = (double)mktime(&tm_year);
+        ImPlot::TagX(y, ImColor::HSV(155 / 360.0f, 0.75f, 0.5f), "%d", 1900 + tm_year.tm_year);
+    }
+
+    ImPlot::EndPlot();
+
+    return true;
+}
+
+FOUNDATION_STATIC void timeline_report_graph_close(void* user_data)
+{
+    timeline_report_t* timeline_report = (timeline_report_t*)user_data;
+    timeline_report_deallocate(timeline_report);
+}
+
 //
 // # PUBLIC API
 //
 
 void timeline_render_graph(const report_t* report)
 {
-    string_const_t preferred_currency = string_to_const(report->wallet->preferred_currency);
-    auto transactions = timeline_report_compute_transactions(report, preferred_currency);
-    auto timeline = timeline_build(transactions, preferred_currency);
-    
-    timeline_deallocate(timeline);
-    array_deallocate(transactions);    
+    timeline_report_t* timeline_report = timeline_report_allocate(report);
+    timeline_report->transactions = timeline_report_compute_transactions(report, timeline_report->preferred_currency);
+    timeline_report->days = timeline_build(timeline_report->transactions, timeline_report->preferred_currency);
+
+    app_open_dialog(timeline_report->title.str, 
+        timeline_report_graph, 1200, 900, true, 
+        timeline_report_graph_close, timeline_report);
 }
 
 //
@@ -427,14 +693,10 @@ void timeline_render_graph(const report_t* report)
 
 FOUNDATION_STATIC void timeline_initialize()
 {
-    _timeline = MEM_NEW(HASH_TIMELINE, TIMELINE_MODULE);
 }
 
 FOUNDATION_STATIC void timeline_shutdown()
-{
-
-    MEM_DELETE(_timeline);
-    
+{    
 }
 
 DEFINE_SERVICE(TIMELINE, timeline_initialize, timeline_shutdown, SERVICE_PRIORITY_UI);
