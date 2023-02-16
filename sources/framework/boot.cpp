@@ -1179,9 +1179,15 @@ extern bool main_is_graphical_mode()
     return !_batch_mode;
 }
 
-extern bool main_is_interactive_mode()
+extern bool main_is_interactive_mode(bool exclude_debugger /*= false*/)
 {
-    return !_batch_mode && !_run_tests;
+    if (_batch_mode)
+        return false;
+    if (_run_tests)
+        return false;
+    if (exclude_debugger && system_debugger_attached())
+        return false;
+    return true;
 }
 
 extern bool main_is_running_tests()

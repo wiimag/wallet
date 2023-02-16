@@ -263,14 +263,14 @@ template<typename T>
 T array_sort_by(T arr, const function<int(const typename std::remove_pointer<T>::type& a, const typename std::remove_pointer<T>::type& b)>& comparer)
 {
 #if FOUNDATION_PLATFORM_WINDOWS
-    qsort_s(arr, array_size(arr), sizeof(T), [](void* context, const void* va, const void* vb)
+    qsort_s(arr, array_size(arr), sizeof(typename std::remove_pointer<T>::type), [](void* context, const void* va, const void* vb)
 #else
-    qsort_r(arr, array_size(arr), sizeof(T), (void*)&comparer, [](void* context, const void* va, const void* vb)
+    qsort_r(arr, array_size(arr), sizeof(typename std::remove_pointer<T>::type), (void*)&comparer, [](void* context, const void* va, const void* vb)
 #endif
     {
-        const function<int(const T&, const T&)>& comparer = *(function<int(const T&, const T&)>*)context;
-        const T& a = *(const T*)va;
-        const T& b = *(const T*)vb;
+        const auto& comparer = *(function<int(const typename std::remove_pointer<T>::type& a, const typename std::remove_pointer<T>::type& b)>*)context;
+        const typename std::remove_pointer<T>::type& a = *(const typename std::remove_pointer<T>::type*)va;
+        const typename std::remove_pointer<T>::type& b = *(const typename std::remove_pointer<T>::type*)vb;
         return comparer(a, b);
 
 #if FOUNDATION_PLATFORM_WINDOWS
@@ -508,7 +508,7 @@ void on_thread_exit(function<void()> func);
 
 extern bool main_is_batch_mode();
 extern bool main_is_graphical_mode();
-extern bool main_is_interactive_mode();
+extern bool main_is_interactive_mode(bool exclude_debugger = false);
 extern bool main_is_running_tests();
 extern double main_tick_elapsed_time_ms();
 
@@ -609,6 +609,23 @@ struct TimeMarkerScope
 	} while (0)
 
 #endif
+
+struct LogPrefixScope
+{
+    const bool previous_state;
+    FOUNDATION_FORCEINLINE LogPrefixScope(bool enable = false)
+        : previous_state(log_is_prefix_enabled())
+    {
+        log_enable_prefix(enable);
+    }
+
+    FOUNDATION_FORCEINLINE ~LogPrefixScope()
+    {
+        log_enable_prefix(previous_state);
+    }
+};
+
+#define LOG_PREFIX(enable)  LogPrefixScope __var_log_prefix_scope__##COUNTER (enable) 
 
 template<typename T> using alias = T;
 #define MEM_NEW(context, type, ...) new (memory_allocate(context, sizeof(type), alignof(type), MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED)) type(__VA_ARGS__);

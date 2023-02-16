@@ -15,6 +15,7 @@
 #include "realtime.h"
 #include "wallet.h"
 #include "pattern.h"
+#include "timeline.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -2116,7 +2117,10 @@ void report_menu(report_t* report)
                 report_filter_out_titles(report);
             if (ImGui::MenuItem(ICON_MD_SUMMARIZE " Show Summary", "F4", &report->show_summary))
                 report_summary_update(report);
-            ImGui::MenuItem(ICON_MD_AUTO_GRAPH " Show transactions", nullptr, &report->show_order_graph);
+            ImGui::MenuItem(ICON_MD_AUTO_GRAPH " Show Transactions", nullptr, &report->show_order_graph);
+
+            if (ImGui::MenuItem(ICON_MD_TIMELINE " Show Timeline"))
+                timeline_render_graph(report);
 
             ImGui::Separator();
 

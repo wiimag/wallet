@@ -387,6 +387,11 @@ void dispatcher_shutdown()
     foreach(e, _event_listeners)
         e->callback.~function();
     array_deallocate(_event_listeners);
+
+    // Empty event queue by processing all remaining messages 
+    // making sure any allocated memory is freed.
+    dispatcher_process_events();
+
     event_stream_deallocate(_event_stream);
     _event_stream = nullptr;
 

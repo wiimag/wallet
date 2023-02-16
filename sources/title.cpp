@@ -280,7 +280,6 @@ config_handle_t title_get_fundamental_config_value(title_t* title, const char* f
 
 void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
 {
-    // Compute title quantity and average price
     const config_tag_t TITLE_DATE = config_get_tag(data, STRING_CONST("date"));
     const config_tag_t TITLE_BUY = config_get_tag(data, STRING_CONST("buy"));
     const config_tag_t TITLE_QTY = config_get_tag(data, STRING_CONST("qty"));
@@ -330,7 +329,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     t->code_length = string_copy(STRING_CONST_CAPACITY(t->code), STRING_ARGS(title_code)).length;
 
     // Initiate to resolve the title stock right away in case it has never been done before.
-    if (main_is_interactive_mode() && t->wallet && t->wallet->track_history)
+    if (main_is_interactive_mode(true) && t->wallet && t->wallet->track_history)
     {
         const auto fetch_level = title_minimum_fetch_level(t);
         if (!t->stock)
