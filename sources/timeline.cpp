@@ -52,19 +52,21 @@ struct timeline_stock_t
     double          total_value{ 0 };
     double          average_price{ 0 };
 
-    double          total_exchange_rate{};
-    double          average_exchange_rate{ 1.0 };
+    // TODO: Remove if not used at the end.
+    //double          total_exchange_rate{};
+    //double          average_exchange_rate{ 1.0 };
 };
 
-struct timeline_date_stats_t
+struct timeline_t
 {
     time_t date{ 0 };
     timeline_stock_t* stocks{ nullptr };
     
-    double total_buy{ 0 };
-    double total_sell{ 0 };
     double total_gain{ 0 };
+    double total_dividends{ 0 };
     double total_value{ 0 };
+
+    double total_fund{ 0 };
     double total_investment{ 0 };
 };
 
@@ -78,11 +80,15 @@ static struct TIMELINE_MODULE {
 // # PRIVATE
 //
 
-FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(const report_t* report)
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator<(const timeline_stock_t& s, const hash_t& key) { return s.key < key; }
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator>(const timeline_stock_t& s, const hash_t& key) { return s.key > key; }
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator<(const timeline_t& s, const time_t& date) { return s.date < date; }
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator>(const timeline_t& s, const time_t& date) { return s.date > date; }
+
+FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(const report_t* report, string_const_t preferred_currency)
 {
     timeline_transaction_t* transactions = nullptr;
-
-    string_const_t preferred_currency = string_to_const(report->wallet->preferred_currency);
 
     foreach(tt, report->titles)
     {
@@ -155,14 +161,25 @@ FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(c
         }
     }
 
-    return transactions;
+    // Sort transactions by date
+    return array_sort_by(transactions, [](const timeline_transaction_t& a, const timeline_transaction_t& b)
+    {
+        if (a.date < b.date)
+            return -1;
+
+        if (a.date > b.date)
+            return 1;
+
+        // Sort buy transactions first for the same day.
+        if (a.type < b.type)
+            return -1;
+
+        if (a.type > b.type)
+            return 1;
+
+        return 0;
+    });
 }
-
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator<(const timeline_stock_t& s, const hash_t& key) { return s.key < key; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator>(const timeline_stock_t& s, const hash_t& key) { return s.key > key; }
-
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator<(const timeline_date_stats_t& s, const time_t& date) { return s.date < date; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator>(const timeline_date_stats_t& s, const time_t& date) { return s.date > date; }
 
 FOUNDATION_STATIC int timeline_add_new_stock(const timeline_transaction_t* t, timeline_stock_t*& stocks, int insert_at)
 {
@@ -176,50 +193,44 @@ FOUNDATION_STATIC int timeline_add_new_stock(const timeline_transaction_t* t, ti
     s.average_price = 0;
     s.code = string_const(t->code, string_length(t->code));
 
-    s.total_exchange_rate = 0;
-    s.average_exchange_rate = 1.0;
+    //s.total_exchange_rate = 0;
+    //s.average_exchange_rate = 1.0;
 
     array_insert(stocks, insert_at, s);
     return insert_at;
 }
 
-FOUNDATION_STATIC void timeline_day_update_total_value(timeline_date_stats_t& day)
+FOUNDATION_STATIC void timeline_day_update_total_value(timeline_t& day, string_const_t preferred_currency)
 {
     double total_value = 0;
-    double total_investment = 0;
     foreach(s, day.stocks)
     {
         const day_result_t ed = stock_get_eod(STRING_ARGS(s->code), day.date);
-        const double current_value = s->qty * ed.close * s->average_exchange_rate;
-        const double investment_value = s->qty * s->average_price;
+        
+        string_const_t stock_currency = stock_get_currency(STRING_ARGS(s->code));
+        const double that_day_exchange_rate = stock_exchange_rate(STRING_ARGS(stock_currency), STRING_ARGS(preferred_currency));
 
+        const double investment_value = s->qty * s->average_price;
+        const double current_value = s->qty * ed.close * that_day_exchange_rate;
+
+        #if BUILD_DEBUG
         const double idiff = math_abs(investment_value - s->total_value);
         if (idiff > 0.001)
-            log_warnf(HASH_TIMELINE, WARNING_SUSPICIOUS, STRING_CONST("Compare investment and stock total value: %.2lf <> %.2lf"), investment_value, s->total_value);
+        {
+            log_warnf(HASH_TIMELINE, WARNING_SUSPICIOUS,
+                STRING_CONST("Compare investment and stock total value: %.2lf <> %.2lf"),
+                investment_value, s->total_value);
+        }
+        #endif
 
         total_value += current_value;
-        total_investment += investment_value;
-
         FOUNDATION_ASSERT(math_real_is_finite(total_value));
-        FOUNDATION_ASSERT(math_real_is_finite(total_investment));
     }
 
     day.total_value = total_value;
-    day.total_investment = total_investment;
-
-    #if BUILD_DEBUG
-    string_const_t date_string = string_from_date(day.date);
-    log_infof(HASH_TIMELINE, STRING_CONST("\t\t\t\t  Day Update: %.*s [%u]\n\t\t\t\t\t"
-        "Buy: %7.2lf $\n\t\t\t\t\t"
-        "Sell: %7.2lf $\n\t\t\t\t\t"
-        "Gain: %7.2lf $\n\t\t\t\t\t"
-        "Total: %8.2lf $ (%8.2lf $)"),
-        STRING_FORMAT(date_string), array_size(day.stocks),
-        day.total_buy, day.total_sell, day.total_gain, day.total_value, day.total_value + day.total_gain);
-    #endif
 }
 
-FOUNDATION_STATIC void timeline_update_day(timeline_date_stats_t& day, const timeline_transaction_t* t)
+FOUNDATION_STATIC void timeline_update_day(timeline_t& day, const timeline_transaction_t* t, string_const_t preferred_currency)
 {
     int sidx = array_binary_search(day.stocks, array_size(day.stocks), t->code_key);
     if (sidx < 0)
@@ -235,11 +246,21 @@ FOUNDATION_STATIC void timeline_update_day(timeline_date_stats_t& day, const tim
         s.total_value += buy_cost;
         s.average_price = s.total_value / s.qty;
 
-        s.total_exchange_rate += t->exchange_rate * t->qty;
-        s.average_exchange_rate = s.total_exchange_rate / s.qty;
-        FOUNDATION_ASSERT(math_real_is_finite(s.average_exchange_rate));
+        //s.total_exchange_rate += t->exchange_rate * t->qty;
+        //s.average_exchange_rate = s.total_exchange_rate / s.qty;
+        //FOUNDATION_ASSERT(math_real_is_finite(s.average_exchange_rate));
 
-        day.total_buy += buy_cost;
+        if (day.total_fund >= buy_cost)
+        {
+            day.total_fund -= buy_cost;
+        }
+        else
+        {
+            day.total_investment += buy_cost - day.total_fund;
+            day.total_fund = 0;
+        }
+
+        day.total_dividends += buy_cost * (1.0 - t->adjusted_factor);
     }
     else if (t->type == TimelineTransactionType::SELL)
     {
@@ -259,51 +280,55 @@ FOUNDATION_STATIC void timeline_update_day(timeline_date_stats_t& day, const tim
         const double gain = sell_total - cost_total;
 
         s.qty -= adjusted_quantity_if_error;
-        FOUNDATION_ASSERT(s.qty >= 0); // TODO: Remove if quantity at 0 now?
+        FOUNDATION_ASSERT(s.qty >= 0); 
+        // Stock will be remove on the next transaction day?
 
         s.total_value -= cost_total;
         s.average_price = math_real_is_zero(s.qty) ? 0 : s.total_value / s.qty;
         FOUNDATION_ASSERT(math_real_is_finite(s.average_price));
 
-        s.total_exchange_rate -= t->exchange_rate * adjusted_quantity_if_error;
-        s.average_exchange_rate = math_real_is_zero(s.qty) ? 1.0 : s.total_exchange_rate / s.qty;
+        //s.total_exchange_rate -= t->exchange_rate * adjusted_quantity_if_error;
+        //s.average_exchange_rate = math_real_is_zero(s.qty) ? 1.0 : s.total_exchange_rate / s.qty;
 
         day.total_gain += gain;
-        day.total_sell += sell_total;
+        day.total_fund += sell_total;
+        day.total_investment += gain;
+
+        day.total_dividends -= cost_total * (1.0 - t->adjusted_factor);
     }
     else
     {
         FOUNDATION_ASSERT_FAIL("Transaction type not supported");
     }
 
-    timeline_day_update_total_value(day);
+    timeline_day_update_total_value(day, preferred_currency);
 }
 
-FOUNDATION_STATIC void timeline_add_new_day(const timeline_transaction_t* t, timeline_date_stats_t*& days, int insert_at)
+FOUNDATION_STATIC int timeline_add_new_day(const timeline_transaction_t* t, timeline_t*& days, int insert_at)
 {
     FOUNDATION_ASSERT(t);
     FOUNDATION_ASSERT(insert_at >= 0);
 
-    timeline_date_stats_t* previous_day = array_last(days);
+    timeline_t* previous_day = array_last(days);
 
-    timeline_date_stats_t day;
+    timeline_t day;
     day.date = t->date;
     day.stocks = nullptr;
 
     if (previous_day == nullptr)
     {
-        day.total_buy = 0;
-        day.total_sell = 0;
         day.total_gain = 0;
+        day.total_dividends = 0;
         day.total_value = 0;
+        day.total_fund = 0;
         day.total_investment = 0;
     }
     else
     {
-        day.total_buy = previous_day->total_buy;
-        day.total_sell = previous_day->total_sell;
         day.total_gain = previous_day->total_gain;
+        day.total_dividends = previous_day->total_dividends;
         day.total_value = previous_day->total_value;
+        day.total_fund = previous_day->total_fund;
         day.total_investment = previous_day->total_investment;
 
         // Copy stocks which still have some qty
@@ -321,9 +346,65 @@ FOUNDATION_STATIC void timeline_add_new_day(const timeline_transaction_t* t, tim
         }       
     }
 
-    timeline_update_day(day, t);
-
     array_insert(days, insert_at, day);
+    return insert_at;
+}
+
+FOUNDATION_STATIC timeline_t* timeline_build(const timeline_transaction_t* transactions, string_const_t preferred_currency)
+{
+    LOG_PREFIX(false);
+
+    timeline_t* days = nullptr;
+    foreach(t, transactions)
+    {
+        string_const_t date_string = string_from_date(t->date);
+
+        // Print transactions
+        log_infof(HASH_TIMELINE, STRING_CONST("[%3u] Transaction: %s%-15s %.*s %7.0lf x %7.2lf $ x %5.4lg = %8.2lf $ (%.2lf, %.4lf)"),
+            i, t->type == TimelineTransactionType::BUY ? "+" : "-",
+            t->code, STRING_FORMAT(date_string),
+            t->qty, t->price, t->exchange_rate, t->qty * t->price * t->exchange_rate,
+            t->split_factor, t->adjusted_factor);
+
+        int fidx = array_binary_search(days, array_size(days), t->date);
+        if (fidx < 0)
+            fidx = timeline_add_new_day(t, days, ~fidx);
+        
+        timeline_t& day = days[fidx];
+        timeline_update_day(day, t, preferred_currency);
+
+        #if BUILD_DEBUG
+        log_infof(HASH_TIMELINE, STRING_CONST(
+            "\t\t\t\t\tFund:       %9.2lf $\n"
+            "\t\t\t\t\tGain:       %9.2lf $\n"
+            "\t\t\t\t\tDividends:  %9.2lf $\n"
+            "\t\t\t\t\tInvestment: %9.2lf $\n"
+            "\t\t\t\t\tTotal [%2u]: %9.2lf $ (%.2lf $)"),
+            day.total_fund, day.total_gain, day.total_dividends, day.total_investment, 
+            array_size(day.stocks), day.total_value,
+            day.total_value + day.total_gain + day.total_dividends + day.total_fund);
+        #endif
+    }
+
+    {
+        foreach(d, days)
+        {
+            string_const_t date_string = string_from_date(d->date);
+            log_infof(HASH_TIMELINE, STRING_CONST("Timeline: [%2u] %.*s -> Funds: %8.2lf $ -> Investment: %9.2lf $ -> Gain: %8.2lf $ (%8.2lf $) -> Total: %8.2lf $ (%8.2lf $)"),
+                array_size(d->stocks), STRING_FORMAT(date_string),
+                d->total_fund, d->total_investment, d->total_gain, d->total_dividends, d->total_value, d->total_value + d->total_gain + d->total_dividends + d->total_fund);
+        }
+    }
+
+    return days;
+}
+
+FOUNDATION_STATIC void timeline_deallocate(timeline_t*& timeline)
+{
+    foreach(d, timeline)
+        array_deallocate(d->stocks);
+    array_deallocate(timeline);
+    timeline = nullptr;
 }
 
 //
@@ -332,68 +413,11 @@ FOUNDATION_STATIC void timeline_add_new_day(const timeline_transaction_t* t, tim
 
 void timeline_render_graph(const report_t* report)
 {
-    LOG_PREFIX(false);
-
-    auto transactions = timeline_report_compute_transactions(report);
-
-    // Sort transactions by date
-    array_sort_by(transactions, [](const timeline_transaction_t& a, const timeline_transaction_t& b) 
-    {
-        if (a.date < b.date)
-            return -1;
-
-        if (a.date > b.date)
-            return 1;
-
-        // Sort buy transactions first for the same day.
-        if (a.type < b.type)
-            return -1;
-
-        if (a.type > b.type)
-            return 1;
-
-        return 0;
-    });
-
-    timeline_date_stats_t* days = nullptr;
-    foreach(t, transactions)
-    {
-        string_const_t date_string = string_from_date(t->date);
-
-        // Print transactions
-        log_infof(HASH_TIMELINE, STRING_CONST("[%3u] Transaction: %s%-15s %.*s %7.0lf x %7.2lf $ x %5.4lg = %8.2lf $ (%.2lf, %.4lf)"),
-            i, t->type == TimelineTransactionType::BUY ? "+" : "-",
-            t->code, STRING_FORMAT(date_string), 
-            t->qty, t->price, t->exchange_rate, t->qty * t->price * t->exchange_rate,
-            t->split_factor, t->adjusted_factor);
-
-        const int fidx = array_binary_search(days, array_size(days), t->date);
-        if (fidx < 0)
-        {
-            timeline_add_new_day(t, days, ~fidx);
-        }
-        else
-        {
-            timeline_date_stats_t& day = days[fidx];
-            timeline_update_day(day, t);
-        }
-    }
-
-    {
-        foreach(d, days)
-        {
-            string_const_t date_string = string_from_date(d->date);
-            log_infof(HASH_TIMELINE, STRING_CONST("Timeline: [%2u] %.*s -> Investment: %9.2lf $ (%9.2lf $) -> Gain: %9.2lf $ -> Total: %8.2lf $ (%8.2lf $)"),
-                array_size(d->stocks), STRING_FORMAT(date_string),
-                d->total_investment, d->total_buy - d->total_sell, d->total_gain, d->total_value, d->total_value + d->total_gain);
-        }
-    }
-
-    {
-        foreach(d, days)
-            array_deallocate(d->stocks);
-        array_deallocate(days);
-    }
+    string_const_t preferred_currency = string_to_const(report->wallet->preferred_currency);
+    auto transactions = timeline_report_compute_transactions(report, preferred_currency);
+    auto timeline = timeline_build(transactions, preferred_currency);
+    
+    timeline_deallocate(timeline);
     array_deallocate(transactions);    
 }
 

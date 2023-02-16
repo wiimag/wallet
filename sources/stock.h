@@ -291,3 +291,5 @@ string_const_t stock_get_short_name(const char* code, size_t code_length);
 string_const_t stock_get_name(const stock_handle_t& handle);
 
 string_const_t stock_get_short_name(const stock_handle_t& handle);
+
+string_const_t stock_get_currency(const char* code, size_t code_length);

@@ -241,7 +241,7 @@ string_const_t string_join(T* const list, const function<string_const_t(T& e)>& 
 // ## Array
 
 #define foreach(_VAR_NAME, _ARR) \
-    decltype(_ARR) _VAR_NAME = array_size(_ARR) > 0 ? &_ARR[0] : nullptr; \
+    std::remove_reference<decltype(_ARR)>::type _VAR_NAME = array_size(_ARR) > 0 ? &_ARR[0] : nullptr; \
     for (unsigned i = 0, end = array_size(_ARR); i < end; _VAR_NAME = &_ARR[++i])
 
 template<typename T> T* array_last(T* arr)

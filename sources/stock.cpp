@@ -7,6 +7,7 @@
 
 #include "eod.h"
 #include "events.h"
+#include "settings.h"
 
 #include <framework/query.h>
 #include <framework/shared_mutex.h>
@@ -15,6 +16,7 @@
 #include <framework/dispatcher.h>
 #include <framework/math.h>
 
+#include <foundation/path.h>
 #include <foundation/hashtable.h>
 
 #define HASH_STOCK static_hash_string("stock", 5, 0x1a0dd7af24ebee7aLL)
@@ -892,6 +894,39 @@ string_const_t stock_get_name(const stock_handle_t& handle)
 string_const_t stock_get_short_name(const stock_handle_t& handle)
 {
     return SYMBOL_CONST(handle->short_name.fetch());
+}
+
+string_const_t stock_get_currency(const char* code, size_t code_length)
+{
+    // Make some quick assumption based on the code itself.
+    string_const_t exchange = path_file_extension(code, code_length);
+    if (string_equal(STRING_ARGS(exchange), STRING_CONST("TO"))) return CTEXT("CAD");
+    if (string_equal(STRING_ARGS(exchange), STRING_CONST("V"))) return CTEXT("CAD");
+    if (string_equal(STRING_ARGS(exchange), STRING_CONST("US"))) return CTEXT("USD");
+    if (string_equal(STRING_ARGS(exchange), STRING_CONST("NEO"))) return CTEXT("CAD");
+
+    SHARED_READ_LOCK(_db_lock);
+    stock_index_t index = stock_index(code, code_length);
+
+    if (index == 0 || _db_stocks[index].currency == STRING_TABLE_NULL_SYMBOL)
+    {
+        tick_t timeout = time_current();
+        stock_handle_t handle = stock_request(code, code_length, FetchLevel::FUNDAMENTALS);
+        while (handle->currency == 0 && time_elapsed(timeout) < 5)
+            dispatcher_wait_for_wakeup_main_thread(250);
+            
+        if (handle->currency != STRING_TABLE_NULL_SYMBOL)
+            return SYMBOL_CONST(handle->currency);
+            
+        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE,
+            STRING_CONST("Failed to get stock '%.*s' currency"), (int)code_length, code);
+    }
+    else
+    {
+        return SYMBOL_CONST(_db_stocks[index].currency);
+    }
+
+    return string_const(SETTINGS.preferred_currency, string_length(SETTINGS.preferred_currency));
 }
 
 //
