@@ -94,7 +94,7 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
         stock_realtime = &_realtime->stocks[fidx];
         // Mark the stock as to be refreshed
         stock_realtime->refresh = true;
-        return realtime_stock_add_record(&_realtime->stocks[fidx], r);
+        return realtime_stock_add_record(stock_realtime, r);
     }
     
     stock_realtime->refresh = true;

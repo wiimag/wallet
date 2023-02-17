@@ -121,6 +121,8 @@ FOUNDATION_STATIC bool stock_fetch_short_name(stock_index_t stock_index, string_
 
     short_name = string_replace(short_name.str, short_name.length, sizeof(short_name_buffer), STRING_CONST("Inc"), nullptr, 0, true);
     short_name = string_replace(short_name.str, short_name.length, sizeof(short_name_buffer), STRING_CONST("Systems"), nullptr, 0, true);
+    short_name = string_replace(short_name.str, short_name.length, sizeof(short_name_buffer), STRING_CONST("Technologies"), nullptr, 0, true);
+    short_name = string_replace(short_name.str, short_name.length, sizeof(short_name_buffer), STRING_CONST("."), nullptr, 0, true);
     value = string_table_encode(string_trim(string_to_const(short_name)));
     return true;
 }
@@ -144,7 +146,13 @@ FOUNDATION_STATIC bool stock_fetch_description(stock_index_t stock_index, string
     }, UINT64_MAX);
 }
 
-FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, uint64_t index)
+FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, stock_index_t index)
+{
+    day_result_t d{};
+    stock_read_real_time_results(index, json, d);
+}
+
+bool stock_read_real_time_results(stock_index_t index, const json_object_t& json, day_result_t& d)
 {
     string_const_t code = json["code"].as_string();
     string_const_t timestamp = json["timestamp"].as_string();
@@ -154,10 +162,10 @@ FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, u
         SHARED_READ_LOCK(_db_lock);
         stock_t* entry = &_db_stocks[index];
         entry->fetch_errors++;
-        return entry->mark_resolved(FetchLevel::REALTIME);
+        entry->mark_resolved(FetchLevel::REALTIME);
+        return false;
     }
-
-    day_result_t d{};
+    
     d.date = (time_t)json_read_number(json, STRING_CONST("timestamp"));
     d.gmtoffset = (uint8_t)json_read_number(json, STRING_CONST("gmtoffset"));
     d.open = json_read_number(json, STRING_CONST("open"));
@@ -198,6 +206,8 @@ FOUNDATION_STATIC void stock_read_real_time_results(const json_object_t& json, u
 
         entry->mark_resolved(FetchLevel::REALTIME);
     }
+    
+    return true;
 }
 
 FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json, uint64_t index)

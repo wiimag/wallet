@@ -134,14 +134,14 @@ FOUNDATION_STATIC void report_order_total_value_adjusted_tooltip(table_element_p
     if (order->price_factor != order->split_factor)
     {
         ImGui::Text(" Adjust Factor: %.3lg", order->price_factor);
-        ImGui::Text(" Adjusted Price: %.2lf $ ", price * order->price_factor);
+        ImGui::Text(" Adjusted Price: %.3lf $ ", price * order->price_factor);
     }
 
     const double adjusted_price = price * order->adjusted_split_factor;
     if (buy_order && order->adjusted_split_factor != 1.0)
     {
         ImGui::Text(" Split Adjusted Factor: %.3lg (%.3lg)", order->adjusted_split_factor, order->split_factor * order->price_factor);
-        ImGui::Text(" Split Adjusted Price: %.2lf $", adjusted_price);
+        ImGui::Text(" Split Adjusted Price: %.3lf $", adjusted_price);
     }
 
     ImGui::Spacing();
@@ -297,8 +297,8 @@ FOUNDATION_STATIC cell_t report_order_column_price(table_element_ptr_t element, 
     {
         double price_scale = price / 10.0f;
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f,
-            math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
+        if (ImGui::InputDouble("##Price", &price, price < 0.5 ? 0.005 : 0.1, price < 0.5 ? 0.01 : 0.5,
+            math_real_is_nan(price) ? "-" : (price < 0.5 ? "%.4lg $" : "%.2lf $"), ImGuiInputTextFlags_None))
         {
             config_set(order->data, STRING_CONST("price"), price);
             title_refresh(order->title);
@@ -320,7 +320,7 @@ FOUNDATION_STATIC cell_t report_order_column_ask_price(table_element_ptr_t eleme
         double price_scale = price / 10.0f;
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::InputDouble("##Ask", &price, price_scale, price_scale * 2.0f,
-            math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
+            math_real_is_nan(price) ? "-" : (price < 0.5 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
         {
             config_set(order->data, STRING_CONST("ask"), price);
             title_refresh(order->title);
@@ -578,7 +578,7 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(control_width);
-        ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
+        ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, math_real_is_nan(price) ? "-" : (price < 0.5 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
         if (price < 0)
             price = title->stock->current.adjusted_close;
 
@@ -591,7 +591,7 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         double buy_value = orig_buy_value;
         ImGui::SetNextItemWidth(control_width);
         if (ImGui::InputDouble("##BuyValue", &buy_value, price * 10.0, price * 100.0,
-            math_real_is_nan(price) ? "-" : (buy_value < 0.05 ? "%.3lf $" : "%.2lf $"),
+            math_real_is_nan(price) ? "-" : (buy_value < 0.5 ? "%.3lf $" : "%.2lf $"),
             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsNoBlank) || buy_value != orig_buy_value)
         {
             if (!math_real_is_nan(price))
@@ -672,7 +672,7 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(control_width);
-        ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, math_real_is_nan(price) ? "-" : (price < 0.05 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
+        ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, math_real_is_nan(price) ? "-" : (price < 0.5 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
         if (price < 0)
             price = title->stock->current.adjusted_close;
 

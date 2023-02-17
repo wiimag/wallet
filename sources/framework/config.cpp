@@ -388,7 +388,14 @@ string_const_t config_value_as_string(config_handle_t h, const char* fmt)
             return string_to_const(string_format(STRING_CONST_CAPACITY(number_string_buffer), fmt, string_length(fmt), v.number));
             
         if (h.config->options & CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS)
+        {
+            if (v.number < 0.1)
+                return string_to_const(string_format(STRING_CONST_CAPACITY(number_string_buffer), STRING_CONST("%.4lf"), v.number));
+
+            if (v.number < 1.0)
+                return string_to_const(string_format(STRING_CONST_CAPACITY(number_string_buffer), STRING_CONST("%.3lf"), v.number));
             return string_to_const(string_format(STRING_CONST_CAPACITY(number_string_buffer), STRING_CONST("%.2lf"), v.number));
+        }
         return string_from_real_static(v.number, 0, 0, 0);
     }
 

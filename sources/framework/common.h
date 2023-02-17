@@ -295,7 +295,7 @@ bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& 
 }
 
 template<typename T, typename V>
-FOUNDATION_STATIC int array_binary_search(const T* array, uint32_t _num, const V& _key)
+int array_binary_search(const T* array, uint32_t _num, const V& _key)
 {
     uint32_t offset = 0;
     for (uint32_t ll = _num; offset < ll;)
@@ -312,6 +312,12 @@ FOUNDATION_STATIC int array_binary_search(const T* array, uint32_t _num, const V
     }
 
     return ~offset;
+}
+
+template<typename T, typename V>
+int array_binary_search(const T* array, const V& _key)
+{
+    return array_binary_search<T, V>(array, array_size(array), _key);
 }
 
 template<typename T>

@@ -446,6 +446,30 @@ FOUNDATION_STATIC void imgui_deallocate(void* ptr, void* user_data)
     memory_deallocate(ptr);
 }
 
+FOUNDATION_STATIC void imgui_add_thin_space_glyph(ImFont* font, float size_pixels)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    
+    int rect_id = io.Fonts->AddCustomRectFontGlyph(font, 0x2009, size_pixels / 7, size_pixels, size_pixels / 7); // "\xe2\x80\x89"
+
+    // Build atlas
+    io.Fonts->Build();
+
+    // Retrieve texture in RGBA format
+    int tex_width, tex_height;
+    unsigned char* tex_pixels = NULL;
+    io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
+    if (const ImFontAtlasCustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
+    {
+        for (int y = 0; y < rect->Height; y++)
+        {
+            ImU32* p = (ImU32*)tex_pixels + (rect->Y + y) * tex_width + (rect->X);
+            for (int x = rect->Width; x > 0; x--)
+                *p++ = IM_COL32(0, 0, 0, 0);
+        }
+    }
+}
+
 FOUNDATION_STATIC bool imgui_load_font(unsigned int font_res_id, const char* res_type, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -461,15 +485,20 @@ FOUNDATION_STATIC bool imgui_load_font(unsigned int font_res_id, const char* res
             char* bytes = (char*)imgui_allocate(dwSize, nullptr);
             memcpy(bytes, lpAddress, dwSize);
 
-            io.Fonts->AddFontFromMemoryTTF(
+            auto font = io.Fonts->AddFontFromMemoryTTF(
                 bytes, dwSize,
                 size_pixels,
                 font_cfg,
                 glyph_ranges
             );
-
+            
             UnlockResource(hMemory);
-            return true;
+            
+            if (font)
+            {
+                imgui_add_thin_space_glyph(font, size_pixels);
+                return true;
+            }
         }
     #elif FOUNDATION_PLATFORM_MACOS
 
@@ -483,15 +512,18 @@ FOUNDATION_STATIC bool imgui_load_font(unsigned int font_res_id, const char* res
         fclose(file);
         
         // bytes will be owned by imgui
-        bool success = io.Fonts->AddFontFromMemoryTTF(
+        auto font = io.Fonts->AddFontFromMemoryTTF(
             bytes, (int)file_size,
             size_pixels,
             font_cfg,
             glyph_ranges
         );
         
-        if (success)
+        if (font)
+        {
+            imgui_add_thin_space_glyph(font, size_pixels);
             return true;
+        }
     #endif
 
     return false;

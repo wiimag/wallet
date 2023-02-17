@@ -13,6 +13,7 @@
 #include <foundation/string.h>
 
 struct job_t;
+struct json_object_t;
 typedef uint64_t stock_index_t;
 
 typedef enum class FetchLevel /*: unsigned int*/ {
@@ -293,3 +294,7 @@ string_const_t stock_get_name(const stock_handle_t& handle);
 string_const_t stock_get_short_name(const stock_handle_t& handle);
 
 string_const_t stock_get_currency(const char* code, size_t code_length);
+
+bool stock_read_real_time_results(stock_index_t stock_index, const json_object_t& json, day_result_t& d);
+
+stock_index_t stock_index(const char* symbol, size_t symbol_length);
