@@ -15,6 +15,8 @@
 #include <framework/service.h>
 #include <framework/dispatcher.h>
 
+#include <algorithm>
+
 #define HASH_TIMELINE static_hash_string("timeline", 8, 0x8982c42357327efeULL)
 
 typedef enum class TimelineTransactionType
@@ -106,6 +108,18 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator>(const timeline_t& s, 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator<(const timeline_transaction_t& s, const time_t& date) { return s.date < date; }
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator>(const timeline_transaction_t& s, const time_t& date) { return s.date > date; }
 
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int timeline_transaction_same_day_count(timeline_transaction_t* transactions, hash_t code, time_t date)
+{
+    int counter = 0;
+    foreach(t, transactions)
+    {
+        if (t->code_key == code && t->date == date)
+            counter++;
+    }
+
+    return counter;
+}
+
 FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(const report_t* report, string_const_t preferred_currency)
 {
     timeline_transaction_t* transactions = nullptr;
@@ -181,14 +195,32 @@ FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(c
         }
     }
 
-    // Sort transactions by date
-    return array_sort_by(transactions, [](const timeline_transaction_t& a, const timeline_transaction_t& b)
+    transactions = array_sort_by(transactions, [transactions](const timeline_transaction_t& a, const timeline_transaction_t& b)
     {
         if (a.date < b.date)
             return -1;
 
         if (a.date > b.date)
             return 1;
+
+        int ca = timeline_transaction_same_day_count(transactions, a.code_key, a.date);
+        int cb = timeline_transaction_same_day_count(transactions, b.code_key, a.date);
+
+        if (ca < cb)
+            return -1;
+
+        if (ca > cb)
+            return 1;
+
+        if (ca == 1)
+        {
+            // Sort buy transactions first for the same day.
+            if (a.type > b.type)
+                return -1;
+
+            if (a.type < b.type)
+                return 1;
+        }
 
         // Sort buy transactions first for the same day.
         if (a.type < b.type)
@@ -199,6 +231,8 @@ FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(c
 
         return 0;
     });
+
+    return transactions;
 }
 
 FOUNDATION_STATIC int timeline_add_new_stock(const timeline_transaction_t* t, timeline_stock_t*& stocks, int insert_at)
@@ -420,7 +454,7 @@ FOUNDATION_STATIC timeline_t* timeline_build(const timeline_transaction_t* trans
         string_const_t date_string = string_from_date(d->date);
         log_infof(HASH_TIMELINE, STRING_CONST("Timeline: [%2u] %.*s -> Funds: %8.2lf $ -> Investment: %9.2lf $ -> Gain: %8.2lf $ (%8.2lf $) -> Total: %8.2lf $ (%8.2lf $)"),
             array_size(d->stocks), STRING_FORMAT(date_string),
-            d->total_fund, d->total_investment, d->total_gain, d->total_dividends, d->total_value, d->total_value + d->total_gain + d->total_dividends + d->total_fund);
+            d->total_fund, d->total_investment, d->total_gain, d->total_dividends, d->total_value, d->total_value + d->total_dividends + d->total_fund);
     }
     #endif
 
@@ -616,8 +650,8 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
     timeline_report_plot_day_value("Investments", report->days, L1(_1->total_investment), 2.0f);
 
     ImPlot::SetAxis(ImAxis_Y1);
-    timeline_report_graph_limit("Total Value", min_d, max_d, summary->total_value + summary->total_fund + summary->total_gain + summary->total_dividends);
-    timeline_report_plot_day_value("Total Value", report->days, L1(_1->total_value + _1->total_fund + _1->total_gain + _1->total_dividends), 3.0f);
+    timeline_report_graph_limit("Total Value", min_d, max_d, summary->total_value + summary->total_fund + summary->total_dividends);
+    timeline_report_plot_day_value("Total Value", report->days, L1(_1->total_value + _1->total_fund + _1->total_dividends), 3.0f);
 
     const time_t min_time = (time_t)limits.X.Min + time_one_day() * 5;
     const int year_range = math_ceil(time_elapsed_days((time_t)min_time, (time_t)max_d) / 365.0);
@@ -676,7 +710,7 @@ FOUNDATION_STATIC void timeline_report_toolbar(timeline_report_t* report)
     string_const_t date_string = string_from_date(d->date);
     ImGui::Text(ICON_MD_STACKED_LINE_CHART " [%u] %.*s " ICON_MD_WALLET " %.2lf $ " ICON_MD_DIFFERENCE " %.2lf $ " ICON_MD_ASSIGNMENT_RETURN " %.2lf $ " ICON_MD_SAVINGS " %.2lf $ " ICON_MD_ACCOUNT_BALANCE_WALLET " %.2lf $",
             array_size(report->transactions), STRING_FORMAT(date_string),
-            d->total_fund, d->total_gain, d->total_dividends, d->total_value, d->total_investment, d->total_value + d->total_gain + d->total_dividends + d->total_fund);
+            d->total_fund, d->total_gain, d->total_dividends, d->total_value, d->total_investment, d->total_value + d->total_dividends + d->total_fund);
 
     ImGui::EndGroup();
 }

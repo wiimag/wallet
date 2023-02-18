@@ -724,8 +724,7 @@ FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t e
     if (ec->format == COLUMN_FORMAT_CURRENCY || ec->format == COLUMN_FORMAT_NUMBER || ec->format == COLUMN_FORMAT_PERCENTAGE)
     { 
         cvalue.number = result.as_number();
-        if (math_real_is_finite(cvalue.number))
-            _report_expression_cache->put(cvalue);
+        _report_expression_cache->put(cvalue);
         return cvalue.number;
     }
     if (ec->format == COLUMN_FORMAT_DATE)
