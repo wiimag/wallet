@@ -59,6 +59,7 @@ struct report_expression_column_t
     char name[64];
     char expression[256];
     column_format_t format{ COLUMN_FORMAT_TEXT };
+    mutable int store_counter{ 0 };
 };
 
 struct report_expression_cache_value_t
@@ -724,19 +725,22 @@ FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t e
     if (ec->format == COLUMN_FORMAT_CURRENCY || ec->format == COLUMN_FORMAT_NUMBER || ec->format == COLUMN_FORMAT_PERCENTAGE)
     { 
         cvalue.number = result.as_number();
-        _report_expression_cache->put(cvalue);
+        if (ec->store_counter++ > 0)
+            _report_expression_cache->put(cvalue);
         return cvalue.number;
     }
     if (ec->format == COLUMN_FORMAT_DATE)
     {
         cvalue.date = (time_t)result.as_number();
-        _report_expression_cache->put(cvalue);
+        if (ec->store_counter++ > 0)
+            _report_expression_cache->put(cvalue);
         return cvalue.date;
     }
     
     string_const_t str_value = result.as_string();
     cvalue.symbol = string_table_encode(str_value);
-    _report_expression_cache->put(cvalue);
+    if (ec->store_counter++ > 0)
+        _report_expression_cache->put(cvalue);
     return str_value;
 }
 

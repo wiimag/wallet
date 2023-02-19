@@ -15,8 +15,6 @@
 #include <framework/service.h>
 #include <framework/dispatcher.h>
 
-#include <algorithm>
-
 #define HASH_TIMELINE static_hash_string("timeline", 8, 0x8982c42357327efeULL)
 
 typedef enum class TimelineTransactionType
@@ -623,27 +621,28 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
     axis_format.limits = limits;
     axis_format.print_short_value = false;
 
-    ImPlot::SetAxis(ImAxis_Y2);
-    ImPlot::HideNextItem(false, ImPlotCond_Once);
-    timeline_report_plot_day_bar_value("Gain", report->days, L1(_1->total_gain + _1->total_dividends));
-
-    timeline_report_graph_limit("Gain", min_d, max_d, summary->total_gain + summary->total_dividends);
-    timeline_report_plot_day_bar_value("Funds", report->days, L1(_1->total_fund), 0, true);
-    timeline_report_plot_day_bar_value("Sells", report->days, L1(_1->total_gain), 0, true);
-
-    ImPlot::SetAxis(ImAxis_Y2);
-    ImPlot::HideNextItem(true, ImPlotCond_Once);
-    timeline_report_graph_limit("Dividends", min_d, max_d, summary->total_dividends);
-    timeline_report_plot_day_bar_value("Dividends", report->days, L1(_1->total_dividends), 0, true);
-
     ImPlot::SetAxis(ImAxis_Y1);
     ImPlot::HideNextItem(true, ImPlotCond_Once);
     timeline_report_graph_limit("Stock Value", min_d, max_d, summary->total_value);
     timeline_report_plot_day_value("Stock Value", report->days, L1(_1->total_value), 2.0f, true);
 
+    ImPlot::SetAxis(ImAxis_Y2);
+    ImPlot::HideNextItem(false, ImPlotCond_Once);
+    timeline_report_plot_day_bar_value("+Gain", report->days, L1(_1->total_gain + _1->total_dividends));
+
+    timeline_report_graph_limit("+Gain", min_d, max_d, summary->total_gain + summary->total_dividends);
+    timeline_report_plot_day_bar_value("+Funds", report->days, L1(_1->total_fund), 0, true);
+    //timeline_report_plot_day_bar_value("Sells", report->days, L1(_1->total_gain), 0, true);
+
+
+    ImPlot::SetAxis(ImAxis_Y2);
+    ImPlot::HideNextItem(true, ImPlotCond_Once);
+    timeline_report_graph_limit("+Dividends", min_d, max_d, summary->total_dividends);
+    timeline_report_plot_day_bar_value("+Dividends", report->days, L1(_1->total_dividends), 0, true);
+
     //timeline_report_plot_day_value("+Gain", report->days, L1(_1->total_value + _1->total_gain), 1.0f, true);
-    timeline_report_plot_day_value("Funds", report->days, L1(_1->total_value + _1->total_fund), 1.0f, true);
-    timeline_report_plot_day_value("Dividends", report->days, L1(_1->total_value + _1->total_dividends), 1.0f, true);
+    timeline_report_plot_day_value("+Funds", report->days, L1(_1->total_value + _1->total_fund), 1.0f, true);
+    timeline_report_plot_day_value("+Dividends", report->days, L1(_1->total_value + _1->total_dividends), 1.0f, true);
 
     ImPlot::SetAxis(ImAxis_Y1);
     timeline_report_graph_limit("Investments", min_d, max_d, summary->total_investment);
@@ -710,7 +709,7 @@ FOUNDATION_STATIC void timeline_report_toolbar(timeline_report_t* report)
     string_const_t date_string = string_from_date(d->date);
     ImGui::Text(ICON_MD_STACKED_LINE_CHART " [%u] %.*s " ICON_MD_WALLET " %.2lf $ " ICON_MD_DIFFERENCE " %.2lf $ " ICON_MD_ASSIGNMENT_RETURN " %.2lf $ " ICON_MD_SAVINGS " %.2lf $ " ICON_MD_ACCOUNT_BALANCE_WALLET " %.2lf $",
             array_size(report->transactions), STRING_FORMAT(date_string),
-            d->total_fund, d->total_gain, d->total_dividends, d->total_value, d->total_investment, d->total_value + d->total_dividends + d->total_fund);
+            d->total_fund, d->total_gain, d->total_dividends, /*d->total_value, */d->total_investment, d->total_value + d->total_dividends + d->total_fund);
 
     ImGui::EndGroup();
 }
