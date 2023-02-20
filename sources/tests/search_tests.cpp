@@ -9,9 +9,13 @@
  
 #include "test_utils.h"
 
+#include <eod.h>
+#include <stock.h>
 #include <search.h>
 
 #include <framework/common.h>
+
+#include <foundation/random.h>
 
 #include <doctest/doctest.h>
 
@@ -126,39 +130,309 @@ TEST_SUITE("Search")
         CHECK_EQ(search_database_word_document_count(db, STRING_ARGS(super_word)), 0);
 
         search_database_index_word(db, doc1, STRING_ARGS(super_word));
-        CHECK_EQ(search_database_index_count(db), 9);
+        CHECK_EQ(search_database_index_count(db), 8);
         CHECK_EQ(search_database_document_count(db), 4);
         CHECK_EQ(search_database_word_document_count(db, STRING_ARGS(super_word)), 1);
         
         search_database_index_word(db, doc2, STRING_ARGS(super_word));
-        CHECK_EQ(search_database_index_count(db), 9);
+        CHECK_EQ(search_database_index_count(db), 8);
         CHECK_EQ(search_database_document_count(db), 4);
         CHECK_EQ(search_database_word_document_count(db, STRING_ARGS(super_word)), 2);
         
         search_database_index_word(db, doc3, STRING_ARGS(super_word));
-        CHECK_EQ(search_database_index_count(db), 9);
+        CHECK_EQ(search_database_index_count(db), 8);
         CHECK_EQ(search_database_document_count(db), 4);
         CHECK_EQ(search_database_word_document_count(db, STRING_ARGS(super_word)), 3);
 
         search_database_index_word(db, doc3, STRING_CONST("SUPER KOOL"));
-        CHECK_EQ(search_database_index_count(db), 13);
+        CHECK_EQ(search_database_index_count(db), 12);
         CHECK_EQ(search_database_document_count(db), 4);
 
-        search_database_index_word(db, doc4, STRING_ARGS(super_word));
-        CHECK_EQ(search_database_index_count(db), 13);
+        CHECK(search_database_index_word(db, doc4, STRING_ARGS(super_word)));
+        CHECK_EQ(search_database_index_count(db), 12);
         CHECK_EQ(search_database_document_count(db), 4);
         CHECK_EQ(search_database_word_document_count(db, STRING_ARGS(super_word)), 4);
 
         auto doc5 = search_database_add_document(db, STRING_CONST("doc5"));
 
         search_database_index_word(db, doc5, STRING_CONST("SUPER"));
-        CHECK_EQ(search_database_index_count(db), 14);
+        CHECK_EQ(search_database_index_count(db), 13);
         CHECK_EQ(search_database_document_count(db), 5);
         CHECK_EQ(search_database_word_document_count(db, STRING_CONST("SUPER"), false), 1);
         CHECK_EQ(search_database_word_document_count(db, STRING_CONST("SUPER"), true), 5);
 
         CHECK_EQ(search_database_word_document_count(db, STRING_CONST("SUPER COOL"), false), 0);
         CHECK_EQ(search_database_word_document_count(db, STRING_CONST("SUPER COOL"), true), 4);
+
+        search_database_deallocate(db);
+    }
+
+    TEST_CASE("Index stock description" * doctest::timeout(30))
+    {
+        auto db = search_database_allocate();
+        REQUIRE_NE(db, nullptr);
+
+        stock_handle_t stock_handle = stock_request(STRING_CONST("SEAS.US"), FetchLevel::FUNDAMENTALS);
+        REQUIRE_NE(stock_handle, nullptr);
+
+        const stock_t* stock = stock_handle;
+        REQUIRE_NE(stock, nullptr);
+
+        while (!stock->has_resolve(FetchLevel::FUNDAMENTALS))
+            dispatcher_wait_for_wakeup_main_thread(100);
+
+        string_const_t name = SYMBOL_CONST(stock->name);
+        string_const_t description = SYMBOL_CONST(stock->description.fetch());
+        
+        auto doc1 = search_database_add_document(db, STRING_CONST("SEAS.US"));
+
+        CHECK(search_database_index_exact_match(db, doc1, STRING_ARGS(name)));
+        CHECK_EQ(search_database_index_count(db), 1);
+        
+        string_t* words = string_split(description, CTEXT(" "));
+        foreach(w, words)
+        {
+            log_debugf(0, STRING_CONST("WORD: %.*s"), STRING_FORMAT(*w));
+            search_database_index_word(db, doc1, STRING_ARGS(*w));
+        }
+        string_array_deallocate(words);
+
+        CHECK_GT(search_database_index_count(db), 250);
+        CHECK_EQ(search_database_document_count(db), 1);
+        CHECK_EQ(search_database_word_document_count(db, STRING_CONST("sexy"), true), 0);
+        CHECK_EQ(search_database_word_document_count(db, STRING_CONST("theme")), 1);
+
+        search_database_deallocate(db);
+    }
+
+    TEST_CASE("Index JSON query" * doctest::timeout(30))
+    {
+        auto db = search_database_allocate();
+        REQUIRE_NE(db, nullptr);
+
+        eod_fetch("fundamentals", "GFL.TO", FORMAT_JSON_CACHE, [db](const json_object_t& json)
+        {
+            auto doc1 = search_database_add_document(db, STRING_CONST("GFL.TO"));
+                
+            for (unsigned i = 0; i < json.token_count; ++i)
+            {
+                const json_token_t& token = json.tokens[i];
+
+                string_const_t id = json_token_identifier(json.buffer, &token);
+                search_database_index_text(db, doc1, STRING_ARGS(id), false);
+                
+                if (token.type == JSON_STRING || token.type == JSON_PRIMITIVE)
+                {
+                    string_const_t value = json_token_value(json.buffer, &token);
+                    CHECK(search_database_index_text(db, doc1, STRING_ARGS(value), true));
+
+                    log_debugf(0, STRING_CONST("id: %.*s, value: %.*s"), STRING_FORMAT(id), STRING_FORMAT(value));
+                }
+            }
+        
+        }, 5 * 60ULL);
+
+        CHECK_EQ(search_database_document_count(db), 1);
+        CHECK_GT(search_database_index_count(db), 1000);
+        CHECK_EQ(search_database_word_document_count(db, STRING_CONST("environmental")), 1);
+
+        search_database_deallocate(db);
+    }
+
+    TEST_CASE("Index properties")
+    {
+        auto db = search_database_allocate();
+        REQUIRE_NE(db, nullptr);
+
+        auto doc1 = search_database_add_document(db, STRING_CONST("doc1"));
+        auto doc2 = search_database_add_document(db, STRING_CONST("doc2"));
+        auto doc3 = search_database_add_document(db, STRING_CONST("doc3"));
+        
+        CHECK_EQ(search_database_index_count(db), 0);
+
+        CHECK(search_database_index_word(db, doc1, STRING_CONST("SUPER")));
+        CHECK_EQ(search_database_index_count(db), 3);
+
+        search_database_index_word(db, doc2, STRING_CONST("COOL"));
+        CHECK_EQ(search_database_index_count(db), 5);
+
+        search_database_index_word(db, doc3, STRING_CONST("KOOL"));
+        CHECK_EQ(search_database_index_count(db), 7);
+
+        search_database_index_property(db, doc1, STRING_CONST("property1"), STRING_CONST("value1"));
+        CHECK_EQ(search_database_index_count(db), 11);
+
+        search_database_index_property(db, doc2, STRING_CONST("n1"), 14.5);
+        CHECK_EQ(search_database_index_count(db), 12);
+
+        search_database_index_property(db, doc1, STRING_CONST("number"), 24.5);
+        CHECK_EQ(search_database_index_count(db), 13);
+
+        search_database_index_property(db, doc2, STRING_CONST("number"), 24.5);
+        CHECK_EQ(search_database_index_count(db), 13);
+        
+        search_database_index_property(db, doc2, STRING_CONST("s"), STRING_CONST("value2"));
+        CHECK_EQ(search_database_index_count(db), 17);
+
+        search_database_index_property(db, doc3, STRING_CONST("s"), STRING_CONST("value"));
+        CHECK_EQ(search_database_index_count(db), 17);
+
+        search_database_index_property(db, doc3, STRING_CONST("number"), 42.5);
+        CHECK_EQ(search_database_index_count(db), 18);
+        
+        search_database_index_property(db, doc3, STRING_CONST("test_123"), STRING_CONST("v1"));
+        CHECK_EQ(search_database_index_count(db), 19);
+
+        search_database_index_property(db, doc3, STRING_CONST("test_123"), STRING_CONST("three"), true);
+        CHECK_EQ(search_database_index_count(db), 22);
+
+        search_database_index_property(db, doc1, STRING_CONST("test_123"), STRING_CONST("xmas"), false);
+        CHECK_EQ(search_database_index_count(db), 23);
+        
+        search_database_index_property(db, doc3, STRING_CONST("test_123"), STRING_CONST("value "));
+        CHECK_EQ(search_database_index_count(db), 26);
+
+        search_database_index_property(db, doc2, STRING_CONST("test_123"), STRING_CONST("value third"));
+        CHECK_EQ(search_database_index_count(db), 31);
+
+        search_database_index_property(db, doc1, STRING_CONST("price"), 100042.5);
+        CHECK_EQ(search_database_index_count(db), 32);
+        
+        CHECK_EQ(search_database_document_count(db), 3);
+        search_database_deallocate(db);
+    }
+
+    TEST_CASE("Index many numbers")
+    {
+        auto db = search_database_allocate(SearchDatabaseFlags::CaseSensitive);
+        REQUIRE_NE(db, nullptr);
+
+        search_document_handle_t docs[] = {
+            search_database_add_document(db, STRING_CONST("doc1")),
+            search_database_add_document(db, STRING_CONST("doc2")),
+            search_database_add_document(db, STRING_CONST("doc3")),
+            search_database_add_document(db, STRING_CONST("doc4")),
+            search_database_add_document(db, STRING_CONST("doc5")),
+            search_database_add_document(db, STRING_CONST("doc6")),
+            search_database_add_document(db, STRING_CONST("doc7")),
+        };        
+
+        CHECK_EQ(search_database_index_count(db), 0);
+
+        // Generate 200 random unique numbers in an array
+        double numbers[200];
+        for (unsigned i = 0; i < ARRAY_COUNT(numbers); ++i)
+        {
+            numbers[i] = random_range(0.0, 1000.0);
+            for (unsigned j = 0; j < i; ++j)
+            {
+                if (numbers[i] == numbers[j])
+                {
+                    --i;
+                    break;
+                }
+            }
+        }
+
+        for (int t = 0; t < 100; ++t)
+        {
+            // Index the numbers
+            for (unsigned i = 0, count = ARRAY_COUNT(numbers); i < count; ++i)
+            {
+                CHECK(search_database_index_property(db, docs[random32_range(0, ARRAY_COUNT(docs))], STRING_CONST("Number"), numbers[i]));
+            }
+        }
+        
+        CHECK_EQ(search_database_index_count(db), ARRAY_COUNT(numbers));
+        CHECK_EQ(search_database_document_count(db), ARRAY_COUNT(docs));
+        search_database_deallocate(db);
+    }
+
+    TEST_CASE("Add and remove many documents" * doctest::timeout(30))
+    {
+        auto db = search_database_allocate();
+        REQUIRE_NE(db, nullptr);
+
+        search_document_handle_t docs[1024];
+        for (unsigned i = 0; i < ARRAY_COUNT(docs); ++i)
+        {
+            docs[i] = search_database_add_document(db, STRING_CONST("doc"));
+        }
+
+        CHECK_EQ(search_database_index_count(db), 0);
+        CHECK_EQ(search_database_document_count(db), ARRAY_COUNT(docs));
+
+        CHECK(search_database_index_exact_match(db, docs[0], STRING_CONST("word")));
+        CHECK_EQ(search_database_index_count(db), 1);
+        CHECK(search_database_remove_document(db, docs[0]));      
+        CHECK_FALSE(search_database_index_exact_match(db, docs[0], STRING_CONST("word")));
+        CHECK_EQ(search_database_document_count(db), ARRAY_COUNT(docs) - 1);
+
+        // This should cover the case where an index now has document count of 0 and we re-add a new document to it.
+        CHECK(search_database_index_exact_match(db, docs[1], STRING_CONST("word")));
+        CHECK_EQ(search_database_index_count(db), 1);
+
+        // Index random words, randomly in the created documents many times
+        while (search_database_document_count(db) > 0)
+        {
+            char word_buffer[8 + 1];
+            string_const_t word = random_string(STRING_CONST_BUFFER(word_buffer));
+
+            for (int d = 0; d < ARRAY_COUNT(docs) / 2; ++d)
+                search_database_index_word(db, docs[random32_range(0, ARRAY_COUNT(docs))], STRING_ARGS(word));
+
+            // Remove a random document
+            const uint32_t doc_index = random32_range(0, ARRAY_COUNT(docs));
+            const search_document_handle_t doc_handle = docs[doc_index];
+            if (search_database_is_document_valid(db, doc_handle))
+            {
+                if (!search_database_remove_document(db, doc_handle))
+                    docs[doc_index] = SEARCH_DOCUMENT_INVALID_ID;
+            }
+        }
+        
+        CHECK_GT(search_database_index_count(db), 1);
+        CHECK_EQ(search_database_document_count(db), 0);
+        search_database_deallocate(db);
+    }
+
+    TEST_CASE("Indexing validation")
+    {
+        // Create a new document
+        auto db = search_database_allocate();
+        REQUIRE_NE(db, nullptr);
+
+        CHECK_FALSE(search_database_is_document_valid(db, 0));
+        CHECK_FALSE(search_database_is_document_valid(db, 99));
+
+        search_document_handle_t doc = search_database_add_document(db, STRING_CONST("doc"));
+        REQUIRE_NE(doc, SEARCH_DOCUMENT_INVALID_ID);
+        
+        CHECK_EQ(search_database_word_count(db), 0);
+
+        // Index some text
+        CHECK(search_database_index_text(db, doc, STRING_CONST("this is a short phrase")));
+        CHECK_EQ(search_database_word_count(db), 9);
+
+        // Index a number
+        CHECK(search_database_index_property(db, doc, STRING_CONST("$"), 88));
+        CHECK_EQ(search_database_word_count(db), 10);
+
+        // Index a property (short and phrase should already be encoded)
+        CHECK(search_database_index_property(db, doc, STRING_CONST("short"), STRING_CONST("phrase")));
+        CHECK_EQ(search_database_word_count(db), 10);
+
+        // Remove the document
+        CHECK(search_database_remove_document(db, doc));
+        CHECK_FALSE(search_database_is_document_valid(db, doc));
+
+        // Indexing should fail
+        CHECK_FALSE(search_database_index_text(db, doc, STRING_CONST("test")));
+        CHECK_FALSE(search_database_index_property(db, doc, STRING_CONST("price"), 18));
+        CHECK_FALSE(search_database_index_property(db, doc, STRING_CONST("name"), STRING_CONST("sam")));
+
+        // Removing documents doesn't affect the database string table.
+        CHECK_EQ(search_database_word_count(db), 10);
 
         search_database_deallocate(db);
     }

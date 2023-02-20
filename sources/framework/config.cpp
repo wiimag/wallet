@@ -188,7 +188,7 @@ config_handle_t config_allocate(config_value_type_t type /*= CONFIG_VALUE_OBJECT
 {
     config_t* config = (config_t*)memory_allocate(0, sizeof(config_t), 0, (options & CONFIG_OPTION_ALLOCATE_TEMPORARY) ? MEMORY_PERSISTENT : MEMORY_TEMPORARY);
     config->options = options;
-    config->st = string_table_allocate();
+    config->st = string_table_allocate(256, 10);
     config->values = nullptr;
     array_resize(config->values, 1);
 

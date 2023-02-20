@@ -13,6 +13,7 @@
 #include <foundation/stream.h>
 #include <foundation/path.h>
 #include <foundation/environment.h>
+#include <foundation/random.h>
  
 #include <stack> 
 
@@ -2590,6 +2591,37 @@ string_t string_to_upper_utf8(char* buf, size_t capacity, const char* str, size_
     return result;
 }
 
+string_t string_remove_character(char* buf, size_t size, size_t capacity, char char_to_remove)
+{
+    size_t i = 0;
+
+    size_t pos = string_find(buf, size, char_to_remove, i);
+    if (pos == STRING_NPOS)
+        return {buf, size};
+
+    string_t result{ buf, 0 };
+    while (i < size && result.length < capacity)
+    {
+        if (pos != STRING_NPOS)
+        {
+            size_t copy_size = pos - i;
+            memcpy(result.str + result.length, buf + i, copy_size);
+            result.length += copy_size;
+            i = pos + 1;
+        }
+        else
+        {
+            size_t copy_size = size - i;
+            memcpy(result.str + result.length, buf + i, copy_size);
+            result.length += copy_size;
+            i = size;
+        }
+
+        pos = string_find(buf, size, char_to_remove, i);
+    }
+    return result;
+}
+
 string_t string_remove_line_returns(const char* str, size_t length)
 {
     if (string_find(str, length, '\n', 0) == STRING_NPOS)
@@ -2639,4 +2671,33 @@ bool time_is_weekend()
     if (!time_to_local(now, &tm_now))
         return false;
     return (tm_now.tm_wday == 0) || (tm_now.tm_wday == 6);
+}
+
+string_const_t random_string(char* buf, size_t capacity)
+{
+    static const char* const strings[] = {
+        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
+        "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6",
+        "7", "8", "9", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")",
+        "-", "_", "+", "=", "[", "]", "{", "}", ";", ":", "'", "\"", ",", ".",
+        "<", ">", "/", "?", "|", "\\", "`", "~" };
+    const size_t num_chars = capacity - 1;
+
+    string_t random_string { buf, 0 };
+    for (size_t i = 0; i < num_chars; ++i)
+    {
+        const size_t string_index = random32_range(0, ARRAY_COUNT(strings));
+        random_string = string_concat(buf, capacity,  STRING_ARGS(random_string), strings[string_index], string_length(strings[string_index]));
+    }
+    buf[num_chars] = '\0';
+    return { buf, num_chars };
+}
+
+void string_deallocate(string_t& str)
+{
+    if (!str.str)
+        return;
+    string_deallocate(str.str);
+    str.str = nullptr;
+    str.length = 0;
 }

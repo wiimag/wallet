@@ -145,7 +145,10 @@ TEST_SUITE("Stocks")
         static bool stock_was_requested = false;
         const auto listener_id = dispatcher_register_event_listener(EVENT_STOCK_REQUESTED, [](const dispatcher_event_args_t& args)
         {
-            CHECK_EQ(string_const_t{ args.c_str(), args.size }, CTEXT("SSE.V"));
+            CHECK_EQ(args.size, sizeof(stock_realtime_t));
+            stock_realtime_t* stock_realtime = (stock_realtime_t*)args.data;
+            string_const_t code{ stock_realtime->code, string_length(stock_realtime->code) };
+            CHECK_EQ(code, CTEXT("SSE.V"));
             return (stock_was_requested = true);
         });
 

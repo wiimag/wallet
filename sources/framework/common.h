@@ -20,20 +20,19 @@ constexpr double DNAN = __builtin_nan("0");
 #define ARRAY_COUNT(ARR) (sizeof(ARR) / sizeof(ARR[0]))
 
 #define DEFINE_ENUM_FLAGS(T) \
-    FOUNDATION_FORCEINLINE const T operator~ (T a) { return (T)~(unsigned int)a; } \
-    FOUNDATION_FORCEINLINE const bool operator== (const T a, const int b) { return (unsigned int)a == b; } \
-    FOUNDATION_FORCEINLINE const bool operator&& (const T a, const T b) { return (unsigned int)a != 0 && (unsigned int)b != 0; } \
-    FOUNDATION_FORCEINLINE const bool operator&& (const T a, const bool b) { return (unsigned int)a != 0 && b; } \
-    FOUNDATION_FORCEINLINE const T operator| (const T a, const T b) { return (T)((unsigned int)a | (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE const T operator& (const T a, const T b) { return (T)((unsigned int)a & (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE const T operator^ (const T a, const T b) { return (T)((unsigned int)a ^ (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE T& operator|= (T& a, const T b) { return (T&)((unsigned int&)a |= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE T& operator&= (T& a, const T b) { return (T&)((unsigned int&)a &= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE T& operator^= (T& a, const T b) { return (T&)((unsigned int&)a ^= (unsigned int)b); }
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator~ (T a) { return static_cast<T>(~(unsigned int)a); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator== (const T a, const int b) { return (unsigned int)a == b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const T b) { return (unsigned int)a != 0 && (unsigned int)b != 0; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const bool b) { return (unsigned int)a != 0 && b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator| (const T a, const T b) { return (T)((unsigned int)a | (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator& (const T a, const T b) { return (T)((unsigned int)a & (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator^ (const T a, const T b) { return (T)((unsigned int)a ^ (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator|= (T& a, const T b) { return (T&)((unsigned int&)a |= (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator&= (T& a, const T b) { return (T&)((unsigned int&)a &= (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator^= (T& a, const T b) { return (T&)((unsigned int&)a ^= (unsigned int)b); }
 
-template<typename T> T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
-template<typename T> T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
-template<typename R, typename T, typename U> R max(T a, U b) { return (((R)(a) > (R)(b)) ? (R)(a) : (R)(b)); }
+template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
+template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
 
 typedef struct GLFWwindow GLFWwindow;
 typedef function<void(GLFWwindow* window)> app_update_handler_t;
@@ -80,6 +79,9 @@ string_t string_to_lower_ascii(char* buf, size_t capacity, const char* str, size
 string_t string_to_upper_ascii(char* buf, size_t capacity, const char* str, size_t length);
 string_t string_to_lower_utf8(char* buf, size_t capacity, const char* str, size_t length);
 string_t string_to_upper_utf8(char* buf, size_t capacity, const char* str, size_t length);
+string_t string_remove_character(char* buf, size_t size, size_t capacity, char char_to_remove);
+
+void string_deallocate(string_t& str);
 
 FOUNDATION_FORCEINLINE bool is_whitespace(char c)
 {
@@ -706,3 +708,5 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t
 {
     return hash_combine(hash_combine(h1, h2), hash_combine(h3, h4));
 }
+
+string_const_t random_string(char* buf, size_t capacity);
