@@ -20,7 +20,7 @@ const fetch_level_t TITLE_MINIMUM_FETCH_LEVEL =
 
 const fetch_level_t INDEX_MINIMUM_FETCH_LEVEL =
     FetchLevel::REALTIME |
-    FetchLevel::FUNDAMENTALS;
+    FetchLevel::EOD;
     
 FOUNDATION_ALIGNED_STRUCT(title_t, 8) 
 {

@@ -5,15 +5,14 @@
 
 #include "string_table.h"
 
-#include "common.h"
-#include "scoped_mutex.h"
-#include "scoped_string.h"
-#include "profiler.h"
+#include <framework/common.h>
+#include <framework/profiler.h>
+#include <framework/shared_mutex.h>
+#include <framework/scoped_string.h>
 
 #include <foundation/hash.h>
 #include <foundation/memory.h>
 #include <foundation/assert.h>
-#include <foundation/mutex.h>
 
 #define HASH_STRING_TABLE static_hash_string("string_table", 12, 0xf026bfe3a9500e3cLL)
 
@@ -24,7 +23,7 @@
 /// Only allocated on demand.
 /// </summary>
 static string_table_t* GLOBAL_STRING_TABLE = nullptr;
-static mutex_t* _string_table_lock = nullptr;
+static shared_mutex _string_table_lock;
 
 /// <summary>
 /// Contains the hash key of string stored in a string table.
@@ -69,7 +68,7 @@ string_table_symbol_t string_table_encode(const char* s, size_t length /* = 0*/)
     if (length == 0)
         return STRING_TABLE_NULL_SYMBOL;
 
-    auto lock = scoped_mutex_t(_string_table_lock);
+    SHARED_WRITE_LOCK(_string_table_lock);
 
     string_table_symbol_t symbol = string_table_to_symbol(GLOBAL_STRING_TABLE, s, length);
     while (symbol == STRING_TABLE_FULL)
@@ -83,44 +82,39 @@ string_table_symbol_t string_table_encode(const char* s, size_t length /* = 0*/)
 
 const char* string_table_decode(string_table_symbol_t symbol)
 {
-    auto lock = scoped_mutex_t(_string_table_lock);
+    SHARED_READ_LOCK(_string_table_lock);
     return string_table_to_string(GLOBAL_STRING_TABLE, symbol);
 }
 
 string_const_t string_table_decode_const(string_table_symbol_t symbol)
 {
-    auto lock = scoped_mutex_t(_string_table_lock);
+    SHARED_READ_LOCK(_string_table_lock);
     return string_table_to_string_const(GLOBAL_STRING_TABLE, symbol);
 }
 
 void string_table_compress()
 {
-    auto lock = scoped_mutex_t(_string_table_lock);
+    SHARED_WRITE_LOCK(_string_table_lock);
     string_table_pack(&GLOBAL_STRING_TABLE);
 }
 
 void string_table_initialize()
 {
+    SHARED_WRITE_LOCK(_string_table_lock);
+    
     if (GLOBAL_STRING_TABLE == nullptr)
         GLOBAL_STRING_TABLE = string_table_allocate(32 * 1024, 16);
-
-    if (_string_table_lock == nullptr)
-        _string_table_lock = mutex_allocate(STRING_CONST("Global_String_Table_Lock"));
 }
 
 void string_table_shutdown()
-{
+{   
     if (GLOBAL_STRING_TABLE)
     {
-        log_debugf(HASH_STRING_TABLE, STRING_CONST("String table size: %.3g kb"), GLOBAL_STRING_TABLE->allocated_bytes / 1024.0);
+        SHARED_WRITE_LOCK(_string_table_lock);
+        log_debugf(HASH_STRING_TABLE, STRING_CONST("String table size: %.3g kb (average string length: %" PRIsize ")"), 
+            GLOBAL_STRING_TABLE->allocated_bytes / 1024.0, string_table_average_string_length(GLOBAL_STRING_TABLE));
         string_table_deallocate(GLOBAL_STRING_TABLE);
         GLOBAL_STRING_TABLE = nullptr;
-    }
-
-    if (_string_table_lock)
-    {
-        mutex_deallocate(_string_table_lock);
-        _string_table_lock = nullptr;
     }
 }
 
@@ -226,7 +220,7 @@ void string_table_grow(string_table_t* st, int bytes)
     const char* const old_strings = st->strings();
     st->allocated_bytes = bytes;
 
-    float average_strlen = st->count > 0 ? (float)st->string_bytes / (float)st->count : 15.0f;
+    float average_strlen = st->count > 0 ? string_table_average_string_length(st) : 15.0f;
     float bytes_per_string = average_strlen + 1 + sizeof(uint16_t) * HASH_FACTOR;
     float num_strings = (bytes - sizeof(*st)) / bytes_per_string;
     st->num_hash_slots = max<int>(num_strings * HASH_FACTOR, st->num_hash_slots);
@@ -372,4 +366,11 @@ bool string_table_symbol_equal(string_table_symbol_t symbol, const char* str, si
 
     string_const_t symbol_string = string_table_decode_const(symbol);
     return string_equal(STRING_ARGS(symbol_string), str, str_length);
+}
+
+size_t string_table_average_string_length(string_table_t* st)
+{
+    if (st->count == 0)
+        return 0;
+    return math_ceil(st->string_bytes / (double)st->count);
 }

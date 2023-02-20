@@ -168,6 +168,15 @@ const char* string_table_to_string(string_table_t* st, string_table_symbol_t sym
 /// <returns></returns>
 string_const_t string_table_to_string_const(string_table_t* st, string_table_symbol_t symbol);
 
+/*! Returns the average string length of string already stored in the table.
+ * 
+ * @remark This is an approximation and may not be accurate.
+ * @remark This function is not thread safe.
+ * 
+ * @param st The string table to query.
+ */
+size_t string_table_average_string_length(string_table_t* st);
+
 /// # Global string table access
 
 /// <summary>

@@ -349,6 +349,9 @@ FOUNDATION_STATIC string_const_t pattern_eod_to_google_exchange(string_const_t e
     if (string_equal(STRING_ARGS(eod_exchange), STRING_CONST("TO")))
         return CTEXT("TSE");
 
+    if (string_equal(STRING_ARGS(eod_exchange), STRING_CONST("V")))
+        return CTEXT("CVE");
+
     if (string_equal(STRING_ARGS(eod_exchange), STRING_CONST("OTCQX")))
         return CTEXT("OTCMKTS");
 
@@ -363,9 +366,10 @@ FOUNDATION_STATIC string_const_t pattern_google_finance_url(const pattern_t* pat
 
     string_t url_buf = string_static_buffer(2048);
     string_const_t google_finance_exchange = pattern_eod_to_google_exchange(string_table_decode_const(s->exchange));
+    string_const_t symbol_name = string_table_decode_const(s->symbol);
     string_t url = string_format(url_buf.str, url_buf.length, 
         STRING_CONST("https://www.google.com/finance/quote/%.*s:%.*s?window=6M"), 
-        STRING_FORMAT(string_table_decode_const(s->symbol)),
+        STRING_FORMAT(symbol_name),
         STRING_FORMAT(google_finance_exchange));
     return string_to_const(url);
 }
@@ -373,7 +377,8 @@ FOUNDATION_STATIC string_const_t pattern_google_finance_url(const pattern_t* pat
 FOUNDATION_STATIC string_const_t pattern_lapresse_news_url(const pattern_t* pattern)
 {
     string_const_t name = stock_get_short_name(pattern->stock);
-    return string_format_static(STRING_CONST("https://www.google.com/search?q=%.*s+site:lapresse.ca&tbs=qdr:w"), STRING_FORMAT(name));
+    string_const_t encoded_name = url_encode(STRING_ARGS(name));
+    return string_format_static(STRING_CONST("https://www.google.com/search?q=%.*s+site:lapresse.ca&tbs=qdr:w"), STRING_FORMAT(encoded_name));
 }
 
 FOUNDATION_STATIC string_const_t pattern_google_news_url(const pattern_t* pattern)
@@ -382,10 +387,13 @@ FOUNDATION_STATIC string_const_t pattern_google_news_url(const pattern_t* patter
     if (s == nullptr)
         return string_null();
 
+    string_const_t stock_name = string_table_decode_const(s->name);
+    string_const_t encoded_name = url_encode(STRING_ARGS(stock_name));
+
     string_t url_buf = string_static_buffer(2048);
     string_t url = string_format(url_buf.str, url_buf.length,
         STRING_CONST("https://www.google.com/search?tbs=sbd:1&q=%.*s&source=lnms&tbm=nws"),
-        STRING_FORMAT(url_encode(STRING_ARGS(string_table_decode_const(s->name)))));
+        STRING_FORMAT(encoded_name));
     return string_to_const(url);
 }
 

@@ -112,6 +112,7 @@
     <ClCompile Include="..\..\sources\report_orders.cpp" />
     <ClCompile Include="..\..\sources\report_transactions.cpp" />
     <ClCompile Include="..\..\sources\report_expr.cpp" />
+    <ClCompile Include="..\..\sources\search.cpp" />
     <ClCompile Include="..\..\sources\settings.cpp" />
     <ClCompile Include="..\..\sources\stock.cpp" />
     <ClCompile Include="..\..\sources\symbols.cpp" />
@@ -121,9 +122,11 @@
     <ClCompile Include="..\..\sources\tests\dispatcher_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\generics_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\imgui_tests.cpp" />
+    <ClCompile Include="..\..\sources\tests\search_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\stock_tests.cpp" />
     <ClCompile Include="..\..\sources\tests\test_runner.cpp" />
     <ClCompile Include="..\..\sources\tests\test_utils.cpp" />
+    <ClCompile Include="..\..\sources\timeline.cpp" />
     <ClCompile Include="..\..\sources\title.cpp" />
     <ClCompile Include="..\..\sources\wallet.cpp" />
     <ClInclude Include="..\..\external\glfw\include\GLFW\glfw3.h" />
@@ -181,10 +184,12 @@
     <ClInclude Include="..\..\sources\pattern.h" />
     <ClInclude Include="..\..\sources\realtime.h" />
     <ClInclude Include="..\..\sources\report.h" />
+    <ClInclude Include="..\..\sources\search.h" />
     <ClInclude Include="..\..\sources\settings.h" />
     <ClInclude Include="..\..\sources\stock.h" />
     <ClInclude Include="..\..\sources\symbols.h" />
     <ClInclude Include="..\..\sources\tests\test_utils.h" />
+    <ClInclude Include="..\..\sources\timeline.h" />
     <ClInclude Include="..\..\sources\title.h" />
     <ClInclude Include="..\..\sources\version.h" />
     <ClInclude Include="..\..\sources\wallet.h" />

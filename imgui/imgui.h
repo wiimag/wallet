@@ -56,6 +56,7 @@ Index of this file:
 #include "imconfig.h"
 // ###############################################################################
 #include "IconsMaterialDesign.h"
+#define THIN_SPACE "\xe2\x80\x89"	// U+2009
 // ###############################################################################
 
 #ifndef IMGUI_DISABLE

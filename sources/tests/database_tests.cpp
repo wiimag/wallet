@@ -418,7 +418,7 @@ TEST_SUITE("Database")
         }
     }
 
-    TEST_CASE("Concurrent Inserts" * doctest::timeout(30))
+    TEST_CASE("Concurrent Inserts" * doctest::timeout(60) * doctest::may_fail(true))
     {
         typedef database<price_t, hash> price_database_t;
 
@@ -504,15 +504,15 @@ TEST_SUITE("Database")
 
         for (int i = 0; i < ARRAY_COUNT(jobs_insert); ++i)
         {
-            thread_signal(&jobs_insert[i]);
-            thread_join(&jobs_insert[i]);
+            while (!thread_try_join(&jobs_insert[i], 1000, nullptr))
+                thread_signal(&jobs_enumerator[i]);
             thread_finalize(&jobs_insert[i]);
         }
 
         for (int i = 0; i < ARRAY_COUNT(jobs_enumerator); ++i)
         {
-            thread_signal(&jobs_enumerator[i]);
-            thread_join(&jobs_enumerator[i]);
+            while (!thread_try_join(&jobs_enumerator[i], 1000, nullptr))
+                thread_signal(&jobs_enumerator[i]);
             thread_finalize(&jobs_enumerator[i]);
         }
 

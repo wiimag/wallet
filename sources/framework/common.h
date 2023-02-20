@@ -20,20 +20,19 @@ constexpr double DNAN = __builtin_nan("0");
 #define ARRAY_COUNT(ARR) (sizeof(ARR) / sizeof(ARR[0]))
 
 #define DEFINE_ENUM_FLAGS(T) \
-    FOUNDATION_FORCEINLINE const T operator~ (T a) { return (T)~(unsigned int)a; } \
-    FOUNDATION_FORCEINLINE const bool operator== (const T a, const int b) { return (unsigned int)a == b; } \
-    FOUNDATION_FORCEINLINE const bool operator&& (const T a, const T b) { return (unsigned int)a != 0 && (unsigned int)b != 0; } \
-    FOUNDATION_FORCEINLINE const bool operator&& (const T a, const bool b) { return (unsigned int)a != 0 && b; } \
-    FOUNDATION_FORCEINLINE const T operator| (const T a, const T b) { return (T)((unsigned int)a | (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE const T operator& (const T a, const T b) { return (T)((unsigned int)a & (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE const T operator^ (const T a, const T b) { return (T)((unsigned int)a ^ (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE T& operator|= (T& a, const T b) { return (T&)((unsigned int&)a |= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE T& operator&= (T& a, const T b) { return (T&)((unsigned int&)a &= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE T& operator^= (T& a, const T b) { return (T&)((unsigned int&)a ^= (unsigned int)b); }
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator~ (T a) { return static_cast<T>(~(unsigned int)a); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator== (const T a, const int b) { return (unsigned int)a == b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const T b) { return (unsigned int)a != 0 && (unsigned int)b != 0; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const bool b) { return (unsigned int)a != 0 && b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator| (const T a, const T b) { return (T)((unsigned int)a | (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator& (const T a, const T b) { return (T)((unsigned int)a & (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator^ (const T a, const T b) { return (T)((unsigned int)a ^ (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator|= (T& a, const T b) { return (T&)((unsigned int&)a |= (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator&= (T& a, const T b) { return (T&)((unsigned int&)a &= (unsigned int)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator^= (T& a, const T b) { return (T&)((unsigned int&)a ^= (unsigned int)b); }
 
-template<typename T> T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
-template<typename T> T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
-template<typename R, typename T, typename U> R max(T a, U b) { return (((R)(a) > (R)(b)) ? (R)(a) : (R)(b)); }
+template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
+template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
 
 typedef struct GLFWwindow GLFWwindow;
 typedef function<void(GLFWwindow* window)> app_update_handler_t;
@@ -76,6 +75,13 @@ bool string_compare_less(const char* str1, const char* str2);
 bool string_compare_less(const char* str1, size_t str1_length, const char* str2, size_t str2_length);
 string_const_t string_remove_line_returns(char* buffer, size_t capacity, const char* str, size_t length);
 string_t string_remove_line_returns(const char* str, size_t length);
+string_t string_to_lower_ascii(char* buf, size_t capacity, const char* str, size_t length);
+string_t string_to_upper_ascii(char* buf, size_t capacity, const char* str, size_t length);
+string_t string_to_lower_utf8(char* buf, size_t capacity, const char* str, size_t length);
+string_t string_to_upper_utf8(char* buf, size_t capacity, const char* str, size_t length);
+string_t string_remove_character(char* buf, size_t size, size_t capacity, char char_to_remove);
+
+void string_deallocate(string_t& str);
 
 FOUNDATION_FORCEINLINE bool is_whitespace(char c)
 {
@@ -241,7 +247,7 @@ string_const_t string_join(T* const list, const function<string_const_t(T& e)>& 
 // ## Array
 
 #define foreach(_VAR_NAME, _ARR) \
-    decltype(_ARR) _VAR_NAME = array_size(_ARR) > 0 ? &_ARR[0] : nullptr; \
+    std::remove_reference<decltype(_ARR)>::type _VAR_NAME = array_size(_ARR) > 0 ? &_ARR[0] : nullptr; \
     for (unsigned i = 0, end = array_size(_ARR); i < end; _VAR_NAME = &_ARR[++i])
 
 template<typename T> T* array_last(T* arr)
@@ -263,14 +269,14 @@ template<typename T>
 T array_sort_by(T arr, const function<int(const typename std::remove_pointer<T>::type& a, const typename std::remove_pointer<T>::type& b)>& comparer)
 {
 #if FOUNDATION_PLATFORM_WINDOWS
-    qsort_s(arr, array_size(arr), sizeof(T), [](void* context, const void* va, const void* vb)
+    qsort_s(arr, array_size(arr), sizeof(typename std::remove_pointer<T>::type), [](void* context, const void* va, const void* vb)
 #else
-    qsort_r(arr, array_size(arr), sizeof(T), (void*)&comparer, [](void* context, const void* va, const void* vb)
+    qsort_r(arr, array_size(arr), sizeof(typename std::remove_pointer<T>::type), (void*)&comparer, [](void* context, const void* va, const void* vb)
 #endif
     {
-        const function<int(const T&, const T&)>& comparer = *(function<int(const T&, const T&)>*)context;
-        const T& a = *(const T*)va;
-        const T& b = *(const T*)vb;
+        const auto& comparer = *(function<int(const typename std::remove_pointer<T>::type& a, const typename std::remove_pointer<T>::type& b)>*)context;
+        const typename std::remove_pointer<T>::type& a = *(const typename std::remove_pointer<T>::type*)va;
+        const typename std::remove_pointer<T>::type& b = *(const typename std::remove_pointer<T>::type*)vb;
         return comparer(a, b);
 
 #if FOUNDATION_PLATFORM_WINDOWS
@@ -295,7 +301,7 @@ bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& 
 }
 
 template<typename T, typename V>
-FOUNDATION_STATIC int array_binary_search(const T* array, uint32_t _num, const V& _key)
+int array_binary_search(const T* array, uint32_t _num, const V& _key)
 {
     uint32_t offset = 0;
     for (uint32_t ll = _num; offset < ll;)
@@ -306,6 +312,33 @@ FOUNDATION_STATIC int array_binary_search(const T* array, uint32_t _num, const V
         if (mid_value > _key)
             ll = idx;
         else if (mid_value < _key)
+            offset = idx + 1;
+        else
+            return idx;
+    }
+
+    return ~offset;
+}
+
+template<typename T, typename V>
+int array_binary_search(const T* array, const V& _key)
+{
+    return array_binary_search<T, V>(array, array_size(array), _key);
+}
+
+template<typename T, typename V>
+int array_binary_search_compare(const T array, const typename V& _key, int(*compare)(const typename std::remove_pointer<T>::type& a, const typename V& b))
+{
+    uint32_t offset = 0;
+    for (uint32_t ll = array_size(array); offset < ll;)
+    {
+        const uint32_t idx = (offset + ll) / 2;
+
+        const typename std::remove_pointer<T>::type& mid_value = array[idx];
+        const int cmp = compare(mid_value, _key);
+        if (cmp > 0)
+            ll = idx;
+        else if (cmp < 0)
             offset = idx + 1;
         else
             return idx;
@@ -508,7 +541,7 @@ void on_thread_exit(function<void()> func);
 
 extern bool main_is_batch_mode();
 extern bool main_is_graphical_mode();
-extern bool main_is_interactive_mode();
+extern bool main_is_interactive_mode(bool exclude_debugger = false);
 extern bool main_is_running_tests();
 extern double main_tick_elapsed_time_ms();
 
@@ -610,6 +643,23 @@ struct TimeMarkerScope
 
 #endif
 
+struct LogPrefixScope
+{
+    const bool previous_state;
+    FOUNDATION_FORCEINLINE LogPrefixScope(bool enable = false)
+        : previous_state(log_is_prefix_enabled())
+    {
+        log_enable_prefix(enable);
+    }
+
+    FOUNDATION_FORCEINLINE ~LogPrefixScope()
+    {
+        log_enable_prefix(previous_state);
+    }
+};
+
+#define LOG_PREFIX(enable)  LogPrefixScope __var_log_prefix_scope__##COUNTER (enable) 
+
 template<typename T> using alias = T;
 #define MEM_NEW(context, type, ...) new (memory_allocate(context, sizeof(type), alignof(type), MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED)) type(__VA_ARGS__);
 #define MEM_DELETE(ptr) {   \
@@ -658,3 +708,5 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t
 {
     return hash_combine(hash_combine(h1, h2), hash_combine(h3, h4));
 }
+
+string_const_t random_string(char* buf, size_t capacity);

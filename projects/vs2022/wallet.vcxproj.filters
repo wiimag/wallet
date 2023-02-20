@@ -187,6 +187,12 @@
     <ClInclude Include="..\..\sources\app.h">
       <Filter>app</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sources\timeline.h">
+      <Filter>app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\search.h">
+      <Filter>app</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sources\stock.cpp">
@@ -338,6 +344,15 @@
     </ClCompile>
     <ClCompile Include="..\..\sources\indicators.cpp">
       <Filter>app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\timeline.cpp">
+      <Filter>app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\search.cpp">
+      <Filter>app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\tests\search_tests.cpp">
+      <Filter>tests</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

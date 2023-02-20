@@ -42,8 +42,6 @@ FOUNDATION_STATIC string_const_t cell_number_value_to_string(const cell_t& cell,
         return CTEXT("-");
 
     double value = cell.number;
-    if (flags & COLUMN_ROUND_NUMBER)
-        value = math_round(value);
     double abs_value = math_abs(value);
     format = format == COLUMN_FORMAT_UNDEFINED ? cell.format : format;
     if (format == COLUMN_FORMAT_CURRENCY && abs_value > 999.99)
@@ -51,47 +49,63 @@ FOUNDATION_STATIC string_const_t cell_number_value_to_string(const cell_t& cell,
         if (flags & COLUMN_NUMBER_ABBREVIATION)
         {
             if (abs_value >= 1e12)
-                return string_format_static(STRING_CONST("%.3gT $"), value / 1e12);
+                return string_format_static(STRING_CONST("%.3gT" THIN_SPACE "$"), value / 1e12);
             if (abs_value >= 1e9)
-                return string_format_static(STRING_CONST("%.3gB $"), value / 1e9);
+                return string_format_static(STRING_CONST("%.3gB" THIN_SPACE "$"), value / 1e9);
             else if (abs_value >= 1e6)
-                return string_format_static(STRING_CONST("%.3gM $"), value / 1e6);
+                return string_format_static(STRING_CONST("%.3gM" THIN_SPACE "$"), value / 1e6);
             else if (abs_value >= 1e3)
-                return string_format_static(STRING_CONST("%.3gK $"), value / 1e3);
+                return string_format_static(STRING_CONST("%.3gK" THIN_SPACE "$"), value / 1e3);
         }
-        return string_from_currency(value, STRING_CONST("9 999 999.99 $"));
+        if (flags & COLUMN_ROUND_NUMBER)
+            return string_from_currency(value, STRING_CONST("9" THIN_SPACE "999" THIN_SPACE "999" THIN_SPACE "$"));
+        return string_from_currency(math_round(value), STRING_CONST("9" THIN_SPACE "999" THIN_SPACE "999.99" THIN_SPACE "$"));
     }
+
+    if (flags & COLUMN_ROUND_NUMBER)
+        value = math_round(value);
 
     if (format == COLUMN_FORMAT_NUMBER && (flags & COLUMN_NUMBER_ABBREVIATION))
     {
         if (abs_value >= 1e9)
-            return string_format_static(STRING_CONST("%.0lf B"), value / 1e9);
+            return string_format_static(STRING_CONST("%.0lf" THIN_SPACE "B"), value / 1e9);
         else if (abs_value >= 1e6)
-            return string_format_static(STRING_CONST("%.0lf M"), value / 1e6);
+            return string_format_static(STRING_CONST("%.0lf" THIN_SPACE "M"), value / 1e6);
         else if (abs_value >= 1e3)
-            return string_format_static(STRING_CONST("%.0lf K"), value / 1e3);
+            return string_format_static(STRING_CONST("%.0lf" THIN_SPACE "K"), value / 1e3);
     }
     
     string_const_t format_string = CTEXT("%3.2lf");
     if (format == COLUMN_FORMAT_CURRENCY)
     {
-        if (value == 0 || abs_value > 0.05)
-            format_string = CTEXT("%.2lf $");
+        if (value == 0 || abs_value > 0.5)
+            format_string = CTEXT("%.2lf" THIN_SPACE "$");
         else
-            format_string = CTEXT("%.3lf $");
+            format_string = CTEXT("%.3lf" THIN_SPACE "$");
     }
     else if (format == COLUMN_FORMAT_PERCENTAGE)
     {
+        if (abs_value > 1999)
+        {
+            if (abs_value > 1e8)
+                return CTEXT("-");
+                
+            return string_format_static(STRING_CONST("%.3gK" THIN_SPACE "%%"), value / 1e3);
+        }
+
+        if (math_real_is_zero(value))
+            return CTEXT("0" THIN_SPACE "%");
+        
         if (abs_value < 0.1)
-            format_string = CTEXT("%.2g %%"); 
+            format_string = CTEXT("%.2g" THIN_SPACE "%%");
         else if (abs_value < 1)
-            format_string = CTEXT("%.2lf %%");
+            format_string = CTEXT("%.2lf" THIN_SPACE "%%");
         else if (abs_value > 999)
-            format_string = CTEXT("%.5g %%");
+            format_string = CTEXT("%.0lf" THIN_SPACE "%%");
         else if (flags & COLUMN_ROUND_NUMBER || abs_value <= 100)
-            format_string = CTEXT("%.3g %%"); 
+            format_string = CTEXT("%.3lg" THIN_SPACE "%%");
         else
-            format_string = CTEXT("%.4g %%");
+            format_string = CTEXT("%.4lg" THIN_SPACE "%%");
     }
     else if (format == COLUMN_FORMAT_DATE)
         format_string = CTEXT("%x");
@@ -596,6 +610,8 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
             if ((column.flags & COLUMN_SUMMARY_AVERAGE) || column.format == COLUMN_FORMAT_PERCENTAGE)
             {
                 sc.number /= (double)sc.length;
+                if (math_abs(sc.number) > 9.5)
+                    sc.number = (double)math_round(sc.number);
             }
         }
         else if (column.format == COLUMN_FORMAT_DATE)
@@ -634,9 +650,12 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool table_column_is_number_value_tr
     if ((column.flags & COLUMN_NUMBER_ABBREVIATION) && column.format == COLUMN_FORMAT_NUMBER && cell.number > 999)
         return true;
         
-    if ((column.flags & COLUMN_ROUND_NUMBER) && column.format == COLUMN_FORMAT_PERCENTAGE)
+    if ((column.flags & COLUMN_ROUND_NUMBER) && cell_format_is_numeric(cell) && math_round(cell.number) != cell.number)
         return true;
 
+    if (column.format == COLUMN_FORMAT_PERCENTAGE && (cell.number < -1e8 || cell.number > 1e8))
+        return true;
+    
    return false;
 }
 

@@ -15,6 +15,7 @@
 #include "realtime.h"
 #include "wallet.h"
 #include "pattern.h"
+#include "timeline.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -58,6 +59,7 @@ struct report_expression_column_t
     char name[64];
     char expression[256];
     column_format_t format{ COLUMN_FORMAT_TEXT };
+    mutable int store_counter{ 0 };
 };
 
 struct report_expression_cache_value_t
@@ -662,11 +664,7 @@ FOUNDATION_STATIC cell_t report_column_get_change_value(table_element_ptr_t elem
     if (!stock_data)
         return DNAN;
 
-    const double v = title_get_range_change_p(title, stock_data, rel_days, rel_days < -365);
-
-    if (rel_days < -10 || rel_days > 10)
-        return (double)math_round(v);
-    return v;
+    return title_get_range_change_p(title, stock_data, rel_days, rel_days < -365);
 }
 
 FOUNDATION_STATIC bool report_column_is_numeric(column_format_t format)
@@ -727,20 +725,22 @@ FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t e
     if (ec->format == COLUMN_FORMAT_CURRENCY || ec->format == COLUMN_FORMAT_NUMBER || ec->format == COLUMN_FORMAT_PERCENTAGE)
     { 
         cvalue.number = result.as_number();
-        if (math_real_is_finite(cvalue.number))
+        if (ec->store_counter++ > 0)
             _report_expression_cache->put(cvalue);
         return cvalue.number;
     }
     if (ec->format == COLUMN_FORMAT_DATE)
     {
         cvalue.date = (time_t)result.as_number();
-        _report_expression_cache->put(cvalue);
+        if (ec->store_counter++ > 0)
+            _report_expression_cache->put(cvalue);
         return cvalue.date;
     }
     
     string_const_t str_value = result.as_string();
     cvalue.symbol = string_table_encode(str_value);
-    _report_expression_cache->put(cvalue);
+    if (ec->store_counter++ > 0)
+        _report_expression_cache->put(cvalue);
     return str_value;
 }
 
@@ -846,24 +846,22 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
     title_t* title = *(title_t**)element;
     if (title == nullptr)
         return;
-    eod_fetch("real-time", title->code, FORMAT_JSON_CACHE, [title](const json_object_t& json)
+    eod_fetch("real-time", title->code, FORMAT_JSON_CACHE, "s", title->code, [title](const json_object_t& json)
     {
+        const stock_t* s = title->stock;
         string_const_t time_str = string_from_time_static((tick_t)(json["timestamp"].as_number() * 1000.0), true);
-
-        if (time_str.length == 0)
+        
+        if (s == nullptr || time_str.length == 0)
         {
             return ImGui::Text(" %s (%s) \n Data not available \n",
                 title->code, string_table_decode(title->stock->name));
         }
 
-        const double old_price = title->stock->current.adjusted_close;
-        const double open = json["open"].as_number();
-        const double change = json["change"].as_number();
-        const double volume = json["volume"].as_number();
-        const double current_price = json["close"].as_number();
-        const double previous_close = json["previousClose"].as_number();
-        const double low = json["low"].as_number();
-        const double high = json["high"].as_number();
+        day_result_t d{};
+        const double old_price = s->current.adjusted_close;
+        stock_index_t stock_index = ::stock_index(title->code, title->code_length);
+        stock_read_real_time_results(stock_index, json, d);
+        
         ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), " %s (%s) \n %.*s \n"
             "\tPrice %.2lf $\n"
             "\tOpen: %.2lf $\n"
@@ -873,17 +871,17 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
             "\tHigh %.2lf $ (%.3g %%)\n"
             "\tDMA (50d) %.2lf $ (%.3g %%)\n"
             "\tDMA (200d) %.2lf $ (%.3g %%)\n"
-            "\tVolume %.6g (%.*s)", title->code, string_table_decode(title->stock->name), STRING_FORMAT(time_str),
-            current_price,
-            open,
-            current_price - open, (current_price - open) / open * 100.0,
-            previous_close, (current_price - previous_close) / previous_close * 100.0,
-            low,
-            high, (high - low) / current_price * 100.0,
-            title->stock->dma_50, title->stock->dma_50 / current_price * 100.0,
-            title->stock->dma_200, title->stock->dma_200 / title->stock->high_52 * 100.0,
-            volume, STRING_FORMAT(string_from_currency(volume * change, "9 999 999 999 $")));
-        if (current_price != old_price)
+            "\tVolume %.6g (%.*s)", title->code, string_table_decode(s->name), STRING_FORMAT(time_str),
+            d.close,
+            d.open,
+            d.close - d.open, (d.close - d.open) / d.open * 100.0,
+            d.previous_close, (d.close - d.previous_close) / d.previous_close * 100.0,
+            d.low,
+            d.high, (d.high - d.low) / d.close * 100.0,
+            s->dma_50, s->dma_50 / d.close * 100.0,
+            s->dma_200, s->dma_200 / s->high_52 * 100.0,
+            d.volume, STRING_FORMAT(string_from_currency(d.volume * d.change, "9 999 999 999 $")));
+        if (d.close != old_price)
             title_refresh(title);
     }, 60ULL);
 
@@ -1094,26 +1092,26 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         report_column_get_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
 
     table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"),
-        report_column_get_date, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
+        report_column_get_date, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_details_view);
 
     table_add_column(table, STRING_CONST("  " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"),
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION)
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_details_view);
 
     table_add_column(table, STRING_CONST("   Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"),
-        report_column_get_buy_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE)
+        report_column_get_buy_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_buy_view)
         .set_tooltip_callback(report_title_adjusted_price_tooltip);
 
     table_add_column(table, STRING_CONST(" Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"),
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_details_view)
         .set_tooltip_callback(report_title_live_price_tooltip)
         .set_style_formatter(report_title_price_alerts_formatter);
 
     table_add_column(table, STRING_CONST("   Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"),
-        report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE)
+        report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_sell_view)
         .set_tooltip_callback(report_title_ask_price_gain_tooltip);
 
@@ -1136,7 +1134,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
 #endif
 
     table_add_column(table, STRING_CONST("EPS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Trend"),
-        report_column_earning_percent, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+        report_column_earning_percent, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ZERO_USE_DASH);
 
     table_add_column(table, STRING_CONST(" Day %||" ICON_MD_PRICE_CHANGE " Day % "),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_CHANGE), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE)
@@ -1147,9 +1145,9 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
     table_add_column(table, STRING_CONST("  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week"),
         E32(report_column_get_change_value, _1, _2, -7), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
     table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"),
-        E32(report_column_get_change_value, _1, _2, -31), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE);
+        E32(report_column_get_change_value, _1, _2, -31), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
     table_add_column(table, STRING_CONST("  3M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 3 months"),
-        E32(report_column_get_change_value, _1, _2, -90), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+        E32(report_column_get_change_value, _1, _2, -90), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
     table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"),
         E32(report_column_get_change_value, _1, _2, -365), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
     table_add_column(table, STRING_CONST("10Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 10 years"),
@@ -1165,12 +1163,12 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .set_tooltip_callback(report_title_dividends_total_tooltip);
 
     table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"),
-        report_column_get_total_investment, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+        report_column_get_total_investment, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER | COLUMN_ZERO_USE_DASH);
     table_add_column(table, STRING_CONST("      V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"),
-        report_column_get_total_value, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+        report_column_get_total_value, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER | COLUMN_ZERO_USE_DASH);
 
     table_add_column(table, STRING_CONST("   Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"),
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE)
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE/* | COLUMN_ROUND_NUMBER*/)
         .set_style_formatter(report_title_total_gain_alerts_formatter)
         .set_tooltip_callback(report_title_gain_total_tooltip);
     table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "),
@@ -2116,8 +2114,12 @@ void report_menu(report_t* report)
                 report_filter_out_titles(report);
             if (ImGui::MenuItem(ICON_MD_SUMMARIZE " Show Summary", "F4", &report->show_summary))
                 report_summary_update(report);
-            ImGui::MenuItem(ICON_MD_AUTO_GRAPH " Show transactions", nullptr, &report->show_order_graph);
 
+            if (ImGui::MenuItem(ICON_MD_TIMELINE " Show Timeline"))
+                timeline_render_graph(report);
+
+            ImGui::MenuItem(ICON_MD_AUTO_GRAPH " Show Transactions", nullptr, &report->show_order_graph);
+                
             ImGui::Separator();
 
             if (report->save)

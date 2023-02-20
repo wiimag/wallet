@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 equals-forty-two.com All rights reserved.
+ * Copyright 2023 equals-forty-two.com All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
  
@@ -94,7 +94,7 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
         stock_realtime = &_realtime->stocks[fidx];
         // Mark the stock as to be refreshed
         stock_realtime->refresh = true;
-        return realtime_stock_add_record(&_realtime->stocks[fidx], r);
+        return realtime_stock_add_record(stock_realtime, r);
     }
     
     stock_realtime->refresh = true;
@@ -734,11 +734,14 @@ FOUNDATION_STATIC void realtime_initialize()
     _realtime->stream = realtime_open_stream();
 
     // Create thread to query realtime stock
-    _realtime->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
-    if (_realtime->background_thread == nullptr || !thread_start(_realtime->background_thread))
+    if (!environment_command_line_arg("disable-realtime"))
     {
-        log_panic(HASH_REALTIME, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to create realtime background thread"));
-        return;
+        _realtime->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
+        if (_realtime->background_thread == nullptr || !thread_start(_realtime->background_thread))
+        {
+            log_panic(HASH_REALTIME, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to create realtime background thread"));
+            return;
+        }
     }
 
     dispatcher_register_event_listener(EVENT_STOCK_REQUESTED, realtime_register_new_stock);
@@ -751,17 +754,21 @@ FOUNDATION_STATIC void realtime_shutdown()
 {   
     session_set_bool("realtime_show_window", _realtime->show_window);
     session_set_integer("realtime_time_lapse_days", _realtime->time_lapse);
+    
+    table_deallocate(_realtime->table);
+
+    if (_realtime->background_thread)
+    {
+        while (!thread_try_join(_realtime->background_thread, 1, nullptr))
+            thread_signal(_realtime->background_thread);
+        thread_deallocate(_realtime->background_thread);
+    }
 
     {
         SHARED_WRITE_LOCK(_realtime->stocks_mutex);
         stream_deallocate(_realtime->stream);
         _realtime->stream = nullptr;
     }
-    
-    while (!thread_try_join(_realtime->background_thread, 1, nullptr))
-        thread_signal(_realtime->background_thread);
-    thread_deallocate(_realtime->background_thread);
-    table_deallocate(_realtime->table);
 
     foreach(s, _realtime->stocks)
         array_deallocate(s->records);
