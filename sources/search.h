@@ -76,3 +76,5 @@ uint32_t search_database_word_count(search_database_t* database);
 bool search_database_remove_document(search_database_t* database, search_document_handle_t document);
 
 bool search_database_is_document_valid(search_database_t* database, search_document_handle_t document);
+
+bool search_database_contains_word(search_database_t* database, const char* word, size_t word_length);

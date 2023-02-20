@@ -556,6 +556,17 @@ uint32_t search_database_word_count(search_database_t* database)
     return database->strings->count;
 }
 
+bool search_database_contains_word(search_database_t* db, const char* word, size_t word_length)
+{
+    FOUNDATION_ASSERT(db);
+
+    if (word == nullptr || word_length == 0)
+        return false;
+
+    string_const_t formatted_word = search_database_format_word(word, word_length, search_database_case_indexing_flag(db));
+    return string_table_find_symbol(db->strings, STRING_ARGS(formatted_word)) > 0;
+}
+
 bool search_database_is_document_valid(search_database_t* database, search_document_handle_t document)
 {
     FOUNDATION_ASSERT(database);

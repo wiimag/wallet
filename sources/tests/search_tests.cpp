@@ -436,6 +436,36 @@ TEST_SUITE("Search")
 
         search_database_deallocate(db);
     }
+
+    TEST_CASE("Contains word")
+    {
+        // Create a new document
+        auto db = search_database_allocate();
+        REQUIRE_NE(db, nullptr);
+
+        search_document_handle_t doc = search_database_add_document(db, STRING_CONST("doc"));
+        REQUIRE_NE(doc, SEARCH_DOCUMENT_INVALID_ID);
+
+        CHECK_EQ(search_database_word_count(db), 0);
+        CHECK_FALSE(search_database_contains_word(db, STRING_CONST("this")));
+
+        // Index some text
+        CHECK(search_database_index_text(db, doc, STRING_CONST("this is a SHORT phrase")));
+        CHECK_EQ(search_database_word_count(db), 9);
+        
+        CHECK_FALSE(search_database_contains_word(db, nullptr, 10));
+        CHECK_FALSE(search_database_contains_word(db, "phrase", 0));
+        CHECK(search_database_contains_word(db, STRING_CONST("this")));
+        CHECK_FALSE(search_database_contains_word(db, STRING_CONST("is")));
+        CHECK_FALSE(search_database_contains_word(db, STRING_CONST("a")));
+        CHECK(search_database_contains_word(db, STRING_CONST("short")));
+        CHECK(search_database_contains_word(db, STRING_CONST("shor")));
+        CHECK(search_database_contains_word(db, STRING_CONST("sho")));
+        CHECK_FALSE(search_database_contains_word(db, STRING_CONST("sh")));
+        CHECK(search_database_contains_word(db, STRING_CONST("PHRASE")));
+
+        search_database_deallocate(db);
+    }
 }
 
 #endif // BUILD_DEVELOPMENT
