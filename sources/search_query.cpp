@@ -216,7 +216,17 @@ FOUNDATION_STATIC const char* search_query_parse_variable(const char* tok, const
                 }
 
                 property.identifier = string_const(tok, end_value_pos - tok);
-                property.value = string_const(start_value_pos, end_value_pos - start_value_pos);
+
+                if (*start_value_pos == '"' && *(end_value_pos-1) == '"')
+                {
+                    property.value = string_const(start_value_pos+1, end_value_pos - start_value_pos - 2);
+                }
+                else
+                {
+                    property.value = string_const(start_value_pos, end_value_pos - start_value_pos);
+                }
+
+                
                 array_push(tokens, property);
                 return end_value_pos;
             }
@@ -528,12 +538,17 @@ FOUNDATION_STATIC search_result_t* search_query_evaluate_node(
 
         FOUNDATION_ASSERT(node->left == nullptr);
         FOUNDATION_ASSERT(node->right == nullptr);
-        FOUNDATION_ASSERT(node->token->children && node->token->children[0].type == SearchQueryTokenType::Word);
+        FOUNDATION_ASSERT(node->token->children && (
+            node->token->children[0].type == SearchQueryTokenType::Word || 
+            node->token->children[0].type == SearchQueryTokenType::Literal));
         
         string_const_t op_token = { 
             node->token->identifier.str + node->token->name.length, 
             to_size(node->token->value.str - (node->token->name.str + node->token->name.length))
         };
+
+        if (op_token.str[op_token.length-1] == '"')
+            op_token.length--;
 
         eval_flags |= SearchQueryEvalFlags::Property;
         if (string_equal(STRING_ARGS(op_token), STRING_CONST("=")))

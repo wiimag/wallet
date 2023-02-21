@@ -240,6 +240,79 @@ TEST_SUITE("Search")
         search_database_deallocate(db);
     }
 
+    TEST_CASE("Search fundamentals query" * doctest::timeout(30))
+    {
+        auto db = search_database_allocate();
+        REQUIRE_NE(db, nullptr);
+
+        eod_fetch("fundamentals", "GFL.TO", FORMAT_JSON_CACHE, [db](const json_object_t& json)
+        {
+            auto doc1 = search_database_add_document(db, STRING_CONST("GFL.TO"));
+
+            for (unsigned i = 0; i < json.token_count; ++i)
+            {
+                const json_token_t& token = json.tokens[i];
+
+                string_const_t id = json_token_identifier(json.buffer, &token);
+                if (token.type == JSON_STRING || token.type == JSON_PRIMITIVE)
+                {
+                    string_const_t value = json_token_value(json.buffer, &token);
+                    double number;
+                    if (string_try_convert_number(STRING_ARGS(value), number))
+                    {
+                        search_database_index_property(db, doc1, STRING_ARGS(id), number);
+                    }
+                    else
+                    {
+                        search_database_index_property(db, doc1, STRING_ARGS(id), STRING_ARGS(value));
+                    }
+                }
+            }
+        }, 5 * 60ULL);
+
+        {
+            auto query = search_database_query(db, STRING_CONST("CurrencyCode=USD"));
+            REQUIRE_NE(query, SEARCH_QUERY_INVALID_ID);
+            while (!search_database_query_is_completed(db, query))
+                dispatcher_wait_for_wakeup_main_thread(100);
+            const search_result_t* results = search_database_query_results(db, query);
+            CHECK_EQ(array_size(results), 0);
+            search_database_query_dispose(db, query);
+        }
+
+        {
+            auto query = search_database_query(db, STRING_CONST("isin=CA36168Q1046"));
+            REQUIRE_NE(query, SEARCH_QUERY_INVALID_ID);
+            while (!search_database_query_is_completed(db, query))
+                dispatcher_wait_for_wakeup_main_thread(100);
+            const search_result_t* results = search_database_query_results(db, query);
+            CHECK_EQ(array_size(results), 1);
+            search_database_query_dispose(db, query);
+        }
+
+        {
+            auto query = search_database_query(db, STRING_CONST("MarketCapitalization>1e6"));
+            REQUIRE_NE(query, SEARCH_QUERY_INVALID_ID);
+            while (!search_database_query_is_completed(db, query))
+                dispatcher_wait_for_wakeup_main_thread(100);
+            const search_result_t* results = search_database_query_results(db, query);
+            CHECK_EQ(array_size(results), 1);
+            search_database_query_dispose(db, query);
+        }
+
+        {
+            auto query = search_database_query(db, STRING_CONST("name:\"mr. patrick\""));
+            REQUIRE_NE(query, SEARCH_QUERY_INVALID_ID);
+            while (!search_database_query_is_completed(db, query))
+                dispatcher_wait_for_wakeup_main_thread(100);
+            const search_result_t* results = search_database_query_results(db, query);
+            CHECK_EQ(array_size(results), 1);
+            search_database_query_dispose(db, query);
+        }
+        
+        search_database_deallocate(db);
+    }
+
     TEST_CASE("Index properties")
     {
         auto db = search_database_allocate();
@@ -893,6 +966,64 @@ TEST_SUITE("SearchQuery")
         REQUIRE_EQ(array_size(results), 2);
         CHECK(array_contains(results, mel));
         CHECK(array_contains(results, will));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 15" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            (job=retire age>14 weight>40) or (job=student)
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 3);
+        CHECK(array_contains(results, joe));
+        CHECK(array_contains(results, will));
+        CHECK(array_contains(results, mag));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 16" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            -job=retire age>14
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 2);
+        CHECK(array_contains(results, mel));
+        CHECK(array_contains(results, bob));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 17" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            age>14 -job:RET
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 2);
+        CHECK(array_contains(results, mel));
+        CHECK(array_contains(results, bob));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 18" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            -age>-100 name:smi
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 0);
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 18" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            name=MÉlanie cadotte age>=39
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 1);
+        CHECK(array_contains(results, mel));
     }
 }
 
