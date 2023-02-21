@@ -193,6 +193,9 @@
     <ClInclude Include="..\..\sources\search.h">
       <Filter>app</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sources\search_query.h">
+      <Filter>app</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sources\stock.cpp">
@@ -353,6 +356,9 @@
     </ClCompile>
     <ClCompile Include="..\..\sources\tests\search_tests.cpp">
       <Filter>tests</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\search_query.cpp">
+      <Filter>app</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

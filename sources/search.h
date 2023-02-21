@@ -12,6 +12,7 @@
 struct search_index_t;
 struct search_database_t;
 typedef uint32_t search_document_handle_t;
+typedef uint32_t search_query_handle_t;
 
 #define SEARCH_DOCUMENT_INVALID_ID (0)
 
@@ -78,3 +79,5 @@ bool search_database_remove_document(search_database_t* database, search_documen
 bool search_database_is_document_valid(search_database_t* database, search_document_handle_t document);
 
 bool search_database_contains_word(search_database_t* database, const char* word, size_t word_length);
+
+search_query_handle_t search_database_query(search_database_t* database, const char* query, size_t query_length);

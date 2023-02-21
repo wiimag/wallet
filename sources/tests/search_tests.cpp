@@ -12,6 +12,7 @@
 #include <eod.h>
 #include <stock.h>
 #include <search.h>
+#include <search_query.h>
 
 #include <framework/common.h>
 
@@ -465,6 +466,182 @@ TEST_SUITE("Search")
         CHECK(search_database_contains_word(db, STRING_CONST("PHRASE")));
 
         search_database_deallocate(db);
+    }
+
+    TEST_CASE("Query 1")
+    {
+        // Create a new document
+        auto db = search_database_allocate();
+        REQUIRE_NE(db, nullptr);
+
+        search_document_handle_t doc = search_database_add_document(db, STRING_CONST("doc"));
+        REQUIRE_NE(doc, SEARCH_DOCUMENT_INVALID_ID);
+
+        CHECK(search_database_index_word(db, doc, STRING_CONST("joe")));
+        CHECK(search_database_index_word(db, doc, STRING_CONST("2023")));
+        CHECK(search_database_index_property(db, doc, STRING_CONST("name"), STRING_CONST("joe")));
+        CHECK(search_database_index_property(db, doc, STRING_CONST("age"), 18));
+        CHECK(search_database_index_property(db, doc, STRING_CONST("height"), 1.8f));
+        CHECK(search_database_index_property(db, doc, STRING_CONST("weight"), 80.0f));
+
+        search_document_handle_t sam = search_database_add_document(db, STRING_CONST("Samuel"));
+        REQUIRE_NE(sam, SEARCH_DOCUMENT_INVALID_ID);
+        
+        CHECK(search_database_index_property(db, doc, STRING_CONST("name"), STRING_CONST("SAM")));
+        CHECK(search_database_index_property(db, doc, STRING_CONST("age"), 7));
+
+        search_document_handle_t textdoc = search_database_add_document(db, STRING_CONST("short text"));
+        REQUIRE_NE(textdoc, SEARCH_DOCUMENT_INVALID_ID);
+        
+        CHECK(search_database_index_text(db, textdoc, STRING_CONST("this is a short phrase created by joe at the age of 18")));
+
+        string_const_t query = CTEXT("joe");
+        search_query_handle_t q = search_database_query(db, STRING_ARGS(query));
+                
+
+        search_database_deallocate(db);
+    }
+    
+}
+
+TEST_SUITE("SearchQuery")
+{
+    TEST_CASE("Parser")
+    {
+        /*
+     * Query examples:
+     *      number>32 and joe
+     *      number>32 and (joe or bob)
+     *      number>32 and (joe or bob) and not (joe and bob)
+     *      "number> 32" -joe
+     *      "single word"
+     *      name=sam
+     *      name=sam and age>32
+     *      last_name!=schmidt
+     *      name=sam and age>32 and (last_name!=schmidt or last_name!=smith)
+     */
+
+     // Example: number>32 and (joe or (bob and func(smith))) and not (joe and (bob (kim or -yolland)) suzy) -will age<=10 or age>=20
+     // 
+     //          number>32
+     //   AND    (joe or (bob and smith)) and not (joe and (bob (kim or -yolland)) suzy) -will age<=10 or age>=20
+     //              (joe or (bob and smith))
+     //                  joe
+     //    OR            (bob and smith)
+     //                      bob
+     //                      smith
+     //   AND         not (joe and (bob (kim or -yolland)) suzy) -will age<=10 or age>=20
+     //                  not (joe and (bob (kim or -yolland)) suzy)
+     //                      (joe and (bob (kim or -yolland)) suzy)
+     //                          joe
+     //                          (bob (kim or -yolland)) suzy
+     //                              bob (kim or -yolland)
+     //                                  bob
+     //                                  kim or -yolland
+     //                                      kim
+     //                                      -yolland
+     //                              suzy
+     //                  -will age<=10 or age>=20
+     //                      -will
+     //                          will
+     //                      age<=10 or age>= 20
+     //                          age<=10
+     //                          age>=20
+
+        {
+            search_query_token_t* tokens = search_query_parse_tokens(STRING_CONST("\"number > 32\" -(-joe -last!=smith)"));
+            REQUIRE_EQ(array_size(tokens), 2);
+            CHECK_EQ(tokens[0].type, SearchQueryTokenType::Literal);
+            CHECK_EQ(tokens[1].type, SearchQueryTokenType::Not);
+            REQUIRE_EQ(array_size(tokens[1].children), 1);
+            CHECK_EQ(tokens[1].children[0].children[1].children[0].type, SearchQueryTokenType::Property);
+            CHECK_EQ(tokens[1].children[0].children[1].children[0].name, CTEXT("last"));
+            search_query_deallocate_tokens(tokens);
+        }
+
+        {
+            search_query_token_t* tokens = search_query_parse_tokens(STRING_CONST("(bob and func(smith))"));
+            REQUIRE_EQ(array_size(tokens), 1);
+            REQUIRE_EQ(array_size(tokens[0].children), 3);
+            CHECK_EQ(tokens[0].children[0].type, SearchQueryTokenType::Word);
+            CHECK_EQ(tokens[0].children[1].type, SearchQueryTokenType::And);
+            CHECK_EQ(tokens[0].children[2].type, SearchQueryTokenType::Function);
+            search_query_deallocate_tokens(tokens);
+        }
+
+        {
+            search_query_token_t* tokens = search_query_parse_tokens(STRING_CONST("not (joe and (bob (kim or -yolland)) suzy) -will age<=10 or age>=20"));
+            REQUIRE_EQ(array_size(tokens), 5);
+            CHECK_EQ(tokens[0].type, SearchQueryTokenType::Not);
+            REQUIRE_EQ(tokens[0].children[0].type, SearchQueryTokenType::Group);
+            {
+                REQUIRE_EQ(array_size(tokens[0].children[0].children), 4);
+                CHECK_EQ(tokens[0].children[0].children[0].type, SearchQueryTokenType::Word);
+                CHECK_EQ(tokens[0].children[0].children[1].type, SearchQueryTokenType::And);
+                CHECK_EQ(tokens[0].children[0].children[2].type, SearchQueryTokenType::Group);
+                CHECK_EQ(tokens[0].children[0].children[3].type, SearchQueryTokenType::Word);
+
+            }
+            CHECK_EQ(tokens[1].type, SearchQueryTokenType::Not);
+            CHECK_EQ(tokens[2].type, SearchQueryTokenType::Property);
+            CHECK_EQ(tokens[3].type, SearchQueryTokenType::Or);
+            CHECK_EQ(tokens[4].type, SearchQueryTokenType::Property);
+            search_query_deallocate_tokens(tokens);
+        }
+
+        {
+            search_query_token_t* tokens = search_query_parse_tokens(STRING_CONST("-will - space age<=10 or age>=20"));
+            REQUIRE_EQ(array_size(tokens), 5);
+            CHECK_EQ(tokens[0].type, SearchQueryTokenType::Not);
+            CHECK_EQ(tokens[0].children[0].type, SearchQueryTokenType::Word);
+            CHECK_EQ(tokens[1].type, SearchQueryTokenType::Not);
+            CHECK_EQ(tokens[1].children[0].type, SearchQueryTokenType::Word);
+            CHECK_EQ(tokens[2].type, SearchQueryTokenType::Property);
+            CHECK_EQ(tokens[3].type, SearchQueryTokenType::Or);
+            CHECK_EQ(tokens[4].type, SearchQueryTokenType::Property);
+            search_query_deallocate_tokens(tokens);
+        }
+
+        {
+            search_query_token_t* tokens = search_query_parse_tokens(STRING_CONST("         age<=10       or age>= 2"));
+            REQUIRE_EQ(array_size(tokens), 3);
+            CHECK_EQ(tokens[0].type, SearchQueryTokenType::Property);
+            CHECK_EQ(tokens[1].type, SearchQueryTokenType::Or);
+            CHECK_EQ(tokens[2].type, SearchQueryTokenType::Property);
+            search_query_deallocate_tokens(tokens);
+        }
+
+        {
+            search_query_token_t* tokens = search_query_parse_tokens(STRING_CONST("age>=20"));
+            REQUIRE_EQ(array_size(tokens), 1);
+            CHECK_EQ(tokens[0].type, SearchQueryTokenType::Property);
+            REQUIRE_EQ(array_size(tokens[0].children), 1);
+            CHECK_EQ(tokens[0].children[0].type, SearchQueryTokenType::Word);
+            CHECK_EQ(tokens[0].children[0].children, nullptr);
+            search_query_deallocate_tokens(tokens);
+        }
+
+        {
+            search_query_token_t* tokens = search_query_parse_tokens(STRING_CONST("  number>32   "));
+            REQUIRE_EQ(array_size(tokens), 1);
+            CHECK_EQ(tokens[0].type, SearchQueryTokenType::Property);
+            REQUIRE_EQ(array_size(tokens[0].children), 1);
+            CHECK_EQ(tokens[0].children[0].type, SearchQueryTokenType::Word);
+            CHECK_EQ(tokens[0].children[0].children, nullptr);
+            search_query_deallocate_tokens(tokens);
+        }
+    }
+
+    TEST_CASE("Compiler")
+    {
+        string_const_t query_string = CTEXT(R"(
+            number>32 and ("joe smith" or (bob and func(smith))) and 
+                not (joe and (bob (kim or -yolland)) suzy) -will age<=10 or age>=20
+        )");
+        
+        search_query_t* query = search_query_allocate(STRING_ARGS(query_string));
+        
+        search_query_deallocate(query);
     }
 }
 

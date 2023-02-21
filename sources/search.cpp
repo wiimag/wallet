@@ -5,6 +5,8 @@
 
 #include "search.h"
 
+#include "search_query.h"
+
 #include <framework/imgui.h>
 #include <framework/common.h>
 #include <framework/service.h>
@@ -130,6 +132,8 @@ struct search_database_t
     uint32_t                document_count{ 0 };
     string_table_t*         strings{ nullptr };
     search_database_flags_t options{ SearchDatabaseFlags::Default };
+
+    search_query_t**         queries{ nullptr };
 };
 
 //
@@ -352,30 +356,33 @@ search_database_t* search_database_allocate(search_database_flags_t flags /*= Se
 
 void search_database_deallocate(search_database_t*& database)
 {
-    if (database)
+    if (database == nullptr)
+        return;
+    for (unsigned i = 0, end = array_size(database->documents); i < end; ++i)
     {
-        for (unsigned i = 0, end = array_size(database->documents); i < end; ++i)
-        {
-            search_document_t& doc = database->documents[i];
-            string_deallocate(doc.name);
-            string_deallocate(doc.source);
-        }
-
-        for (unsigned i = 0, end = array_size(database->indexes); i < end; ++i)
-        {
-            search_index_t& index = database->indexes[i];
-            if (index.document_count > ARRAY_COUNT(index.docs))
-                array_deallocate(index.docs_list);
-        }
-
-        array_deallocate(database->indexes);
-        array_deallocate(database->documents);
-
-        string_table_deallocate(database->strings);
-    
-        MEM_DELETE(database);
-        database = nullptr;
+        search_document_t& doc = database->documents[i];
+        string_deallocate(doc.name);
+        string_deallocate(doc.source);
     }
+
+    for (unsigned i = 0, end = array_size(database->indexes); i < end; ++i)
+    {
+        search_index_t& index = database->indexes[i];
+        if (index.document_count > ARRAY_COUNT(index.docs))
+            array_deallocate(index.docs_list);
+    }
+
+    array_deallocate(database->indexes);
+    array_deallocate(database->documents);
+
+    string_table_deallocate(database->strings);
+
+    for (unsigned i = 0, end = array_size(database->queries); i < end; ++i)
+        search_query_deallocate(database->queries[i]);
+    array_deallocate(database->queries);
+    
+    MEM_DELETE(database);
+    database = nullptr;
 }
 
 search_document_handle_t search_database_add_document(search_database_t* db, const char* name, size_t name_length)
@@ -648,6 +655,24 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
     string_deallocate(doc->name);
     string_deallocate(doc->source);
     return document_removed;
+}
+
+search_query_handle_t search_database_query(search_database_t* db, const char* query_string, size_t query_string_length)
+{
+    FOUNDATION_ASSERT(db);
+
+    if (query_string == nullptr || query_string_length == 0)
+        return 0;
+
+    // Create query
+    search_query_t* query = search_query_allocate(query_string, query_string_length);
+    
+    //search_query_parse(&query);
+    //search_query_build(&query);
+
+    SHARED_WRITE_LOCK(db->mutex);
+    array_push_memcpy(db->queries, &query);
+    return (search_query_handle_t)array_size(db->queries) - 1;
 }
 
 //

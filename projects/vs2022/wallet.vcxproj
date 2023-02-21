@@ -113,6 +113,7 @@
     <ClCompile Include="..\..\sources\report_transactions.cpp" />
     <ClCompile Include="..\..\sources\report_expr.cpp" />
     <ClCompile Include="..\..\sources\search.cpp" />
+    <ClCompile Include="..\..\sources\search_query.cpp" />
     <ClCompile Include="..\..\sources\settings.cpp" />
     <ClCompile Include="..\..\sources\stock.cpp" />
     <ClCompile Include="..\..\sources\symbols.cpp" />
@@ -185,6 +186,7 @@
     <ClInclude Include="..\..\sources\realtime.h" />
     <ClInclude Include="..\..\sources\report.h" />
     <ClInclude Include="..\..\sources\search.h" />
+    <ClInclude Include="..\..\sources\search_query.h" />
     <ClInclude Include="..\..\sources\settings.h" />
     <ClInclude Include="..\..\sources\stock.h" />
     <ClInclude Include="..\..\sources\symbols.h" />
