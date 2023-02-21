@@ -2591,6 +2591,13 @@ string_t string_to_upper_utf8(char* buf, size_t capacity, const char* str, size_
     return result;
 }
 
+bool string_try_convert_number(const char* str, size_t length, double& out_value)
+{
+    char* end = (char*)str + length;
+    out_value = strtod(str, &end);
+    return end == str + length;
+}
+
 string_t string_remove_character(char* buf, size_t size, size_t capacity, char char_to_remove)
 {
     size_t i = 0;

@@ -20,16 +20,21 @@ constexpr double DNAN = __builtin_nan("0");
 #define ARRAY_COUNT(ARR) (sizeof(ARR) / sizeof(ARR[0]))
 
 #define DEFINE_ENUM_FLAGS(T) \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator~ (T a) { return static_cast<T>(~(unsigned int)a); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator== (const T a, const int b) { return (unsigned int)a == b; } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const T b) { return (unsigned int)a != 0 && (unsigned int)b != 0; } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const bool b) { return (unsigned int)a != 0 && b; } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator| (const T a, const T b) { return (T)((unsigned int)a | (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator& (const T a, const T b) { return (T)((unsigned int)a & (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator^ (const T a, const T b) { return (T)((unsigned int)a ^ (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator|= (T& a, const T b) { return (T&)((unsigned int&)a |= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator&= (T& a, const T b) { return (T&)((unsigned int&)a &= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator^= (T& a, const T b) { return (T&)((unsigned int&)a ^= (unsigned int)b); }
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator~ (T a) { return static_cast<T>(~(std::underlying_type_t<T>)a); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator!= (const T a, const std::underlying_type_t<T> b) { return (std::underlying_type_t<T>)a != b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator== (const T a, const std::underlying_type_t<T> b) { return (std::underlying_type_t<T>)a == b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const T b) { return (std::underlying_type_t<T>)a != 0 && (std::underlying_type_t<T>)b != 0; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const bool b) { return (std::underlying_type_t<T>)a != 0 && b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator| (const T a, const T b) { return (T)((std::underlying_type_t<T>)a | (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator& (const T a, const T b) { return (T)((std::underlying_type_t<T>)a & (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator^ (const T a, const T b) { return (T)((std::underlying_type_t<T>)a ^ (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator|= (T& a, const T b) { return (T&)((std::underlying_type_t<T>&)a |= (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator&= (T& a, const T b) { return (T&)((std::underlying_type_t<T>&)a &= (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator^= (T& a, const T b) { return (T&)((std::underlying_type_t<T>&)a ^= (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool test(const T a, const T b) { return (a & b) == b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool any(const T a, const T b) { return (a & b) != 0; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool none(const T a, const T b) { return (a & b) == 0; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool one(const T a, const T b) { const auto bits = ((std::underlying_type_t<T>)a & (std::underlying_type_t<T>)b); return bits && !(bits & (bits-1)); }
 
 template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
 template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
@@ -80,6 +85,7 @@ string_t string_to_upper_ascii(char* buf, size_t capacity, const char* str, size
 string_t string_to_lower_utf8(char* buf, size_t capacity, const char* str, size_t length);
 string_t string_to_upper_utf8(char* buf, size_t capacity, const char* str, size_t length);
 string_t string_remove_character(char* buf, size_t size, size_t capacity, char char_to_remove);
+bool string_try_convert_number(const char* str, size_t length, double& out_value);
 
 void string_deallocate(string_t& str);
 
@@ -288,8 +294,8 @@ T array_sort_by(T arr, const function<int(const typename std::remove_pointer<T>:
     return arr;
 }
 
-template<typename T, typename U>
-bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& compare_equal, const U& v)
+template<typename T, typename U, typename Compare>
+bool array_contains(const T* arr, const U& v, const Compare& compare_equal)
 {
     for (unsigned i = 0, end = array_size(arr); i < end; ++i)
     {
@@ -298,6 +304,12 @@ bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& 
     }
 
     return false;
+}
+
+template<typename T, typename U>
+bool array_contains(const T* arr, const U& v)
+{
+    return array_contains(arr, v, [](const T& a, const U& b) { return a == b; });
 }
 
 template<typename T, typename V>
@@ -678,6 +690,12 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t to_uint(int32_t v
 {
     FOUNDATION_ASSERT_MSGFORMAT(v >= 0, "%d<0", v);
     return (uint32_t)v;
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr size_t to_size(int64_t v)
+{
+    FOUNDATION_ASSERT_MSGFORMAT(v >= 0, "%lld<0", v);
+    return (size_t)v;
 }
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t to_uint(size_t v)

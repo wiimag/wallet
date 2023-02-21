@@ -504,49 +504,118 @@ TEST_SUITE("Search")
     
 }
 
+struct SearchQueryFixture
+{
+    search_database_t* db;
+
+    search_document_handle_t joe;
+    search_document_handle_t bob;
+    search_document_handle_t will;
+    search_document_handle_t mel;
+    search_document_handle_t mag;
+    search_document_handle_t yolland;
+
+    search_query_handle_t query{ 0 };
+
+    SearchQueryFixture()
+    {
+        db = search_database_allocate();
+
+        joe = search_database_add_document(db, STRING_CONST("Joe"));            // 1 <- Expected document handle index values
+        bob = search_database_add_document(db, STRING_CONST("Bob"));            // 2
+        will = search_database_add_document(db, STRING_CONST("Will"));          // 3
+        mel = search_database_add_document(db, STRING_CONST("Mel"));            // 4
+        mag = search_database_add_document(db, STRING_CONST("Mag"));            // 5
+        yolland = search_database_add_document(db, STRING_CONST("Yolland"));    // 6
+
+        search_database_index_text(db, joe, STRING_CONST("joe smith"));
+        search_database_index_text(db, bob, STRING_CONST("bob smith"));
+        search_database_index_text(db, will, STRING_CONST("will schmidt"));
+        search_database_index_text(db, mel, STRING_CONST("mel cadotte"));
+        search_database_index_text(db, mag, STRING_CONST("mag cadotte schmidt"));
+        search_database_index_text(db, yolland, STRING_CONST("yolland smitton"));
+        
+        search_database_index_property(db, joe, STRING_CONST("age"), 40);
+        search_database_index_property(db, bob, STRING_CONST("age"), 55);
+        search_database_index_property(db, will, STRING_CONST("age"), 14);
+        search_database_index_property(db, mel, STRING_CONST("age"), 39);
+        search_database_index_property(db, mag, STRING_CONST("age"), 10);
+        search_database_index_property(db, yolland, STRING_CONST("age"), 101);
+        
+        search_database_index_property(db, joe, STRING_CONST("height"), 1.8f);
+        search_database_index_property(db, bob, STRING_CONST("height"), 1.6f);
+        search_database_index_property(db, will, STRING_CONST("height"), 1.79f);
+        search_database_index_property(db, mel, STRING_CONST("height"), 1.7f);
+        search_database_index_property(db, mag, STRING_CONST("height"), 1.6f);
+        search_database_index_property(db, yolland, STRING_CONST("height"), 1.5f);
+        
+        search_database_index_property(db, joe, STRING_CONST("weight"), 80.0f);
+        search_database_index_property(db, bob, STRING_CONST("weight"), 90.0f);
+        search_database_index_property(db, will, STRING_CONST("weight"), 70.0f);
+        search_database_index_property(db, mel, STRING_CONST("weight"), 60.0f);
+        search_database_index_property(db, mag, STRING_CONST("weight"), 40.0f);
+        search_database_index_property(db, yolland, STRING_CONST("weight"), 40.0f);
+
+        search_database_index_property(db, joe, STRING_CONST("job"), STRING_CONST("retired"));
+        search_database_index_property(db, bob, STRING_CONST("job"), STRING_CONST("manager"));
+        search_database_index_property(db, will, STRING_CONST("job"), STRING_CONST("student"));
+        search_database_index_property(db, mel, STRING_CONST("job"), STRING_CONST("hr"));
+        search_database_index_property(db, mag, STRING_CONST("job"), STRING_CONST("student"));
+        search_database_index_property(db, yolland, STRING_CONST("job"), STRING_CONST("retired"));
+
+        search_database_index_property(db, joe, STRING_CONST("name"), STRING_CONST("Jonathan"));
+        search_database_index_property(db, bob, STRING_CONST("name"), STRING_CONST("Robert"));
+        search_database_index_property(db, will, STRING_CONST("name"), STRING_CONST("William"));
+        search_database_index_property(db, mel, STRING_CONST("name"), STRING_CONST("Mélanie"));
+        search_database_index_property(db, mag, STRING_CONST("name"), STRING_CONST("Magaly"));
+        search_database_index_property(db, yolland, STRING_CONST("name"), STRING_CONST("Yolland"));
+    }
+
+    const search_result_t* evaluate_query_sync(string_const_t query_string)
+    {
+        CHECK_MESSAGE(query == 0, "Query already in progress");
+
+        log_infof(0, STRING_CONST("Query: %.*s"), STRING_FORMAT(query_string));
+
+        REQUIRE_NOTHROW(query = search_database_query(db, STRING_ARGS(query_string)));
+        REQUIRE_NE(query, SEARCH_QUERY_INVALID_ID);
+        while (!search_database_query_is_completed(db, query))
+            dispatcher_wait_for_wakeup_main_thread(100);
+
+        const search_result_t* results = search_database_query_results(db, query);
+        foreach(r, results)
+        {
+            string_const_t document_name = search_database_document_name(db, (search_document_handle_t)r->id);
+            log_infof(0, STRING_CONST("Result: %.*s (%" PRIhash ")"), STRING_FORMAT(document_name), r->id);
+        }
+
+        return results;
+    }
+
+    ~SearchQueryFixture()
+    {
+        if (search_database_query_dispose(db, query))
+            query = 0;
+        search_database_deallocate(db);
+    }
+};
+
 TEST_SUITE("SearchQuery")
 {
     TEST_CASE("Parser")
     {
         /*
-     * Query examples:
-     *      number>32 and joe
-     *      number>32 and (joe or bob)
-     *      number>32 and (joe or bob) and not (joe and bob)
-     *      "number> 32" -joe
-     *      "single word"
-     *      name=sam
-     *      name=sam and age>32
-     *      last_name!=schmidt
-     *      name=sam and age>32 and (last_name!=schmidt or last_name!=smith)
-     */
-
-     // Example: number>32 and (joe or (bob and func(smith))) and not (joe and (bob (kim or -yolland)) suzy) -will age<=10 or age>=20
-     // 
-     //          number>32
-     //   AND    (joe or (bob and smith)) and not (joe and (bob (kim or -yolland)) suzy) -will age<=10 or age>=20
-     //              (joe or (bob and smith))
-     //                  joe
-     //    OR            (bob and smith)
-     //                      bob
-     //                      smith
-     //   AND         not (joe and (bob (kim or -yolland)) suzy) -will age<=10 or age>=20
-     //                  not (joe and (bob (kim or -yolland)) suzy)
-     //                      (joe and (bob (kim or -yolland)) suzy)
-     //                          joe
-     //                          (bob (kim or -yolland)) suzy
-     //                              bob (kim or -yolland)
-     //                                  bob
-     //                                  kim or -yolland
-     //                                      kim
-     //                                      -yolland
-     //                              suzy
-     //                  -will age<=10 or age>=20
-     //                      -will
-     //                          will
-     //                      age<=10 or age>= 20
-     //                          age<=10
-     //                          age>=20
+         * Query examples:
+         *      number>32 and joe
+         *      number>32 and (joe or bob)
+         *      number>32 and (joe or bob) and not (joe and bob)
+         *      "number> 32" -joe
+         *      "single word"
+         *      name=sam
+         *      name=sam and age>32
+         *      last_name!=schmidt
+         *      name=sam and age>32 and (last_name!=schmidt or last_name!=smith)
+         */
 
         {
             search_query_token_t* tokens = search_query_parse_tokens(STRING_CONST("\"number > 32\" -(-joe -last!=smith)"));
@@ -632,16 +701,198 @@ TEST_SUITE("SearchQuery")
         }
     }
 
-    TEST_CASE("Compiler")
+    TEST_CASE("Evaluate")
     {
         string_const_t query_string = CTEXT(R"(
             number>32 and ("joe smith" or (bob and func(smith))) and 
                 not (joe and (bob (kim or -yolland)) suzy) -will age<=10 or age>=20
         )");
-        
+
         search_query_t* query = search_query_allocate(STRING_ARGS(query_string));
-        
+
+        search_query_evaluate(query, [](
+            string_const_t name,
+            string_const_t value,
+            search_query_eval_flags_t flags,
+            search_result_t* and_set,
+            void* user_data)
+            {
+                log_infof(0, STRING_CONST("Evaluating %28s -> Name: %-8.*s -> Value: %-10.*s -> AndSet: 0x%x (%u) -> Data: 0x%x"),
+                    search_query_eval_flags_to_string(flags), STRING_FORMAT(name), STRING_FORMAT(value),
+                    and_set, array_size(and_set), user_data);
+                return nullptr;
+            }, nullptr);
+
         search_query_deallocate(query);
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 1" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            smith
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 2);
+        CHECK(array_contains(results, joe));
+        CHECK(array_contains(results, bob));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 2" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            SMITH OR CADOTTE
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 4);
+        CHECK(array_contains(results, joe));
+        CHECK(array_contains(results, bob));
+        CHECK(array_contains(results, mel));
+        CHECK(array_contains(results, mag));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 3" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            schmidt and CADOTTE
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 1);
+        CHECK(array_contains(results, mag));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 4" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            (schmidt or CADOTTE) and (joe or will)
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 1);
+        CHECK(array_contains(results, will));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 5" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            smit or pascal
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 3);
+        CHECK(array_contains(results, joe));
+        CHECK(array_contains(results, bob));
+        CHECK(array_contains(results, yolland));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 6" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            (((smit) or (pascal)) or ((will)))
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 4);
+        CHECK(array_contains(results, joe));
+        CHECK(array_contains(results, bob));
+        CHECK(array_contains(results, will));
+        CHECK(array_contains(results, yolland));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 7" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            ((schmidt) (cAdoTtE)) or (yoll smitt)
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 2);
+        CHECK(array_contains(results, mag));
+        CHECK(array_contains(results, yolland));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 8" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            cadotte -schmidt
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 1);
+        CHECK(array_contains(results, mel));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 9" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            -cadotte or -schmidt
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 5);
+        CHECK_FALSE(array_contains(results, mag));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 10" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            -cadotte AND -"schmidt"
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 3);
+        CHECK(array_contains(results, joe));
+        CHECK(array_contains(results, bob));
+        CHECK(array_contains(results, yolland));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 11" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            age=40 or age:40
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 1);
+        CHECK(array_contains(results, joe));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 12" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            -age=40
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 5);
+        CHECK_FALSE(array_contains(results, joe));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 13" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            age<40
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 3);
+        CHECK(array_contains(results, mag));
+        CHECK(array_contains(results, mel));
+        CHECK(array_contains(results, will));
+    }
+
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 14" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            age<40 and age>=14
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 2);
+        CHECK(array_contains(results, mel));
+        CHECK(array_contains(results, will));
     }
 }
 

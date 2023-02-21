@@ -5,15 +5,19 @@
 
 #pragma once
 
+#include "search_query.h"
+
 #include <framework/common.h>
 
 #include <foundation/hash.h>
 
 struct search_index_t;
 struct search_database_t;
-typedef uint32_t search_document_handle_t;
-typedef uint32_t search_query_handle_t;
 
+typedef uint32_t search_query_handle_t;
+typedef uint32_t search_document_handle_t;
+
+#define SEARCH_QUERY_INVALID_ID (0)
 #define SEARCH_DOCUMENT_INVALID_ID (0)
 
 typedef enum class SearchDatabaseFlags : uint32_t {
@@ -28,6 +32,11 @@ typedef enum class SearchDatabaseFlags : uint32_t {
 
 } search_database_flags_t;
 DEFINE_ENUM_FLAGS(SearchDatabaseFlags);
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator==(const search_result_t& result, const search_document_handle_t& id)
+{
+    return result.id == id;
+}
 
 search_database_t* search_database_allocate(search_database_flags_t flags = SearchDatabaseFlags::None);
 
@@ -67,6 +76,8 @@ uint32_t search_database_index_count(search_database_t* database);
 
 uint32_t search_database_document_count(search_database_t* database);
 
+string_const_t search_database_document_name(search_database_t* database, search_document_handle_t document);
+
 uint32_t search_database_word_document_count(
     search_database_t* database, 
     const char* word, size_t word_length, 
@@ -81,3 +92,9 @@ bool search_database_is_document_valid(search_database_t* database, search_docum
 bool search_database_contains_word(search_database_t* database, const char* word, size_t word_length);
 
 search_query_handle_t search_database_query(search_database_t* database, const char* query, size_t query_length);
+
+bool search_database_query_is_completed(search_database_t* database, search_query_handle_t query);
+
+const search_result_t* search_database_query_results(search_database_t* database, search_query_handle_t query);
+
+bool search_database_query_dispose(search_database_t* database, search_query_handle_t query);

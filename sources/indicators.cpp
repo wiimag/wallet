@@ -549,7 +549,7 @@ FOUNDATION_STATIC void indicators_load_settings()
         {
             auto& c = COUNTRIES[i];
             c.key = string_hash(STRING_ARGS(c.code));
-            if (array_contains<string_t, string_const_t>(codes, L2(string_equal(_1, _2)), c.code))
+            if (array_contains(codes, c.code, LC2(string_equal(_1, _2))))
                 c.selected = true;
         }
         string_array_deallocate(codes);
@@ -562,7 +562,7 @@ FOUNDATION_STATIC void indicators_load_settings()
         {
             auto& c = MACRO_INDICATORS[i];
             c.key = string_hash(STRING_ARGS(c.name));
-            if (array_contains<string_t, string_const_t>(codes, L2(string_equal(_1, _2)), c.code))
+            if (array_contains(codes, c.code, LC2(string_equal(_1, _2))))
                 c.selected = true;
         }
         string_array_deallocate(codes);

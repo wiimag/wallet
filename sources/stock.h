@@ -34,7 +34,6 @@ typedef enum class FetchLevel /*: unsigned int*/ {
 } fetch_level_t;
 DEFINE_ENUM_FLAGS(FetchLevel);
 
-
 FOUNDATION_ALIGNED_STRUCT(stock_realtime_record_t, 8)
 {
     time_t timestamp;

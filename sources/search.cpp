@@ -33,6 +33,7 @@ typedef enum class SearchIndexingFlags
     RemovePonctuations  = 1 << 1,
     Lowercase           = 1 << 2,
     Variations          = 1 << 3,
+    Exclude             = 1 << 4,
 
     //Default = TrimWord | Lowercase
     
@@ -343,6 +344,9 @@ search_database_t* search_database_allocate(search_database_flags_t flags /*= Se
         db->options = flags;
 
     db->strings = string_table_allocate(1024, 10);
+
+    // Add a dummy query so the handle indexes start at 1
+    array_push(db->queries, nullptr);
     
     // Add first "special" root document
     search_document_t root{};
@@ -477,6 +481,14 @@ uint32_t search_database_document_count(search_database_t* database)
     return database->document_count;
 }
 
+string_const_t search_database_document_name(search_database_t* database, search_document_handle_t document)
+{
+    SHARED_READ_LOCK(database->mutex);
+    if (!search_database_is_document_valid(database, document))
+        return string_null();
+    return string_to_const(database->documents[document].name);
+}
+
 uint32_t search_database_word_document_count(search_database_t* db, const char* _word, size_t _word_length, bool include_variations /*= false*/)
 {    
     string_const_t word = search_database_format_word(_word, _word_length, search_database_case_indexing_flag(db) | SearchIndexingFlags::TrimWord);
@@ -580,12 +592,322 @@ bool search_database_is_document_valid(search_database_t* database, search_docum
 
     if (document == 0)
         return false; // User cannot access root document
-    
+
     if (document >= array_size(database->documents))
         return false;
-        
+
     SHARED_READ_LOCK(database->mutex);
     return (database->documents[document].type == SearchDocumentType::Default);
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL search_document_handle_t search_database_get_indexed_document(const search_index_t& idx, uint32_t element_at)
+{
+    FOUNDATION_ASSERT(idx.document_count > 0 && element_at < idx.document_count);
+        
+    if (idx.document_count <= ARRAY_COUNT(idx.docs))
+        return idx.docs[element_at];
+
+    return idx.docs_list[element_at];
+}
+
+FOUNDATION_STATIC search_result_t* search_database_get_index_document_results(search_database_t* db, const search_index_t& idx, const search_result_t* and_set, search_result_t*& results)
+{
+    search_result_t entry;
+    for (uint32_t i = 0; i < idx.document_count; ++i)
+    {
+        entry.id = search_database_get_indexed_document(idx, i);
+
+        if (and_set == nullptr || array_contains(and_set, entry.id))
+        {
+            entry.score = idx.key.score;
+            array_push_memcpy(results, &entry);
+        }
+    }
+
+    return results;
+}
+
+FOUNDATION_STATIC search_result_t* search_database_get_key_document_results(search_database_t* db, const search_index_key_t& key, const search_result_t* and_set, search_result_t*& results)
+{
+    int index = search_database_find_index(db, key);
+    if (index < 0)
+        return nullptr;
+     
+    const search_index_t& idx = db->indexes[index];
+    return search_database_get_index_document_results(db, idx, and_set, results);
+}
+
+FOUNDATION_STATIC search_result_t* search_database_exclude_documents(search_database_t* db, search_result_t*& results)
+{
+    // This operation is costly as we have to execute the query and then iterate over ALL the documents to exclude those found
+    search_result_t* included_set = nullptr;
+    const search_result_t* excluded_set = results;
+
+    foreach(d, db->documents)
+    {
+        if (d->type != SearchDocumentType::Default)
+            continue;
+
+        const auto docid = (search_document_handle_t)i;
+        if (array_contains(excluded_set, docid))
+            continue;
+
+        search_result_t entry;
+        entry.id = docid;
+        entry.score = 0;
+        array_push_memcpy(included_set, &entry);
+    }
+
+    array_deallocate(excluded_set);
+    results = included_set;
+    return included_set;
+}
+
+FOUNDATION_STATIC search_result_t* search_database_query_property_number(
+    search_database_t* db, 
+    search_query_eval_flags_t eval_flags, const search_index_key_t& key, 
+    search_result_t* and_set, search_result_t*& results)
+{
+    // We expect the db to already be locked
+    FOUNDATION_ASSERT(db->mutex.locked());
+    
+    // Find the range of numbers to match
+    int start = search_database_find_index(db, key);
+    if (start < 0)
+        start = ~start;
+
+    int end = start;
+    
+    // Rewind to first index with same crc
+    while (start > 0 && db->indexes[start - 1].key.crc == key.crc)
+        --start;
+    FOUNDATION_ASSERT(db->indexes[start].key.type == key.type && db->indexes[start].key.crc == key.crc);
+
+    // Forward to the last index with same crc
+    const int index_count = array_size(db->indexes);
+    while (end < index_count - 1 && db->indexes[end + 1].key.crc == key.crc)
+        ++end;
+    FOUNDATION_ASSERT(db->indexes[end].key.type == key.type && db->indexes[end].key.crc == key.crc);
+
+    if (any(eval_flags, SearchQueryEvalFlags::OpLess | SearchQueryEvalFlags::OpLessEq))
+    {
+        for (; start <= end; ++start)
+        {
+            const search_index_t& idx = db->indexes[start];
+            if (idx.key.number >= key.number)
+                break;
+            search_database_get_index_document_results(db, idx, and_set, results);
+        }
+        
+        if (test(eval_flags, SearchQueryEvalFlags::OpLessEq))
+        {
+            for (; start <= end; ++start)
+            {
+                const search_index_t& idx = db->indexes[start];
+                if (idx.key.number > key.number)
+                    break;
+                search_database_get_index_document_results(db, idx, and_set, results);
+            }
+        }
+    }
+    else if (any(eval_flags, SearchQueryEvalFlags::OpGreater | SearchQueryEvalFlags::OpGreaterEq))
+    {
+        for (; end >= start; --end)
+        {
+            const search_index_t& idx = db->indexes[end];
+            if (idx.key.number <= key.number)
+                break;
+            search_database_get_index_document_results(db, idx, and_set, results);
+        }
+
+        if (test(eval_flags, SearchQueryEvalFlags::OpGreaterEq))
+        {
+            for (; end >= start; --end)
+            {
+                const search_index_t& idx = db->indexes[end];
+                if (idx.key.number < key.number)
+                    break;
+                search_database_get_index_document_results(db, idx, and_set, results);
+            }
+        }
+    }
+    else
+    {
+        FOUNDATION_ASSERT_FAIL("Invalid number query operator");
+    }    
+
+    return results;
+}
+
+FOUNDATION_STATIC search_result_t* search_database_query_property(
+    search_database_t* db,
+    string_const_t name,
+    string_const_t value,
+    search_result_t* and_set,
+    search_query_eval_flags_t eval_flags,
+    search_indexing_flags_t indexing_flags)
+{
+    if (value.length < 2)
+        return nullptr;
+
+    search_result_t* results = nullptr;
+    search_index_key_t key{ SearchIndexType::Property };
+
+    SHARED_READ_LOCK(db->mutex);
+
+    string_const_t property_name = search_database_format_word(STRING_ARGS(name), indexing_flags);
+    key.crc = string_table_find_symbol(db->strings, STRING_ARGS(property_name));
+    if (key.crc <= 0)
+        return nullptr;
+        
+    string_const_t property_value = search_database_format_word(STRING_ARGS(value), indexing_flags);
+    if (string_try_convert_number(STRING_ARGS(property_value), key.number))
+    {
+        key.type = SearchIndexType::Number;
+
+        if (none(eval_flags, SearchQueryEvalFlags::OpEqual | SearchQueryEvalFlags::OpContains))
+        {
+            return search_database_query_property_number(db, eval_flags, key, and_set, results);
+        }
+    }
+    else
+    {
+        key.hash = string_table_find_symbol(db->strings, STRING_ARGS(property_value));
+        if (key.hash <= 0)
+            return nullptr;
+    }     
+        
+    return search_database_get_key_document_results(db, key, and_set, results);
+}
+
+FOUNDATION_STATIC search_result_t* search_database_query_word(
+    search_database_t* db, 
+    string_const_t value, 
+    search_result_t* and_set,
+    search_query_eval_flags_t eval_flags, 
+    search_indexing_flags_t indexing_flags)
+{    
+    if (value.length < 2)
+        return nullptr;
+
+    search_result_t* results = nullptr;
+    string_const_t word = search_database_format_word(STRING_ARGS(value), indexing_flags);
+
+    search_index_key_t key{ SearchIndexType::Word };
+    key.hash = string_hash(STRING_ARGS(word));
+
+    SHARED_READ_LOCK(db->mutex);
+
+    key.crc = string_table_find_symbol(db->strings, STRING_ARGS(word));
+    if (key.crc <= 0)
+        return nullptr;
+
+    search_database_get_key_document_results(db, key, and_set, results);
+
+    if (any(indexing_flags, SearchIndexingFlags::Variations))
+    {
+        key.type = SearchIndexType::Variation;
+        search_database_get_key_document_results(db, key, and_set, results);
+    }
+    
+    return results;
+}
+
+FOUNDATION_STATIC search_result_t* search_database_handle_query_evaluation(
+    string_const_t name,
+    string_const_t value,
+    search_query_eval_flags_t eval_flags,
+    search_result_t* and_set,
+    void* user_data)
+{
+    search_database_t* db = (search_database_t*)user_data;
+    FOUNDATION_ASSERT(db);
+    
+    SearchIndexingFlags indexing_flags = search_database_case_indexing_flag(db);
+    if (any(eval_flags, SearchQueryEvalFlags::Exclude))
+        indexing_flags |= SearchIndexingFlags::Exclude;
+        
+    if (!any(db->options, SearchDatabaseFlags::DoNotIndexVariations))
+        indexing_flags |= SearchIndexingFlags::Variations;
+    
+    search_result_t* results = nullptr;
+    if (any(eval_flags, SearchQueryEvalFlags::Word))
+    {
+        results = search_database_query_word(db, value, and_set, eval_flags, indexing_flags);
+    }
+    else if (any(eval_flags, SearchQueryEvalFlags::Property))
+    {
+        results = search_database_query_property(db, name, value, and_set, eval_flags, indexing_flags);
+    }
+    else if (any(eval_flags, SearchQueryEvalFlags::Function))
+    {
+        FOUNDATION_ASSERT_FAIL("Not implemented");
+    }
+    else
+    {
+        FOUNDATION_ASSERT_FAIL("Not implemented");
+    }
+
+    if (any(eval_flags, SearchQueryEvalFlags::Exclude))
+        return search_database_exclude_documents(db, results);
+
+    return results;
+}
+
+search_query_handle_t search_database_query(search_database_t* db, const char* query_string, size_t query_string_length)
+{
+    FOUNDATION_ASSERT(db);
+
+    if (query_string == nullptr || query_string_length == 0)
+        return SEARCH_QUERY_INVALID_ID;
+
+    // Create query
+    search_query_t* query = search_query_allocate(query_string, query_string_length);
+    FOUNDATION_ASSERT(query);
+    
+    // TODO: Use the job system to spawn a new query job.
+    //       The job should evaluate the query and store the results in the query object.
+    //       The query object should be stored in the database and the handle returned.
+    //       The query object should be marked as completed when the job is done.
+    //       The query object should be marked as cancelled if the database is destroyed.
+    //       The query object should be marked as cancelled if the query is cancelled.
+    //       The query object should be marked as cancelled if the query is destroyed.
+    //       The query object should be marked as cancelled if the query is replaced.
+    //       The query object should be marked as cancelled if the query is replaced by another query.
+    query->results = search_query_evaluate(query, search_database_handle_query_evaluation, db);
+    query->completed = true;
+
+    SHARED_WRITE_LOCK(db->mutex);
+    array_push(db->queries, query);
+    return (search_query_handle_t)array_size(db->queries) - 1;
+}
+
+bool search_database_query_is_completed(search_database_t* database, search_query_handle_t query)
+{
+    FOUNDATION_ASSERT(query > 0);
+    if (query == 0 || query >= array_size(database->queries))
+        return false;
+    SHARED_READ_LOCK(database->mutex);
+    return database->queries[query]->completed;
+}
+
+const search_result_t* search_database_query_results(search_database_t* database, search_query_handle_t query)
+{
+    FOUNDATION_ASSERT(query > 0);
+    if (query == 0 || query >= array_size(database->queries))
+        return nullptr;
+    SHARED_READ_LOCK(database->mutex);
+    return database->queries[query]->results;
+}
+
+bool search_database_query_dispose(search_database_t* database, search_query_handle_t query)
+{
+    FOUNDATION_ASSERT(query > 0);
+    if (query >= array_size(database->queries))
+        return false;
+    SHARED_WRITE_LOCK(database->mutex);
+    search_query_deallocate(database->queries[query]);
+    return database->queries[query] == nullptr;
 }
 
 bool search_database_remove_document(search_database_t* db, search_document_handle_t document)
@@ -595,12 +917,12 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
     FOUNDATION_ASSERT(document != 0);
 
     SHARED_WRITE_LOCK(db->mutex);
-    
+
     bool document_removed = false;
     search_document_t* doc = &db->documents[document];
     if (doc->type == SearchDocumentType::Removed)
         return false;
-    
+
     for (unsigned i = 0, end = array_size(db->indexes); i < end && !document_removed; ++i)
     {
         search_index_t& index = db->indexes[i];
@@ -655,24 +977,6 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
     string_deallocate(doc->name);
     string_deallocate(doc->source);
     return document_removed;
-}
-
-search_query_handle_t search_database_query(search_database_t* db, const char* query_string, size_t query_string_length)
-{
-    FOUNDATION_ASSERT(db);
-
-    if (query_string == nullptr || query_string_length == 0)
-        return 0;
-
-    // Create query
-    search_query_t* query = search_query_allocate(query_string, query_string_length);
-    
-    //search_query_parse(&query);
-    //search_query_build(&query);
-
-    SHARED_WRITE_LOCK(db->mutex);
-    array_push_memcpy(db->queries, &query);
-    return (search_query_handle_t)array_size(db->queries) - 1;
 }
 
 //
