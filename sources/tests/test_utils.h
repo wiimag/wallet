@@ -12,8 +12,7 @@
 #include <framework/config.h>
 #include <framework/common.h>
 #include <framework/dispatcher.h>
-
-#include <foundation/string.h>
+#include <framework/string.h>
 
 #if BUILD_DEVELOPMENT
 

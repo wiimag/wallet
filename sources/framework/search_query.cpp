@@ -11,6 +11,7 @@
 #include "search_query.h"
 
 #include <framework/common.h>
+#include <framework/string.h>
 
 #include <foundation/array.h>
 #include <foundation/memory.h>

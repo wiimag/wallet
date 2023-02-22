@@ -12,6 +12,7 @@
 #include <framework/common.h>
 #include <framework/generics.h>
 #include <framework/math.h>
+#include <framework/string.h>
 
 #include <foundation/random.h>
  

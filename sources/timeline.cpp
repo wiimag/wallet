@@ -14,6 +14,7 @@
 #include <framework/common.h>
 #include <framework/service.h>
 #include <framework/dispatcher.h>
+#include <framework/string.h>
 
 #define HASH_TIMELINE static_hash_string("timeline", 8, 0x8982c42357327efeULL)
 

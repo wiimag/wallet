@@ -27,6 +27,7 @@
 #include <framework/expr.h>
 #include <framework/database.h>
 #include <framework/console.h>
+#include <framework/string.h>
  
 #include <foundation/uuid.h>
 #include <foundation/path.h>

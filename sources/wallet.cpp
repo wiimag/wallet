@@ -12,7 +12,8 @@
 #include <framework/table.h>
 #include <framework/common.h>
 #include <framework/math.h>
-// 
+#include <framework/string.h>
+ 
 #include <foundation/hash.h>
 #include <foundation/array.h>
 #include <foundation/uuid.h>

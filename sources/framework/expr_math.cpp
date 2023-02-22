@@ -5,10 +5,10 @@
 
 #include "expr.h"
 
-#include "math.h"
+#include <framework/math.h>
+#include <framework/string.h>
 
 #include <foundation/array.h>
-#include <foundation/string.h>
 
 typedef enum VecMatType : uint32_t {
     VECMAT_NIL = 0,

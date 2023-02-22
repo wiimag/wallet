@@ -5,978 +5,201 @@
 
 #include "search.h"
 
-#include "search_query.h"
+#include "eod.h"
 
 #include <framework/imgui.h>
+#include <framework/string.h>
 #include <framework/common.h>
+#include <framework/session.h>
 #include <framework/service.h>
 #include <framework/database.h>
 #include <framework/dispatcher.h>
 #include <framework/string_table.h>
+#include <framework/search_query.h>
+#include <framework/search_database.h>
+#include <framework/profiler.h>
+
+#include <foundation/stream.h>
 
 #define HASH_SEARCH static_hash_string("search", 6, 0xc9d4e54fbae76425ULL)
 
-typedef enum class SearchIndexType : uint32_t
-{
-    Undefined   = 0,
-    Word        = (1 << 0),
-    Variation   = (1 << 1),
-    Number      = (1 << 2),
-    Property    = (1 << 3)
-} search_index_type_t;
-DEFINE_ENUM_FLAGS(SearchIndexType);
-
-typedef enum class SearchIndexingFlags
-{
-    None                = 0,
-    TrimWord            = 1 << 0,
-    RemovePonctuations  = 1 << 1,
-    Lowercase           = 1 << 2,
-    Variations          = 1 << 3,
-    Exclude             = 1 << 4,
-
-    //Default = TrimWord | Lowercase
+static struct SEARCH_MODULE {
     
-} search_indexing_flags_t;
-DEFINE_ENUM_FLAGS(SearchIndexingFlags);
+    search_database_t* db{ nullptr };
+    dispatcher_thread_id indexing_thread{ 0 };
 
-typedef enum class SearchDocumentType
+} *_search;
+
+//
+// PRIVATE
+//
+
+FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, search_document_handle_t doc)
 {
-    Unused  = 0,
-    Default = 1 << 0,
-    Root    = 1 << 1,
-    Removed = 1 << 2,
+    search_database_t* db = _search->db;
 
-} search_document_type_t;
+    // Get description
+    string_const_t description = json["General"]["Description"].as_string();
+    if (!string_is_null(description))
+        search_database_index_text(db, doc, STRING_ARGS(description), false);
 
-FOUNDATION_ALIGNED_STRUCT(search_index_key_t, 8)
+    // Get industry
+    string_const_t industry = json["General"]["Industry"].as_string();
+    if (!string_is_null(industry))
+        search_database_index_text(db, doc, STRING_ARGS(industry), true);
+
+    // Get sector
+    string_const_t sector = json["General"]["Sector"].as_string();
+    if (!string_is_null(sector))
+        search_database_index_text(db, doc, STRING_ARGS(sector), true);
+
+    // Get GicSector
+    string_const_t gic_sector = json["General"]["GicSector"].as_string();
+    if (!string_is_null(gic_sector))
+        search_database_index_text(db, doc, STRING_ARGS(gic_sector), true);
+
+    // Get GicGroup
+    string_const_t gic_group = json["General"]["GicGroup"].as_string();
+    if (!string_is_null(gic_group))
+        search_database_index_text(db, doc, STRING_ARGS(gic_group), true);
+
+    // Get GicIndustry
+    string_const_t gic_industry = json["General"]["GicIndustry"].as_string();
+    if (!string_is_null(gic_industry))
+        search_database_index_text(db, doc, STRING_ARGS(gic_industry), true);
+
+    // Get GicSubIndustry
+    string_const_t gic_sub_industry = json["General"]["GicSubIndustry"].as_string();
+    if (!string_is_null(gic_sub_industry))
+        search_database_index_text(db, doc, STRING_ARGS(gic_sub_industry), true);
+
+    // Get HomeCategory
+    string_const_t home_category = json["General"]["HomeCategory"].as_string();
+    if (!string_is_null(home_category))
+        search_database_index_text(db, doc, STRING_ARGS(home_category), true);
+        
+    // Get Address
+    string_const_t address = json["General"]["Address"].as_string();
+    if (!string_is_null(address))
+        search_database_index_text(db, doc, STRING_ARGS(address), true);
+
+    for (unsigned i = 0; i < json.token_count; ++i)
+    {
+        const json_token_t& token = json.tokens[i];
+
+        string_const_t id = json_token_identifier(json.buffer, &token);
+        if (id.length == 0 || id.length > 30)
+            continue;
+        if (token.type == JSON_STRING || token.type == JSON_PRIMITIVE)
+        {
+            double number = NAN;
+            string_const_t value = json_token_value(json.buffer, &token);
+            if (string_try_convert_number(STRING_ARGS(value), number))
+            {
+                search_database_index_property(db, doc, STRING_ARGS(id), number);
+            }
+            else if (value.length > 0 && value.length < 30)
+            {
+                if (string_equal_nocase(STRING_ARGS(id), STRING_CONST("name")))
+                    search_database_index_text(db, doc, STRING_ARGS(value), false);
+                else
+                    search_database_index_property(db, doc, STRING_ARGS(id), STRING_ARGS(value), false);
+            }
+        }
+    }
+}
+
+FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, bool* stop_indexing)
 {
-    /*! Type of the index entry */
-    search_index_type_t type{ SearchIndexType::Undefined };
+    search_database_t* db = _search->db;
 
-    /*! Value correction code (can be length, property key hash, etc.) */
-    hash_t crc{ 0 };
+    for(auto e : data)
+    {
+        if (thread_try_wait(1000))
+        {
+            *stop_indexing = true;
+            break;
+        }
+        
+        if (e.root == nullptr || e.root->type != JSON_OBJECT)
+            continue;
 
-    /*! Key of the index entry. This key is usually hashed from the value content. */
-    union {
-        hash_t hash{ 0 };
-        double number;
+        string_const_t code = e["Code"].as_string();
+        if (string_is_null(code))
+            continue;
+
+        string_const_t exchange = e["Exchange"].as_string();
+        if (string_is_null(exchange))
+            continue;
+
+        char symbol_buffer[32];
+        string_t symbol = string_format(STRING_CONST_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+
+        search_document_handle_t doc = search_database_get_or_add_document(db, STRING_ARGS(symbol));
+        if (doc == SEARCH_DOCUMENT_INVALID_ID)
+            continue;
+            
+        // Index basic information
+        string_const_t name = e["Name"].as_string();
+        if (!string_is_null(name))
+            search_database_index_text(db, doc, STRING_ARGS(name));
+
+        log_infof(HASH_SEARCH, STRING_CONST("Indexing %.*s (%.*s)"), STRING_FORMAT(symbol), STRING_FORMAT(name));
+
+        string_const_t country = e["Country"].as_string();
+        if (!string_is_null(country))
+            search_database_index_text(db, doc, STRING_ARGS(country), false);
+
+        string_const_t currency = e["Currency"].as_string();
+        if (!string_is_null(currency))
+            search_database_index_text(db, doc, STRING_ARGS(currency), false);
+            
+        string_const_t isin = e["Isin"].as_string();
+        if (!string_is_null(isin))
+            search_database_index_text(db, doc, STRING_ARGS(isin), false);
+            
+        string_const_t type = e["type"].as_string();
+        if (!string_is_null(type))
+            search_database_index_text(db, doc, STRING_ARGS(type), false);
+
+        // Fetch symbol fundamental data
+        if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON_CACHE, LC1(search_index_fundamental_data(_1, doc)), 90 * 24 * 60 * 60ULL))
+        {
+            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
+        }
+    }
+}
+
+FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
+{
+    MEMORY_TRACKER(HASH_SEARCH);
+
+    string_const_t stock_markets[] = {
+        CTEXT("TO"),
+        CTEXT("NEO"),
+        CTEXT("V"),
+        CTEXT("US")
     };
 
-    /*! Score of the entry (used for sorting results only) */
-    int32_t score{ 0 };
-};
-
-FOUNDATION_ALIGNED_STRUCT(search_index_t, 8)
-{
-    search_index_key_t  key;
+    bool stop_indexing = false;
     
-    uint32_t document_count{ 0 };
-    union {
-        search_document_handle_t  doc;
-        search_document_handle_t  docs[3];
-        search_document_handle_t* docs_list{ nullptr };
-    };
-};
-
-struct search_document_t
-{
-    search_document_type_t  type{ SearchDocumentType::Unused };
-    string_t                name{};
-    string_t                source{};
-};
-
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int search_index_key_compare(const search_index_key_t& s, const search_index_key_t& key)
-{
-    if (s.type < key.type)
-        return -1;
-        
-    if (s.type > key.type)
-        return 1;
-
-    if (s.crc < key.crc)
-        return -1;
-
-    if (s.crc > key.crc)
-        return 1;
-
-    if (s.type == SearchIndexType::Number)
+    // Fetch all titles from stock exchange market
+    for (auto market : stock_markets)
     {
-        if (s.number < key.number)
-            return -1;
-
-        if (s.number > key.number)
-            return 1;
-    }
-    else
-    {
-        if (s.hash < key.hash)
-            return -1;
-
-        if (s.hash > key.hash)
-            return 1;
-    }
-    
-    return 0;
-}
-
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int search_index_compare(const search_index_t& s, const search_index_key_t& key)
-{
-    return search_index_key_compare(s.key, key);
-}
-
-struct search_database_t
-{
-    shared_mutex            mutex;
-    search_index_t*         indexes{ nullptr };
-    search_document_t*      documents{ nullptr };
-    uint32_t                document_count{ 0 };
-    string_table_t*         strings{ nullptr };
-    search_database_flags_t options{ SearchDatabaseFlags::Default };
-
-    search_query_t**         queries{ nullptr };
-};
-
-//
-// # PRIVATE
-//
-
-FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, size_t& word_length, search_indexing_flags_t flags)
-{
-    FOUNDATION_ASSERT(word && word_length > 0);
-
-    if (flags == SearchIndexingFlags::None)
-        return string_const_t(word, word_length);
-
-    const bool trim_word = (flags & SearchIndexingFlags::TrimWord) != 0;
-    const bool lower_case_word = (flags & SearchIndexingFlags::Lowercase) != 0;
-    const bool remove_ponctuations = (flags & SearchIndexingFlags::RemovePonctuations) != 0;
-    
-    if (trim_word && word_length >= 4)
-    {
-        // By default ignore s or es word ending
-        if ((word[word_length - 1] == 's') || (word[word_length - 1] == 'S'))
-        {
-            --word_length;
-            if ((word[word_length - 1] == 'e') || (word[word_length - 1] == 'E'))
-                --word_length;
-        }
-    }
-
-    if (word_length >= 32)
-        log_warnf(HASH_SEARCH, WARNING_INVALID_VALUE, STRING_CONST("Word too long, truncating to 32 characters: %.*s"), (int)word_length, word);
-
-    static thread_local char word_lower_buffer[32];
-    string_t word_lower = lower_case_word ? 
-        string_to_lower_utf8(STRING_CONST_BUFFER(word_lower_buffer), word, word_length) :
-        string_copy(STRING_CONST_BUFFER(word_lower_buffer), word, word_length);
-
-    if (remove_ponctuations)
-    {
-        // Remove some chars
-        word_lower = string_remove_character(STRING_ARGS(word_lower), sizeof(word_lower_buffer), '.');
-        word_lower = string_remove_character(STRING_ARGS(word_lower), sizeof(word_lower_buffer), ',');
-        word_lower = string_remove_character(STRING_ARGS(word_lower), sizeof(word_lower_buffer), ';');
-    }
-
-    // Always trim whitespaces
-    return string_trim(string_to_const(word_lower), ' ');
-}
-
-FOUNDATION_STATIC int search_database_find_index(search_database_t* db, const search_index_key_t& key)
-{
-    return array_binary_search_compare(db->indexes, key, search_index_compare);
-}
-
-FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search_document_handle_t doc, const search_index_key_t& key)
-{
-    SHARED_WRITE_LOCK(db->mutex);
-    
-    int insert_at = search_database_find_index(db, key);
-    if (insert_at >= 0)
-    {
-        // Found existing index, add document to list
-        search_index_t& index = db->indexes[insert_at];
-
-        if (index.document_count == 0)
-        {
-            // This can happen if a document gets removed eventually.
-            index.doc = doc;
-            index.document_count = 1;
-        }
-        else if (index.document_count < ARRAY_COUNT(index.docs))
-        {
-            // Check if doc already exist
-            for (unsigned i = 0; i < index.document_count; ++i)
-            {
-                if (index.docs[i] == doc)
-                    return insert_at;
-            }
-            index.docs[index.document_count++] = doc;
-        }
-        else if (index.document_count == ARRAY_COUNT(index.docs))
-        {
-            // Check if doc already exist
-            for (unsigned i = 0; i < index.document_count; ++i)
-            {
-                if (index.docs[i] == doc)
-                    return insert_at;
-            }
+        if (stop_indexing)
+            break;
             
-            // Create new list and copy existing docs
-            search_document_handle_t* docs = nullptr;
-            for (int i = 0; i < ARRAY_COUNT(index.docs); ++i)
-                array_push(docs, index.docs[i]);
-            array_push(docs, doc);
-            index.docs_list = docs;
-            index.document_count = array_size(docs);
-        }
-        else
-        {
-            // Check if doc already exist
-            for (unsigned i = 0, end = array_size(index.docs_list); i < end; ++i)
-            {
-                if (index.docs_list[i] == doc)
-                    return insert_at;
-            }
+        if (thread_try_wait(1000))
+            break;
             
-            // Add to existing list
-            array_push(index.docs_list, doc);
-            index.document_count = array_size(index.docs_list);
-        }
-    }
-    else
-    {
-        // Create new index
-        insert_at = ~insert_at;
-        search_index_t index{ key };
-        index.docs[0] = doc;
-        for (int i = 1; i < ARRAY_COUNT(index.docs); ++i)
-            index.docs[i] = SEARCH_DOCUMENT_INVALID_ID;
-        index.document_count = 1;
-        array_insert_memcpy(db->indexes, insert_at, &index);
-    }
-
-    return insert_at;
-}
-
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_const_t search_database_clean_up_text(const char* text, size_t text_length)
-{
-    return string_trim(string_trim(string_trim(string_const(text, text_length), '"'), '\''), ' ');
-}
-
-FOUNDATION_STATIC hash_t search_database_string_to_symbol(search_database_t* db, const char* str, size_t length)
-{
-    hash_t symbol = string_table_to_symbol(db->strings, str, length);
-    while (symbol == STRING_TABLE_FULL)
-    {
-        const int grow_size = (int)math_align_up(db->strings->allocated_bytes * 1.5f, 8);
-        log_warnf(HASH_SEARCH, WARNING_PERFORMANCE, STRING_CONST("Search database string table full, growing to %d bytes"), grow_size);
-        string_table_grow(&db->strings, grow_size);
-        symbol = string_table_to_symbol(db->strings, str, length);
-    }
-
-    return symbol;
-}
-
-FOUNDATION_STATIC int32_t search_database_string_to_key(search_database_t* db, const char* str, size_t length, search_index_key_t& key)
-{
-    key.hash = string_hash(str, length);
-    key.crc = search_database_string_to_symbol(db, str, length);
-    return -to_int(length);
-}
-
-FOUNDATION_STATIC bool search_database_index_word(
-    search_database_t* db, search_document_handle_t doc, 
-    const char* _word, size_t _word_length, 
-    SearchIndexingFlags flags)
-{
-    if (!search_database_is_document_valid(db, doc))
-        return false;
-        
-    FOUNDATION_ASSERT(_word && _word_length > 0);
-    if (_word_length < 3)
-        return false;
-
-    string_const_t word = search_database_format_word(_word, _word_length, flags);
-
-    // Insert exact word
-    search_index_key_t key;
-    key.type = SearchIndexType::Word;
-    key.score = search_database_string_to_key(db, STRING_ARGS(word), key);
-    search_database_insert_index(db, doc, key);
-
-    const bool include_variations = (flags & SearchIndexingFlags::Variations) != SearchIndexingFlags::None;
-    if (!include_variations)
-        return true;
-
-    word.length--;
-    if (word.length < 3)
-        return true;
-
-    key.type = SearchIndexType::Variation;
-    for (; word.length > 2; --word.length, ++key.score)
-    {
-        // Skip spaces at the end
-        if (word.str[word.length - 1] == ' ')
-            continue;
-            
-        search_database_string_to_key(db, word.str, word.length, key);
-        search_database_insert_index(db, doc, key);
-    }
-
-    return true;
-}
-
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL SearchIndexingFlags search_database_case_indexing_flag(search_database_t* db)
-{
-    return (db->options & SearchDatabaseFlags::CaseSensitive) != 0 ? SearchIndexingFlags::None : SearchIndexingFlags::Lowercase;
-}
-
-//
-// # PUBLIC API
-//
-
-search_database_t* search_database_allocate(search_database_flags_t flags /*= SearchDatabaseFlags::None*/)
-{
-    search_database_t* db = MEM_NEW(HASH_SEARCH, search_database_t);
-    if (flags != SearchDatabaseFlags::None)
-        db->options = flags;
-
-    db->strings = string_table_allocate(1024, 10);
-
-    // Add a dummy query so the handle indexes start at 1
-    array_push(db->queries, nullptr);
-    
-    // Add first "special" root document
-    search_document_t root{};
-    root.type = SearchDocumentType::Root;
-    root.name = string_clone(STRING_CONST("<root>"));
-    root.source = {};
-    array_push_memcpy(db->documents, &root);
-    
-    return db;
-}
-
-void search_database_deallocate(search_database_t*& database)
-{
-    if (database == nullptr)
-        return;
-    for (unsigned i = 0, end = array_size(database->documents); i < end; ++i)
-    {
-        search_document_t& doc = database->documents[i];
-        string_deallocate(doc.name);
-        string_deallocate(doc.source);
-    }
-
-    for (unsigned i = 0, end = array_size(database->indexes); i < end; ++i)
-    {
-        search_index_t& index = database->indexes[i];
-        if (index.document_count > ARRAY_COUNT(index.docs))
-            array_deallocate(index.docs_list);
-    }
-
-    array_deallocate(database->indexes);
-    array_deallocate(database->documents);
-
-    string_table_deallocate(database->strings);
-
-    for (unsigned i = 0, end = array_size(database->queries); i < end; ++i)
-        search_query_deallocate(database->queries[i]);
-    array_deallocate(database->queries);
-    
-    MEM_DELETE(database);
-    database = nullptr;
-}
-
-search_document_handle_t search_database_add_document(search_database_t* db, const char* name, size_t name_length)
-{
-    FOUNDATION_ASSERT(db);
-    FOUNDATION_ASSERT(name && name_length > 0);
-    
-    search_document_t document{};
-    document.type = SearchDocumentType::Default;
-    document.name = string_clone(name, name_length);
-    document.source = {};
-
-    SHARED_WRITE_LOCK(db->mutex);
-    db->document_count++;
-    array_push_memcpy(db->documents, &document);
-    return array_size(db->documents) - 1;
-}
-
-bool search_database_index_text(search_database_t* db, search_document_handle_t doc, const char* text, size_t text_length, bool include_variations /*= true*/)
-{
-    if (!search_database_is_document_valid(db, doc))
-        return false;
-        
-    SearchIndexingFlags flags = search_database_case_indexing_flag(db) | SearchIndexingFlags::RemovePonctuations;
-    if (include_variations)
-        flags |= SearchIndexingFlags::Variations;
-    string_const_t expression, r = search_database_clean_up_text(text, text_length);
-    do
-    {
-        // Split words by space
-        string_split(STRING_ARGS(r), STRING_CONST(","), &expression, &r, false);
-        if (expression.length)
+        auto fetch_fn = [&stop_indexing](const json_object_t& data) { search_index_exchange_symbols(data, &stop_indexing); };        
+        if (!eod_fetch("exchange-symbol-list", market.str, FORMAT_JSON_CACHE, fetch_fn, 30 * 24 * 60 * 60ULL))
         {
-            // Split words by double colon
-            string_const_t kvp, rr = search_database_clean_up_text(STRING_ARGS(expression));
-            do
-            {
-                // Split words by :
-                string_split(STRING_ARGS(rr), STRING_CONST(":"), &kvp, &rr, false);
-                if (kvp.length)
-                {
-                    // Split words by space
-                    string_const_t word, rrr = search_database_clean_up_text(STRING_ARGS(kvp));
-                    do
-                    {
-                        // Split words by :
-                        string_split(STRING_ARGS(rrr), STRING_CONST(" "), &word, &rrr, false);
-                        if (word.length)
-                        {
-                            search_database_index_word(db, doc, STRING_ARGS(word), flags);
-                        }
-                    } while (rrr.length > 0);
-                }
-            } while (rr.length > 0);
+            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s symbols"), STRING_FORMAT(market));
         }
-    } while (r.length > 0);
-
-    return true;
-}
-
-bool search_database_index_exact_match(search_database_t* db, search_document_handle_t document, const char* _word, size_t _word_length, bool case_sensitive /*= false*/)
-{
-    FOUNDATION_ASSERT(_word && _word_length > 0);
-    
-    if (!search_database_is_document_valid(db, document))
-        return false;
-
-    const search_indexing_flags_t flags = case_sensitive ? SearchIndexingFlags::None : SearchIndexingFlags::Lowercase;
-    string_const_t word = search_database_format_word(_word, _word_length, flags);
-    
-    search_index_key_t key;
-    key.type = SearchIndexType::Word;
-    key.score = INT_MIN - search_database_string_to_key(db, STRING_ARGS(word), key);
-    return search_database_insert_index(db, document, key) >= 0;
-}
-
-bool search_database_index_word(search_database_t* db, search_document_handle_t doc, const char* word, size_t word_length, bool include_variations /*= true*/)
-{
-    search_indexing_flags_t flags = search_database_case_indexing_flag(db) | SearchIndexingFlags::TrimWord;
-    if (include_variations)
-        flags |= SearchIndexingFlags::Variations;
-    return search_database_index_word(db, doc, word, word_length, flags);
-}
-
-uint32_t search_database_index_count(search_database_t* database)
-{
-    return array_size(database->indexes);
-}
-
-uint32_t search_database_document_count(search_database_t* database)
-{
-    return database->document_count;
-}
-
-string_const_t search_database_document_name(search_database_t* database, search_document_handle_t document)
-{
-    SHARED_READ_LOCK(database->mutex);
-    if (!search_database_is_document_valid(database, document))
-        return string_null();
-    return string_to_const(database->documents[document].name);
-}
-
-uint32_t search_database_word_document_count(search_database_t* db, const char* _word, size_t _word_length, bool include_variations /*= false*/)
-{    
-    string_const_t word = search_database_format_word(_word, _word_length, search_database_case_indexing_flag(db) | SearchIndexingFlags::TrimWord);
-    search_index_key_t key{ SearchIndexType::Word };
-    search_database_string_to_key(db, STRING_ARGS(word), key);
-
-    int count = 0;
-    SHARED_READ_LOCK(db->mutex);
-    int index = search_database_find_index(db, key);
-    if (index >= 0)
-        count = db->indexes[index].document_count;
-
-    if (include_variations)
-    {
-        key.type = SearchIndexType::Variation;
-        index = search_database_find_index(db, key);
-        if (index >= 0)
-            count += db->indexes[index].document_count;
-    }
-
-    return count;
-}
-
-bool search_database_index_property(search_database_t* db, search_document_handle_t doc, const char* name, size_t name_length, double value)
-{
-    if (!search_database_is_document_valid(db, doc))
-        return false;
-        
-    const SearchIndexingFlags flags = search_database_case_indexing_flag(db);
-    string_const_t property_name = search_database_format_word(name, name_length, flags);
-
-    search_index_key_t key;
-    key.type = SearchIndexType::Number;
-    key.crc = search_database_string_to_symbol(db, STRING_ARGS(property_name));
-    key.score = -to_int(name_length);
-    key.number = value;
-
-    return search_database_insert_index(db, doc, key) >= 0;
-}
-
-bool search_database_index_property(
-    search_database_t* db, search_document_handle_t doc, 
-    const char* name, size_t name_length, 
-    const char* value, size_t value_length,
-    bool include_variations /*= true*/)
-{
-    FOUNDATION_ASSERT(name && name_length > 0);
-    FOUNDATION_ASSERT(value && value_length > 0);
-    
-    if (!search_database_is_document_valid(db, doc))
-        return false;
-        
-    const SearchIndexingFlags case_indexing_flag = search_database_case_indexing_flag(db);
-    string_const_t property_name = search_database_format_word(name, name_length, case_indexing_flag);
-
-    search_index_key_t key;
-    key.type = SearchIndexType::Property;
-    key.score = -to_int(value_length);
-    key.crc = search_database_string_to_symbol(db, STRING_ARGS(property_name));
-
-    string_const_t property_value = search_database_format_word(value, value_length, case_indexing_flag);
-    key.hash = search_database_string_to_symbol(db, STRING_ARGS(property_value));
-
-    search_database_insert_index(db, doc, key);
-
-    if (!include_variations)
-        return true;
-
-    property_value.length--;        
-    for (; property_value.length > 2; --property_value.length, ++key.score)
-    {
-        // Skip spaces at the end
-        if (property_value.str[property_value.length - 1] == ' ')
-            continue;
-        key.hash = search_database_string_to_symbol(db, property_value.str, property_value.length);
-        search_database_insert_index(db, doc, key);
-    }
-
-    return true;
-}
-
-uint32_t search_database_word_count(search_database_t* database)
-{
-    return database->strings->count;
-}
-
-bool search_database_contains_word(search_database_t* db, const char* word, size_t word_length)
-{
-    FOUNDATION_ASSERT(db);
-
-    if (word == nullptr || word_length == 0)
-        return false;
-
-    string_const_t formatted_word = search_database_format_word(word, word_length, search_database_case_indexing_flag(db));
-    return string_table_find_symbol(db->strings, STRING_ARGS(formatted_word)) > 0;
-}
-
-bool search_database_is_document_valid(search_database_t* database, search_document_handle_t document)
-{
-    FOUNDATION_ASSERT(database);
-
-    if (document == 0)
-        return false; // User cannot access root document
-
-    if (document >= array_size(database->documents))
-        return false;
-
-    SHARED_READ_LOCK(database->mutex);
-    return (database->documents[document].type == SearchDocumentType::Default);
-}
-
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL search_document_handle_t search_database_get_indexed_document(const search_index_t& idx, uint32_t element_at)
-{
-    FOUNDATION_ASSERT(idx.document_count > 0 && element_at < idx.document_count);
-        
-    if (idx.document_count <= ARRAY_COUNT(idx.docs))
-        return idx.docs[element_at];
-
-    return idx.docs_list[element_at];
-}
-
-FOUNDATION_STATIC search_result_t* search_database_get_index_document_results(search_database_t* db, const search_index_t& idx, const search_result_t* and_set, search_result_t*& results)
-{
-    search_result_t entry;
-    for (uint32_t i = 0; i < idx.document_count; ++i)
-    {
-        entry.id = search_database_get_indexed_document(idx, i);
-
-        if (and_set == nullptr || array_contains(and_set, entry.id))
-        {
-            entry.score = idx.key.score;
-            array_push_memcpy(results, &entry);
-        }
-    }
-
-    return results;
-}
-
-FOUNDATION_STATIC search_result_t* search_database_get_key_document_results(search_database_t* db, const search_index_key_t& key, const search_result_t* and_set, search_result_t*& results)
-{
-    int index = search_database_find_index(db, key);
-    if (index < 0)
-        return nullptr;
-     
-    const search_index_t& idx = db->indexes[index];
-    return search_database_get_index_document_results(db, idx, and_set, results);
-}
-
-FOUNDATION_STATIC search_result_t* search_database_exclude_documents(search_database_t* db, search_result_t*& results)
-{
-    // This operation is costly as we have to execute the query and then iterate over ALL the documents to exclude those found
-    search_result_t* included_set = nullptr;
-    const search_result_t* excluded_set = results;
-
-    foreach(d, db->documents)
-    {
-        if (d->type != SearchDocumentType::Default)
-            continue;
-
-        const auto docid = (search_document_handle_t)i;
-        if (array_contains(excluded_set, docid))
-            continue;
-
-        search_result_t entry;
-        entry.id = docid;
-        entry.score = 0;
-        array_push_memcpy(included_set, &entry);
-    }
-
-    array_deallocate(excluded_set);
-    results = included_set;
-    return included_set;
-}
-
-FOUNDATION_STATIC search_result_t* search_database_query_property_number(
-    search_database_t* db, 
-    search_query_eval_flags_t eval_flags, const search_index_key_t& key, 
-    search_result_t* and_set, search_result_t*& results)
-{
-    // We expect the db to already be locked
-    FOUNDATION_ASSERT(db->mutex.locked());
-    
-    // Find the range of numbers to match
-    int start = search_database_find_index(db, key);
-    if (start < 0)
-        start = ~start;
-
-    int end = start;
-    
-    // Rewind to first index with same crc
-    while (start > 0 && db->indexes[start - 1].key.crc == key.crc)
-        --start;
-    FOUNDATION_ASSERT(db->indexes[start].key.type == key.type && db->indexes[start].key.crc == key.crc);
-
-    // Forward to the last index with same crc
-    const int index_count = array_size(db->indexes);
-    while (end < index_count - 1 && db->indexes[end + 1].key.crc == key.crc)
-        ++end;
-    FOUNDATION_ASSERT(db->indexes[end].key.type == key.type && db->indexes[end].key.crc == key.crc);
-
-    if (any(eval_flags, SearchQueryEvalFlags::OpLess | SearchQueryEvalFlags::OpLessEq))
-    {
-        for (; start <= end; ++start)
-        {
-            const search_index_t& idx = db->indexes[start];
-            if (idx.key.number >= key.number)
-                break;
-            search_database_get_index_document_results(db, idx, and_set, results);
-        }
-        
-        if (test(eval_flags, SearchQueryEvalFlags::OpLessEq))
-        {
-            for (; start <= end; ++start)
-            {
-                const search_index_t& idx = db->indexes[start];
-                if (idx.key.number > key.number)
-                    break;
-                search_database_get_index_document_results(db, idx, and_set, results);
-            }
-        }
-    }
-    else if (any(eval_flags, SearchQueryEvalFlags::OpGreater | SearchQueryEvalFlags::OpGreaterEq))
-    {
-        for (; end >= start; --end)
-        {
-            const search_index_t& idx = db->indexes[end];
-            if (idx.key.number <= key.number)
-                break;
-            search_database_get_index_document_results(db, idx, and_set, results);
-        }
-
-        if (test(eval_flags, SearchQueryEvalFlags::OpGreaterEq))
-        {
-            for (; end >= start; --end)
-            {
-                const search_index_t& idx = db->indexes[end];
-                if (idx.key.number < key.number)
-                    break;
-                search_database_get_index_document_results(db, idx, and_set, results);
-            }
-        }
-    }
-    else
-    {
-        FOUNDATION_ASSERT_FAIL("Invalid number query operator");
     }    
 
-    return results;
-}
-
-FOUNDATION_STATIC search_result_t* search_database_query_property(
-    search_database_t* db,
-    string_const_t name,
-    string_const_t value,
-    search_result_t* and_set,
-    search_query_eval_flags_t eval_flags,
-    search_indexing_flags_t indexing_flags)
-{
-    if (value.length < 2)
-        return nullptr;
-
-    search_result_t* results = nullptr;
-    search_index_key_t key{ SearchIndexType::Property };
-
-    SHARED_READ_LOCK(db->mutex);
-
-    string_const_t property_name = search_database_format_word(STRING_ARGS(name), indexing_flags);
-    key.crc = string_table_find_symbol(db->strings, STRING_ARGS(property_name));
-    if (key.crc <= 0)
-        return nullptr;
-        
-    string_const_t property_value = search_database_format_word(STRING_ARGS(value), indexing_flags);
-    if (string_try_convert_number(STRING_ARGS(property_value), key.number))
-    {
-        key.type = SearchIndexType::Number;
-
-        if (none(eval_flags, SearchQueryEvalFlags::OpEqual | SearchQueryEvalFlags::OpContains))
-        {
-            return search_database_query_property_number(db, eval_flags, key, and_set, results);
-        }
-    }
-    else
-    {
-        key.hash = string_table_find_symbol(db->strings, STRING_ARGS(property_value));
-        if (key.hash <= 0)
-            return nullptr;
-    }     
-        
-    return search_database_get_key_document_results(db, key, and_set, results);
-}
-
-FOUNDATION_STATIC search_result_t* search_database_query_word(
-    search_database_t* db, 
-    string_const_t value, 
-    search_result_t* and_set,
-    search_query_eval_flags_t eval_flags, 
-    search_indexing_flags_t indexing_flags)
-{    
-    if (value.length < 2)
-        return nullptr;
-
-    search_result_t* results = nullptr;
-    string_const_t word = search_database_format_word(STRING_ARGS(value), indexing_flags);
-
-    search_index_key_t key{ SearchIndexType::Word };
-    key.hash = string_hash(STRING_ARGS(word));
-
-    SHARED_READ_LOCK(db->mutex);
-
-    key.crc = string_table_find_symbol(db->strings, STRING_ARGS(word));
-    if (key.crc <= 0)
-        return nullptr;
-
-    search_database_get_key_document_results(db, key, and_set, results);
-
-    if (any(indexing_flags, SearchIndexingFlags::Variations))
-    {
-        key.type = SearchIndexType::Variation;
-        search_database_get_key_document_results(db, key, and_set, results);
-    }
-    
-    return results;
-}
-
-FOUNDATION_STATIC search_result_t* search_database_handle_query_evaluation(
-    string_const_t name,
-    string_const_t value,
-    search_query_eval_flags_t eval_flags,
-    search_result_t* and_set,
-    void* user_data)
-{
-    search_database_t* db = (search_database_t*)user_data;
-    FOUNDATION_ASSERT(db);
-    
-    SearchIndexingFlags indexing_flags = search_database_case_indexing_flag(db);
-    if (any(eval_flags, SearchQueryEvalFlags::Exclude))
-        indexing_flags |= SearchIndexingFlags::Exclude;
-        
-    if (!any(db->options, SearchDatabaseFlags::DoNotIndexVariations))
-        indexing_flags |= SearchIndexingFlags::Variations;
-    
-    search_result_t* results = nullptr;
-    if (any(eval_flags, SearchQueryEvalFlags::Word))
-    {
-        results = search_database_query_word(db, value, and_set, eval_flags, indexing_flags);
-    }
-    else if (any(eval_flags, SearchQueryEvalFlags::Property))
-    {
-        results = search_database_query_property(db, name, value, and_set, eval_flags, indexing_flags);
-    }
-    else if (any(eval_flags, SearchQueryEvalFlags::Function))
-    {
-        FOUNDATION_ASSERT_FAIL("Not implemented");
-    }
-    else
-    {
-        FOUNDATION_ASSERT_FAIL("Not implemented");
-    }
-
-    if (any(eval_flags, SearchQueryEvalFlags::Exclude))
-        return search_database_exclude_documents(db, results);
-
-    return results;
-}
-
-search_query_handle_t search_database_query(search_database_t* db, const char* query_string, size_t query_string_length)
-{
-    FOUNDATION_ASSERT(db);
-
-    if (query_string == nullptr || query_string_length == 0)
-        return SEARCH_QUERY_INVALID_ID;
-
-    // Create query
-    search_query_t* query = search_query_allocate(query_string, query_string_length);
-    FOUNDATION_ASSERT(query);
-    
-    // TODO: Use the job system to spawn a new query job.
-    //       The job should evaluate the query and store the results in the query object.
-    //       The query object should be stored in the database and the handle returned.
-    //       The query object should be marked as completed when the job is done.
-    //       The query object should be marked as cancelled if the database is destroyed.
-    //       The query object should be marked as cancelled if the query is cancelled.
-    //       The query object should be marked as cancelled if the query is destroyed.
-    //       The query object should be marked as cancelled if the query is replaced.
-    //       The query object should be marked as cancelled if the query is replaced by another query.
-    query->results = search_query_evaluate(query, search_database_handle_query_evaluation, db);
-    query->completed = true;
-
-    SHARED_WRITE_LOCK(db->mutex);
-    array_push(db->queries, query);
-    return (search_query_handle_t)array_size(db->queries) - 1;
-}
-
-bool search_database_query_is_completed(search_database_t* database, search_query_handle_t query)
-{
-    FOUNDATION_ASSERT(query > 0);
-    if (query == 0 || query >= array_size(database->queries))
-        return false;
-    SHARED_READ_LOCK(database->mutex);
-    return database->queries[query]->completed;
-}
-
-const search_result_t* search_database_query_results(search_database_t* database, search_query_handle_t query)
-{
-    FOUNDATION_ASSERT(query > 0);
-    if (query == 0 || query >= array_size(database->queries))
-        return nullptr;
-    SHARED_READ_LOCK(database->mutex);
-    return database->queries[query]->results;
-}
-
-bool search_database_query_dispose(search_database_t* database, search_query_handle_t query)
-{
-    FOUNDATION_ASSERT(query > 0);
-    if (query >= array_size(database->queries))
-        return false;
-    SHARED_WRITE_LOCK(database->mutex);
-    search_query_deallocate(database->queries[query]);
-    return database->queries[query] == nullptr;
-}
-
-bool search_database_remove_document(search_database_t* db, search_document_handle_t document)
-{
-    FOUNDATION_ASSERT(db);
-    FOUNDATION_ASSERT(document < array_size(db->documents));
-    FOUNDATION_ASSERT(document != 0);
-
-    SHARED_WRITE_LOCK(db->mutex);
-
-    bool document_removed = false;
-    search_document_t* doc = &db->documents[document];
-    if (doc->type == SearchDocumentType::Removed)
-        return false;
-
-    for (unsigned i = 0, end = array_size(db->indexes); i < end && !document_removed; ++i)
-    {
-        search_index_t& index = db->indexes[i];
-
-        // Remove document from index
-        if (index.document_count <= ARRAY_COUNT(index.docs))
-        {
-            for (unsigned j = 0, endj = ARRAY_COUNT(index.docs); j < endj; ++j)
-            {
-                if (index.docs[j] == document)
-                {
-                    --index.document_count;
-                    if (index.document_count > 0)
-                    {
-                        // Remove element and memmove the rest
-                        memmove(index.docs + j, index.docs + j + 1, sizeof(search_document_handle_t) * (ARRAY_COUNT(index.docs) - j - 1));
-                    }
-                    document_removed = true;
-                    break;
-                }
-            }
-        }
-        else
-        {
-            for (unsigned j = 0, endj = array_size(index.docs_list); j < endj; ++j)
-            {
-                if (index.docs_list[j] == document)
-                {
-                    array_erase_ordered_safe(index.docs_list, j);
-                    --index.document_count;
-
-                    if (index.document_count <= ARRAY_COUNT(index.docs))
-                    {
-                        // Move all documents from list to array
-                        search_document_handle_t static_docs[ARRAY_COUNT(index.docs)];
-                        for (unsigned k = 0, endk = array_size(index.docs_list); k < endk; ++k)
-                            static_docs[k] = index.docs_list[k];
-                        array_deallocate(index.docs_list);
-                        memcpy(&index.docs, &static_docs, sizeof(static_docs));
-                    }
-
-                    document_removed = true;
-                    break;
-                }
-            }
-        }
-    }
-
-    FOUNDATION_ASSERT(db->document_count > 0);
-    db->document_count--;
-    doc->type = SearchDocumentType::Removed;
-    string_deallocate(doc->name);
-    string_deallocate(doc->source);
-    return document_removed;
+    return 0;
 }
 
 //
@@ -985,15 +208,40 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
 
 FOUNDATION_STATIC void search_initialize()
 {
-    // TODO: Load search database
+    _search = MEM_NEW(HASH_SEARCH, SEARCH_MODULE);
+    
+    // Load search database
+    _search->db = search_database_allocate();
+    string_const_t search_db_path = session_get_user_file_path(STRING_CONST("search.db"));
+    stream_t* search_db_stream = fs_open_file(STRING_ARGS(search_db_path), STREAM_IN | STREAM_BINARY);
+    if (search_db_stream)
+    {
+        search_database_load(_search->db, search_db_stream);
+        stream_deallocate(search_db_stream);
+    }
+
+    _search->indexing_thread = dispatch_thread(search_indexing_thread_fn, nullptr);
 
     // TODO: Start indexing thread that query a stock exchange market and then 
     //       for each title query its fundamental values to build a search database.
 }
 
 FOUNDATION_STATIC void search_shutdown()
-{    
-    // TODO: Save search database on disk
+{   
+    dispatcher_thread_stop(_search->indexing_thread);
+    
+    // Save search database on disk
+    string_const_t search_db_path = session_get_user_file_path(STRING_CONST("search.db"));
+    stream_t* search_db_stream = fs_open_file(STRING_ARGS(search_db_path), STREAM_CREATE | STREAM_OUT | STREAM_BINARY | STREAM_TRUNCATE);
+    if (search_db_stream)
+    {
+        search_database_save(_search->db, search_db_stream);
+        stream_deallocate(search_db_stream);
+    }
+    
+    search_database_deallocate(_search->db);
+
+    MEM_DELETE(_search);
 }
 
 DEFINE_SERVICE(SEARCH, search_initialize, search_shutdown, SERVICE_PRIORITY_MODULE);

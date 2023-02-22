@@ -17,6 +17,7 @@
 #include <framework/handle.h>
 #include <framework/session.h>
 #include <framework/profiler.h>
+#include <framework/string.h>
 
 #include <foundation/fs.h>
 #include <foundation/path.h>

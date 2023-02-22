@@ -5,10 +5,11 @@
 
 #include "table.h"
 
-#include "common.h"
-#include "session.h"
-#include "scoped_string.h"
-#include "imgui.h"
+#include <framework/common.h>
+#include <framework/session.h>
+#include <framework/scoped_string.h>
+#include <framework/imgui.h>
+#include <framework/string.h>
 
 #include <foundation/assert.h>
 #include <foundation/math.h>

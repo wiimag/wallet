@@ -273,4 +273,4 @@ FOUNDATION_FORCEINLINE dispatcher_thread_id dispatch_fire(function<void(void)>&&
     return dispatch_thread([thread_fn](void*)->void* { thread_fn(); return nullptr; }, nullptr, nullptr);
 }
 
-bool dispatcher_thread_stop(dispatcher_thread_id thread_id);
+bool dispatcher_thread_stop(dispatcher_thread_id thread_id, double timeout_seconds = 30.0);

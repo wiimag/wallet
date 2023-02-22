@@ -5,9 +5,10 @@
 
 #include "config.h"
 
-#include "common.h"
-#include "scoped_string.h"
-#include "string_table.h"
+#include <framework/common.h>
+#include <framework/scoped_string.h>
+#include <framework/string_table.h>
+#include <framework/string.h>
 
 #include <foundation/fs.h>
 #include <foundation/array.h>

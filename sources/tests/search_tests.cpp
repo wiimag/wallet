@@ -11,10 +11,10 @@
 
 #include <eod.h>
 #include <stock.h>
-#include <search.h>
-#include <search_query.h>
 
 #include <framework/common.h>
+#include <framework/search_query.h>
+#include <framework/search_database.h>
 
 #include <foundation/random.h>
 

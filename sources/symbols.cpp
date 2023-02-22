@@ -23,6 +23,7 @@
 #include <framework/table.h>
 #include <framework/service.h>
 #include <framework/tabs.h>
+#include <framework/string.h>
 
 #include <foundation/hash.h>
 #include <foundation/array.h>

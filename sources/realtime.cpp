@@ -18,6 +18,7 @@
 #include <framework/query.h>
 #include <framework/imgui.h>
 #include <framework/table.h>
+#include <framework/string.h>
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>

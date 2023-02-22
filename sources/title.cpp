@@ -10,6 +10,7 @@
  
 #include <framework/math.h>
 #include <framework/query.h>
+#include <framework/string.h>
 
 #define FIELD_FILTERS_INTERNAL "::filters"
 

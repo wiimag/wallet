@@ -14,6 +14,7 @@
 #include <framework/service.h>
 #include <framework/table.h>
 #include <framework/dispatcher.h>
+#include <framework/string.h>
 
 #include <foundation/thread.h>
 

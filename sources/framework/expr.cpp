@@ -14,6 +14,7 @@
 #include <framework/profiler.h>
 #include <framework/config.h>
 #include <framework/dispatcher.h>
+#include <framework/string.h>
 
 #include <foundation/time.h>
 #include <foundation/random.h>
@@ -159,12 +160,12 @@ string_const_t expr_result_string_join(const expr_result_t& e, const char* fmt)
     const uint32_t element_count = e.element_count();
     if (element_count > 99)
         return string_format_static(STRING_CONST("[too many values (%u)...]"), element_count);
-    return string_join<const T>((const T*)e.ptr, e.element_count(), [fmt](const T& v)
-        {
-            static thread_local char buf[32];
-            string_t f = string_format(STRING_CONST_CAPACITY(buf), fmt, string_length(fmt), v);
-            return string_to_const(f);
-        }, CTEXT(", "), CTEXT("["), CTEXT("]"));
+    return string_join((const T*)e.ptr, e.element_count(), [fmt](const T& v)
+    {
+        static thread_local char buf[32];
+        string_t f = string_format(STRING_CONST_CAPACITY(buf), fmt, string_length(fmt), v);
+        return string_to_const(f);
+    }, CTEXT(", "), CTEXT("["), CTEXT("]"));
 }
 
 string_const_t expr_result_t::as_string(const char* fmt /*= nullptr*/) const
@@ -188,8 +189,7 @@ string_const_t expr_result_t::as_string(const char* fmt /*= nullptr*/) const
     if (type == EXPR_RESULT_ARRAY)
     {
         string_const_t list_sep = array_size(list) > 8 ? CTEXT(",\n\t ") : CTEXT(", ");
-        return string_join<const expr_result_t>(list,
-            [fmt](const expr_result_t& e) { return e.as_string(fmt); },
+        return string_join(list, [fmt](const expr_result_t& e) { return e.as_string(fmt); },
             list_sep, CTEXT("["), CTEXT("]"));
     }
 

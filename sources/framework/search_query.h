@@ -7,6 +7,7 @@
 
 #include <framework/common.h>
 
+#include <foundation/hash.h>
 #include <foundation/string.h>
 
 struct search_result_t;

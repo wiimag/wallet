@@ -8,9 +8,9 @@
 #include <framework/session.h>
 #include <framework/table.h>
 #include <framework/imgui.h>
+#include <framework/string.h>
 
 #include <foundation/path.h>
-#include <foundation/string.h>
 
 #if BUILD_DEVELOPMENT
 

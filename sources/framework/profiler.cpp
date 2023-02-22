@@ -14,6 +14,7 @@
 #include <framework/shared_mutex.h>
 #include <framework/table.h>
 #include <framework/math.h>
+#include <framework/string.h>
 
 #include <foundation/stream.h>
 #include <foundation/environment.h>

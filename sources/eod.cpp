@@ -13,6 +13,7 @@
 #include <framework/scoped_string.h>
 #include <framework/service.h>
 #include <framework/dispatcher.h>
+#include <framework/string.h>
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>

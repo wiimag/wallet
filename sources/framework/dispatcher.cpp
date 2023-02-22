@@ -357,19 +357,27 @@ dispatcher_thread_id dispatch_thread(const function<void*(void*)>& thread_fn, co
     return dispatcher_thread;
 }
 
-bool dispatcher_thread_stop(dispatcher_thread_id thread_id)
+bool dispatcher_thread_stop(dispatcher_thread_id thread_id, double timeout_seconds /*= 30.0*/)
 {
     if (thread_id == 0)
         return false;
 
     bool thread_aborted = false;
     dispatcher_thread_t* dt = (dispatcher_thread_t*)thread_id;
+
+    tick_t timeout = time_current();
+    while (!thread_try_join(dt->thread, 200, nullptr) && time_elapsed(timeout) < timeout_seconds)
+    {
+        dispatcher_update();
+        dispatcher_process_events();
+        dispatcher_wait_for_wakeup_main_thread(200);
+    }
     if (thread_is_running(dt->thread))
         thread_aborted = thread_abort(dt->thread);
         
     if (thread_aborted)
         dispatch_execute_thread_completed(dt);    
-    return thread_aborted;
+    return !thread_aborted;
 }
 
 //
@@ -390,6 +398,7 @@ void dispatcher_shutdown()
 
     // Empty event queue by processing all remaining messages 
     // making sure any allocated memory is freed.
+    dispatcher_update();
     dispatcher_process_events();
 
     event_stream_deallocate(_event_stream);

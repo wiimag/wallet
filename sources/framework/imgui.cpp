@@ -5,8 +5,9 @@
 
 #include "imgui.h"
 
-#include "common.h"
-#include "session.h"
+#include <framework/common.h>
+#include <framework/string.h>
+#include <framework/session.h>
 
 static float _global_font_scaling = 0.0f;
 

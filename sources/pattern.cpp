@@ -17,6 +17,7 @@
 #include <framework/tabs.h>
 #include <framework/math.h>
 #include <framework/config.h>
+#include <framework/string.h>
 
 #include <algorithm>
 

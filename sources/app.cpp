@@ -20,6 +20,7 @@
 #include <framework/query.h>
 #include <framework/console.h>
 #include <framework/dispatcher.h>
+#include <framework/string.h>
 
 #include <foundation/version.h>
 #include <foundation/hashstrings.h>
@@ -420,6 +421,9 @@ extern int app_initialize(GLFWwindow* window)
 
 extern void app_shutdown()
 {
+    dispatcher_update();
+    dispatcher_poll(nullptr);
+        
     // Lets make sure all requests are finished 
     // before exiting shutting down other services.
     jobs_shutdown();

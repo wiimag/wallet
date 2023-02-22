@@ -5,16 +5,17 @@
 
 #include "query.h"
 
-#include "common.h"
-#include "config.h"
-#include "session.h"
-#include "scoped_string.h"
-#include "progress.h"
-#include "generics.h"
-#include "concurrent_queue.h"
-#include "profiler.h"
-#include "string_table.h"
-#include "dispatcher.h"
+#include <framework/common.h>
+#include <framework/config.h>
+#include <framework/session.h>
+#include <framework/scoped_string.h>
+#include <framework/progress.h>
+#include <framework/generics.h>
+#include <framework/concurrent_queue.h>
+#include <framework/profiler.h>
+#include <framework/string_table.h>
+#include <framework/dispatcher.h>
+#include <framework/string.h>
 
 #include <foundation/log.h>
 #include <foundation/hashstrings.h>

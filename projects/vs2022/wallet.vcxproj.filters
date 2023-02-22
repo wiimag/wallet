@@ -193,8 +193,14 @@
     <ClInclude Include="..\..\sources\search.h">
       <Filter>app</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\sources\search_query.h">
-      <Filter>app</Filter>
+    <ClInclude Include="..\..\sources\framework\search_query.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\framework\search_database.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\framework\string.h">
+      <Filter>framework</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -357,8 +363,14 @@
     <ClCompile Include="..\..\sources\tests\search_tests.cpp">
       <Filter>tests</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\sources\search_query.cpp">
-      <Filter>app</Filter>
+    <ClCompile Include="..\..\sources\framework\search_database.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\search_query.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\string.cpp">
+      <Filter>framework</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

@@ -12,6 +12,7 @@
 #include <framework/imgui.h>
 #include <framework/scoped_mutex.h>
 #include <framework/generics.h>
+#include <framework/string.h>
 
 #include <foundation/log.h>
 #include <foundation/array.h>

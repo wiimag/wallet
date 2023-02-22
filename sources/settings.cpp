@@ -9,9 +9,10 @@
 #include "stock.h"
 #include "logo.h"
 
-#include "framework/common.h"
-#include "framework/session.h"
-#include "framework/imgui.h"
+#include <framework/imgui.h>
+#include <framework/common.h>
+#include <framework/session.h>
+#include <framework/string.h>
 
 #define SESSION_KEY_SEARCH_TERMS "search_terms"
 #define SESSION_KEY_SEARCH_FILTER "search_filter"

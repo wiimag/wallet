@@ -12,12 +12,12 @@
 #include <framework/imgui.h>
 #include <framework/common.h>
 #include <framework/jobs.h>
- 
+#include <framework/string.h>
+
 #include <foundation/environment.h>
 #include <foundation/path.h>
 #include <foundation/assert.h>
 #include <foundation/fs.h>
-#include <foundation/string.h>
 
 static const char IMGUI_FILE_NAME[] = "imgui.ini";
 

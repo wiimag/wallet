@@ -9,6 +9,7 @@
 #include <framework/profiler.h>
 #include <framework/shared_mutex.h>
 #include <framework/scoped_string.h>
+#include <framework/string.h>
 
 #include <foundation/hash.h>
 #include <foundation/memory.h>

@@ -15,6 +15,7 @@
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
 #include <framework/math.h>
+#include <framework/string.h>
 
 #include <foundation/path.h>
 #include <foundation/hashtable.h>
