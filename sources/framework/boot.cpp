@@ -1106,22 +1106,22 @@ FOUNDATION_STATIC void main_handle_debug_break()
         log_warn(0, WARNING_STANDARD, STRING_CONST("Waiting for debugger to attach..."));
         
         static bool debug_break_continue = false;
-        static dispatcher_thread_id wait_thread_id = 0;
+        static dispatcher_thread_handle_t wait_thread_handle{ 0 };
         if (main_is_graphical_mode())
         {
-            wait_thread_id = dispatch_fire([]()
+            wait_thread_handle = dispatch_fire([]()
             {
                 system_message_box(STRING_CONST("Attach Debugger (Debug Break)"),
                     STRING_CONST("You can attach debugger now and press OK to continue..."), false);
-                wait_thread_id = 0;
+                wait_thread_handle = {};
                 debug_break_continue = true;
             });
         }
 
         while (!system_debugger_attached() && !_process_should_exit && !debug_break_continue)
             thread_sleep(1000);
-        if (wait_thread_id)
-            dispatcher_thread_stop(wait_thread_id);
+        if (wait_thread_handle)
+            dispatcher_thread_stop(wait_thread_handle);
     }
 }
 

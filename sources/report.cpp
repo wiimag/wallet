@@ -1221,7 +1221,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         string_const_t column_name = string_format_static(STRING_CONST("%s||" ICON_MD_VIEW_COLUMN " %s (%.*s)"),
             c->name, c->name, min(16, (int)string_length(c->expression)), c->expression);
         table_add_column(table, STRING_ARGS(column_name), LC2(report_column_evaluate_expression(_1, _2, report_handle, c)), c->format, 
-            COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | (c->format == COLUMN_FORMAT_TEXT ? COLUMN_SEARCHABLE : COLUMN_OPTIONS_NONE));
+            COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | (c->format == COLUMN_FORMAT_TEXT ? COLUMN_SEARCHABLE : COLUMN_OPTIONS_NONE));
     }
 }
 

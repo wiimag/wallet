@@ -9,6 +9,7 @@
 #include "function.h"
 
 #include <foundation/hash.h>
+#include <foundation/atomic.h>
 
 #define INVALID_DISPATCHER_EVENT_LISTENER_ID (0U)
 
@@ -16,7 +17,7 @@ typedef struct GLFWwindow GLFWwindow;
 
 typedef hash_t dispatcher_event_name_t;
 typedef uint32_t dispatcher_event_listener_id_t;
-typedef void* dispatcher_thread_id;
+typedef object_t dispatcher_thread_handle_t;
 
 typedef enum DispatcherEventOption : uint32_t
 {
@@ -266,11 +267,42 @@ void dispatcher_wakeup_main_thread();
 
 bool dispatcher_wait_for_wakeup_main_thread(int timeout_ms = 100);
 
-dispatcher_thread_id dispatch_thread(const function<void*(void*)>& thread_fn, const function<void(void*)> complted_fn = nullptr, void* user_data = nullptr);
+dispatcher_thread_handle_t dispatch_thread(
+    const char* name, size_t name_length, 
+    const function<void*(void*)>& thread_fn, 
+    const function<void(void*)> completed_fn, 
+    void* user_data = nullptr);
 
-FOUNDATION_FORCEINLINE dispatcher_thread_id dispatch_fire(function<void(void)>&& thread_fn)
+template<size_t N>
+FOUNDATION_FORCEINLINE dispatcher_thread_handle_t dispatch_thread(
+    const char(&name)[N], const function<void* (void*)>& thread_fn)
 {
-    return dispatch_thread([thread_fn](void*)->void* { thread_fn(); return nullptr; }, nullptr, nullptr);
+    return dispatch_thread(name, N - 1, thread_fn, nullptr, nullptr);
 }
 
-bool dispatcher_thread_stop(dispatcher_thread_id thread_id, double timeout_seconds = 30.0);
+FOUNDATION_FORCEINLINE dispatcher_thread_handle_t dispatch_thread(
+    const function<void* (void*)>& thread_fn,
+    const function<void(void*)> completed_fn,
+    void* user_data)
+{
+    return dispatch_thread(STRING_CONST("Dispatcher Thread"), thread_fn, completed_fn, user_data);
+}
+
+FOUNDATION_FORCEINLINE dispatcher_thread_handle_t dispatch_thread(const function<void*(void*)>& thread_fn)
+{
+    return dispatch_thread(thread_fn, nullptr, nullptr);
+}
+
+FOUNDATION_FORCEINLINE dispatcher_thread_handle_t dispatch_thread(
+    const function<void* (void*)>& thread_fn,
+    const function<void(void*)> completed_fn)
+{
+    return dispatch_thread(thread_fn, completed_fn, nullptr);
+}
+
+FOUNDATION_FORCEINLINE dispatcher_thread_handle_t dispatch_fire(function<void(void)>&& thread_fn)
+{
+    return dispatch_thread([thread_fn](void*)->void* { thread_fn(); return nullptr; }, nullptr);
+}
+
+bool dispatcher_thread_stop(dispatcher_thread_handle_t thread_id, double timeout_seconds = 30.0);

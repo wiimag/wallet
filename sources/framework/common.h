@@ -12,6 +12,7 @@
 #include <foundation/array.h>
  
 #include <time.h>
+#include <limits>
 
 // ## MACROS
 
@@ -426,7 +427,9 @@ struct TimeMarkerScope
         const double elapsed_time = time_elapsed(start_time);
         if (elapsed_time > less_ignored_elapsed_time)
         {
-            if (elapsed_time < 1.0)
+            if (elapsed_time < 0.1)
+                log_debugf(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
+            else if (elapsed_time < 1.0)
                 log_infof(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
             else
                 log_warnf(context, WARNING_PERFORMANCE, STRING_CONST("%s took %.3lg seconds <<<"), label, elapsed_time);
@@ -494,6 +497,20 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t to_uint(size_t v)
 {
     FOUNDATION_ASSERT(v <= UINT_MAX);
     return (uint32_t)v;
+}
+
+template<typename T = void> 
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T* to_ptr(uint32_t v)
+{
+    return (T*)(uintptr_t)(v);
+}
+
+template<typename T>
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T to_opaque(void* ptr)
+{
+    const auto v = (intptr_t)(ptr);
+    FOUNDATION_ASSERT(std::numeric_limits<T>::min() <= v && v <= std::numeric_limits<T>::max());
+    return (T)v;
 }
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t rgb_to_abgr(const uint32_t v, const uint8_t alpha = 0xFF)

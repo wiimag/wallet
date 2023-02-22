@@ -26,7 +26,7 @@
 static struct SEARCH_MODULE {
     
     search_database_t* db{ nullptr };
-    dispatcher_thread_id indexing_thread{ 0 };
+    dispatcher_thread_handle_t indexing_thread{};
 
 } *_search;
 
@@ -234,13 +234,14 @@ FOUNDATION_STATIC void search_initialize()
     stream_t* search_db_stream = fs_open_file(STRING_ARGS(search_db_path), STREAM_IN | STREAM_BINARY);
     if (search_db_stream)
     {
+        TIME_TRACKER("Loading search database");
         search_database_load(_search->db, search_db_stream);
         stream_deallocate(search_db_stream);
     }
 
     // Start indexing thread that query a stock exchange market and then 
     // for each title query its fundamental values to build a search database.
-    _search->indexing_thread = dispatch_thread(search_indexing_thread_fn, nullptr);
+    _search->indexing_thread = dispatch_thread("Search Indexer", search_indexing_thread_fn);
 }
 
 FOUNDATION_STATIC void search_shutdown()
@@ -252,6 +253,7 @@ FOUNDATION_STATIC void search_shutdown()
     stream_t* search_db_stream = fs_open_file(STRING_ARGS(search_db_path), STREAM_CREATE | STREAM_OUT | STREAM_BINARY | STREAM_TRUNCATE);
     if (search_db_stream)
     {
+        TIME_TRACKER("Saving search database");
         search_database_save(_search->db, search_db_stream);
         stream_deallocate(search_db_stream);
     }
