@@ -433,4 +433,9 @@
       <Filter>resources</Filter>
     </Font>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cpp.hint">
+      <Filter>resources</Filter>
+    </None>
+  </ItemGroup>
 </Project>

@@ -114,13 +114,7 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
     search_database_t* db = _search->db;
 
     for(auto e : data)
-    {
-        if (thread_try_wait(1000))
-        {
-            *stop_indexing = true;
-            break;
-        }
-        
+    {        
         if (e.root == nullptr || e.root->type != JSON_OBJECT)
             continue;
 
@@ -132,19 +126,34 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         if (string_is_null(exchange))
             continue;
 
+        string_const_t isin = e["Isin"].as_string();
+        string_const_t type = e["Type"].as_string();
+
+        // Do not index FUND stock and those with no ISIN
+        if (string_is_null(isin) || string_equal_nocase(STRING_ARGS(type), STRING_CONST("FUND")))
+            continue;
+
         char symbol_buffer[32];
         string_t symbol = string_format(STRING_CONST_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
 
-        search_document_handle_t doc = search_database_get_or_add_document(db, STRING_ARGS(symbol));
+        search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
+        if (doc != SEARCH_DOCUMENT_INVALID_ID)
+        {
+            time_t doc_timestamp = search_database_document_timestamp(db, doc);
+            if (time_elapsed_days(doc_timestamp, time_now()) < 7)
+                continue;
+        }
+
         if (doc == SEARCH_DOCUMENT_INVALID_ID)
-            continue;
+            doc = search_database_add_document(db, STRING_ARGS(symbol));
+
+        // Index symbol
+        search_database_index_word(db, doc, STRING_ARGS(symbol), true);
             
         // Index basic information
         string_const_t name = e["Name"].as_string();
         if (!string_is_null(name))
             search_database_index_text(db, doc, STRING_ARGS(name));
-
-        log_infof(HASH_SEARCH, STRING_CONST("Indexing %.*s (%.*s)"), STRING_FORMAT(symbol), STRING_FORMAT(name));
 
         string_const_t country = e["Country"].as_string();
         if (!string_is_null(country))
@@ -152,20 +161,29 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
 
         string_const_t currency = e["Currency"].as_string();
         if (!string_is_null(currency))
-            search_database_index_text(db, doc, STRING_ARGS(currency), false);
+            search_database_index_word(db, doc, STRING_ARGS(currency), false);
             
-        string_const_t isin = e["Isin"].as_string();
         if (!string_is_null(isin))
-            search_database_index_text(db, doc, STRING_ARGS(isin), false);
-            
-        string_const_t type = e["type"].as_string();
+            search_database_index_word(db, doc, STRING_ARGS(isin), false);
+
         if (!string_is_null(type))
             search_database_index_text(db, doc, STRING_ARGS(type), false);
+
+        log_infof(HASH_SEARCH, STRING_CONST("[%5u] Indexing [%12.*s] %-10.*s -> %-14.*s -> %.*s"), 
+            doc, STRING_FORMAT(isin), STRING_FORMAT(symbol), STRING_FORMAT(type), STRING_FORMAT(name));
 
         // Fetch symbol fundamental data
         if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON_CACHE, LC1(search_index_fundamental_data(_1, doc)), 90 * 24 * 60 * 60ULL))
         {
             log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
+        }
+        else
+        {
+            if (thread_try_wait(1000))
+            {
+                *stop_indexing = true;
+                break;
+            }
         }
     }
 }
@@ -220,10 +238,9 @@ FOUNDATION_STATIC void search_initialize()
         stream_deallocate(search_db_stream);
     }
 
+    // Start indexing thread that query a stock exchange market and then 
+    // for each title query its fundamental values to build a search database.
     _search->indexing_thread = dispatch_thread(search_indexing_thread_fn, nullptr);
-
-    // TODO: Start indexing thread that query a stock exchange market and then 
-    //       for each title query its fundamental values to build a search database.
 }
 
 FOUNDATION_STATIC void search_shutdown()

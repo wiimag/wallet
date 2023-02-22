@@ -250,8 +250,11 @@ struct json_object_t
     string_const_t as_string() const
     {
         if (root == nullptr)
-            return string_const(STRING_CONST(""));
-        return json_token_value(buffer, root);
+            return string_null();
+        string_const_t value = json_token_value(buffer, root);
+        if (root->type == JSON_PRIMITIVE && string_equal(STRING_ARGS(value), STRING_CONST("null")))
+            return string_null();
+        return value;
     }
 
     bool operator!=(const json_object_t& other) const

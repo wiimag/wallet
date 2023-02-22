@@ -48,6 +48,11 @@ search_document_handle_t search_database_add_document(
 search_document_handle_t search_database_get_or_add_document(
     search_database_t* database, const char* name, size_t name_length);
 
+search_document_handle_t search_database_find_document(
+    search_database_t* database, const char* name, size_t name_length);
+
+time_t search_database_document_timestamp(search_database_t* database, search_document_handle_t document);
+
 bool search_database_index_word(
     search_database_t* database, 
     search_document_handle_t document, 

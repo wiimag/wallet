@@ -15,15 +15,10 @@
 
 #include <foundation/stream.h>
 
-#define SEARCH_DATABASE_VERSION 4
+ /*! Search database version */
+constexpr uint8_t SEARCH_DATABASE_VERSION = 5;
 
-struct search_database_header_t {
-    char magic[4] = {0};
-    uint32_t version = 0;
-} SEARCH_DATABASE_HEADER{
-    { 'S', 'E', 'A', 'R' }, SEARCH_DATABASE_VERSION
-};
-
+/*! Search database index entry types */
 typedef enum class SearchIndexType : uint32_t
 {
     Undefined   = 0,
@@ -34,6 +29,7 @@ typedef enum class SearchIndexType : uint32_t
 } search_index_type_t;
 DEFINE_ENUM_FLAGS(SearchIndexType);
 
+/*! Search database indexing flags */
 typedef enum class SearchIndexingFlags
 {
     None                = 0,
@@ -42,13 +38,12 @@ typedef enum class SearchIndexingFlags
     Lowercase           = 1 << 2,
     Variations          = 1 << 3,
     Exclude             = 1 << 4,
-
-    //Default = TrimWord | Lowercase
     
 } search_indexing_flags_t;
 DEFINE_ENUM_FLAGS(SearchIndexingFlags);
 
-typedef enum class SearchDocumentType
+/*! Search database document types */
+typedef enum class SearchDocumentType : unsigned char
 {
     Unused  = 0,
     Default = 1 << 0,
@@ -58,13 +53,14 @@ typedef enum class SearchDocumentType
 } search_document_type_t;
 DEFINE_ENUM_FLAGS(SearchDocumentType);
 
+/*! Search database index key entry */
 FOUNDATION_ALIGNED_STRUCT(search_index_key_t, 8)
 {
     /*! Type of the index entry */
     search_index_type_t type{ SearchIndexType::Undefined };
 
     /*! Value correction code (can be length, property key hash, etc.) */
-    hash_t crc{ 0 };
+    uint64_t crc{ 0 };
 
     /*! Key of the index entry. This key is usually hashed from the value content. */
     union {
@@ -76,6 +72,7 @@ FOUNDATION_ALIGNED_STRUCT(search_index_key_t, 8)
     int32_t score{ 0 };
 };
 
+/*! Search database index entry */
 FOUNDATION_ALIGNED_STRUCT(search_index_t, 8)
 {
     search_index_key_t  key;
@@ -83,58 +80,24 @@ FOUNDATION_ALIGNED_STRUCT(search_index_t, 8)
     uint32_t document_count{ 0 };
     union {
         search_document_handle_t  doc;
-        search_document_handle_t  docs[3];
+        search_document_handle_t  docs[6]; // Ideally align this padding with 8 bytes
         search_document_handle_t* docs_list{ nullptr };
     };
 };
 
-struct search_document_t
+/*! Search database document entry */
+FOUNDATION_ALIGNED_STRUCT(search_document_t, 8) 
 {
     search_document_type_t  type{ SearchDocumentType::Unused };
     string_t                name{};
-    string_t                source{};
+    time_t                  timestamp{ 0 };
 };
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int search_index_key_compare(const search_index_key_t& s, const search_index_key_t& key)
-{
-    if (s.type < key.type)
-        return -1;
-        
-    if (s.type > key.type)
-        return 1;
-
-    if (s.crc < key.crc)
-        return -1;
-
-    if (s.crc > key.crc)
-        return 1;
-
-    if (s.type == SearchIndexType::Number)
-    {
-        if (s.number < key.number)
-            return -1;
-
-        if (s.number > key.number)
-            return 1;
-    }
-    else
-    {
-        if (s.hash < key.hash)
-            return -1;
-
-        if (s.hash > key.hash)
-            return 1;
-    }
-    
-    return 0;
-}
-
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int search_index_compare(const search_index_t& s, const search_index_key_t& key)
-{
-    return search_index_key_compare(s.key, key);
-}
-
-struct search_database_t
+/*! Search database structure
+ * 
+ * The search database is thread safe and use a shared mutex to allow multiple reads concurrently.
+ */
+FOUNDATION_ALIGNED_STRUCT(search_database_t, 8)
 {
     shared_mutex            mutex;
     search_index_t*         indexes{ nullptr };
@@ -146,9 +109,44 @@ struct search_database_t
     search_query_t**         queries{ nullptr };
 };
 
+/*! Search database header */
+FOUNDATION_ALIGNED_STRUCT(search_database_header_t, 8) {
+    char magic[4] = { 0 };
+    uint8_t version = 0;
+    uint8_t index_struct_size = 0;
+    uint8_t index_key_struct_size = 0;
+    uint8_t document_struct_size = 0;
+    uint8_t db_struct_size = 0;
+} SEARCH_DATABASE_HEADER{
+    { 'S', 'E', 'A', 'R' }, SEARCH_DATABASE_VERSION, 
+    sizeof(search_index_t), sizeof(search_index_key_t),
+    sizeof(search_document_t), sizeof(search_database_t)
+};
+
 //
 // # PRIVATE
 //
+
+FOUNDATION_STATIC void search_database_deallocate_documents(search_database_t*& db)
+{
+    for (unsigned i = 0, end = array_size(db->documents); i < end; ++i)
+    {
+        search_document_t& doc = db->documents[i];
+        string_deallocate(doc.name);
+    }
+    array_deallocate(db->documents);
+}
+
+FOUNDATION_STATIC void search_database_deallocate_indexes(search_database_t*& db)
+{
+    for (unsigned i = 0, end = array_size(db->indexes); i < end; ++i)
+    {
+        search_index_t& index = db->indexes[i];
+        if (index.document_count > ARRAY_COUNT(index.docs))
+            array_deallocate(index.docs_list);
+    }
+    array_deallocate(db->indexes);
+}
 
 FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, size_t& word_length, search_indexing_flags_t flags)
 {
@@ -192,9 +190,48 @@ FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, s
     return string_trim(string_to_const(word_lower), ' ');
 }
 
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int search_database_index_key_compare(const search_index_key_t& s, const search_index_key_t& key)
+{
+    if (s.type < key.type)
+        return -1;
+
+    if (s.type > key.type)
+        return 1;
+
+    if (s.crc < key.crc)
+        return -1;
+
+    if (s.crc > key.crc)
+        return 1;
+
+    if (s.type == SearchIndexType::Number)
+    {
+        if (s.number < key.number)
+            return -1;
+
+        if (s.number > key.number)
+            return 1;
+    }
+    else
+    {
+        if (s.hash < key.hash)
+            return -1;
+
+        if (s.hash > key.hash)
+            return 1;
+    }
+
+    return 0;
+}
+
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int search_database_index_compare(const search_index_t& s, const search_index_key_t& key)
+{
+    return search_database_index_key_compare(s.key, key);
+}
+
 FOUNDATION_STATIC int search_database_find_index(search_database_t* db, const search_index_key_t& key)
 {
-    return array_binary_search_compare(db->indexes, key, search_index_compare);
+    return array_binary_search_compare(db->indexes, key, search_database_index_compare);
 }
 
 FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search_document_handle_t doc, const search_index_key_t& key)
@@ -239,6 +276,7 @@ FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search
             array_push(docs, doc);
             index.docs_list = docs;
             index.document_count = array_size(docs);
+            FOUNDATION_ASSERT(index.document_count > ARRAY_COUNT(index.docs));
         }
         else
         {
@@ -252,6 +290,7 @@ FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search
             // Add to existing list
             array_push(index.docs_list, doc);
             index.document_count = array_size(index.docs_list);
+            FOUNDATION_ASSERT(index.document_count > ARRAY_COUNT(index.docs));
         }
     }
     else
@@ -348,6 +387,8 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL SearchIndexingFlags search_database_
 
 search_database_t* search_database_allocate(search_database_flags_t flags /*= SearchDatabaseFlags::None*/)
 {
+    FOUNDATION_ASSERT(sizeof(search_index_t) <= 64);
+
     search_database_t* db = MEM_NEW(0, search_database_t);
     if (flags != SearchDatabaseFlags::None)
         db->options = flags;
@@ -361,41 +402,55 @@ search_database_t* search_database_allocate(search_database_flags_t flags /*= Se
     search_document_t root{};
     root.type = SearchDocumentType::Root;
     root.name = string_clone(STRING_CONST("<root>"));
-    root.source = {};
+    root.timestamp = time_now();
     array_push_memcpy(db->documents, &root);
     
     return db;
 }
 
-void search_database_deallocate(search_database_t*& database)
+void search_database_deallocate(search_database_t*& db)
 {
-    if (database == nullptr)
+    if (db == nullptr)
         return;
-    for (unsigned i = 0, end = array_size(database->documents); i < end; ++i)
-    {
-        search_document_t& doc = database->documents[i];
-        string_deallocate(doc.name);
-        string_deallocate(doc.source);
-    }
 
-    for (unsigned i = 0, end = array_size(database->indexes); i < end; ++i)
-    {
-        search_index_t& index = database->indexes[i];
-        if (index.document_count > ARRAY_COUNT(index.docs))
-            array_deallocate(index.docs_list);
-    }
-
-    array_deallocate(database->indexes);
-    array_deallocate(database->documents);
-
-    string_table_deallocate(database->strings);
-
-    for (unsigned i = 0, end = array_size(database->queries); i < end; ++i)
-        search_query_deallocate(database->queries[i]);
-    array_deallocate(database->queries);
+    search_database_deallocate_indexes(db);
+    search_database_deallocate_documents(db);
     
-    MEM_DELETE(database);
-    database = nullptr;
+    string_table_deallocate(db->strings);
+
+    for (unsigned i = 0, end = array_size(db->queries); i < end; ++i)
+        search_query_deallocate(db->queries[i]);
+    array_deallocate(db->queries);
+    
+    MEM_DELETE(db);
+    db = nullptr;
+}
+
+time_t search_database_document_timestamp(search_database_t* db, search_document_handle_t document)
+{
+    if (!search_database_is_document_valid(db, document))
+        return 0;
+
+    SHARED_READ_LOCK(db->mutex);
+    return db->documents[document].timestamp;
+}
+
+search_document_handle_t search_database_find_document(search_database_t* db, const char* name, size_t name_length)
+{
+    FOUNDATION_ASSERT(db);
+
+    if (name == nullptr || name_length == 0)
+        return SEARCH_DOCUMENT_INVALID_ID;
+
+    SHARED_READ_LOCK(db->mutex);
+    for (unsigned doc_index = 1, end = array_size(db->documents); doc_index < end; ++doc_index)
+    {
+        search_document_t& doc = db->documents[doc_index];
+        if (string_equal(STRING_ARGS(doc.name), name, name_length))
+            return doc_index;
+    }
+
+    return SEARCH_DOCUMENT_INVALID_ID;
 }
 
 search_document_handle_t search_database_add_document(search_database_t* db, const char* name, size_t name_length)
@@ -406,28 +461,12 @@ search_document_handle_t search_database_add_document(search_database_t* db, con
     search_document_t document{};
     document.type = SearchDocumentType::Default;
     document.name = string_clone(name, name_length);
-    document.source = {};
+    document.timestamp = time_now();
 
     SHARED_WRITE_LOCK(db->mutex);
     db->document_count++;
     array_push_memcpy(db->documents, &document);
     return array_size(db->documents) - 1;
-}
-
-FOUNDATION_STATIC search_document_handle_t search_database_find_document(search_database_t* db, const char* name, size_t name_length)
-{
-    FOUNDATION_ASSERT(db);
-    FOUNDATION_ASSERT(name && name_length > 0);
-
-    SHARED_READ_LOCK(db->mutex);
-    for (unsigned i = 0, end = array_size(db->documents); i < end; ++i)
-    {
-        search_document_t& doc = db->documents[i];
-        if (string_equal(STRING_ARGS(doc.name), name, name_length))
-            return i;
-    }
-
-    return SEARCH_DOCUMENT_INVALID_ID;
 }
 
 search_document_handle_t search_database_get_or_add_document(search_database_t* db, const char* name, size_t name_length)
@@ -950,8 +989,6 @@ bool search_database_query_dispose(search_database_t* database, search_query_han
 
 bool search_database_load(search_database_t* db, stream_t* stream)
 {
-    SHARED_WRITE_LOCK(db->mutex);
-
     // Read database header
     search_database_header_t header;
     stream_read(stream, &header, sizeof(SEARCH_DATABASE_HEADER));
@@ -959,36 +996,38 @@ bool search_database_load(search_database_t* db, stream_t* stream)
         return false;
         
     // Read documents
-    array_clear(db->documents);
+    search_document_t* documents = nullptr;
     uint32_t document_count = stream_read_uint32(stream);
-    array_resize(db->documents, document_count);
+    array_resize(documents, document_count);
     for (uint32_t i = 0; i < document_count; ++i)
     {
-        search_document_t* doc = db->documents + i;
-        doc->type = (search_document_type_t)stream_read_uint32(stream);
+        search_document_t* doc = documents + i;
+        doc->type = (search_document_type_t)stream_read_uint8(stream);
         doc->name = stream_read_string(stream);
-        doc->source = stream_read_string(stream);
+        doc->timestamp = stream_read_uint64(stream);
     }
     
     // Read string table
+    string_table_t* strings = nullptr;
     int32_t string_count = stream_read_int32(stream);
     uint64_t average_string_length = stream_read_uint64(stream);
     uint64_t allocated_bytes = stream_read_uint64(stream);
-
-    string_table_deallocate(db->strings);
-    db->strings = (string_table_t*)memory_allocate(0, allocated_bytes, 4, MEMORY_PERSISTENT);
-    stream_read(stream, db->strings, allocated_bytes);
-    FOUNDATION_ASSERT(db->strings->count == string_count);
-    FOUNDATION_ASSERT(string_table_average_string_length(db->strings) == average_string_length);
-    FOUNDATION_ASSERT(db->strings->allocated_bytes == allocated_bytes);
+    
+    strings = (string_table_t*)memory_allocate(0, allocated_bytes, 4, MEMORY_PERSISTENT);
+    FOUNDATION_ASSERT(strings);
+    
+    stream_read(stream, strings, allocated_bytes);
+    FOUNDATION_ASSERT(strings->count == string_count);
+    FOUNDATION_ASSERT(strings->allocated_bytes == allocated_bytes);
+    FOUNDATION_ASSERT(string_table_average_string_length(strings) == average_string_length);
 
     // Read indexes
-    uint32_t index_count = stream_read_uint32(stream);
-    array_clear(db->indexes);
-    array_resize(db->indexes, index_count);
+    search_index_t* indexes = nullptr;
+    const uint32_t index_count = stream_read_uint32(stream);
+    array_resize(indexes, index_count);
     for (uint32_t i = 0; i < index_count; ++i)
     {
-        search_index_t* index = db->indexes + i;
+        search_index_t* index = indexes + i;
         stream_read(stream, &index->key, sizeof(index->key));
         index->document_count = stream_read_uint32(stream);
         if (index->document_count <= ARRAY_COUNT(index->docs))
@@ -1003,6 +1042,17 @@ bool search_database_load(search_database_t* db, stream_t* stream)
                 array_push(index->docs_list, stream_read_uint32(stream));
         }
     }
+
+    // So far so good, lets swap new entries.
+    SHARED_WRITE_LOCK(db->mutex);
+    search_database_deallocate_documents(db);
+    db->documents = documents;
+
+    search_database_deallocate_indexes(db);
+    db->indexes = indexes;
+
+    string_table_deallocate(db->strings);
+    db->strings = strings;    
     
     return true;
 }
@@ -1018,9 +1068,9 @@ bool search_database_save(search_database_t* db, stream_t* stream)
     stream_write_uint32(stream, array_size(db->documents));
     foreach(d, db->documents)
     {
-        stream_write_uint32(stream, (uint32_t)d->type);
+        stream_write_uint8(stream, (uint32_t)d->type);
         stream_write_string(stream, STRING_ARGS(d->name));
-        stream_write_string(stream, STRING_ARGS(d->source));
+        stream_write_uint64(stream, d->timestamp);
     }
 
     // Save string table
@@ -1033,7 +1083,7 @@ bool search_database_save(search_database_t* db, stream_t* stream)
     // Save indexes
     stream_write_uint32(stream, array_size(db->indexes));
     foreach(e, db->indexes)
-    {
+    { 
         stream_write(stream, &e->key, sizeof(e->key));
         
         stream_write_uint32(stream, e->document_count);
@@ -1109,6 +1159,5 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
     db->document_count--;
     doc->type = SearchDocumentType::Removed;
     string_deallocate(doc->name);
-    string_deallocate(doc->source);
     return document_removed;
 }

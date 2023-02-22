@@ -831,12 +831,39 @@ FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t
         return;
 
     tm tm_now;
-    const time_t now = time_now();
     int time_lapse_hours = 24;
+    const time_t now = time_now();
     if (time_to_local(now, &tm_now))
     {
-        if (tm_now.tm_hour >= 10 && tm_now.tm_hour < 17)
+        if (tm_now.tm_hour >= 11 && tm_now.tm_hour < 17)
             time_lapse_hours = 8;
+    }
+
+    const stock_t* s = title->stock;
+    if (s)
+    {
+        string_const_t name = SYMBOL_CONST(s->name);
+        const tick_t tick_updated = s->current.date * 1000;
+        const tick_t system_time = time_system();
+        const char* time_elapsed_unit = "minute";
+        double elapsed_time_updated = time_diff(tick_updated, system_time) / 1000.0 / 60.0;
+        if (elapsed_time_updated > 1440)
+        {
+            time_elapsed_unit = "day";
+            elapsed_time_updated /= 1440;
+        }
+        else if (elapsed_time_updated > 60)
+        {
+            time_elapsed_unit = "hour";
+            elapsed_time_updated /= 60;
+        }
+        string_const_t last_update = string_from_time_static(tick_updated, true);
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text(" Updated %.0lf %s(s) ago (%.*s) \n %.*s [%.*s] -> %.2lf $ (%.3lg %%) ", 
+            elapsed_time_updated, time_elapsed_unit, STRING_FORMAT(last_update),
+            STRING_FORMAT(name), (int)title->code_length, title->code, 
+            s->current.close, s->current.change_p);
+        ImGui::Spacing();
     }
    
     realtime_render_graph(title->code, title->code_length, time_add_hours(time_now(), -time_lapse_hours), 1300.0f, 600.0f);
@@ -1117,7 +1144,8 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .set_tooltip_callback(report_title_ask_price_gain_tooltip);
 
     table_add_column(table, STRING_CONST("   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. "),
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE)
+        .set_tooltip_callback(report_title_day_change_tooltip);
 
     table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE)

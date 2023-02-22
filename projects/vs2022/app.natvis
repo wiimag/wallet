@@ -29,4 +29,8 @@
 			<Item Name="[3]">row4</Item>
 		</Expand>
 	</Type>
+
+	<Type Name="string_const_t">
+		<DisplayString>{str,length}</DisplayString>
+	</Type>
 </AutoVisualizer>
