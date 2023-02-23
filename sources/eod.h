@@ -17,6 +17,9 @@ string_t eod_get_key();
 /*! Checks if we are connected to the EOD service. */
 bool eod_connected();
 
+/*! Checks if the EOD usage is at capacity */
+bool eod_is_at_capacity();
+
 /*! @brief Save the API EOD key.
  *  @param eod_key The key to save.
  *  @return Returns true if the key was saved.

@@ -15,7 +15,7 @@ struct tm;
 
 // ## MACROS
 
-#define CTEXT(str) string_const(STRING_CONST(str))
+#define CTEXT(str) string_const_t{ STRING_CONST(str) }
 
 // ## STRUCTURES
 

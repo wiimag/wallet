@@ -344,6 +344,18 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
     static string_t* codes = nullptr;
     while (!quit_thread && !thread_try_wait(60000U))
     {
+        while (!eod_connected() || eod_is_at_capacity())
+        {
+            if (thread_try_wait(1000U))
+            {
+                quit_thread = true;
+                break;
+            }
+        }
+
+        if (quit_thread)
+            continue;
+
         const time_t now = time_now();
         {
             SHARED_READ_LOCK(mutex);
@@ -696,7 +708,7 @@ FOUNDATION_STATIC void realtime_menu()
     if (!ImGui::BeginMenuBar())
         return;
     
-    if (ImGui::BeginMenu("Windows"))
+    if (ImGui::BeginMenu("Modules"))
     {
         ImGui::MenuItem(ICON_MD_RADIO_BUTTON_ON " Realtime", nullptr, &_realtime->show_window);
         ImGui::EndMenu();

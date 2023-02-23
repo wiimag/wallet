@@ -22,15 +22,16 @@ struct dispatcher_thread_t
     void* payload{ nullptr };
     bool completed{ false };
     function<void* (void*)> thread_fn;
-    function<void(void*)> completed_fn;
+    function<void(void)> completed_fn;
 };
 
-struct event_listener_t
+struct dispatcher_event_listener_t
 {
     dispatcher_event_listener_id_t id;
-    dispatcher_event_name_t event_name;
-    dispatcher_event_handler_t callback;
-    dispatcher_event_options_t options;
+    dispatcher_event_name_t        event_name;
+    dispatcher_event_handler_t     callback;
+    dispatcher_event_options_t     options;
+    void*                          user_data;
 };
 
 struct dispatcher_event_t
@@ -61,7 +62,7 @@ static dispatcher_handler_t* _dispatcher_actions = nullptr;
 
 static dispatcher_event_listener_id_t _next_listener_id = 1;
 static event_stream_t* _event_stream = nullptr;
-static event_listener_t* _event_listeners = nullptr;
+static dispatcher_event_listener_t* _event_listeners = nullptr;
 static objectmap_t* _dispatcher_threads = nullptr;
 
 //
@@ -91,6 +92,7 @@ FOUNDATION_EXTERN bool dispatcher_process_events()
                     args.data = (uint8_t*)de->data;
                     args.size = de->data_size;
                     args.options = de->options;
+                    args.user_data = e->user_data;
                     e->callback.invoke(args);
                 }
             }
@@ -223,7 +225,8 @@ bool dispatcher_post_event(
 dispatcher_event_listener_id_t dispatcher_register_event_listener(
     dispatcher_event_name_t name,
     const dispatcher_event_handler_t& callback,
-    dispatcher_event_options_t options /*= DISPATCHER_EVENT_OPTION_NONE*/)
+    dispatcher_event_options_t options /*= DISPATCHER_EVENT_OPTION_NONE*/,
+    void* user_data /*= nullptr*/)
 {
     FOUNDATION_ASSERT(name != HASH_EMPTY_STRING);
 
@@ -233,10 +236,11 @@ dispatcher_event_listener_id_t dispatcher_register_event_listener(
         return INVALID_DISPATCHER_EVENT_LISTENER_ID;
     }
     
-    event_listener_t elistener;
+    dispatcher_event_listener_t elistener;
     elistener.id = _next_listener_id++;
     elistener.event_name = name;
     elistener.options = options;
+    elistener.user_data = user_data;
     array_push_memcpy(_event_listeners, &elistener);
 
     /// The callback is assigned here, because we do not want the copy to be destroyed 
@@ -251,9 +255,10 @@ dispatcher_event_listener_id_t dispatcher_register_event_listener(
 dispatcher_event_listener_id_t dispatcher_register_event_listener(
     const char* event_name, size_t event_name_length,
     const dispatcher_event_handler_t& callback,
-    dispatcher_event_options_t options /*= DISPATCHER_EVENT_OPTION_NONE*/)
+    dispatcher_event_options_t options /*= DISPATCHER_EVENT_OPTION_NONE*/,
+    void* user_data /*= nullptr*/)
 {
-    return dispatcher_register_event_listener(string_hash(event_name, event_name_length), callback, options);
+    return dispatcher_register_event_listener(string_hash(event_name, event_name_length), callback, options, user_data);
 }
 
 bool dispatcher_unregister_event_listener(dispatcher_event_listener_id_t event_listener_id)
@@ -273,6 +278,11 @@ bool dispatcher_unregister_event_listener(dispatcher_event_listener_id_t event_l
         }
 
         mutex_unlock(_dispatcher_lock);
+    }
+    else
+    {
+        log_errorf(0, ERROR_SYSTEM_CALL_FAIL, 
+            STRING_CONST("Failed to lock dispatcher and unregister event listener %u"), event_listener_id);
     }
 
     return unregistered;
@@ -335,13 +345,10 @@ FOUNDATION_STATIC void dispatch_execute_thread_completed(void* obj)
 
     thread_signal(dt->thread);
     dt->completed = true;
-    
-    dt->completed_fn.invoke(dt->thread->result);
-
     dt->thread_fn.~function();
-    dt->completed_fn.~function();
     
     thread_t* thread = dt->thread;
+    dispatch(dt->completed_fn);
     dispatch(L0(thread_deallocate(thread)));
     dt->thread = nullptr;
     
@@ -351,7 +358,7 @@ FOUNDATION_STATIC void dispatch_execute_thread_completed(void* obj)
 dispatcher_thread_handle_t dispatch_thread(
     const char* name, size_t name_length, 
     const function<void*(void*)>& thread_fn, 
-    const function<void(void*)> completed_fn /*= nullptr*/,
+    const function<void(void)> completed_fn /*= nullptr*/,
     void* payload /*= nullptr*/)
 {
     FOUNDATION_ASSERT(thread_fn);

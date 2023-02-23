@@ -163,7 +163,10 @@ struct json_object_t
             return true;
 
         if (root->type == JSON_PRIMITIVE)
-            return string_equal(STRING_CONST("null"), STRING_ARGS(json_token_value(buffer, root)));
+        {
+            string_const_t value = json_token_value(buffer, root);
+            return string_equal(STRING_CONST("null"), STRING_ARGS(value));
+        }
 
         return false;
     }
@@ -252,6 +255,26 @@ struct json_object_t
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double as_number(double default_value = NAN) const
     {
         return json_read_number(buffer, tokens, root, default_value);
+    }
+
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double as_boolean(bool default_value = false) const
+    {
+        if (root == nullptr || buffer == nullptr)
+            return default_value;
+
+        if (root->type == JSON_UNDEFINED)
+            return default_value;
+
+        if (root->type == JSON_PRIMITIVE)
+        {
+            string_const_t value = json_token_value(buffer, root);
+            if (string_equal(STRING_CONST("true"), STRING_ARGS(value)))
+                return true;
+            if (string_equal(STRING_CONST("false"), STRING_ARGS(value)))
+                return false;
+        }
+
+        return default_value;
     }
 
     string_const_t as_string() const

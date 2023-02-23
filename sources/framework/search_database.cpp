@@ -105,6 +105,7 @@ FOUNDATION_ALIGNED_STRUCT(search_database_t, 8)
     uint32_t                document_count{ 0 };
     string_table_t*         strings{ nullptr };
     search_database_flags_t options{ SearchDatabaseFlags::Default };
+    bool                    dirty{ false };
 
     search_query_t**         queries{ nullptr };
 };
@@ -247,6 +248,7 @@ FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search
         if (index.document_count == 0)
         {
             // This can happen if a document gets removed eventually.
+            db->dirty = true;
             index.doc = doc;
             index.document_count = 1;
         }
@@ -258,6 +260,7 @@ FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search
                 if (index.docs[i] == doc)
                     return insert_at;
             }
+            db->dirty = true;
             index.docs[index.document_count++] = doc;
         }
         else if (index.document_count == ARRAY_COUNT(index.docs))
@@ -273,6 +276,7 @@ FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search
             search_document_handle_t* docs = nullptr;
             for (int i = 0; i < ARRAY_COUNT(index.docs); ++i)
                 array_push(docs, index.docs[i]);
+            db->dirty = true;
             array_push(docs, doc);
             index.docs_list = docs;
             index.document_count = array_size(docs);
@@ -288,6 +292,7 @@ FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search
             }
             
             // Add to existing list
+            db->dirty = true;
             array_push(index.docs_list, doc);
             index.document_count = array_size(index.docs_list);
             FOUNDATION_ASSERT(index.document_count > ARRAY_COUNT(index.docs));
@@ -302,6 +307,7 @@ FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search
         for (int i = 1; i < ARRAY_COUNT(index.docs); ++i)
             index.docs[i] = SEARCH_DOCUMENT_INVALID_ID;
         index.document_count = 1;
+        db->dirty = true;
         array_insert_memcpy(db->indexes, insert_at, &index);
     }
 
@@ -431,6 +437,12 @@ void search_database_deallocate(search_database_t*& db)
     db = nullptr;
 }
 
+bool search_database_is_dirty(search_database_t* database)
+{
+    FOUNDATION_ASSERT(database);
+    return database->dirty;
+}
+
 time_t search_database_document_timestamp(search_database_t* db, search_document_handle_t document)
 {
     if (!search_database_is_document_valid(db, document))
@@ -469,6 +481,7 @@ search_document_handle_t search_database_add_document(search_database_t* db, con
     document.timestamp = time_now();
 
     SHARED_WRITE_LOCK(db->mutex);
+    db->dirty = true;
     db->document_count++;
     array_push_memcpy(db->documents, &document);
     return array_size(db->documents) - 1;
@@ -1065,20 +1078,20 @@ bool search_database_load(search_database_t* db, stream_t* stream)
         index->document_count = stream_read_uint32(stream);
         if (index->document_count <= ARRAY_COUNT(index->docs))
         {
-            for (uint32_t i = 0; i < index->document_count; ++i)
-                index->docs[i] = stream_read_uint32(stream);
+            stream_read(stream, index->docs, sizeof(uint32_t) * index->document_count);
         }
         else
         {
             index->docs_list = nullptr;
-            for (uint32_t i = 0; i < index->document_count; ++i)
-                array_push(index->docs_list, stream_read_uint32(stream));
+            array_resize(index->docs_list, index->document_count);
+            stream_read(stream, index->docs_list, sizeof(uint32_t) * index->document_count);
         }
     }
 
     // So far so good, lets swap new entries.
     SHARED_WRITE_LOCK(db->mutex);
     search_database_deallocate_documents(db);
+    db->dirty = false;
     db->documents = documents;
     db->document_count = document_count - 1; /* -1 to exclude the root document */
 
@@ -1096,35 +1109,55 @@ bool search_database_save(search_database_t* db, stream_t* stream)
     SHARED_READ_LOCK(db->mutex);
     
     // Save database header
-    stream_write(stream, &SEARCH_DATABASE_HEADER, sizeof(SEARCH_DATABASE_HEADER));
+    {
+        TIME_TRACKER("Write header");
+        stream_write(stream, &SEARCH_DATABASE_HEADER, sizeof(SEARCH_DATABASE_HEADER));
+    }
 
     // Save documents
-    stream_write_uint32(stream, array_size(db->documents));
-    foreach(d, db->documents)
     {
-        stream_write_uint8(stream, (uint32_t)d->type);
-        stream_write_string(stream, STRING_ARGS(d->name));
-        stream_write_uint64(stream, d->timestamp);
+        TIME_TRACKER("Write document");
+        stream_write_uint32(stream, array_size(db->documents));
+        foreach(d, db->documents)
+        {
+            stream_write_uint8(stream, (uint32_t)d->type);
+            stream_write_string(stream, STRING_ARGS(d->name));
+            stream_write_uint64(stream, d->timestamp);
+        }
     }
 
     // Save string table
-    string_table_pack(db->strings);
-    stream_write_int32(stream, db->strings->count);
-    stream_write_uint64(stream, string_table_average_string_length(db->strings));
-    stream_write_uint64(stream, db->strings->allocated_bytes);
-    stream_write(stream, db->strings, db->strings->allocated_bytes);
-
-    // Save indexes
-    stream_write_uint32(stream, array_size(db->indexes));
-    foreach(e, db->indexes)
-    { 
-        stream_write(stream, &e->key, sizeof(e->key));
-        
-        stream_write_uint32(stream, e->document_count);
-        for (unsigned i = 0, end = e->document_count; i < end; ++i)
-            stream_write_uint32(stream, search_database_get_indexed_document(*e, i));        
+    {
+        TIME_TRACKER("Write string table");
+        string_table_pack(db->strings);
+        stream_write_int32(stream, db->strings->count);
+        stream_write_uint64(stream, string_table_average_string_length(db->strings));
+        stream_write_uint64(stream, db->strings->allocated_bytes);
+        stream_write(stream, db->strings, db->strings->allocated_bytes);
     }
 
+    // Save indexes
+    {
+        TIME_TRACKER("Write indexes");
+        stream_write_uint32(stream, array_size(db->indexes));
+        foreach(e, db->indexes)
+        {
+            stream_write(stream, &e->key, sizeof(e->key));
+
+            stream_write_uint32(stream, e->document_count);
+
+            if (e->document_count <= ARRAY_COUNT(e->docs))
+            {
+                stream_write(stream, e->docs, sizeof(uint32_t) * e->document_count);
+            }
+            else
+            {
+                stream_write(stream, e->docs_list, sizeof(uint32_t) * e->document_count);
+            }
+        }
+    }
+
+    db->dirty = false;
     return true;
 }
 
@@ -1141,7 +1174,7 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
     if (doc->type == SearchDocumentType::Removed)
         return false;
 
-    for (unsigned i = 0, end = array_size(db->indexes); i < end && !document_removed; ++i)
+    for (unsigned i = 0, end = array_size(db->indexes); i < end/* && !document_removed*/; ++i)
     {
         search_index_t& index = db->indexes[i];
 
@@ -1192,6 +1225,7 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
     FOUNDATION_ASSERT(db->document_count > 0);
     db->document_count--;
     doc->type = SearchDocumentType::Removed;
+    db->dirty |= document_removed;
     string_deallocate(doc->name);
     return document_removed;
 }
