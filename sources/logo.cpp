@@ -449,8 +449,9 @@ FOUNDATION_STATIC int logo_download_thread(void* payload)
 
     if (!logo_download_image(logo, image))
     {
-        log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to download logo %s.%.*s"),
+        log_debugf(HASH_LOGO, STRING_CONST("Failed to download logo %s.%.*s"),
             string_table_decode(logo->symbol), STRING_FORMAT(image->extension));
+        return -1;
     }
         
     return 0;

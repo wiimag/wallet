@@ -45,10 +45,10 @@ static hashtable64_t* log_suppress_table;
 static error_level_t log_suppress_default;
 static bool log_auto_newline = true;
 
-#define LOG_WARNING_NAMES 11+4
+#define LOG_WARNING_NAMES 11+3
 static char* log_warning_name[LOG_WARNING_NAMES] = {"performance", "deprecated", "invalid value",    "memory",
                                                     "unsupported", "suspicious", "system call fail", "deadlock",
-                                                    "script",      "resource", "network", "standard", "cloud", "UI", "timeout"};
+                                                    "script",      "resource", "network", "standard", "UI", "timeout"};
 
 #define LOG_ERROR_NAMES 18
 static char* log_error_name[LOG_ERROR_NAMES] = {"none",

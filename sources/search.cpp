@@ -279,6 +279,16 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
         return 0;
     }
 
+    // Wait to connect to EOD services
+    const tick_t timeout = time_current();
+    while (!eod_connected() && time_elapsed(timeout) < 30.0)
+        thread_try_wait(100);
+    if (!eod_connected())
+    {
+        log_warnf(HASH_SEARCH, WARNING_NETWORK, STRING_CONST("Failed to connect to EOD services, terminating indexing"));
+        return to_ptr(-1);
+    }
+    
     string_const_t stock_markets[] = {
         CTEXT("TO"),
         CTEXT("NEO"),

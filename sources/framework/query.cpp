@@ -172,7 +172,7 @@ struct CURLRequest
         curl_easy_getinfo(req, CURLINFO_RESPONSE_CODE, &response_code);
         if (status != CURLE_OK)
         {
-            log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+            log_warnf(HASH_QUERY, WARNING_NETWORK,
                 STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(status), status, query);
             return false;
         }
@@ -252,7 +252,7 @@ struct JSONRequest : public CURLRequest
 
         if (status != CURLE_OK)
         {
-            log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+            log_errorf(HASH_QUERY, ERROR_NETWORK,
                 STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(status), status, query);
             return false;
         }
@@ -272,7 +272,7 @@ struct JSONRequest : public CURLRequest
         curl_easy_getinfo(req, CURLINFO_RESPONSE_CODE, &response_code);
         if (status != CURLE_OK)
         {
-            log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+            log_errorf(HASH_QUERY, ERROR_NETWORK,
                 STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(status), status, query);
         }
 
@@ -389,7 +389,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
     req.status = curl_easy_perform(req);
     if (req.status != CURLE_OK)
     {
-        log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+        log_errorf(HASH_QUERY, ERROR_NETWORK,
             STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(req.status), req.status, query);
     }
     else
@@ -461,8 +461,20 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
 
                 if (json.root != nullptr)
                 {
-                    callback(json);
-                    signal_thread();
+                    if (callback)
+                    {
+                        try
+                        {
+                            callback(json);
+                            signal_thread();
+                        }
+                        catch (...)
+                        {
+                            log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("Failed to execute JSON callback for %s [%.*s...]"), query, 64, json.buffer);
+                            return false;
+                        }
+                    }
+                    
                     return true;
                 }
                 else
@@ -566,7 +578,7 @@ bool query_execute_async_json(const char* query, query_format_t format, const qu
 {
     FOUNDATION_ASSERT(string_equal(query, 4, STRING_CONST("http")));
     const size_t query_length = string_length(query);
-    log_debugf(HASH_QUERY, STRING_CONST("Queueing GET query [%zu] %.*s"), _fetcher_requests.size(), (int)query_length, query);
+    //log_debugf(HASH_QUERY, STRING_CONST("Queueing GET query [%zu] %.*s"), _fetcher_requests.size(), (int)query_length, query);
     json_query_request_t request;    
     request.query = string_clone(query, query_length);
     request.format = format;
@@ -622,7 +634,7 @@ FOUNDATION_STATIC void* fetcher_thread_fn(void* arg)
             {
                 if (req.format != FORMAT_JSON_WITH_ERROR)
                 {
-                    log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+                    log_errorf(HASH_QUERY, ERROR_NETWORK,
                         STRING_CONST("Failed to execute query %.*s"), STRING_FORMAT(req.query));
                 }
             }
@@ -667,7 +679,7 @@ bool query_post_json(const char* url, const config_handle_t& post_data, const qu
             }
             catch (...)
             {
-                log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("Failed to post JSON or %s"), url);
+                log_errorf(HASH_QUERY, ERROR_NETWORK, STRING_CONST("Failed to post JSON or %s"), url);
                 return false;
             }
         }
@@ -697,7 +709,7 @@ stream_t* query_execute_download_file(const char* query)
     CURLcode status = curl_easy_perform(req);
     if (status != CURLE_OK)
     {
-        log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+        log_errorf(HASH_QUERY, ERROR_NETWORK,
             STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(status), status, query);
         stream_deallocate(download_stream);
         return nullptr;
@@ -771,7 +783,7 @@ void query_initialize()
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK)
     {
-        log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("curl_global_init() failed(%d) : %s"), res, curl_easy_strerror(res));
+        log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("CULR init failed(%d) : %s"), res, curl_easy_strerror(res));
         return;
     }
 

@@ -319,7 +319,7 @@ FOUNDATION_STATIC hash_t search_database_string_to_symbol(search_database_t* db,
     while (symbol == STRING_TABLE_FULL)
     {
         const int grow_size = (int)math_align_up(db->strings->allocated_bytes * 1.5f, 8);
-        log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Search database string table full, growing to %d bytes"), grow_size);
+        log_debugf(0, STRING_CONST("Search database string table full, growing to %d bytes"), grow_size);
         string_table_grow(&db->strings, grow_size);
         symbol = string_table_to_symbol(db->strings, str, length);
     }
@@ -368,6 +368,11 @@ FOUNDATION_STATIC bool search_database_index_word(
         // Skip spaces at the end
         if (word.str[word.length - 1] == ' ')
             continue;
+
+        // TODO: Do not add variations to the string table?
+        //key.hash = string_hash(word.str, word.length);
+        //key.crc = search_database_string_to_symbol(db, str, length);
+        //return -to_int(length);
             
         search_database_string_to_key(db, word.str, word.length, key);
         search_database_insert_index(db, doc, key);

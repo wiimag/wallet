@@ -24,11 +24,12 @@
 // "https://eodhistoricaldata.com/api/exchange-symbol-list/TO?api_token=XYZ&fmt=json"
 
 static char EOD_KEY[32] = { '\0' };
+static bool EOD_CONNECTED = false;
 static const ImColor green = ImColor::HSV(150 / 360.0f, 0.4f, 0.6f);
 static const ImColor red = ImColor::HSV(356 / 360.0f, 0.42f, 0.97f); // hsv(356, 42%, 97%)
 static const ImColor gray = ImColor::HSV(155 / 360.0f, 0.05f, 0.85f); // hsv(155, 6%, 84%)
 
-FOUNDATION_STATIC const char* ensure_key_loaded()
+FOUNDATION_STATIC const char* eod_ensure_key_loaded()
 {
     if (EOD_KEY[0] != '\0')
         return EOD_KEY;
@@ -49,15 +50,23 @@ FOUNDATION_STATIC const char* ensure_key_loaded()
 
 FOUNDATION_STATIC uint64_t eod_fix_invalid_cache_query_after_seconds(uint64_t& invalid_cache_query_after_seconds)
 {
+    if (!EOD_CONNECTED)
+        return UINT64_MAX;
+
     // No need to refresh information on the weekend as often since the stock market doesn't move at this time.
     if (invalid_cache_query_after_seconds != UINT64_MAX && time_is_weekend())
         invalid_cache_query_after_seconds *= 32;
     return invalid_cache_query_after_seconds;
 }
 
+bool eod_connected()
+{
+    return EOD_CONNECTED;
+}
+
 string_t eod_get_key()
 {
-    ensure_key_loaded();
+    eod_ensure_key_loaded();
     return string_t{ STRING_CONST_CAPACITY(EOD_KEY) };
 }
 
@@ -92,8 +101,8 @@ string_const_t eod_build_url(const char* api, const char* ticker, query_format_t
 
 string_const_t eod_build_url(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2)
 {
+    const char* api_key = eod_ensure_key_loaded();
     string_t EOD_URL_BUFFER = string_static_buffer(2048);
-    const char* api_key = ensure_key_loaded();
 
     string_const_t HOST_API = string_const(STRING_CONST("https://eodhistoricaldata.com/api/"));
     string_t eod_url = string_copy(EOD_URL_BUFFER.str, EOD_URL_BUFFER.length, STRING_ARGS(HOST_API));
@@ -195,7 +204,7 @@ const char* eod_build_url(const char* api, query_format_t format, const char* ur
             url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("csv"));
     }
 
-    const char* api_key = ensure_key_loaded();
+    const char* api_key = eod_ensure_key_loaded();
     const size_t api_key_length = string_length(api_key);
     if (api_key_length > 0)
     {
@@ -221,12 +230,6 @@ bool eod_fetch(const char* api, const char* ticker, query_format_t format, const
     return eod_fetch(api, ticker, format, param1, value1, nullptr, nullptr, json_callback, invalid_cache_query_after_seconds);
 }
 
-bool eod_fetch(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 15ULL * 60ULL*/)
-{
-    string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
-    return query_execute_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
-}
-
 bool eod_fetch_async(const char* api, const char* ticker, query_format_t format, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
     return eod_fetch_async(api, ticker, format, nullptr, nullptr, nullptr, nullptr, json_callback, invalid_cache_query_after_seconds);
@@ -237,9 +240,23 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
     return eod_fetch_async(api, ticker, format, param1, value1, nullptr, nullptr, json_callback, invalid_cache_query_after_seconds);
 }
 
+bool eod_fetch(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 15ULL * 60ULL*/)
+{
+    string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
+
+    if (!EOD_CONNECTED && format != FORMAT_JSON_WITH_ERROR)
+        log_warnf(HASH_EOD, WARNING_NETWORK, STRING_CONST("Query to %.*s might fail as we are not connected to EOD services."), STRING_FORMAT(url));
+
+    return query_execute_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
+}
+
 bool eod_fetch_async(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
     string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
+
+    if (!EOD_CONNECTED && format != FORMAT_JSON_WITH_ERROR)
+        log_warnf(HASH_EOD, WARNING_NETWORK, STRING_CONST("Query to %.*s might fail as we are not connected to EOD services."), STRING_FORMAT(url));
+
     return query_execute_async_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
 }
 
@@ -253,19 +270,21 @@ FOUNDATION_STATIC void eod_update_window_title()
 
     extern const char* app_title();
 
-    eod_fetch_async("user", "", FORMAT_JSON, [window](const json_object_t& json)
+    eod_fetch_async("user", "", FORMAT_JSON_WITH_ERROR, [window](const json_object_t& json)
     {
+        EOD_CONNECTED = json.error_code == 0 && json.status_code < 400;
+        
         const bool is_main_branch = string_equal(STRING_CONST(GIT_BRANCH), STRING_CONST("main")) ||
             string_equal(STRING_CONST(GIT_BRANCH), STRING_CONST("master"));
 
-        string_const_t subscription = json["subscriptionType"].as_string();
+        string_const_t subscription = EOD_CONNECTED ? json["subscriptionType"].as_string() : string_to_const(GIT_BRANCH);
         string_const_t branch_name{ subscription.str, subscription.length };
         if (main_is_running_tests())
             branch_name = CTEXT("tests");
         else if (!is_main_branch)
             branch_name = string_to_const(GIT_BRANCH);
 
-        string_const_t license_name = json["name"].as_string();
+        string_const_t license_name = EOD_CONNECTED ? json["name"].as_string() : CTEXT("disconnected");
         string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
 
         static char title[128] = PRODUCT_NAME;
@@ -281,23 +300,22 @@ FOUNDATION_STATIC void eod_main_menu_status()
     GLFWwindow* window = main_window();
     FOUNDATION_ASSERT(window);
     
-    static char eod_status[128] = "";
     static char eod_menu_title[64] = "EOD";
-    static volatile bool eod_connected = false;
+    static char eod_status[128] = "Disconnected";
     static volatile tick_t eod_menu_title_last_update = 0;
     if (time_elapsed(eod_menu_title_last_update) > 60)
     {
         eod_menu_title_last_update = time_current();
-        eod_fetch_async("user", "", FORMAT_JSON, [](const json_object_t& json)
+        eod_fetch_async("user", "", FORMAT_JSON_WITH_ERROR, [](const json_object_t& json)
         {
-            eod_connected = true;
-            double api_calls = json["apiRequests"].as_number();
-            double api_calls_limit = json["dailyRateLimit"].as_number();
+            EOD_CONNECTED = json.error_code == 0 && json.status_code < 400;
+            double api_calls = EOD_CONNECTED ? json["apiRequests"].as_number() : 0;
+            double api_calls_limit = EOD_CONNECTED ? json["dailyRateLimit"].as_number() : 1;
             string_format(STRING_CONST_CAPACITY(eod_menu_title), STRING_CONST("EOD [API USAGE %.2lf %%]"), api_calls * 100 / api_calls_limit);
 
-            string_const_t name = json["name"].as_string();
-            string_const_t email = json["email"].as_string();
-            string_const_t subtype = json["subscriptionType"].as_string();
+            string_const_t name = EOD_CONNECTED ? json["name"].as_string() : CTEXT("Disconnected");
+            string_const_t email = EOD_CONNECTED ? json["email"].as_string() : CTEXT("Disconnected");
+            string_const_t subtype = EOD_CONNECTED ? json["subscriptionType"].as_string() : CTEXT("Disconnected");
             string_format(STRING_CONST_CAPACITY(eod_status), STRING_CONST("Name: %.*s\nEmail: %.*s\nSubscription: %.*s\nRequest: %lg/%lg"),
                 STRING_FORMAT(name), STRING_FORMAT(email), STRING_FORMAT(subtype), api_calls, api_calls_limit);
 
@@ -349,7 +367,7 @@ FOUNDATION_STATIC void eod_main_menu_status()
     const ImRect status_box(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
     const ImVec2 status_box_center = status_box.GetCenter() + ImVec2(-4.0f, 4.0f);
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->AddCircleFilled(status_box_center, status_box_size.x / 2.0f, eod_connected ? green : gray);
+    draw_list->AddCircleFilled(status_box_center, status_box_size.x / 2.0f, EOD_CONNECTED ? green : gray);
 
     ImGui::EndGroup();
 }
