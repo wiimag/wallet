@@ -798,8 +798,16 @@ FOUNDATION_STATIC search_result_t* search_database_query_property_number(
         start = ~start;
 
     int end = start;
+
+    // Try to fix the insertion point by one index
+    if (db->indexes[start].key.type == key.type && db->indexes[start].key.crc != key.crc)
+        start++;
+
     if (db->indexes[end].key.type == key.type && db->indexes[end].key.crc != key.crc)
         end--;
+
+    if (db->indexes[start].key.crc != key.crc || db->indexes[end].key.crc != key.crc)
+        return results; // Nothing to be found
     
     // Rewind to first index with same crc
     while (start > 0 && db->indexes[start - 1].key.crc == key.crc)
@@ -945,6 +953,9 @@ FOUNDATION_STATIC search_result_t* search_database_handle_query_evaluation(
 {
     search_database_t* db = (search_database_t*)user_data;
     FOUNDATION_ASSERT(db);
+
+    if (array_size(db->indexes) == 0)
+        return nullptr;
     
     SearchIndexingFlags indexing_flags = search_database_case_indexing_flag(db);
     if (any(eval_flags, SearchQueryEvalFlags::Exclude))
@@ -964,7 +975,8 @@ FOUNDATION_STATIC search_result_t* search_database_handle_query_evaluation(
     }
     else if (any(eval_flags, SearchQueryEvalFlags::Function))
     {
-        FOUNDATION_ASSERT_FAIL("Not implemented");
+        log_warnf(0, WARNING_UNSUPPORTED, STRING_CONST("Function support is not supported yet"));
+        //FOUNDATION_ASSERT_FAIL("Not implemented");
     }
     else
     {
@@ -989,15 +1001,16 @@ search_query_handle_t search_database_query(search_database_t* db, const char* q
     FOUNDATION_ASSERT(query);
     
     // TODO: Use the job system to spawn a new query job.
-    //       The job should evaluate the query and store the results in the query object.
-    //       The query object should be stored in the database and the handle returned.
-    //       The query object should be marked as completed when the job is done.
-    //       The query object should be marked as cancelled if the database is destroyed.
-    //       The query object should be marked as cancelled if the query is cancelled.
-    //       The query object should be marked as cancelled if the query is destroyed.
-    //       The query object should be marked as cancelled if the query is replaced.
-    //       The query object should be marked as cancelled if the query is replaced by another query.
-    query->results = search_query_evaluate(query, search_database_handle_query_evaluation, db);
+    try
+    {
+        query->results = search_query_evaluate(query, search_database_handle_query_evaluation, db);
+    }
+    catch (SearchQueryException ex)
+    {
+        search_query_deallocate(query);
+        throw ex;
+    }
+    
     query->completed = true;
 
     SHARED_WRITE_LOCK(db->mutex);

@@ -11,6 +11,7 @@
 #include "events.h"
 #include "settings.h"
 #include "pattern.h"
+#include "logo.h"
 
 #include <framework/imgui.h>
 #include <framework/string.h>
@@ -31,6 +32,8 @@
 
 struct search_window_t;
 
+static const ImU32 SEARCH_PATTERN_VIEWED_COLOR = (ImU32)ImColor::HSV(0.6f, 0.3f, 0.9f);
+
 struct search_result_entry_t
 {
     search_database_t*       db{ nullptr };
@@ -49,6 +52,8 @@ struct search_window_t
     char                           query[1024] = { 0 };
     tick_t                         query_tick{ 0 };
     dispatcher_event_listener_id_t dispatcher_event_db_loaded{ INVALID_DISPATCHER_EVENT_LISTENER_ID };
+
+    char                           error[1024] = { 0 };
 };
 
 static struct SEARCH_MODULE {
@@ -378,11 +383,20 @@ FOUNDATION_STATIC void search_execute_query(search_database_t* db, const char* s
 FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const char* text, size_t length)
 {
     sw->query_tick = time_current();
-    search_execute_query(sw->db, text, length, sw->results);
-    sw->query_tick = time_diff(sw->query_tick, time_current());
+    try
+    {
+        search_execute_query(sw->db, text, length, sw->results);
+        sw->error[0] = 0;
 
-    // Save last query to module
-    string_copy(STRING_CONST_BUFFER(_search->query), text, length);
+        // Save last query to module
+        string_copy(STRING_CONST_BUFFER(_search->query), text, length);
+    }
+    catch (SearchQueryException err)
+    {
+        string_format(STRING_CONST_BUFFER(sw->error), STRING_CONST("(%u) %s at %.*s"), err.error, err.msg, STRING_FORMAT(err.token));
+    }
+    
+    sw->query_tick = time_diff(sw->query_tick, time_current());
 }
 
 FOUNDATION_STATIC bool search_window_render(void* user_data)
@@ -409,7 +423,11 @@ FOUNDATION_STATIC bool search_window_render(void* user_data)
 
     table_render(sw->table, sw->results, 0, -ImGui::GetFontSize() - 8.0f);
 
-    if (sw->query_tick > 0 )
+    if (sw->error[0] != 0)
+    {
+        ImGui::TextColored(ImColor(IM_COL32(200, 10, 10, 245)), "%s", sw->error);
+    }
+    else if (sw->query_tick > 0 )
     {
         double elapsed_time = sw->query_tick / (double)time_ticks_per_second() * 1000.0;
         const char* time_unit = "ms";
@@ -463,10 +481,33 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
 
     const stock_t* s = search_result_resolve_stock(entry, column);
     if (s)
-        return SYMBOL_CONST(s->code);
+    {
+        string_const_t code = SYMBOL_CONST(s->code);
+        if (column->flags & COLUMN_RENDER_ELEMENT)
+        {
+            if (entry->viewed)
+                ImGui::PushStyleColor(ImGuiCol_Text, SEARCH_PATTERN_VIEWED_COLOR);
+            
+            const float font_size = ImGui::GetFontSize();
+            ImGui::Text("%.*s", STRING_FORMAT(code));
+
+            if (entry->viewed)
+                ImGui::PopStyleColor();
+
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - font_size, 0.0f);
+            ImVec2 logo_size{ font_size, font_size };
+            logo_render_icon(STRING_ARGS(code), logo_size, false, true, nullptr);
+        }
+        
+        return code;
+    }
 
     string_const_t symbol = search_database_document_name(entry->db, entry->doc);
     FOUNDATION_ASSERT(!string_is_null(symbol));
+
+    if (column->flags & COLUMN_RENDER_ELEMENT)
+        ImGui::Text("%.*s", STRING_FORMAT(symbol));
+
     return symbol;
 }
 
@@ -714,9 +755,8 @@ FOUNDATION_STATIC table_t* search_create_table()
     table->flags |= TABLE_HIGHLIGHT_HOVERED_ROW;
     table->context_menu = search_table_contextual_menu;
 
-    table_add_column(table, search_table_column_symbol, "Symbol", COLUMN_FORMAT_TEXT, COLUMN_SORTABLE)
-        .set_width(imgui_get_font_ui_scale(110.0f))
-        .set_style_formatter(search_table_column_code_color);
+    table_add_column(table, search_table_column_symbol, "Symbol", COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING)
+        .set_width(imgui_get_font_ui_scale(120.0f));
 
     table_add_column(table, search_table_column_name, ICON_MD_BUSINESS " Name", COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_STRETCH)
         .set_style_formatter(search_table_column_code_color)
@@ -833,7 +873,7 @@ FOUNDATION_STATIC void search_menu()
     if (ImGui::BeginMenu("Symbols"))
     {
         //ImGui::Separator();
-        if (ImGui::MenuItem("Search", "ALT+`", nullptr, true))
+        if (ImGui::MenuItem("Search", ICON_MD_KEYBOARD_OPTION_KEY "+`", nullptr, true))
             search_open_quick_search();
 
         ImGui::Separator();

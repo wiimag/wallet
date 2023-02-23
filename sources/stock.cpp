@@ -344,7 +344,7 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
                 log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Failed to fetch technical results %d for %s"), entry->fetch_errors, access_level, ticker);
             }
         }
-        else
+        else if (eod_availalble())
         {
             const uint32_t postpone_time_ms = min((uint32_t)(1000.0 - time_elapsed(entry->last_update_time) * 1000.0), 1000U);
             log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Missing EOD data to fetch technical results %d for %s (%u)"), 

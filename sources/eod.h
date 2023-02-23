@@ -20,6 +20,9 @@ bool eod_connected();
 /*! Checks if the EOD usage is at capacity */
 bool eod_is_at_capacity();
 
+/*! Check if the EOD service is available and usable. (i.e. connected at not at capacity) */
+bool eod_availalble();
+
 /*! @brief Save the API EOD key.
  *  @param eod_key The key to save.
  *  @return Returns true if the key was saved.

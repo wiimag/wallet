@@ -80,6 +80,11 @@ bool eod_is_at_capacity()
     return EOD->CAPACITY >= 1.0;
 }
 
+bool eod_availalble()
+{
+    return eod_connected() && !eod_is_at_capacity();
+}
+
 bool eod_connected()
 {
     return EOD->CONNECTED;

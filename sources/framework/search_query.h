@@ -67,6 +67,23 @@ typedef enum class SearchQueryTokenType : unsigned char
     Not,
 } search_query_token_type_t;
 
+struct SearchQueryException
+{
+    search_parser_error_t error{ SearchParserError::None };
+    string_const_t        token{};
+    char                  msg[256];
+
+    SearchQueryException(search_parser_error_t err, string_const_t token, const char* fmt = nullptr, ...)
+        : error(err)
+        , token(token)
+    {
+        va_list list;
+        va_start(list, fmt);
+        string_vformat(STRING_CONST_BUFFER(msg), fmt, string_length(msg), list);
+        va_end(list);
+    }
+};
+
 struct search_query_t
 {
     string_t text{};
