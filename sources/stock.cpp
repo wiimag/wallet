@@ -226,7 +226,27 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     entry.logo = string_table_encode_unescape(general["LogoURL"].as_string());
     entry.updated_at = string_table_encode(general["UpdatedAt"].as_string());
     entry.exchange = string_table_encode(general["Exchange"].as_string());
+    entry.isin = string_table_encode(general["ISIN"].as_string());
     entry.description = string_table_encode_unescape(general["Description"].as_string());
+
+    string_const_t sector = general["GicSector"].as_string();
+    if (string_is_null(sector))
+        sector = general["Sector"].as_string();
+    entry.sector = string_table_encode(sector);
+    
+    string_const_t group = general["GicGroup"].as_string();
+    entry.group = string_table_encode(group);
+    
+    string_const_t industry = general["GicIndustry"].as_string();
+    if (string_is_null(industry))
+        industry = general["Industry"].as_string();
+    entry.industry = string_table_encode(industry);
+
+    string_const_t subindustry = general["GicSubIndustry"].as_string();
+    entry.activity = string_table_encode(subindustry);
+
+    string_const_t category = general["HomeCategory"].as_string();
+    entry.category = string_table_encode(category);
 
     const json_object_t& hightlights = json["Highlights"];
     entry.dividends_yield = hightlights["DividendYield"].as_number(0.0);

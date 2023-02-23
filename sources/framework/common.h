@@ -131,8 +131,8 @@ int array_binary_search(const T* array, const V& _key)
     return array_binary_search<T, V>(array, array_size(array), _key);
 }
 
-template<typename T, typename V>
-int array_binary_search_compare(const T array, const typename V& _key, int(*compare)(const typename std::remove_pointer<T>::type& a, const typename V& b))
+template<typename T, typename V, typename Comparer>
+int array_binary_search_compare(const T array, const typename V& _key, Comparer compare)
 {
     uint32_t offset = 0;
     for (uint32_t ll = array_size(array); offset < ll;)
@@ -344,10 +344,43 @@ void execute_tool(const string_const_t& name, string_const_t* argv, size_t argc,
 
 void on_thread_exit(function<void()> func);
 
+/*! Returns the true if the application is running in daemon mode, meaning that it is either running as a service or as a background process.
+ * 
+ *  @remark Running tests is considered daemon mode, as it is a background process that does not require user interaction.
+ * 
+ *  @return True if the application is running in daemon mode.
+ */
+extern bool main_is_daemon_mode();
+
+/*! Returns true if the application is running in batch mode, meaning that it is running without a graphical user interface.
+ *
+ *  @remark Running tests is considered batch mode, as it is a background process that does not require user interaction.
+ *
+ *  @return True if the application is running in batch mode.
+ */
 extern bool main_is_batch_mode();
+
+/*! Returns true if the application is running in graphical mode, meaning that it is running with a graphical user interface.
+ *
+ *  @return True if the application is running in graphical mode.
+ */
 extern bool main_is_graphical_mode();
+
+/*! Returns true if the application is running in interactive mode, meaning that it is running with a graphical user interface and the user is interacting with it.
+ *
+ *  @remark Running tests is considered interactive mode, as it is a background process that does not require user interaction.
+ *
+ *  @return True if the application is running in interactive mode.
+ */
 extern bool main_is_interactive_mode(bool exclude_debugger = false);
+
+/*! Returns true if the application is running in test mode, meaning that it is running unit tests.
+ *
+ *  @return True if the application is running in test mode.
+ */
 extern bool main_is_running_tests();
+
+
 extern double main_tick_elapsed_time_ms();
 
 bool process_release_console();

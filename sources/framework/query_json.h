@@ -25,6 +25,7 @@ struct json_object_t
     long status_code{ 0 };
     long error_code{ 0 };
     string_const_t query;
+    bool resolved_from_cache{ false };
 
     json_object_t()
         : buffer(nullptr)
@@ -32,6 +33,7 @@ struct json_object_t
         , tokens(nullptr)
         , root(nullptr)
         , child(false)
+        , resolved_from_cache(false)
     {
 
     }
@@ -45,6 +47,7 @@ struct json_object_t
         , token_count(0)
         , tokens(nullptr)
         , root(nullptr)
+        , resolved_from_cache(false)
     {
         token_count = json_parse(STRING_ARGS(json_string), nullptr, 0);
         if (token_count > 0)
@@ -55,7 +58,7 @@ struct json_object_t
         }
     }
 
-    json_object_t(const string_t& buffer)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL json_object_t(const string_t& buffer)
         : json_object_t(string_const(STRING_ARGS(buffer)))
     {
     }
@@ -69,6 +72,7 @@ struct json_object_t
         , status_code(json.status_code)
         , error_code(json.error_code)
         , query(json.query)
+        , resolved_from_cache(json.resolved_from_cache)
     {
     }
 
@@ -81,6 +85,7 @@ struct json_object_t
         , status_code(src.status_code)
         , error_code(src.error_code)
         , query(src.query)
+        , resolved_from_cache(false)
     {
         src.child = true;
         src.buffer = nullptr;
@@ -100,6 +105,7 @@ struct json_object_t
         status_code = src.status_code;
         error_code = src.error_code;
         query = src.query;
+        resolved_from_cache = src.resolved_from_cache;
         return *this;
     }
 
@@ -112,6 +118,7 @@ struct json_object_t
         status_code = src.status_code;
         error_code = src.error_code;
         query = src.query;
+        resolved_from_cache = src.resolved_from_cache;
 
         src.buffer = nullptr;
         src.token_count = 0;
@@ -122,32 +129,32 @@ struct json_object_t
         return *this;
     }
 
-    ~json_object_t()
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL ~json_object_t()
     {
         if (!child)
             array_deallocate(tokens);
     }
 
-    string_const_t id() const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_const_t id() const
     {
         if (buffer == nullptr || root == nullptr)
             return string_null();
         return string_const(buffer + root->id, root->id_length);
     }
 
-    string_const_t to_string() const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_const_t to_string() const
     {
         if (buffer == nullptr || root == nullptr)
             return string_null();
         return string_const(buffer + root->value, root->value_length);
     }
 
-    bool is_valid() const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool is_valid() const
     {
         return root && tokens;
     }
 
-    bool is_null() const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool is_null() const
     {
         if (root == nullptr || buffer == nullptr)
             return true;
@@ -161,7 +168,7 @@ struct json_object_t
         return false;
     }
 
-    bool resolved() const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool resolved() const
     {
         return is_valid() && status_code < 400;
     }
@@ -219,7 +226,7 @@ struct json_object_t
         return json_object_t(*this, c);
     }
 
-    const json_object_t get(const char* field_name, size_t field_name_size) const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const json_object_t get(const char* field_name, size_t field_name_size) const
     {
         const json_token_t* field_token = json_find_token(*this, field_name, field_name_size);
         if (field_token == nullptr)
@@ -227,22 +234,22 @@ struct json_object_t
         return json_object_t(*this, field_token);
     }
 
-    const json_object_t operator[](size_t index) const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const json_object_t operator[](size_t index) const
     {
         return get(index);
     }
 
-    const json_object_t operator[](const char* field_name) const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const json_object_t operator[](const char* field_name) const
     {
         return get(field_name, 0U);
     }
 
-    const json_object_t operator[](string_const_t field_name) const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const json_object_t operator[](string_const_t field_name) const
     {
         return get(STRING_ARGS(field_name));
     }
 
-    double as_number(double default_value = NAN) const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double as_number(double default_value = NAN) const
     {
         return json_read_number(buffer, tokens, root, default_value);
     }
@@ -257,12 +264,12 @@ struct json_object_t
         return value;
     }
 
-    bool operator!=(const json_object_t& other) const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator!=(const json_object_t& other) const
     {
         return other.root != this->root;
     }
 
-    bool operator==(const json_object_t& other) const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator==(const json_object_t& other) const
     {
         return !operator!=(other);
     }
@@ -283,19 +290,19 @@ struct json_object_t
         return *this;
     }
 
-    const json_object_t& operator*() const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const json_object_t& operator*() const
     {
         return *this;
     }
 
-    json_object_t begin(size_t index = 0) const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL json_object_t begin(size_t index = 0) const
     {
         if (this->root == nullptr)
             return end();
         return get(index);
     }
 
-    json_object_t end() const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL json_object_t end() const
     {
         return json_object_t{};
     }

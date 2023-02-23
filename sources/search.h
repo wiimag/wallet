@@ -4,3 +4,6 @@
  */
 
 #pragma once
+
+/*! Returns true if the search service is ready to be used. */
+bool search_available();

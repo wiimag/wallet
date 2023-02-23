@@ -304,6 +304,7 @@ FOUNDATION_STATIC bool table_default_sorter(table_t* table, column_t* sorting_co
     if (table == nullptr || sorting_column == nullptr)
         return true;
 
+    sorting_column->flags |= COLUMN_SORTING_ELEMENT;
     table_sorting_context_t sorting_context{ table, sorting_column, sort_direction };
     sorting_context.search_filter = table->search_filter;
     #if FOUNDATION_PLATFORM_WINDOWS
@@ -314,6 +315,7 @@ FOUNDATION_STATIC bool table_default_sorter(table_t* table, column_t* sorting_co
         return table_qsort_cells(&sorting_context, &a, &b) < 0;
     });
     #endif
+    sorting_column->flags &= ~COLUMN_SORTING_ELEMENT;
 
     return sorting_context.completly_sorted;
 }
@@ -788,7 +790,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             ImGui::PopStyleColor();
 
         // Handle tooltip
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()/* && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)*/)
         {
             if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             {

@@ -170,10 +170,10 @@ FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, s
         }
     }
 
-    if (word_length >= 32)
-        log_warnf(0, WARNING_INVALID_VALUE, STRING_CONST("Word too long, truncating to 32 characters: %.*s"), (int)word_length, word);
+    static thread_local char word_lower_buffer[SEARCH_INDEX_WORD_MAX_LENGTH];
+    if (word_length >= ARRAY_COUNT(word_lower_buffer))
+        log_warnf(0, WARNING_INVALID_VALUE, STRING_CONST("Word too long, truncating to %u characters: %.*s"), SEARCH_INDEX_WORD_MAX_LENGTH, (int)word_length, word);
 
-    static thread_local char word_lower_buffer[32];
     string_t word_lower = lower_case_word ? 
         string_to_lower_utf8(STRING_CONST_BUFFER(word_lower_buffer), word, word_length) :
         string_copy(STRING_CONST_BUFFER(word_lower_buffer), word, word_length);
@@ -558,9 +558,10 @@ uint32_t search_database_document_count(search_database_t* database)
 
 string_const_t search_database_document_name(search_database_t* database, search_document_handle_t document)
 {
-    SHARED_READ_LOCK(database->mutex);
     if (!search_database_is_document_valid(database, document))
         return string_null();
+
+    SHARED_READ_LOCK(database->mutex);
     return string_to_const(database->documents[document].name);
 }
 
@@ -621,7 +622,7 @@ bool search_database_index_property(
 
     search_index_key_t key;
     key.type = SearchIndexType::Property;
-    key.score = -to_int(value_length);
+    key.score = to_int(value_length);
     key.crc = search_database_string_to_symbol(db, STRING_ARGS(property_name));
 
     string_const_t property_value = search_database_format_word(value, value_length, case_indexing_flag);
@@ -687,6 +688,31 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL search_document_handle_t search_data
     return idx.docs_list[element_at];
 }
 
+FOUNDATION_STATIC void search_database_insert_result(search_result_t*& results, const search_result_t& new_entry)
+{
+    int ridx = array_binary_search_compare(results, new_entry, [](const search_result_t& lhs, const search_result_t& rhs) 
+    {
+        if (lhs.id < rhs.id)
+            return -1;
+
+        if (lhs.id > rhs.id)
+            return 1;
+
+        return 0;
+    });
+
+    if (ridx < 0)
+    {
+        ridx = ~ridx;
+        array_insert_memcpy(results, ridx, &new_entry);
+    }
+    else
+    {
+        search_result_t& entry = results[ridx];
+        entry.score = min(new_entry.score, entry.score);
+    }
+}
+
 FOUNDATION_STATIC search_result_t* search_database_get_index_document_results(search_database_t* db, const search_index_t& idx, const search_result_t* and_set, search_result_t*& results)
 {
     search_result_t entry;
@@ -697,7 +723,7 @@ FOUNDATION_STATIC search_result_t* search_database_get_index_document_results(se
         if (and_set == nullptr || array_contains(and_set, entry.id))
         {
             entry.score = idx.key.score;
-            array_push_memcpy(results, &entry);
+            search_database_insert_result(results, entry);
         }
     }
 
@@ -732,7 +758,7 @@ FOUNDATION_STATIC search_result_t* search_database_exclude_documents(search_data
         search_result_t entry;
         entry.id = docid;
         entry.score = 0;
-        array_push_memcpy(included_set, &entry);
+        search_database_insert_result(included_set, entry);
     }
 
     array_deallocate(excluded_set);
@@ -754,6 +780,8 @@ FOUNDATION_STATIC search_result_t* search_database_query_property_number(
         start = ~start;
 
     int end = start;
+    if (db->indexes[end].key.type == key.type && db->indexes[end].key.crc != key.crc)
+        end--;
     
     // Rewind to first index with same crc
     while (start > 0 && db->indexes[start - 1].key.crc == key.crc)
@@ -824,7 +852,7 @@ FOUNDATION_STATIC search_result_t* search_database_query_property(
     search_query_eval_flags_t eval_flags,
     search_indexing_flags_t indexing_flags)
 {
-    if (value.length < 2)
+    if (value.length == 0)
         return nullptr;
 
     search_result_t* results = nullptr;
@@ -1047,6 +1075,7 @@ bool search_database_load(search_database_t* db, stream_t* stream)
     SHARED_WRITE_LOCK(db->mutex);
     search_database_deallocate_documents(db);
     db->documents = documents;
+    db->document_count = document_count - 1; /* -1 to exclude the root document */
 
     search_database_deallocate_indexes(db);
     db->indexes = indexes;

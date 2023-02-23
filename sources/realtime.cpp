@@ -735,7 +735,7 @@ FOUNDATION_STATIC void realtime_initialize()
     _realtime->stream = realtime_open_stream();
 
     // Create thread to query realtime stock
-    if (!environment_command_line_arg("disable-realtime"))
+    if (main_is_interactive_mode() && !environment_command_line_arg("disable-realtime"))
     {
         _realtime->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
         if (_realtime->background_thread == nullptr || !thread_start(_realtime->background_thread))

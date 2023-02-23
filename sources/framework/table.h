@@ -32,10 +32,13 @@ typedef enum : unsigned int {
     COLUMN_NUMBER_ABBREVIATION = 1 << 14,
     COLUMN_SUMMARY_AVERAGE = 1 << 15,
     COLUMN_SEARCHABLE = 1 << 16,
-    COLUMN_COMPUTE_SUMMARY = 1 << 17,
-    COLUMN_RENDER_ELEMENT = 1 << 18,
+    
     COLUMN_DEFAULT_SORT = 1 << 19,
     COLUMN_VALIGN_TOP = 1 << 20,
+
+    COLUMN_COMPUTE_SUMMARY = 1 << 27,
+    COLUMN_RENDER_ELEMENT = 1 << 28,
+    COLUMN_SORTING_ELEMENT = 1 << 29,
 
     COLUMN_ALIGNMENT_MASK = COLUMN_LEFT_ALIGN | COLUMN_RIGHT_ALIGN | COLUMN_MIDDLE_ALIGN,
 } column_flag_t;
@@ -298,6 +301,16 @@ template <size_t N> FOUNDATION_FORCEINLINE
 column_t& table_add_column(table_t* table,
     const char(&name)[N],
     const cell_fetch_value_handler_t& fetch_value_handler,
+    column_format_t format = COLUMN_FORMAT_TEXT,
+    column_flags_t flags = COLUMN_OPTIONS_NONE)
+{
+    return table_add_column(table, name, N, fetch_value_handler, format, flags);
+}
+
+template <size_t N> FOUNDATION_FORCEINLINE
+column_t& table_add_column(table_t* table,
+    const cell_fetch_value_handler_t& fetch_value_handler,
+    const char(&name)[N],
     column_format_t format = COLUMN_FORMAT_TEXT,
     column_flags_t flags = COLUMN_OPTIONS_NONE)
 {

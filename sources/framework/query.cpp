@@ -456,6 +456,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
 
                 json_object_t json = json_parse(json_string);
                 json.query = string_to_const(query_copy);
+                json.resolved_from_cache = true;
                 stream_deallocate(cache_file_stream);
 
                 if (json.root != nullptr)

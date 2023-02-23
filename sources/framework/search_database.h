@@ -17,8 +17,10 @@ struct search_database_t;
 typedef uint32_t search_query_handle_t;
 typedef uint32_t search_document_handle_t;
 
-#define SEARCH_QUERY_INVALID_ID (0)
-#define SEARCH_DOCUMENT_INVALID_ID (0)
+constexpr uint32_t SEARCH_QUERY_INVALID_ID = (0);
+constexpr uint32_t SEARCH_DOCUMENT_INVALID_ID = (0);
+constexpr uint8_t SEARCH_DOCUMENT_MAX_NAME_LENGTH = (64);
+constexpr uint8_t SEARCH_INDEX_WORD_MAX_LENGTH = (64);
 
 typedef enum class SearchDatabaseFlags : uint32_t {
     

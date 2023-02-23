@@ -1207,6 +1207,11 @@ extern bool main_is_batch_mode()
     return _batch_mode;
 }
 
+extern bool main_is_daemon_mode()
+{
+    return _batch_mode || _run_tests;
+}
+
 extern bool main_is_graphical_mode()
 {
     return !_batch_mode;
