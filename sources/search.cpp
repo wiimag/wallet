@@ -25,6 +25,7 @@
 #include <framework/search_database.h>
 #include <framework/profiler.h>
 #include <framework/table.h>
+#include <framework/expr.h>
 
 #include <foundation/stream.h>
 
@@ -70,7 +71,8 @@ constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
     CTEXT("weburl"),
     CTEXT("seclink"),
     CTEXT("disclaimer"),
-    CTEXT("etf_url")
+    CTEXT("etf_url"),
+    CTEXT("date"),
 };
 
 //
@@ -179,16 +181,29 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         if (string_equal(STRING_ARGS(value), STRING_CONST("NA")))
             continue;
                 
+        time_t date;
         double number = NAN;
         if (value.length < 21 && string_try_convert_number(STRING_ARGS(value), number))
         {
             if (math_real_is_finite(number))
                 search_database_index_property(db, doc, STRING_ARGS(id), number);
         }
+        else if (string_try_convert_date(STRING_ARGS(value), date))
+        {
+            search_database_index_property(db, doc, STRING_ARGS(id), (double)date);
+        }
         else //if (value.length < SEARCH_INDEX_WORD_MAX_LENGTH-1)
         {
-            if (string_equal_nocase(STRING_ARGS(id), STRING_CONST("name")) ||
-                string_equal_nocase(STRING_ARGS(id), STRING_CONST("title")))
+            // Add suppor to index activity fields such as {"Activity":"controversialWeapons","Involvement":"Yes"}
+            if (string_equal(STRING_ARGS(id), STRING_CONST("Activity")))
+            {
+                const json_token_t& Involvement = json.tokens[i+1];
+                string_const_t yes_no = json_token_value(json.buffer, &Involvement);
+                search_database_index_property(db, doc, STRING_ARGS(value), STRING_ARGS(yes_no), false);
+                i++;
+            }
+            else if (string_equal_nocase(STRING_ARGS(id), STRING_CONST("name")) ||
+                     string_equal_nocase(STRING_ARGS(id), STRING_CONST("title")))
             {
                 search_database_index_text(db, doc, STRING_ARGS(value), false);
             }
@@ -206,6 +221,22 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
 
     for(auto e : data)
     {        
+        // Wait to connect to EOD services
+        const tick_t timeout = time_current();
+        while (!eod_availalble() && time_elapsed(timeout) < 30.0)
+        {
+            if (thread_try_wait(100))
+            {
+                *stop_indexing = true;
+                return;
+            }
+        }
+        if (!eod_availalble())
+        {
+            log_warnf(HASH_SEARCH, WARNING_NETWORK, STRING_CONST("Failed to connect to EOD services, terminating indexing"));
+            return;
+        }
+    
         const tick_t st = time_current();
         if (e.root == nullptr || e.root->type != JSON_OBJECT)
             continue;
@@ -226,7 +257,7 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
             continue;
 
         char symbol_buffer[SEARCH_INDEX_WORD_MAX_LENGTH];
-        string_t symbol = string_format(STRING_CONST_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), to_int(market_length), market);
+        string_t symbol = string_format(STRING_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), to_int(market_length), market);
 
         search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
         if (doc != SEARCH_DOCUMENT_INVALID_ID)
@@ -271,7 +302,7 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         }
         else
         {
-            if (thread_try_wait(time_elapsed(st) > 1.0 ? 0 : 500))
+            if (thread_try_wait(time_elapsed(st) > 1.0 ? 100 : 1000))
             {
                 *stop_indexing = true;
                 break;
@@ -314,16 +345,6 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
         log_warnf(HASH_SEARCH, WARNING_SUSPICIOUS, STRING_CONST("Batch mode, skipping search indexing"));
         return 0;
     }
-
-    // Wait to connect to EOD services
-    const tick_t timeout = time_current();
-    while (!eod_connected() && time_elapsed(timeout) < 30.0)
-        thread_try_wait(100);
-    if (!eod_connected())
-    {
-        log_warnf(HASH_SEARCH, WARNING_NETWORK, STRING_CONST("Failed to connect to EOD services, terminating indexing"));
-        return to_ptr(-1);
-    }
     
     string_const_t stock_markets[] = {
         CTEXT("TO"),
@@ -352,48 +373,54 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
     return 0;
 }
 
-FOUNDATION_STATIC void search_execute_query(search_database_t* db, const char* search_text, size_t search_text_length, search_result_entry_t*& entries)
+FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const char* search_text, size_t search_text_length)
 {
-    array_clear(entries);
+    FOUNDATION_ASSERT(sw);
+
+    search_database_t* db = sw->db;
+    FOUNDATION_ASSERT(db);
+
+    // Clear any previous errors
+    sw->error[0] = 0;
+
+    array_clear(sw->results);
     if (search_text == nullptr || search_text_length == 0)
         return;
 
-    search_query_handle_t query = search_database_query(db, search_text, search_text_length);
-    if (search_database_query_is_completed(db, query))
-    {
-        const search_result_t* results = search_database_query_results(db, query);
-
-        // TODO: Sort results?
-
-        foreach(r, results)
-        {
-            search_result_entry_t entry;
-            entry.db = db; 
-            entry.doc = r->id;
-            array_push_memcpy(entries, &entry);
-        }
-
-        if (!search_database_query_dispose(db, query))
-        {
-            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to dispose query"));
-        }
-    }
-}
-
-FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const char* text, size_t length)
-{
     sw->query_tick = time_current();
     try
     {
-        search_execute_query(sw->db, text, length, sw->results);
-        sw->error[0] = 0;
+        search_query_handle_t query = search_database_query(db, search_text, search_text_length);
+        if (search_database_query_is_completed(db, query))
+        {
+            const search_result_t* results = search_database_query_results(db, query);
+
+            // TODO: Sort results?
+
+            foreach(r, results)
+            {
+                search_result_entry_t entry;
+                entry.db = db;
+                entry.doc = r->id;
+                array_push_memcpy(sw->results, &entry);
+            }
+
+            if (!search_database_query_dispose(db, query))
+            {
+                log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to dispose query"));
+            }
+        }
+        else
+        {
+            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Query not completed"));
+        }
 
         // Save last query to module
-        string_copy(STRING_CONST_BUFFER(_search->query), text, length);
+        string_copy(STRING_BUFFER(_search->query), search_text, search_text_length);
     }
     catch (SearchQueryException err)
     {
-        string_format(STRING_CONST_BUFFER(sw->error), STRING_CONST("(%u) %s at %.*s"), err.error, err.msg, STRING_FORMAT(err.token));
+        string_format(STRING_BUFFER(sw->error), STRING_CONST("(%u) %s at %.*s"), err.error, err.msg, STRING_FORMAT(err.token));
     }
     
     sw->query_tick = time_diff(sw->query_tick, time_current());
@@ -406,7 +433,7 @@ FOUNDATION_STATIC bool search_window_render(void* user_data)
 
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(98.0f));
-    if (ImGui::InputTextWithHint("##SearchQuery", "Search stocks... " ICON_MD_FILTER_LIST_ALT, STRING_CONST_CAPACITY(sw->query)))
+    if (ImGui::InputTextWithHint("##SearchQuery", "Search stocks... " ICON_MD_FILTER_LIST_ALT, STRING_BUFFER(sw->query)))
     {
         const size_t search_query_length = string_length(sw->query);
         search_window_execute_query(sw, sw->query, search_query_length);        
@@ -444,7 +471,7 @@ FOUNDATION_STATIC bool search_window_render(void* user_data)
         ImGui::Text("Search found %u result(s) and took %.3lg %s", array_size(sw->results), elapsed_time, time_unit);
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip(" Documents: %u \n Indexes: %u ", search_database_document_count(sw->db), search_database_index_count(sw->db));
+            ImGui::SetTooltip(" Symbols: %u \n Properties: %u ", search_database_document_count(sw->db), search_database_index_count(sw->db));
         }
     }
 
@@ -791,15 +818,15 @@ FOUNDATION_STATIC table_t* search_create_table()
     
     table_add_column(table, search_table_column_change_month, "  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER)
         .set_width(imgui_get_font_ui_scale(80.0f))
-        .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4) { search_table_column_change_p_formatter(_1, _2, _3, _4, 3.0); });
+        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 3.0)));
 
     table_add_column(table, search_table_column_change_year, "1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER)
         .set_width(imgui_get_font_ui_scale(80.0f))
-        .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4) { search_table_column_change_p_formatter(_1, _2, _3, _4, 10.0); });
+        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 10.0)));
     
     table_add_column(table, search_table_column_change_max, "MAX %||" ICON_MD_CALENDAR_MONTH " % since creation", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT |  COLUMN_ROUND_NUMBER)
         .set_width(imgui_get_font_ui_scale(100.0f))
-        .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4) { search_table_column_change_p_formatter(_1, _2, _3, _4, 25.0); });
+        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 25.0)));
 
     table_add_column(table, search_table_column_return_rate, " R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)", COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
         .set_width(imgui_get_font_ui_scale(90.0f))
@@ -829,7 +856,7 @@ FOUNDATION_STATIC search_window_t* search_window_allocate()
     search_window->db = _search->db;
     search_window->table = search_create_table();
 
-    string_t opening_query = string_copy(STRING_CONST_BUFFER(search_window->query), _search->query, string_length(_search->query));
+    string_t opening_query = string_copy(STRING_BUFFER(search_window->query), _search->query, string_length(_search->query));
     if (!string_is_null(opening_query))
         search_window_execute_query(search_window, STRING_ARGS(opening_query));
 
@@ -884,6 +911,24 @@ FOUNDATION_STATIC void search_menu()
     ImGui::EndMenuBar();
 }
 
+FOUNDATION_STATIC expr_result_t search_expr_keywords(const expr_func_t* f, vec_expr_t* args, void* context)
+{
+    search_database_t* db = _search->db;
+    FOUNDATION_ASSERT(db);
+
+    string_t* keywords = search_database_property_keywords(db);
+
+    // Print all keywords
+    for (size_t i = 0, end = array_size(keywords); i < end; ++i)
+    {
+        log_infof(HASH_SEARCH, STRING_CONST("Keyword: %.*s"), STRING_FORMAT(keywords[i]));
+    }
+
+    string_array_deallocate(keywords);
+
+    return NIL;
+}
+
 //
 // # PUBLIC API
 //
@@ -906,7 +951,9 @@ FOUNDATION_STATIC void search_initialize()
     _search->indexing_thread = dispatch_thread("Search Indexer", search_indexing_thread_fn);
     FOUNDATION_ASSERT(_search->indexing_thread);
 
-    session_get_string("search_query", STRING_CONST_BUFFER(_search->query), "");
+    session_get_string("search_query", STRING_BUFFER(_search->query), "");
+
+    expr_register_function("SEARCH_KEYWORDS", search_expr_keywords, nullptr, 0);
 
     service_register_menu(HASH_SEARCH, search_menu);
 }

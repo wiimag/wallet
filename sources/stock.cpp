@@ -544,7 +544,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
     // Fetch stock data
     char ticker[64] { 0 };
     string_const_t code_string = string_table_decode_const(handle.code);
-    string_copy(STRING_CONST_CAPACITY(ticker), STRING_ARGS(code_string));
+    string_copy(STRING_BUFFER(ticker), STRING_ARGS(code_string));
 
     status_t status = STATUS_OK;
     if ((fetch_levels & FetchLevel::REALTIME) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::REALTIME) == 0)

@@ -2083,6 +2083,16 @@ string_t string_to_upper_utf8(char* buf, size_t capacity, const char* str, size_
     return result;
 }
 
+bool string_try_convert_date(const char* str, size_t length, time_t& date)
+{
+    if (length != 10 || str[4] != '-' || str[7] != '-')
+        return false;
+
+    struct tm tm;
+    date = string_to_date(str, length, &tm);
+    return date > 0;
+}
+
 bool string_try_convert_number(const char* str, size_t length, double& out_value)
 {
     char* end = (char*)str + length;

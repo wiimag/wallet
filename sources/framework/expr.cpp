@@ -163,7 +163,7 @@ string_const_t expr_result_string_join(const expr_result_t& e, const char* fmt)
     return string_join((const T*)e.ptr, e.element_count(), [fmt](const T& v)
     {
         static thread_local char buf[32];
-        string_t f = string_format(STRING_CONST_CAPACITY(buf), fmt, string_length(fmt), v);
+        string_t f = string_format(STRING_BUFFER(buf), fmt, string_length(fmt), v);
         return string_to_const(f);
     }, CTEXT(", "), CTEXT("["), CTEXT("]"));
 }
@@ -242,7 +242,7 @@ const expr_result_t* expr_eval_list(const expr_result_t* list)
     return list;
 }
 
-static expr_result_t expr_eval_set(expr_t* e)
+FOUNDATION_STATIC expr_result_t expr_eval_set(expr_t* e)
 {
     expr_result_t* resolved_values = nullptr;
 
@@ -312,7 +312,7 @@ string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, cons
     return expr_eval(&args->buf[idx]).as_string();
 }
 
-string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message)
+FOUNDATION_STATIC string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message)
 {
     const auto& arg_string = expr_eval_get_string_arg(args, idx, message);
 
@@ -817,10 +817,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_reduce(const expr_func_t* f, vec_expr_
     // Loop on all elements and invoke function
     for (auto e : elements)
     {
-        expr_var_t* vr = eval_get_or_create_global_var(STRING_CONST("$0"));
+        expr_var_t* vr = expr_get_or_create_global_var(STRING_CONST("$0"));
         vr->value = result;
 
-        expr_var_t* ve = eval_get_or_create_global_var(STRING_CONST("$1"));
+        expr_var_t* ve = expr_get_or_create_global_var(STRING_CONST("$1"));
         ve->value = e;
 
         if (args->buf[1].type == OP_FUNC)
@@ -870,12 +870,12 @@ FOUNDATION_STATIC expr_result_t expr_eval_repeat(const expr_func_t* f, vec_expr_
     expr_result_t* results = nullptr;
     const int repeat_count = math_round(expr_eval(&args->buf[1]).as_number());
 
-    expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$count"));
+    expr_var_t* v = expr_get_or_create_global_var(STRING_CONST("$count"));
     v->value = expr_result_t((double)repeat_count);
 
     for (int i = 0; i < repeat_count; ++i)
     {
-        expr_var_t* vi = eval_get_or_create_global_var(STRING_CONST("$i"));
+        expr_var_t* vi = expr_get_or_create_global_var(STRING_CONST("$i"));
         vi->value = expr_result_t((double)i);
 
         expr_result_t r = expr_eval(&args->buf[0]);
@@ -947,7 +947,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_
     {
         if (!e.is_set())
         {
-            eval_set_or_create_global_var(STRING_CONST("$1"), e);
+            expr_set_or_create_global_var(STRING_CONST("$1"), e);
         }
         else
         {
@@ -955,8 +955,8 @@ FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_
             int i = 1;
             for (auto m : e)
             {
-                string_t macro = string_format(STRING_CONST_CAPACITY(varname), STRING_CONST("$%d"), i);
-                eval_set_or_create_global_var(STRING_ARGS(macro), m);
+                string_t macro = string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), i);
+                expr_set_or_create_global_var(STRING_ARGS(macro), m);
                 i++;
             }
         }
@@ -990,7 +990,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
     {
         if (!e.is_set())
         {
-            eval_set_or_create_global_var(STRING_CONST("$1"), e);
+            expr_set_or_create_global_var(STRING_CONST("$1"), e);
         }
         else
         {
@@ -998,8 +998,8 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
             int i = 1;
             for (auto m : e)
             {
-                string_t macro = string_format(STRING_CONST_CAPACITY(varname), STRING_CONST("$%d"), i);
-                eval_set_or_create_global_var(STRING_ARGS(macro), m);
+                string_t macro = string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), i);
+                expr_set_or_create_global_var(STRING_ARGS(macro), m);
                 i++;
             }
         }
@@ -1042,7 +1042,7 @@ expr_result_t expr_error(expr_error_code_t err_code, expr_string_t expr_string, 
     EXPR_ERROR_CODE = err_code;
     va_list list;
     va_start(list, err_msg);
-    string_t formatted_error_message = string_vformat(STRING_CONST_CAPACITY(EXPR_ERROR_MSG), err_msg, string_length(err_msg), list);
+    string_t formatted_error_message = string_vformat(STRING_BUFFER(EXPR_ERROR_MSG), err_msg, string_length(err_msg), list);
     va_end(list);
 
     if (log_handler() == nullptr)
@@ -1054,7 +1054,7 @@ expr_result_t expr_error(expr_error_code_t err_code, expr_string_t expr_string, 
     return NAN;
 }
 
-string_const_t expr_result_to_string(const expr_result_t& result, const char* fmt /*= "%.6g"*/)
+FOUNDATION_STATIC string_const_t expr_result_to_string(const expr_result_t& result, const char* fmt = "%.6g")
 {
     return result.as_string(fmt);
 }
@@ -1136,7 +1136,7 @@ FOUNDATION_FORCEINLINE int expr_prec(const expr_type_t a, const expr_type_t b)
     return (left && prec[a] >= prec[b]) || (prec[a] > prec[b]);
 }
 
-static const expr_type_t expr_op(const char* s, size_t len, int unary)
+FOUNDATION_STATIC const expr_type_t expr_op(const char* s, size_t len, int unary)
 {
     for (size_t i = 0, end = sizeof(OPS) / sizeof(OPS[0]); i != end; ++i)
     {
@@ -1146,7 +1146,7 @@ static const expr_type_t expr_op(const char* s, size_t len, int unary)
     return OP_UNKNOWN;
 }
 
-static double expr_parse_number(const char* s, size_t len)
+FOUNDATION_STATIC double expr_parse_number(const char* s, size_t len)
 {
     double num = 0;
     unsigned int frac = 0;
@@ -1183,7 +1183,7 @@ static double expr_parse_number(const char* s, size_t len)
  * Functions
  */
 
-static expr_func_t* expr_func(expr_func_t* funcs, const char* s, size_t len)
+FOUNDATION_STATIC expr_func_t* expr_func(expr_func_t* funcs, const char* s, size_t len)
 {
     for (expr_func_t* f = funcs; f->name.str; f++)
     {
@@ -1197,7 +1197,7 @@ static expr_func_t* expr_func(expr_func_t* funcs, const char* s, size_t len)
  * Variables
  */
 
-static expr_var_t* expr_var(expr_var_list_t* vars, const char* s, size_t len)
+FOUNDATION_STATIC expr_var_t* expr_var(expr_var_list_t* vars, const char* s, size_t len)
 {
     expr_var_t* v = NULL;
 
@@ -1348,7 +1348,7 @@ expr_result_t expr_eval(expr_t* e)
     case OP_FUNC:
     {
         expr_result_t fn_result = e->param.func.f->handler(e->param.func.f, &e->args, e->param.func.context);
-        expr_var_t* v = eval_get_or_create_global_var(STRING_CONST("$0"));
+        expr_var_t* v = expr_get_or_create_global_var(STRING_CONST("$0"));
         v->value = fn_result;
         return fn_result;
     }
@@ -1364,7 +1364,7 @@ expr_result_t expr_eval(expr_t* e)
     return NAN;
 }
 
-static int expr_next_token(const char* s, size_t len, int& flags)
+FOUNDATION_STATIC int expr_next_token(const char* s, size_t len, int& flags)
 {
     unsigned int i = 0;
     if (len == 0) {
@@ -1492,7 +1492,7 @@ static int expr_next_token(const char* s, size_t len, int& flags)
     }
 }
 
-static int expr_bind(const char* s, size_t len, vec_expr_t* es)
+FOUNDATION_STATIC int expr_bind(const char* s, size_t len, vec_expr_t* es)
 {
     const expr_type_t op = expr_op(s, len, -1);
     if (op == OP_UNKNOWN) {
@@ -1526,28 +1526,28 @@ static int expr_bind(const char* s, size_t len, vec_expr_t* es)
     return 0;
 }
 
-static expr_t expr_const(const expr_result_t& value, const char* s, size_t len)
+FOUNDATION_STATIC expr_t expr_const(const expr_result_t& value, const char* s, size_t len)
 {
     expr_t e = expr_init(OP_CONST, s, len);
     e.param.result.value = value;
     return e;
 }
 
-static expr_t expr_varref(expr_var_t* v)
+FOUNDATION_STATIC expr_t expr_varref(expr_var_t* v)
 {
     expr_t e = expr_init(OP_VAR, STRING_ARGS(v->name));
     e.param.var.value = &v->value;
     return e;
 }
 
-static expr_t expr_binary(const expr_type_t type, expr_t a, expr_t b) {
+FOUNDATION_STATIC expr_t expr_binary(const expr_type_t type, expr_t a, expr_t b) {
     expr_t e = expr_init(type);
     vec_push(&e.args, a);
     vec_push(&e.args, b);
     return e;
 }
 
-static inline void expr_copy(expr_t* dst, expr_t* src)
+FOUNDATION_STATIC inline void expr_copy(expr_t* dst, expr_t* src)
 {
     int i;
     expr_t arg = expr_init(OP_UNKNOWN);
@@ -1579,7 +1579,7 @@ static inline void expr_copy(expr_t* dst, expr_t* src)
     }
 }
 
-static void expr_destroy_args(expr_t* e)
+FOUNDATION_STATIC void expr_destroy_args(expr_t* e)
 {
     int i;
     expr_t arg = expr_init(OP_UNKNOWN);
@@ -1771,7 +1771,7 @@ expr_t* expr_create(const char* s, size_t len, expr_var_list_t* vars, expr_func_
                         /* Assign macro parameters */
                         for (int j = 0; j < vec_len(&arg.args); j++) {
                             char varname[4];
-                            string_format(STRING_CONST_CAPACITY(varname), STRING_CONST("$%d"), (j + 1));
+                            string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), (j + 1));
                             expr_var_t* vv = expr_var(vars, varname, string_length(varname));
                             expr_t ev = expr_varref(vv);
                             expr_t assign =
@@ -1964,7 +1964,7 @@ expr_result_t eval(string_const_t expression)
         return NIL;
     }
 
-    eval_set_or_create_global_var(STRING_CONST("$0"), nullptr);
+    expr_set_or_create_global_var(STRING_CONST("$0"), nullptr);
 
     expr_result_t result;
     try
@@ -1987,20 +1987,20 @@ expr_result_t eval(string_const_t expression)
  * Evaluation functions
  */
 
-static string_const_t eval_evaluators_file_path()
+FOUNDATION_STATIC string_const_t expr_evaluators_file_path()
 {
     return session_get_user_file_path(STRING_CONST("evaluators.json"));
 }
 
-static void eval_load_evaluators(config_handle_t evaluators_data)
+FOUNDATION_STATIC void eval_load_evaluators(config_handle_t evaluators_data)
 {
     for (const auto cv : evaluators_data)
     {
         expr_evaluator_t e{};
-        string_copy(STRING_CONST_CAPACITY(e.code), STRING_ARGS(cv["code"].as_string()));
-        string_copy(STRING_CONST_CAPACITY(e.label), STRING_ARGS(cv["label"].as_string()));
-        string_copy(STRING_CONST_CAPACITY(e.expression), STRING_ARGS(cv["expression"].as_string()));
-        string_copy(STRING_CONST_CAPACITY(e.assertion), STRING_ARGS(cv["assertion"].as_string()));
+        string_copy(STRING_BUFFER(e.code), STRING_ARGS(cv["code"].as_string()));
+        string_copy(STRING_BUFFER(e.label), STRING_ARGS(cv["label"].as_string()));
+        string_copy(STRING_BUFFER(e.expression), STRING_ARGS(cv["expression"].as_string()));
+        string_copy(STRING_BUFFER(e.assertion), STRING_ARGS(cv["assertion"].as_string()));
         e.frequency = cv["frequency"].as_number(60.0);
 
         for (const auto rcv : cv["records"])
@@ -2024,7 +2024,7 @@ static void eval_load_evaluators(config_handle_t evaluators_data)
 
 FOUNDATION_STATIC void eval_save_evaluators()
 {
-    config_write_file(eval_evaluators_file_path(), [](config_handle_t evaluators_data)
+    config_write_file(expr_evaluators_file_path(), [](config_handle_t evaluators_data)
     {
         for (size_t i = 0; i < array_size(_evaluators); ++i)
         {
@@ -2100,7 +2100,7 @@ FOUNDATION_STATIC void eval_run_evaluators()
                 else if (assertion_result.type == EXPR_RESULT_FALSE)
                     new_record.assertion = false;
 
-                string_format(STRING_CONST_CAPACITY(e.assembled), STRING_CONST("%.*s > %.*s"), STRING_FORMAT(result.as_string("%.6lf")), STRING_FORMAT(assertion_result.as_string()));
+                string_format(STRING_BUFFER(e.assembled), STRING_CONST("%.*s > %.*s"), STRING_FORMAT(result.as_string("%.6lf")), STRING_FORMAT(assertion_result.as_string()));
             }
 
             array_push(e.records, new_record);
@@ -2109,7 +2109,7 @@ FOUNDATION_STATIC void eval_run_evaluators()
     }
 }
 
-void eval_render_evaluators()
+void expr_render_evaluators()
 {
     static bool has_ever_show_evaluators = session_key_exists("show_evaluators");
     static bool show_evaluators = session_get_bool("show_evaluators", false);
@@ -2147,21 +2147,21 @@ void eval_render_evaluators()
                 if (ImGui::TableNextColumn())
                 {
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputTextWithHint("##Label", "Description", STRING_CONST_CAPACITY(new_entry.label), ImGuiInputTextFlags_EnterReturnsTrue))
+                    if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(new_entry.label), ImGuiInputTextFlags_EnterReturnsTrue))
                         evaluate_expression = true;
                 }
 
                 if (ImGui::TableNextColumn())
                 {
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_CONST_CAPACITY(new_entry.code), ImGuiInputTextFlags_EnterReturnsTrue))
+                    if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_BUFFER(new_entry.code), ImGuiInputTextFlags_EnterReturnsTrue))
                         evaluate_expression = true;
                 }
 
                 if (ImGui::TableNextColumn())
                 {
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)", STRING_CONST_CAPACITY(new_entry.expression), ImGuiInputTextFlags_EnterReturnsTrue))
+                    if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)", STRING_BUFFER(new_entry.expression), ImGuiInputTextFlags_EnterReturnsTrue))
                         evaluate_expression = true;
                 }
 
@@ -2169,7 +2169,7 @@ void eval_render_evaluators()
                 if (ImGui::TableNextColumn())
                 {
                     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputTextWithHint("##Assertion", "E > 200.0", STRING_CONST_CAPACITY(new_entry.assertion), ImGuiInputTextFlags_EnterReturnsTrue))
+                    if (ImGui::InputTextWithHint("##Assertion", "E > 200.0", STRING_BUFFER(new_entry.assertion), ImGuiInputTextFlags_EnterReturnsTrue))
                         evaluate_expression = true;
                 }
 
@@ -2184,7 +2184,7 @@ void eval_render_evaluators()
                     string_const_t assertion_build = string_format_static(STRING_CONST("E = %.*s, %.*s"), STRING_FORMAT(expression), STRING_FORMAT(assertion));
                     string_const_t assertion_result = eval(assertion_build).as_string();
 
-                    string_format(STRING_CONST_CAPACITY(new_entry.assembled), STRING_CONST("%.*s > %.*s"), STRING_FORMAT(result), STRING_FORMAT(assertion_result));
+                    string_format(STRING_BUFFER(new_entry.assembled), STRING_CONST("%.*s > %.*s"), STRING_FORMAT(result), STRING_FORMAT(assertion_result));
                 }
 
                 if (ImGui::SmallButton("Add"))
@@ -2208,7 +2208,7 @@ void eval_render_evaluators()
                     if (ImGui::TableNextColumn())
                     {
                         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                        if (ImGui::InputTextWithHint("##Label", "Description", STRING_CONST_CAPACITY(ev.label), ImGuiInputTextFlags_EnterReturnsTrue))
+                        if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(ev.label), ImGuiInputTextFlags_EnterReturnsTrue))
                             evaluate_expression = true;
                         ImGui::Text("%u Records", array_size(ev.records));
                     }
@@ -2216,7 +2216,7 @@ void eval_render_evaluators()
                     if (ImGui::TableNextColumn())
                     {
                         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                        if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_CONST_CAPACITY(ev.code), ImGuiInputTextFlags_EnterReturnsTrue))
+                        if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_BUFFER(ev.code), ImGuiInputTextFlags_EnterReturnsTrue))
                             evaluate_expression = true;
 
                         ImGui::TextWrapped("%.*s", STRING_FORMAT(string_from_time_static(ev.last_run_time * 1000, true)));
@@ -2225,7 +2225,7 @@ void eval_render_evaluators()
                     if (ImGui::TableNextColumn())
                     {
                         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                        if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)", STRING_CONST_CAPACITY(ev.expression), ImGuiInputTextFlags_EnterReturnsTrue))
+                        if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)", STRING_BUFFER(ev.expression), ImGuiInputTextFlags_EnterReturnsTrue))
                             evaluate_expression = true;
 
                         ImGui::AlignTextToFramePadding();
@@ -2244,7 +2244,7 @@ void eval_render_evaluators()
                     if (ImGui::TableNextColumn())
                     {
                         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                        if (ImGui::InputTextWithHint("##Assertion", "E > 200.0", STRING_CONST_CAPACITY(ev.assertion), ImGuiInputTextFlags_EnterReturnsTrue))
+                        if (ImGui::InputTextWithHint("##Assertion", "E > 200.0", STRING_BUFFER(ev.assertion), ImGuiInputTextFlags_EnterReturnsTrue))
                             evaluate_expression = true;
 
                         ImGui::TextWrapped("%s", ev.assembled);
@@ -2305,7 +2305,7 @@ void eval_render_evaluators()
     }
 }
 
-void eval_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t cleanup /*= nullptr*/, size_t context_size /*= 0*/)
+void expr_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t cleanup /*= nullptr*/, size_t context_size /*= 0*/)
 {
     FOUNDATION_ASSERT(fn);
 
@@ -2324,7 +2324,7 @@ void eval_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t clea
     memory_context_pop();
 }
 
-bool eval_unregister_function(const char* name, exprfn_t fn /*= nullptr*/)
+bool expr_unregister_function(const char* name, exprfn_t fn /*= nullptr*/)
 {
     for (unsigned i = 0, end = array_size(_expr_user_funcs); i < end; ++i)
     {
@@ -2339,7 +2339,7 @@ bool eval_unregister_function(const char* name, exprfn_t fn /*= nullptr*/)
     return false;
 }
 
-expr_var_t* eval_find_global_var(const char* name, size_t name_length)
+expr_var_t* expr_find_global_var(const char* name, size_t name_length)
 {
     expr_var_t* v = _global_vars.head;
     while (v)
@@ -2352,10 +2352,10 @@ expr_var_t* eval_find_global_var(const char* name, size_t name_length)
     return nullptr;
 }
 
-expr_var_t* eval_get_or_create_global_var(const char* name, size_t name_length /*= 0ULL*/)
+expr_var_t* expr_get_or_create_global_var(const char* name, size_t name_length /*= 0ULL*/)
 {
     name_length = name_length == 0ULL ? string_length(name) : name_length;
-    expr_var_t* v = eval_find_global_var(name, name_length);
+    expr_var_t* v = expr_find_global_var(name, name_length);
     if (v == nullptr)
     {
         v = (expr_var_t*)memory_allocate(HASH_EXPR, sizeof(expr_var_t) + name_length + 1, 0, MEMORY_PERSISTENT);
@@ -2367,25 +2367,25 @@ expr_var_t* eval_get_or_create_global_var(const char* name, size_t name_length /
     return v;
 }
 
-expr_var_t* eval_set_or_create_global_var(const char* name, size_t name_length, const expr_result_t& value)
+expr_var_t* expr_set_or_create_global_var(const char* name, size_t name_length, const expr_result_t& value)
 {
-    expr_var_t* ev = eval_get_or_create_global_var(name, name_length);
+    expr_var_t* ev = expr_get_or_create_global_var(name, name_length);
     ev->value = value;
     return ev;
 }
 
-bool eval_set_global_var(const char* name, void* ptr, size_t size /*= 0*/)
+bool expr_set_global_var(const char* name, void* ptr, size_t size /*= 0*/)
 {
-    expr_var_t* v = eval_get_or_create_global_var(name);
+    expr_var_t* v = expr_get_or_create_global_var(name);
     v->value.type = EXPR_RESULT_POINTER;
     v->value.ptr = ptr;
     v->value.index = size;
     return true;
 }
 
-bool eval_set_global_var(const char* name, double value)
+bool expr_set_global_var(const char* name, double value)
 {
-    expr_var_t* v = eval_get_or_create_global_var(name);
+    expr_var_t* v = expr_get_or_create_global_var(name);
     v->value.type = EXPR_RESULT_NUMBER;
     v->value.value = value;
     v->value.index = NO_INDEX;
@@ -2437,7 +2437,7 @@ void expr_log_evaluation_result(string_const_t expression_string, const expr_res
     }
 }
 
-FOUNDATION_STATIC void eval_initialize()
+FOUNDATION_STATIC void expr_initialize()
 {
     const auto json_flags =
         CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS |
@@ -2467,7 +2467,7 @@ FOUNDATION_STATIC void eval_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RANDOM"), expr_eval_random, NULL, 0 }));
 
     // Vectors and matrices functions
-    eval_register_vec_mat_functions(_expr_user_funcs);
+    expr_register_vec_mat_functions(_expr_user_funcs);
 
     // Time functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("NOW"), expr_eval_time_now, NULL, 0 })); // // ELAPSED_DAYS(TO_DATE(F(SSE.V, General.UpdatedAt)), NOW())
@@ -2477,16 +2477,16 @@ FOUNDATION_STATIC void eval_initialize()
     // Must always be last
     array_push(_expr_user_funcs, (expr_func_t{ NULL, 0, NULL, NULL, 0 }));
 
-    eval_set_global_var("PI", DBL_PI);
-    eval_set_global_var("HALFPI", DBL_HALFPI);
-    eval_set_global_var("TWOPI", DBL_TWOPI);
-    eval_set_global_var("SQRT2", DBL_SQRT2);
-    eval_set_global_var("SQRT3", DBL_SQRT3);
-    eval_set_global_var("E", DBL_E);
-    eval_set_global_var("LOGN2", DBL_LOGN2);
-    eval_set_global_var("LOGN10", DBL_LOGN10);
+    expr_set_global_var("PI", DBL_PI);
+    expr_set_global_var("HALFPI", DBL_HALFPI);
+    expr_set_global_var("TWOPI", DBL_TWOPI);
+    expr_set_global_var("SQRT2", DBL_SQRT2);
+    expr_set_global_var("SQRT3", DBL_SQRT3);
+    expr_set_global_var("E", DBL_E);
+    expr_set_global_var("LOGN2", DBL_LOGN2);
+    expr_set_global_var("LOGN10", DBL_LOGN10);
 
-    string_const_t evaluators_file_path = eval_evaluators_file_path();
+    string_const_t evaluators_file_path = expr_evaluators_file_path();
     config_handle_t evaluators_data = config_parse_file(STRING_ARGS(evaluators_file_path), json_flags);
     if (evaluators_data)
     {
@@ -2494,7 +2494,7 @@ FOUNDATION_STATIC void eval_initialize()
         config_deallocate(evaluators_data);
     }
 
-    service_register_window(HASH_EXPR, eval_render_evaluators);
+    service_register_window(HASH_EXPR, expr_render_evaluators);
 
     string_const_t eval_expression;
     if (environment_command_line_arg("eval", &eval_expression))
@@ -2533,12 +2533,11 @@ FOUNDATION_STATIC void eval_initialize()
             string_deallocate(command_line_eval_expression.str);
             
             system_post_event(FOUNDATIONEVENT_TERMINATE);
-            //process_exit(0);
         });
     }
 }
 
-FOUNDATION_STATIC void eval_shutdown()
+FOUNDATION_STATIC void expr_shutdown()
 {
     eval_save_evaluators();
     array_deallocate(_evaluators);
@@ -2553,4 +2552,4 @@ FOUNDATION_STATIC void eval_shutdown()
     expr_destroy(nullptr, &_global_vars);
 }
 
-DEFINE_SERVICE(EXPR, eval_initialize, eval_shutdown, SERVICE_PRIORITY_SYSTEM);
+DEFINE_SERVICE(EXPR, expr_initialize, expr_shutdown, SERVICE_PRIORITY_SYSTEM);

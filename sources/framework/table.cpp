@@ -711,7 +711,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             row.fetched = table->update(element);
 
         char cell_id_buf[64];
-        string_t cell_id = string_format(STRING_CONST_CAPACITY(cell_id_buf), STRING_CONST("cell_%d_%d"), element_index, column_index);
+        string_t cell_id = string_format(STRING_BUFFER(cell_id_buf), STRING_CONST("cell_%d_%d"), element_index, column_index);
         ImGui::PushID(cell_id.str, cell_id.str + cell_id.length);
 
         cell_t cell = column.fetch_value ? column.fetch_value(element, &column) : cell_t{};

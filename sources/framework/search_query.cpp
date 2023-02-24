@@ -599,7 +599,7 @@ FOUNDATION_STATIC search_result_t* search_query_evaluate_node(
         FOUNDATION_ASSERT(node->token->children && node->token->children[0].type == SearchQueryTokenType::Group);
 
         if (node->token->value.length == 0)
-            return nullptr;
+            return nullptr; // TODO: Validate this?
         
         FOUNDATION_ASSERT(node->token->type == SearchQueryTokenType::Function);
         FOUNDATION_ASSERT(node->token->name.str && node->token->name.length > 0);
@@ -664,16 +664,16 @@ const char* search_query_eval_flags_to_string(search_query_eval_flags_t flags)
     string_t str{ buffer, 0 };
 
     if (any(flags, SearchQueryEvalFlags::Exclude))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Exclude | "));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Exclude | "));
 
     FOUNDATION_ASSERT(one(flags, SearchQueryEvalFlags::Word | SearchQueryEvalFlags::Property | SearchQueryEvalFlags::Function));
 
     if (any(flags, SearchQueryEvalFlags::Word))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Word | "));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Word | "));
     else if (any(flags, SearchQueryEvalFlags::Property))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Property | "));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Property | "));
     else if (any(flags, SearchQueryEvalFlags::Function))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Function | "));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Function | "));
 
     FOUNDATION_ASSERT(one(flags, 
         SearchQueryEvalFlags::OpContains | SearchQueryEvalFlags::OpEqual | SearchQueryEvalFlags::OpNotEq | 
@@ -681,21 +681,21 @@ const char* search_query_eval_flags_to_string(search_query_eval_flags_t flags)
         SearchQueryEvalFlags::OpGreaterEq | SearchQueryEvalFlags::OpEval));
 
     if (any(flags, SearchQueryEvalFlags::OpContains))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Contains"));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Contains"));
     else if (any(flags, SearchQueryEvalFlags::OpEqual))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Equals"));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Equals"));
     else if (any(flags, SearchQueryEvalFlags::OpNotEq))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Not Equal"));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Not Equal"));
     else if (any(flags, SearchQueryEvalFlags::OpLess))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Less"));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Less"));
     else if (any(flags, SearchQueryEvalFlags::OpLessEq))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("LessOrEqual"));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("LessOrEqual"));
     else if (any(flags, SearchQueryEvalFlags::OpGreater))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Greater"));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Greater"));
     else if (any(flags, SearchQueryEvalFlags::OpGreaterEq))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("GreaterOrEqual"));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("GreaterOrEqual"));
     else if (any(flags, SearchQueryEvalFlags::OpEval))
-        str = string_concat(STRING_CONST_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Eval"));
+        str = string_concat(STRING_BUFFER(buffer), STRING_ARGS(str), STRING_CONST("Eval"));
     else 
         FOUNDATION_ASSERT_FAIL("Unknown operator");
 

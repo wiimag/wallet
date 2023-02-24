@@ -114,3 +114,5 @@ bool search_database_query_dispose(search_database_t* database, search_query_han
 bool search_database_load(search_database_t* database, stream_t* stream);
 
 bool search_database_save(search_database_t* database, stream_t* stream);
+
+string_t* search_database_property_keywords(search_database_t* database);

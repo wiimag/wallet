@@ -213,18 +213,18 @@ FOUNDATION_STATIC bool indicators_render_indicators_selector()
 
         if (added == 0)
         {
-            string_copy(STRING_CONST_CAPACITY(preview_single_code), STRING_ARGS(c.code));
-            preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.description));
+            string_copy(STRING_BUFFER(preview_single_code), STRING_ARGS(c.code));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.description));
         }
         else if (added == 1)
         {
-            preview = string_copy(STRING_CONST_CAPACITY(preview_buffer), preview_single_code, string_length(preview_single_code));
+            preview = string_copy(STRING_BUFFER(preview_buffer), preview_single_code, string_length(preview_single_code));
         }
         
         if (added > 0)
         {
-            preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
-            preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.code));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.code));
         }
         
         added++;
@@ -274,8 +274,8 @@ FOUNDATION_STATIC bool indicators_render_country_selector()
         if (!c.selected)
             continue;
         if (added > 0)
-            preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
-        preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.code));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
+        preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.code));
         added++;
     }
     

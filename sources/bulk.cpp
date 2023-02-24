@@ -487,7 +487,7 @@ FOUNDATION_STATIC bool bulk_render_exchange_selector()
     size_t selected_exchanges_count = array_size(_selected_exchanges);
     if (selected_exchanges_count == 0)
     {
-        string_copy(STRING_CONST_CAPACITY(preview_buffer), STRING_CONST("None"));
+        string_copy(STRING_BUFFER(preview_buffer), STRING_CONST("None"));
     }
     else
     {
@@ -495,10 +495,10 @@ FOUNDATION_STATIC bool bulk_render_exchange_selector()
         {
             if (i > 0)
             {
-                preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
+                preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
             }
             string_const_t ex_code = string_table_decode_const(_selected_exchanges[i]->code);
-            preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_ARGS(ex_code));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(ex_code));
         }
     }
 

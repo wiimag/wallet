@@ -506,13 +506,13 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
         table_add_column(table, STRING_CONST("  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week"), symbol_get_week_change, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
         table_add_column(table, STRING_CONST("  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month"),
             symbol_get_month_change, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER)
-            .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4) { symbol_change_p_formatter(_1, _2, _3, _4, 3.0); });
+            .set_style_formatter(LCCCR(symbol_change_p_formatter(_1, _2, _3, _4, 3.0)));
         table_add_column(table, STRING_CONST("1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year"),
             symbol_get_year_change, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER)
-            .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4) { symbol_change_p_formatter(_1, _2, _3, _4, 10.0); });
+            .set_style_formatter(LCCCR(symbol_change_p_formatter(_1, _2, _3, _4, 10.0)));
         table_add_column(table, STRING_CONST("MAX %||" ICON_MD_CALENDAR_MONTH " % since creation"),
             symbol_get_max_change, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER)
-            .set_style_formatter([](auto _1, auto _2, auto _3, auto& _4) { symbol_change_p_formatter(_1, _2, _3, _4, 25.0); });
+            .set_style_formatter(LCCCR(symbol_change_p_formatter(_1, _2, _3, _4, 25.0)));
 
         table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"),
             symbol_get_dividends_yield, COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ZERO_USE_DASH)
@@ -626,7 +626,7 @@ void symbols_render(const char* market, bool filter_null_isin /*= true*/)
 
 void symbols_render_search(const function<void(string_const_t)>& selector /*= nullptr*/)
 {
-    ImGui::InputTextEx("##SearchField", "Search...", STRING_CONST_CAPACITY(SETTINGS.search_terms),
+    ImGui::InputTextEx("##SearchField", "Search...", STRING_BUFFER(SETTINGS.search_terms),
         ImVec2(selector ? -100.0f : 300.0f, 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
 
     string_const_t search_filter{ SETTINGS.search_terms, string_length(SETTINGS.search_terms) };

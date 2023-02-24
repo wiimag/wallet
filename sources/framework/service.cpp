@@ -52,7 +52,7 @@ Service::Service(const char* FOUNDATION_RESTRICT name, hash_t service_hash,
     FOUNDATION_ASSERT_MSGFORMAT(_service_count < MAX_SERVICE_COUNT, "Too many services (%zu)", MAX_SERVICE_COUNT);
 
     service_t s{ service_hash };
-    string_copy(STRING_CONST_CAPACITY(s.name), name, string_length(name));
+    string_copy(STRING_BUFFER(s.name), name, string_length(name));
     s.priority = priority;
     s.initialize = initialize_handler;
     s.shutdown = shutdown_handler;

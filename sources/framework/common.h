@@ -418,7 +418,7 @@ struct TimeMarkerScope
     {
         va_list list;
         va_start(list, fmt);
-        string_vformat(STRING_CONST_CAPACITY(label), fmt, string_length(fmt), list);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
         va_end(list);   
         
         start_time = time_current();
@@ -428,7 +428,7 @@ struct TimeMarkerScope
         TimeMarkerScope(const char(&name)[N])
         : context(memory_context())
     {
-        string_copy(STRING_CONST_CAPACITY(label), name, N);
+        string_copy(STRING_BUFFER(label), name, N);
         start_time = time_current();
     }
 
@@ -437,7 +437,7 @@ struct TimeMarkerScope
     {
         va_list list;
         va_start(list, fmt);
-        string_vformat(STRING_CONST_CAPACITY(label), fmt, string_length(fmt), list);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
         va_end(list);
 
         start_time = time_current();
@@ -449,7 +449,7 @@ struct TimeMarkerScope
     {
         va_list list;
         va_start(list, fmt);
-        string_vformat(STRING_CONST_CAPACITY(label), fmt, string_length(fmt), list);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
         va_end(list);
 
         start_time = time_current();

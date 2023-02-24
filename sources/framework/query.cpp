@@ -123,7 +123,7 @@ FOUNDATION_STATIC CURL* query_create_curl_request()
         {
             static thread_local char user_agent_header[256];
             const application_t* app = environment_application();
-            string_format(STRING_CONST_CAPACITY(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"), 
+            string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
                 STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
             _req_json_header_chunk = curl_slist_append(_req_json_header_chunk, user_agent_header);
             _req_json_header_chunk = curl_slist_append(_req_json_header_chunk, "Content-Type: application/json");
@@ -378,7 +378,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
 
     char user_agent_header[256];
     const application_t* app = environment_application();
-    string_format(STRING_CONST_CAPACITY(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
+    string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
         STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
     curl_slist* headerlist = curl_slist_append(NULL, user_agent_header);
     headerlist = curl_slist_append(headerlist, "Expect:");
@@ -419,7 +419,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
     {
         json_object_t json = json_parse(req.json);
         static thread_local char query_copy_buffer[2048];
-        string_t query_copy = string_copy(STRING_CONST_CAPACITY(query_copy_buffer), query, string_length(query));
+        string_t query_copy = string_copy(STRING_BUFFER(query_copy_buffer), query, string_length(query));
         json.query = string_to_const(query_copy);
         json.status_code = req.response_code;
         json.error_code = req.response_code < 400 ? req.status : CURL_LAST;
@@ -435,7 +435,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
     MEMORY_TRACKER(HASH_QUERY);
 
     static thread_local char query_copy_buffer[2048];
-    string_t query_copy = string_copy(STRING_CONST_CAPACITY(query_copy_buffer), query, string_length(query));
+    string_t query_copy = string_copy(STRING_BUFFER(query_copy_buffer), query, string_length(query));
 
     bool warning_logged = false;
     const bool has_body_content = !string_is_null(body);

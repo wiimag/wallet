@@ -308,7 +308,7 @@ FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const
 
     ImGui::TableNextColumn();
     char cid[32];
-    string_format(STRING_CONST_CAPACITY(cid), STRING_CONST("##CHECK_%lu"), (uintptr_t)check);
+    string_format(STRING_BUFFER(cid), STRING_CONST("##CHECK_%lu"), (uintptr_t)check);
     if (check && ImGui::Checkbox(cid, check))
         log_infof(0, STRING_CONST("Reason %d %s"), rank, *check ? "checked" : "unchecked");
 
@@ -1953,7 +1953,7 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle)
     if (!pattern->stock->is_resolving(FETCH_ALL))
         stock_update(STRING_ARGS(code), pattern->stock, FETCH_ALL, 8.0);
 
-    string_format(STRING_CONST_CAPACITY(pattern_id), STRING_CONST("Pattern###%.*s"), STRING_FORMAT(code));
+    string_format(STRING_BUFFER(pattern_id), STRING_CONST("Pattern###%.*s"), STRING_FORMAT(code));
     if (!ImGui::BeginTable(pattern_id, 3, flags))
         return;
         
@@ -2047,8 +2047,8 @@ FOUNDATION_STATIC void pattern_initialize(pattern_handle_t handle)
     FOUNDATION_ASSERT(ARRAY_COUNT(FIXED_MARKS) == ARRAY_COUNT(pattern->marks));
 
     pattern->date = time_now();
-    pattern->flex_low.fetcher = R1(pattern_fetch_flex_low(handle, _1));
-    pattern->flex_high.fetcher = R1(pattern_fetch_flex_high(handle, _1));
+    pattern->flex_low.fetcher = LR1(pattern_fetch_flex_low(handle, _1));
+    pattern->flex_high.fetcher = LR1(pattern_fetch_flex_high(handle, _1));
     
     // Initialize marks
     const size_t mark_count = ARRAY_COUNT(pattern->marks);
@@ -2145,7 +2145,7 @@ FOUNDATION_STATIC void pattern_load(const config_handle_t& pattern_data, pattern
     pattern.x_axis_inverted = pattern_data["x_axis_inverted"].as_boolean();
     pattern.range = pattern_data["range_acc"].as_integer();
     pattern.type = pattern_data["graph_type"].as_integer();
-    string_copy(STRING_CONST_CAPACITY(pattern.notes), STRING_ARGS(pattern_data["notes"].as_string()));
+    string_copy(STRING_BUFFER(pattern.notes), STRING_ARGS(pattern_data["notes"].as_string()));
 
     auto cv_price_limits = pattern_data["price_limits"];
     pattern.price_limits.xmin = cv_price_limits["xmin"].as_number();

@@ -61,105 +61,107 @@ struct dynamic_report_t
 
 #define HASH_REPORT_EXPRESSION static_hash_string("report_expr", 11, 0x44456b54e62624e0ULL)
 
-#define IS_NOT_A_NUMBER SL1(math_real_is_nan(_1.as_number()))
-#define EVAL_STOCK_FIELD(field_name) FOUNDATION_PREPROCESSOR_TOSTRING(field_name), SL2(_2->field_name), IS_NOT_A_NUMBER, FetchLevel::FUNDAMENTALS
+#define IS_NOT_A_NUMBER SC1(math_real_is_nan(_1.as_number()))
+#define EVAL_STOCK_FIELD(field_name) FOUNDATION_PREPROCESSOR_TOSTRING(field_name), SC2(_2->field_name), IS_NOT_A_NUMBER, FetchLevel::FUNDAMENTALS
+
+constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 35;
 
 static struct {
     const char* property_name;
-    function<expr_result_t(title_t* t, const stock_t* s)> handler;
+    function<expr_result_t(const title_t* t, const stock_t* s)> handler;
     function<bool(const expr_result_t& v)> filter_out;
     FetchLevel required_level{ FetchLevel::NONE };
 } report_field_property_evalutors[] = {
     
     // Title & Stocks
+    
+    {"sold",    SC2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0)},                       /*0*/
+    { "active", SC2(_1->average_quantity ? true : false), SL1(_1.as_number() == 0) },
+    { "qty",    SC2(_1->average_quantity), SL1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
+    { "buy",    SC2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
+    { "day",    SC2(title_get_day_change(_1, _2)), IS_NOT_A_NUMBER },
 
-    { "sold",   SL2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0) },
-    { "active", SL2(_1->average_quantity ? true : false), SL1(_1.as_number() == 0) },
-    { "qty",    SL2(_1->average_quantity), SL1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
-    { "buy",    SL2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
-    { "day",    SL2(title_get_day_change(_1, _2)), IS_NOT_A_NUMBER },
+    { "buy_total_adjusted_qty",     SC2(_1->buy_total_adjusted_qty), IS_NOT_A_NUMBER },                    /*5*/
+    { "buy_total_adjusted_price",   SC2(_1->buy_total_adjusted_price), IS_NOT_A_NUMBER },
+    { "sell_total_adjusted_qty",    SC2(_1->sell_total_adjusted_qty), IS_NOT_A_NUMBER },
+    { "sell_total_adjusted_price",  SC2(_1->sell_total_adjusted_price), IS_NOT_A_NUMBER },
 
-    { "buy_total_adjusted_qty",    SL2(_1->buy_total_adjusted_qty), IS_NOT_A_NUMBER },
-    { "buy_total_adjusted_price",    SL2(_1->buy_total_adjusted_price), IS_NOT_A_NUMBER },
-    { "sell_total_adjusted_qty",    SL2(_1->sell_total_adjusted_qty), IS_NOT_A_NUMBER },
-    { "sell_total_adjusted_price",    SL2(_1->sell_total_adjusted_price), IS_NOT_A_NUMBER },
+    { "buy_total_price",    SC2(_1->buy_total_price), IS_NOT_A_NUMBER },                                    /*9*/
+    { "buy_total_quantity", SC2(_1->buy_total_quantity), IS_NOT_A_NUMBER },
 
-    { "buy_total_price",    SL2(_1->buy_total_price), IS_NOT_A_NUMBER },
-    { "buy_total_quantity",    SL2(_1->buy_total_quantity), IS_NOT_A_NUMBER },
+    { "sell_total_price",       SC2(_1->sell_total_price), IS_NOT_A_NUMBER },                               /*11*/
+    { "sell_total_quantity",    SC2(_1->sell_total_quantity), IS_NOT_A_NUMBER },
 
-    { "sell_total_price",    SL2(_1->sell_total_price), IS_NOT_A_NUMBER },
-    { "sell_total_quantity",    SL2(_1->sell_total_quantity), IS_NOT_A_NUMBER },
+    { "buy_total_price_rated_adjusted",     SC2(_1->buy_total_price_rated_adjusted), IS_NOT_A_NUMBER },     /*13*/
+    { "sell_total_price_rated_adjusted",    SC2(_1->sell_total_price_rated_adjusted), IS_NOT_A_NUMBER },
 
-    { "buy_total_price_rated_adjusted",    SL2(_1->buy_total_price_rated_adjusted), IS_NOT_A_NUMBER },
-    { "sell_total_price_rated_adjusted",    SL2(_1->sell_total_price_rated_adjusted), IS_NOT_A_NUMBER },
+    { "buy_total_price_rated",  SC2(_1->buy_total_price_rated), IS_NOT_A_NUMBER },                          /*15*/
+    { "sell_total_price_rated", SC2(_1->sell_total_price_rated), IS_NOT_A_NUMBER },
 
-    { "buy_total_price_rated",    SL2(_1->buy_total_price_rated), IS_NOT_A_NUMBER },
-    { "sell_total_price_rated",    SL2(_1->sell_total_price_rated), IS_NOT_A_NUMBER },
+    { "buy_adjusted_price",     SC2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },                             /*17*/
+    { "sell_adjusted_price",    SC2(_1->sell_adjusted_price), IS_NOT_A_NUMBER },
 
-    { "buy_adjusted_price",    SL2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
-    { "sell_adjusted_price",    SL2(_1->sell_adjusted_price), IS_NOT_A_NUMBER },
+    { "average_price",              SC2(_1->average_price), IS_NOT_A_NUMBER },                              /*19*/
+    { "average_price_rated",        SC2(_1->average_price_rated), IS_NOT_A_NUMBER },
+    { "average_quantity",           SC2(_1->average_quantity), IS_NOT_A_NUMBER },
+    { "average_buy_price",          SC2(_1->average_buy_price), IS_NOT_A_NUMBER },
+    { "average_buy_price_rated",    SC2(_1->average_buy_price_rated), IS_NOT_A_NUMBER },
+    { "remaining_shares",           SC2(_1->remaining_shares), IS_NOT_A_NUMBER },
+    { "total_dividends",            SC2(_1->total_dividends), IS_NOT_A_NUMBER },
+    { "average_ask_price",          SC2(_1->average_ask_price), IS_NOT_A_NUMBER },
+    { "average_exchange_rate",      SC2(_1->average_exchange_rate), IS_NOT_A_NUMBER },
 
-    { "average_price",    SL2(_1->average_price), IS_NOT_A_NUMBER },
-    { "average_price_rated",    SL2(_1->average_price_rated), IS_NOT_A_NUMBER },
-    { "average_quantity",    SL2(_1->average_quantity), IS_NOT_A_NUMBER },
-    { "average_buy_price",    SL2(_1->average_buy_price), IS_NOT_A_NUMBER },
-    { "average_buy_price_rated",    SL2(_1->average_buy_price_rated), IS_NOT_A_NUMBER },
-    { "remaining_shares",    SL2(_1->remaining_shares), IS_NOT_A_NUMBER },
-    { "total_dividends",    SL2(_1->total_dividends), IS_NOT_A_NUMBER },
-    { "average_ask_price",    SL2(_1->average_ask_price), IS_NOT_A_NUMBER },
-    { "average_exchange_rate",    SL2(_1->average_exchange_rate), IS_NOT_A_NUMBER },
+    { "date_min",       SC2((double)_1->date_min), IS_NOT_A_NUMBER },                                       /*28*/
+    { "date_max",       SC2((double)_1->date_max), IS_NOT_A_NUMBER },
+    { "date_average",   SC2((double)_1->date_average), IS_NOT_A_NUMBER},
 
-    { "date_min",    SL2((double)_1->date_min), IS_NOT_A_NUMBER },
-    { "date_max",    SL2((double)_1->date_max), IS_NOT_A_NUMBER },
-    { "date_average",    SL2((double)_1->date_average), IS_NOT_A_NUMBER},
+    { "title",                  SC2(_1->code), SL1(_1.index == 0) },                                        /*31*/
+    { "ps",                     SC2(_1->ps.fetch()), IS_NOT_A_NUMBER },                                 
+    { "ask",                    SC2(_1->ask_price.fetch()), nullptr },
+    { "today_exchange_rate",    SC2(_1->today_exchange_rate.fetch()), nullptr },
 
-    { "title",  SL2(_1->code), SL1(_1.index == 0) },
-    { "ps",     SL2(_1->ps.fetch()), IS_NOT_A_NUMBER },
-    { "ask",    SL2(_1->ask_price.fetch()), nullptr },
-    { "today_exchange_rate",    SL2(_1->today_exchange_rate.fetch()), nullptr },
+    //Stock only (Start at index 35 <== !!!UPDATE INDEX #STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
 
-    // Stock only (Start at index 35 <== !!!UPDATE INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
+    { "price",      SC2(_2->current.adjusted_close), nullptr, FetchLevel::REALTIME },                       /*35*/
+    { "date",       SC2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
+    { "gmt",        SC2((double)_2->current.gmtoffset), nullptr, FetchLevel::REALTIME },
+    { "open",       SC2(_2->current.open), nullptr, FetchLevel::REALTIME },
+    { "close",      SC2(_2->current.adjusted_close), nullptr, FetchLevel::REALTIME },
+    { "yesterday",  SC2(_2->current.previous_close), nullptr, FetchLevel::REALTIME },
+    { "low",        SC2(_2->current.low), nullptr, FetchLevel::REALTIME },
+    { "high",       SC2(_2->current.high), nullptr, FetchLevel::REALTIME },
+    { "change",     SC2(_2->current.change), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "change_p",   SC2(_2->current.change_p), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "volume",     SC2(_2->current.volume), nullptr, FetchLevel::REALTIME },
 
-    { "price",      SL2(_2->current.adjusted_close), nullptr, FetchLevel::REALTIME },
-    { "date",       SL2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
-    { "gmt",        SL2((double)_2->current.gmtoffset), nullptr, FetchLevel::REALTIME },
-    { "open",       SL2(_2->current.open), nullptr, FetchLevel::REALTIME },
-    { "close",      SL2(_2->current.adjusted_close), nullptr, FetchLevel::REALTIME },
-    { "yesterday",  SL2(_2->current.previous_close), nullptr, FetchLevel::REALTIME },
-    { "low",        SL2(_2->current.low), nullptr, FetchLevel::REALTIME },
-    { "high",       SL2(_2->current.high), nullptr, FetchLevel::REALTIME },
-    { "change",     SL2(_2->current.change), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
-    { "change_p",   SL2(_2->current.change_p), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
-    { "volume",     SL2(_2->current.volume), nullptr, FetchLevel::REALTIME },
+    { "price_factor",   SC2(_2->current.price_factor), nullptr, FetchLevel::EOD },
+    { "change_p_high",  SC2(_2->current.change_p_high), nullptr, FetchLevel::EOD },
 
-    { "price_factor",   SL2(_2->current.price_factor), nullptr, FetchLevel::EOD },
-    { "change_p_high",  SL2(_2->current.change_p_high), nullptr, FetchLevel::EOD },
+    { "wma",    SC2(_2->current.wma), nullptr, FetchLevel::TECHNICAL_WMA },
+    { "ema",    SC2(_2->current.ema), nullptr, FetchLevel::TECHNICAL_EMA },
+    { "sma",    SC2(_2->current.sma), nullptr, FetchLevel::TECHNICAL_SMA },
+    { "uband",  SC2(_2->current.uband), nullptr, FetchLevel::TECHNICAL_BBANDS },
+    { "mband",  SC2(_2->current.mband), nullptr, FetchLevel::TECHNICAL_BBANDS },
+    { "lband",  SC2(_2->current.lband), nullptr, FetchLevel::TECHNICAL_BBANDS },
+    { "sar",    SC2(_2->current.sar), nullptr, FetchLevel::TECHNICAL_SAR },
+    { "slope",  SC2(_2->current.slope), nullptr, FetchLevel::TECHNICAL_SLOPE },
+    { "cci",    SC2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
 
-    { "wma",    SL2(_2->current.wma), nullptr, FetchLevel::TECHNICAL_WMA },
-    { "ema",    SL2(_2->current.ema), nullptr, FetchLevel::TECHNICAL_EMA },
-    { "sma",    SL2(_2->current.sma), nullptr, FetchLevel::TECHNICAL_SMA },
-    { "uband",  SL2(_2->current.uband), nullptr, FetchLevel::TECHNICAL_BBANDS },
-    { "mband",  SL2(_2->current.mband), nullptr, FetchLevel::TECHNICAL_BBANDS },
-    { "lband",  SL2(_2->current.lband), nullptr, FetchLevel::TECHNICAL_BBANDS },
-    { "sar",    SL2(_2->current.sar), nullptr, FetchLevel::TECHNICAL_SAR },
-    { "slope",  SL2(_2->current.slope), nullptr, FetchLevel::TECHNICAL_SLOPE },
-    { "cci",    SL2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
+    { "dividends",  SC2(_2->dividends_yield.fetch()), nullptr, FetchLevel::FUNDAMENTALS },
+    { "earning_trend_actual",  SC2(_2->earning_trend_actual.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_trend_estimate",  SC2(_2->earning_trend_estimate.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_trend_difference",  SC2(_2->earning_trend_difference.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_trend_percent",  SC2(_2->earning_trend_percent.fetch()), nullptr, FetchLevel::NONE },
 
-    { "dividends",  SL2(_2->dividends_yield.fetch()), nullptr, FetchLevel::FUNDAMENTALS },
-    { "earning_trend_actual",  SL2(_2->earning_trend_actual.fetch()), nullptr, FetchLevel::NONE },
-    { "earning_trend_estimate",  SL2(_2->earning_trend_estimate.fetch()), nullptr, FetchLevel::NONE },
-    { "earning_trend_difference",  SL2(_2->earning_trend_difference.fetch()), nullptr, FetchLevel::NONE },
-    { "earning_trend_percent",  SL2(_2->earning_trend_percent.fetch()), nullptr, FetchLevel::NONE },
-
-    { "name",           SL2(string_table_decode(_2->name)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
-    { "description",    SL2(string_table_decode(_2->description.fetch())), nullptr, FetchLevel::FUNDAMENTALS },
-    { "country",        SL2(string_table_decode(_2->country)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
-    { "type",           SL2(string_table_decode(_2->type)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
-    { "currency",       SL2(string_table_decode(_2->currency)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
-    { "url",            SL2(string_table_decode(_2->url)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
-    { "updated_at",     SL2(string_table_decode(_2->updated_at)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
-    { "exchange",       SL2(string_table_decode(_2->exchange)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
-    { "symbol",         SL2(string_table_decode(_2->symbol)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "name",           SC2(string_table_decode(_2->name)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "description",    SC2(string_table_decode(_2->description.fetch())), nullptr, FetchLevel::FUNDAMENTALS },
+    { "country",        SC2(string_table_decode(_2->country)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "type",           SC2(string_table_decode(_2->type)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "currency",       SC2(string_table_decode(_2->currency)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "url",            SC2(string_table_decode(_2->url)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "updated_at",     SC2(string_table_decode(_2->updated_at)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "exchange",       SC2(string_table_decode(_2->exchange)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "symbol",         SC2(string_table_decode(_2->symbol)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
 
     { EVAL_STOCK_FIELD(shares_count) },
     { EVAL_STOCK_FIELD(low_52) },
@@ -185,27 +187,27 @@ static struct {
     FetchLevel required_level{ FetchLevel::NONE };
 } stock_end_of_day_property_evalutors[] = {
 
-    { CTEXT("date"),           SL2((double)_2->date), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("gmtoffset"),      SL2((double)_2->gmtoffset), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("open"),           SL2(_2->open), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("close"),          SL2(_2->adjusted_close), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("previous_close"), SL2(_2->previous_close), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("price_factor"),   SL2(_2->price_factor), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("low"),            SL2(_2->low), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("high"),           SL2(_2->high), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("change"),         SL2(_2->change), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("change_p"),       SL2(_2->change_p), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("change_p_high"),  SL2(_2->change_p_high), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("volume"),         SL2(_2->volume), FetchLevel::REALTIME | FetchLevel::EOD },
-    { CTEXT("wma"),            SL2(_2->wma), FetchLevel::REALTIME | FetchLevel::TECHNICAL_WMA },
-    { CTEXT("ema"),            SL2(_2->ema), FetchLevel::REALTIME | FetchLevel::TECHNICAL_EMA },
-    { CTEXT("sma"),            SL2(_2->sma), FetchLevel::REALTIME | FetchLevel::TECHNICAL_SMA },
-    { CTEXT("uband"),          SL2(_2->uband), FetchLevel::REALTIME | FetchLevel::TECHNICAL_BBANDS },
-    { CTEXT("mband"),          SL2(_2->mband), FetchLevel::REALTIME | FetchLevel::TECHNICAL_BBANDS },
-    { CTEXT("lband"),          SL2(_2->lband), FetchLevel::REALTIME | FetchLevel::TECHNICAL_BBANDS },
-    { CTEXT("sar"),            SL2(_2->sar), FetchLevel::REALTIME | FetchLevel::TECHNICAL_SAR },
-    { CTEXT("slope"),          SL2(_2->slope), FetchLevel::REALTIME | FetchLevel::TECHNICAL_SLOPE },
-    { CTEXT("cci"),            SL2(_2->cci), FetchLevel::REALTIME | FetchLevel::TECHNICAL_CCI }
+    { CTEXT("date"),           SC2((double)_2->date), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("gmtoffset"),      SC2((double)_2->gmtoffset), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("open"),           SC2(_2->open), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("close"),          SC2(_2->adjusted_close), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("previous_close"), SC2(_2->previous_close), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("price_factor"),   SC2(_2->price_factor), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("low"),            SC2(_2->low), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("high"),           SC2(_2->high), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("change"),         SC2(_2->change), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("change_p"),       SC2(_2->change_p), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("change_p_high"),  SC2(_2->change_p_high), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("volume"),         SC2(_2->volume), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("wma"),            SC2(_2->wma), FetchLevel::REALTIME | FetchLevel::TECHNICAL_WMA },
+    { CTEXT("ema"),            SC2(_2->ema), FetchLevel::REALTIME | FetchLevel::TECHNICAL_EMA },
+    { CTEXT("sma"),            SC2(_2->sma), FetchLevel::REALTIME | FetchLevel::TECHNICAL_SMA },
+    { CTEXT("uband"),          SC2(_2->uband), FetchLevel::REALTIME | FetchLevel::TECHNICAL_BBANDS },
+    { CTEXT("mband"),          SC2(_2->mband), FetchLevel::REALTIME | FetchLevel::TECHNICAL_BBANDS },
+    { CTEXT("lband"),          SC2(_2->lband), FetchLevel::REALTIME | FetchLevel::TECHNICAL_BBANDS },
+    { CTEXT("sar"),            SC2(_2->sar), FetchLevel::REALTIME | FetchLevel::TECHNICAL_SAR },
+    { CTEXT("slope"),          SC2(_2->slope), FetchLevel::REALTIME | FetchLevel::TECHNICAL_SLOPE },
+    { CTEXT("cci"),            SC2(_2->cci), FetchLevel::REALTIME | FetchLevel::TECHNICAL_CCI }
 };
 
 // 
@@ -320,9 +322,10 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock(const expr_func_t* f, vec
     expr_result_t* results = nullptr;
 
     if (args->len == 2)
-    {
+    {   
+        FOUNDATION_ASSERT(string_equal(CTEXT("price"), string_to_const(report_field_property_evalutors[STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX].property_name)));
         // Handle default case getting latest information
-        for (int i = 35; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
+        for (int i = STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
         {
             const auto& pe = report_field_property_evalutors[i];
             if (report_eval_report_field_test(pe.property_name, stock_handle, field_name, pe.handler, pe.filter_out, &results, pe.required_level))
@@ -511,7 +514,7 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     
     char field_name_buffer[64];
     string_const_t field_name_temp = expr_eval(args->get(field_name_index)).as_string();
-    string_const_t field_name = string_to_const(string_copy(STRING_CONST_CAPACITY(field_name_buffer), STRING_ARGS(field_name_temp)));
+    string_const_t field_name = string_to_const(string_copy(STRING_BUFFER(field_name_buffer), STRING_ARGS(field_name_temp)));
 
     tick_t s = time_current();
     while (title_filter.length == 0 && !report_sync_titles(report))
@@ -555,9 +558,9 @@ FOUNDATION_STATIC void report_eval_read_object_fields(const json_object_t& json,
         char path[256];
         size_t path_length = 0;
         if (s && len > 0)
-            path_length = string_format(STRING_CONST_CAPACITY(path), STRING_CONST("%.*s.%.*s"), (int)len, s, (int)t->id_length, &json.buffer[t->id]).length;
+            path_length = string_format(STRING_BUFFER(path), STRING_CONST("%.*s.%.*s"), (int)len, s, (int)t->id_length, &json.buffer[t->id]).length;
         else
-            path_length = string_copy(STRING_CONST_CAPACITY(path), &json.buffer[t->id], t->id_length).length;
+            path_length = string_copy(STRING_BUFFER(path), &json.buffer[t->id], t->id_length).length;
 
         if (t->type == JSON_OBJECT)
             report_eval_read_object_fields(json, t, field_names, path, path_length);
@@ -757,7 +760,7 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
             foreach(v, record.values)
             {
                 string_const_t arg_macro = string_format_static(STRING_CONST("$%u"), i + 1);
-                eval_set_or_create_global_var(STRING_ARGS(arg_macro), *v);
+                expr_set_or_create_global_var(STRING_ARGS(arg_macro), *v);
             }
 
             TIME_TRACKER("report_eval_table_ELEMENT(%.*s)", STRING_FORMAT(c->name));
@@ -822,11 +825,11 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
 
 FOUNDATION_STATIC void report_expr_initialize()
 {
-    eval_register_function("S", report_expr_eval_stock);
-    eval_register_function("F", report_expr_eval_stock_fundamental);
-    eval_register_function("R", report_eval_report_field);
-    eval_register_function("FIELDS", report_eval_list_fields);
-    eval_register_function("TABLE", report_eval_table);
+    expr_register_function("S", report_expr_eval_stock);
+    expr_register_function("F", report_expr_eval_stock_fundamental);
+    expr_register_function("R", report_eval_report_field);
+    expr_register_function("FIELDS", report_eval_list_fields);
+    expr_register_function("TABLE", report_eval_table);
 }
 
 FOUNDATION_STATIC void report_expr_shutdown()

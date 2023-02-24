@@ -52,7 +52,7 @@ FOUNDATION_STATIC const char* eod_ensure_key_loaded()
 
     const string_const_t& eod_key_file_path = session_get_user_file_path(STRING_CONST("eod.key"));
     if (!fs_is_file(STRING_ARGS(eod_key_file_path)))
-        return string_copy(STRING_CONST_CAPACITY(EOD->KEY), STRING_CONST("demo")).str;
+        return string_copy(STRING_BUFFER(EOD->KEY), STRING_CONST("demo")).str;
     
     stream_t* key_stream = fs_open_file(STRING_ARGS(eod_key_file_path), STREAM_IN);
     if (key_stream == nullptr)
@@ -93,7 +93,7 @@ bool eod_connected()
 string_t eod_get_key()
 {
     eod_ensure_key_loaded();
-    return string_t{ STRING_CONST_CAPACITY(EOD->KEY) };
+    return string_t{ STRING_BUFFER(EOD->KEY) };
 }
 
 bool eod_save_key(string_t eod_key)
@@ -102,7 +102,7 @@ bool eod_save_key(string_t eod_key)
     log_infof(0, STRING_CONST("Saving EOD %.*s"), STRING_FORMAT(eod_key));
 
     if (eod_key.str != EOD->KEY)
-        string_copy(STRING_CONST_CAPACITY(EOD->KEY), STRING_ARGS(eod_key));
+        string_copy(STRING_BUFFER(EOD->KEY), STRING_ARGS(eod_key));
 
     const string_const_t& eod_key_file_path = session_get_user_file_path(STRING_CONST("eod.key"));
     stream_t* key_stream = fs_open_file(STRING_ARGS(eod_key_file_path), STREAM_CREATE | STREAM_OUT | STREAM_TRUNCATE);
@@ -186,9 +186,10 @@ const char* eod_build_image_url(const char* image_url, size_t image_url_length)
     static thread_local char IMAGE_URL_BUFFER[2048];
 
     string_const_t HOST_API = string_const(STRING_CONST("https://eodhistoricaldata.com"));
-    string_t url = string_copy(STRING_CONST_CAPACITY(IMAGE_URL_BUFFER), STRING_ARGS(HOST_API));
+    string_t url = string_copy(STRING_BUFFER(IMAGE_URL_BUFFER), STRING_ARGS(HOST_API));
     
-    return string_append(STRING_ARGS(url), STRING_CONST_LENGTH(IMAGE_URL_BUFFER), image_url, image_url_length).str;
+    return string_append(STRING_ARGS_BUFFER(url, IMAGE_URL_BUFFER), image_url, image_url_length).str;
+    //return string_append(STRING_ARGS(url), STRING_CONST_LENGTH(IMAGE_URL_BUFFER), image_url, image_url_length).str;
 }
 
 const char* eod_build_url(const char* api, query_format_t format, const char* uri_format, ...)
@@ -196,38 +197,38 @@ const char* eod_build_url(const char* api, query_format_t format, const char* ur
     static thread_local char URL_BUFFER[2048];
 
     string_const_t HOST_API = CTEXT("https://eodhistoricaldata.com/api/");
-    string_t url = string_copy(STRING_CONST_CAPACITY(URL_BUFFER), STRING_ARGS(HOST_API));
+    string_t url = string_copy(STRING_BUFFER(URL_BUFFER), STRING_ARGS(HOST_API));
     if (url.str[url.length - 1] != '/')
-        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("/"));
+        url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("/"));
         
     if (string_length(api) > 0)
     {
-        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), api, string_length(api));
+        url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), api, string_length(api));
         if (url.str[url.length - 1] != '/')
-            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("/"));
+            url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("/"));
     }
 
     va_list list;
     va_start(list, uri_format);
     char uri_formatted_buffer[2048] = { '\0' };
-    string_t uri_formatted = string_vformat(STRING_CONST_CAPACITY(uri_formatted_buffer), uri_format, string_length(uri_format), list);
+    string_t uri_formatted = string_vformat(STRING_BUFFER(uri_formatted_buffer), uri_format, string_length(uri_format), list);
     
-    url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_ARGS(uri_formatted));
+    url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_ARGS(uri_formatted));
     va_end(list);
     
     const size_t qm_pos = string_rfind(STRING_ARGS(url), '?', STRING_NPOS);
     if (format != FORMAT_UNDEFINED)
     {
         if (qm_pos == STRING_NPOS)
-            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("?"));
+            url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("?"));
         else
-            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("&"));
+            url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("&"));
 
-        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("fmt="));
+        url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("fmt="));
         if (format == FORMAT_JSON || format == FORMAT_JSON_CACHE)
-            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("json"));
+            url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("json"));
         else
-            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("csv"));
+            url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("csv"));
     }
 
     const char* api_key = eod_ensure_key_loaded();
@@ -235,12 +236,12 @@ const char* eod_build_url(const char* api, query_format_t format, const char* ur
     if (api_key_length > 0)
     {
         if (qm_pos == STRING_NPOS)
-            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("?"));
+            url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("?"));
         else
-            url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("&"));
+            url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("&"));
 
-        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), STRING_CONST("api_token="));
-        url = string_append(STRING_ARGS(url), STRING_CONST_LENGTH(URL_BUFFER), api_key, api_key_length);
+        url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("api_token="));
+        url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), api_key, api_key_length);
     }
     
     return url.str;
@@ -309,7 +310,7 @@ FOUNDATION_STATIC void eod_update_window_title()
     string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
 
     static char title[128] = PRODUCT_NAME;
-    string_format(STRING_CONST_CAPACITY(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
+    string_format(STRING_BUFFER(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
         app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
 
     glfwSetWindowTitle(window, title);
@@ -330,15 +331,15 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
 
     if (EOD->CONNECTED)
     {
-        string_copy(STRING_CONST_BUFFER(EOD->USER_NAME), STRING_ARGS(name));
-        string_copy(STRING_CONST_BUFFER(EOD->USER_EMAIL), STRING_ARGS(email));
-        string_copy(STRING_CONST_BUFFER(EOD->SUBSCRIPTION_TYPE), STRING_ARGS(subtype));
+        string_copy(STRING_BUFFER(EOD->USER_NAME), STRING_ARGS(name));
+        string_copy(STRING_BUFFER(EOD->USER_EMAIL), STRING_ARGS(email));
+        string_copy(STRING_BUFFER(EOD->SUBSCRIPTION_TYPE), STRING_ARGS(subtype));
     }
 
-    string_format(STRING_CONST_CAPACITY(EOD->STATUS), STRING_CONST("Name: %.*s\nEmail: %.*s\nSubscription: %.*s\nRequest: %lg/%lg"),
+    string_format(STRING_BUFFER(EOD->STATUS), STRING_CONST("Name: %.*s\nEmail: %.*s\nSubscription: %.*s\nRequest: %lg/%lg"),
         STRING_FORMAT(name), STRING_FORMAT(email), STRING_FORMAT(subtype), EOD->API_CALLS, EOD->API_LIMIT);
 
-    string_format(STRING_CONST_CAPACITY(EOD->USAGE_LABEL), STRING_CONST("EOD [API USAGE %.3lg %%]"), EOD->API_CALLS * 100 / EOD->API_LIMIT);
+    string_format(STRING_BUFFER(EOD->USAGE_LABEL), STRING_CONST("EOD [API USAGE %.3lg %%]"), EOD->API_CALLS * 100 / EOD->API_LIMIT);
 
     EOD->UPDATE_TICK = time_current();
 

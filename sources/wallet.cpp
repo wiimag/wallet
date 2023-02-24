@@ -79,11 +79,11 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::TextUnformatted("Currency");
 
         char currency[64];
-        string_copy(STRING_CONST_CAPACITY(currency), STRING_ARGS(wallet->preferred_currency));
+        string_copy(STRING_BUFFER(currency), STRING_ARGS(wallet->preferred_currency));
 
         ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(26.0f), 0, true);
         ImGui::SetNextItemWidth(imgui_get_font_ui_scale(96.0f));
-        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_CONST_CAPACITY(currency), ImGuiInputTextFlags_AutoSelectAll))
+        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(currency), ImGuiInputTextFlags_AutoSelectAll))
         {
             char* old = wallet->preferred_currency.str;
             wallet->preferred_currency = string_clone(currency, string_length(currency));

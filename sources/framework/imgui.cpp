@@ -137,7 +137,7 @@ bool imgui_draw_splitter(const char* id,
 
     char splitter_session_key[256];
     const float space_left = (orientation == IMGUI_SPLITTER_HORIZONTAL ? space.x : space.y);
-    string_format(STRING_CONST_CAPACITY(splitter_session_key), STRING_CONST("%s_splitter_pos"), id);
+    string_format(STRING_BUFFER(splitter_session_key), STRING_CONST("%s_splitter_pos"), id);
     float splitter_pos = session_get_float(splitter_session_key, initial_propertion > 0.0f ? space_left * initial_propertion : space_left / 2.0f);
     if (!imgui_draw_splitter(id, &splitter_pos, left_callback, right_callback, orientation, frame_flags, preserve_proportion))
         return false;

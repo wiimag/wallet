@@ -1054,11 +1054,10 @@ typedef volatile _Atomic(void*) atomicptr_t;
 #define STRING_FORMAT(s) (int)(s).length, (s).str
 
 // =======================================
-#define STRING_RANGE(s) (s).str, (s).str + (s).length
-#define STRING_CONST_LENGTH(s) (sizeof((s)))
-#define STRING_CONST_CAPACITY(s) (s), (sizeof((s)))
-#define STRING_CONST_BUFFER(s) (s), (sizeof((s)))
 #define WSTRING_CONST(s) (s), (sizeof((s))/sizeof((s[0])) - 1)
+#define STRING_RANGE(s) (s).str, ((s).str + (s).length)
+#define STRING_BUFFER(s) (s), (sizeof((s))/sizeof((s[0])))
+#define STRING_ARGS_BUFFER(s, buf) (s).str, (s).length, (sizeof((buf))/sizeof((buf[0])))
 // =======================================
 // 
 // Misc

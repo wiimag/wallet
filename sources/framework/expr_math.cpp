@@ -489,14 +489,14 @@ FOUNDATION_STATIC expr_result_t expr_eval_vecmat_transpose(const expr_func_t* f,
     return expr_eval_vecmat_push_result(context, r);
 }
 
-void eval_register_vec_mat_functions(expr_func_t*& funcs)
+void expr_register_vec_mat_functions(expr_func_t*& funcs)
 {
     const size_t VECMAT_CONTEXT_SIZE = 0;//sizeof(vecmat_context_t); NOT USED YET
 
     static thread_local mat4 IDENTITY;
     bx::mtxIdentity(IDENTITY.f);
     expr_result_t EIDENTITY(&IDENTITY.f, sizeof(IDENTITY.f[0]), 16, EXPR_POINTER_ARRAY_FLOAT);
-    eval_set_global_var("I", EIDENTITY.ptr, EIDENTITY.index);
+    expr_set_global_var("I", EIDENTITY.ptr, EIDENTITY.index);
 
     // vec2(0,0), vec3(0,0,0), vec4(0,0,0,1), q(0,0,0,1)
     array_push(funcs, (expr_func_t{ STRING_CONST("vec2"), expr_eval_vecmat_vec2, NULL, VECMAT_CONTEXT_SIZE }));

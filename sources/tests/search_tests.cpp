@@ -29,8 +29,8 @@ TEST_SUITE("Search")
         char to_lower_buffer[32];
         char to_upper_buffer[32];
 
-        string_t to_lower = string_to_lower_utf8(STRING_CONST_BUFFER(to_lower_buffer), STRING_CONST(mel));
-        string_t to_upper = string_to_upper_utf8(STRING_CONST_BUFFER(to_upper_buffer), STRING_ARGS(to_lower));
+        string_t to_lower = string_to_lower_utf8(STRING_BUFFER(to_lower_buffer), STRING_CONST(mel));
+        string_t to_upper = string_to_upper_utf8(STRING_BUFFER(to_upper_buffer), STRING_ARGS(to_lower));
 
         log_debugf(0, STRING_CONST("Original: %s -> Upper: %.*s -> Lower: %.*s "), 
             mel,
@@ -450,7 +450,7 @@ TEST_SUITE("Search")
         while (search_database_document_count(db) > 0)
         {
             char word_buffer[8 + 1];
-            string_const_t word = random_string(STRING_CONST_BUFFER(word_buffer));
+            string_const_t word = random_string(STRING_BUFFER(word_buffer));
 
             for (int d = 0; d < ARRAY_COUNT(docs) / 2; ++d)
                 search_database_index_word(db, docs[random32_range(0, ARRAY_COUNT(docs))], STRING_ARGS(word));

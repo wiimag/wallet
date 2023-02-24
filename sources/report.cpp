@@ -721,7 +721,7 @@ FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t e
     cvalue.format = ec->format;
     cvalue.time = time_current();
     
-    eval_set_or_create_global_var(STRING_CONST("$TITLE"), expr_result_t(title->code));
+    expr_set_or_create_global_var(STRING_CONST("$TITLE"), expr_result_t(title->code));
     auto result = eval(ec->expression, expression_length);
     if (ec->format == COLUMN_FORMAT_CURRENCY || ec->format == COLUMN_FORMAT_NUMBER || ec->format == COLUMN_FORMAT_PERCENTAGE)
     { 
@@ -1380,8 +1380,8 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
             if (ImGui::Button(ICON_MD_ADD, ImVec2(ImGui::GetContentRegionAvail().x, 0)) || add)
             {
                 report_expression_column_t ec{};
-                string_copy(STRING_CONST_CAPACITY(ec.name), name, string_length(name));
-                string_copy(STRING_CONST_CAPACITY(ec.expression), expression, string_length(expression));
+                string_copy(STRING_BUFFER(ec.name), name, string_length(name));
+                string_copy(STRING_BUFFER(ec.expression), expression, string_length(expression));
                 ec.format = format;
                 array_push(report->expression_columns, ec);
                 update_table = true;
@@ -1647,7 +1647,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
 
     if (ImGui::IsWindowAppearing())
     {
-        input_length = string_copy(STRING_CONST_CAPACITY(input), STRING_ARGS(initial_value)).length;
+        input_length = string_copy(STRING_BUFFER(input), STRING_ARGS(initial_value)).length;
     }
 
     ImGui::MoveCursor(2, 10);
@@ -1655,7 +1655,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
     {
         if (ImGui::IsWindowAppearing())
             ImGui::SetKeyboardFocusHere();
-        if (ImGui::InputTextEx("##InputField", hint.str, STRING_CONST_CAPACITY(input), ImVec2(-1, 0),
+        if (ImGui::InputTextEx("##InputField", hint.str, STRING_BUFFER(input), ImVec2(-1, 0),
             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
         {
             applied = true;
@@ -2292,7 +2292,7 @@ void report_render(report_t* report)
         };   
     }
 
-    eval_set_or_create_global_var(STRING_CONST("$REPORT"), expr_result_t(SYMBOL_CSTR(report->name)));
+    expr_set_or_create_global_var(STRING_CONST("$REPORT"), expr_result_t(SYMBOL_CSTR(report->name)));
     
     imgui_draw_splitter("Report", [report](const ImRect& rect)
     {
@@ -2460,7 +2460,7 @@ FOUNDATION_STATIC void report_initialize()
     foreach (e, paths)
     {
         char report_path_buffer[1024];
-        string_t report_path = path_concat(STRING_CONST_CAPACITY(report_path_buffer), STRING_ARGS(report_dir_path), STRING_ARGS(*e));
+        string_t report_path = path_concat(STRING_BUFFER(report_path_buffer), STRING_ARGS(report_dir_path), STRING_ARGS(*e));
         report_load(string_to_const(report_path));
     }
     string_array_deallocate(paths);

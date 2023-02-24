@@ -199,11 +199,11 @@ FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
 
     char temp_path_buffer[BUILD_MAX_PATHLEN];
     string_const_t temp_path_const = stream_path(migrate_stream);
-    string_t temp_path = string_copy(STRING_CONST_CAPACITY(temp_path_buffer), temp_path_const.str, temp_path_const.length);
+    string_t temp_path = string_copy(STRING_BUFFER(temp_path_buffer), temp_path_const.str, temp_path_const.length);
 
     char current_stream_path_buffer[BUILD_MAX_PATHLEN];
     string_const_t current_stream_path_const = stream_path(_realtime->stream);
-    string_t current_stream_path = string_copy(STRING_CONST_CAPACITY(current_stream_path_buffer), current_stream_path_const.str, current_stream_path_const.length);
+    string_t current_stream_path = string_copy(STRING_BUFFER(current_stream_path_buffer), current_stream_path_const.str, current_stream_path_const.length);
     
     if (from == 0 && to == 1)
     {

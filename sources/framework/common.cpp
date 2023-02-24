@@ -254,7 +254,7 @@ string_const_t fs_clean_file_name(const char* filename, size_t filename_length)
         else
         {
             char file_extensions_buffer[1024] = { '\0' };
-            string_t extension_filters = string_format(STRING_CONST_CAPACITY(file_extensions_buffer),
+            string_t extension_filters = string_format(STRING_BUFFER(file_extensions_buffer),
                 STRING_CONST("%s|All Files (*.*)|*.*"), extension);
             extension_filters = string_replace(STRING_ARGS(extension_filters), sizeof(file_extensions_buffer),
                 STRING_CONST("|"), "\0", 1, true);

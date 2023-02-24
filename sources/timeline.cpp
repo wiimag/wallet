@@ -246,9 +246,6 @@ FOUNDATION_STATIC int timeline_add_new_stock(const timeline_transaction_t* t, ti
     s.average_price = 0;
     s.code = string_const(t->code, string_length(t->code));
 
-    //s.total_exchange_rate = 0;
-    //s.average_exchange_rate = 1.0;
-
     array_insert(stocks, insert_at, s);
     return insert_at;
 }
@@ -304,10 +301,6 @@ FOUNDATION_STATIC void timeline_update_day(timeline_t& day, const timeline_trans
         s.total_value += buy_cost;
         s.average_price = s.total_value / s.qty;
 
-        //s.total_exchange_rate += t->exchange_rate * t->qty;
-        //s.average_exchange_rate = s.total_exchange_rate / s.qty;
-        //FOUNDATION_ASSERT(math_real_is_finite(s.average_exchange_rate));
-
         if (day.total_fund >= buy_cost)
         {
             day.total_fund -= buy_cost;
@@ -339,14 +332,10 @@ FOUNDATION_STATIC void timeline_update_day(timeline_t& day, const timeline_trans
 
         s.qty -= adjusted_quantity_if_error;
         FOUNDATION_ASSERT(s.qty >= 0); 
-        // Stock will be remove on the next transaction day?
 
         s.total_value -= cost_total;
         s.average_price = math_real_is_zero(s.qty) ? 0 : s.total_value / s.qty;
         FOUNDATION_ASSERT(math_real_is_finite(s.average_price));
-
-        //s.total_exchange_rate -= t->exchange_rate * adjusted_quantity_if_error;
-        //s.average_exchange_rate = math_real_is_zero(s.qty) ? 1.0 : s.total_exchange_rate / s.qty;
 
         day.total_gain += gain;
         day.total_fund += sell_total;
@@ -602,10 +591,9 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
     const double min_d = (double)report->days[0].date;
     const double max_d = (double)array_last(report->days)->date;
 
-    ImPlot::SetupLegend(ImPlotLocation_NorthWest, /*ImPlotLegendFlags_Horizontal | ImPlotLegendFlags_Outside |*/ ImPlotLegendFlags_None);
+    ImPlot::SetupLegend(ImPlotLocation_NorthWest, ImPlotLegendFlags_Horizontal | ImPlotLegendFlags_None);
 
-    ImPlot::SetupAxis(ImAxis_X1, "##Date", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight /*| ImPlotAxisFlags_RangeFit*/);
-    ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+    ImPlot::SetupAxis(ImAxis_X1, "##Date", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min_d, max_d + time_one_day() * 5.0);
     ImPlot::SetupAxisFormat(ImAxis_X1, timeline_report_graph_date_format, &axis_format);
 
@@ -622,6 +610,10 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
     axis_format.limits = limits;
     axis_format.print_short_value = false;
 
+    ImPlot::SetAxis(ImAxis_Y2);
+    ImPlot::HideNextItem(false, ImPlotCond_Once);
+    timeline_report_plot_day_bar_value("Gain", report->days, L1(_1->total_gain + _1->total_dividends));
+
     ImPlot::SetAxis(ImAxis_Y1);
     ImPlot::HideNextItem(true, ImPlotCond_Once);
     timeline_report_graph_limit("Stock Value", min_d, max_d, summary->total_value);
@@ -629,29 +621,28 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
 
     ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::HideNextItem(false, ImPlotCond_Once);
-    timeline_report_plot_day_bar_value("+Gain", report->days, L1(_1->total_gain + _1->total_dividends));
-
-    timeline_report_graph_limit("+Gain", min_d, max_d, summary->total_gain + summary->total_dividends);
     timeline_report_plot_day_bar_value("+Funds", report->days, L1(_1->total_fund), 0, true);
-    //timeline_report_plot_day_bar_value("Sells", report->days, L1(_1->total_gain), 0, true);
-
 
     ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::HideNextItem(true, ImPlotCond_Once);
     timeline_report_graph_limit("+Dividends", min_d, max_d, summary->total_dividends);
     timeline_report_plot_day_bar_value("+Dividends", report->days, L1(_1->total_dividends), 0, true);
 
-    //timeline_report_plot_day_value("+Gain", report->days, L1(_1->total_value + _1->total_gain), 1.0f, true);
     timeline_report_plot_day_value("+Funds", report->days, L1(_1->total_value + _1->total_fund), 1.0f, true);
     timeline_report_plot_day_value("+Dividends", report->days, L1(_1->total_value + _1->total_dividends), 1.0f, true);
 
     ImPlot::SetAxis(ImAxis_Y1);
-    timeline_report_graph_limit("Investments", min_d, max_d, summary->total_investment);
-    timeline_report_plot_day_value("Investments", report->days, L1(_1->total_investment), 2.0f);
+    timeline_report_graph_limit("Investments", min_d, max_d, summary->total_investment - summary->total_dividends - summary->total_gain);
+    timeline_report_plot_day_value("Investments", report->days, L1(_1->total_investment - _1->total_dividends - _1->total_gain), 2.0f);
 
     ImPlot::SetAxis(ImAxis_Y1);
-    timeline_report_graph_limit("Total Value", min_d, max_d, summary->total_value + summary->total_fund + summary->total_dividends);
-    timeline_report_plot_day_value("Total Value", report->days, L1(_1->total_value + _1->total_fund + _1->total_dividends), 3.0f);
+    timeline_report_graph_limit("Total Value##5", min_d, max_d, summary->total_value + summary->total_fund + summary->total_dividends);
+    timeline_report_plot_day_value("Total Value##5", report->days, L1(_1->total_value + _1->total_fund + _1->total_dividends), 4.0f);
+
+    ImPlot::SetAxis(ImAxis_Y1);
+    ImPlot::HideNextItem(true, ImPlotCond_Once);
+    timeline_report_graph_limit("Total Wealth", min_d, max_d, summary->total_investment);
+    timeline_report_plot_day_value("Total Wealth", report->days, L1(_1->total_investment), 2.0f, true);
 
     const time_t min_time = (time_t)limits.X.Min + time_one_day() * 5;
     const int year_range = math_ceil(time_elapsed_days((time_t)min_time, (time_t)max_d) / 365.0);
@@ -678,21 +669,23 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
         if (tidx < 0)
             tidx = ~tidx;
 
-        for (int i = max(0, tidx - 3), end = min(tidx + 3, to_int(transaction_count)); i < end; ++i)
+        const int max_transactions = 10;
+        for (int i = max(0, tidx - max_transactions/2), end = min(tidx + max_transactions/2, to_int(transaction_count)); i < end; ++i)
         {
             timeline_transaction_t* t = &report->transactions[i];
 
-            const float xo = 10 + t->code_key % ((int)i + 1) / 1.0f;
-            const float yo = 20 + t->code_key % 140 / 1.0f;
-            const float xd = float((double)t->date - ppos.x) / 12.0f / 60.0f / 60.0f;
+            // Compute point position around #ppos that make a circle for each transaction
+            const float angle = i * (2 * FLT_PI / max_transactions) + ((t->code_key % 120) / 120.0f + 0.3f);
+            const float radius = (t->type == TimelineTransactionType::BUY ? 80.0f : 190.0f) + ((t->code_key % 120));
+            const ImVec2 offset{ radius * cosf(angle), radius * sinf(angle) };
 
             if (t->type == TimelineTransactionType::BUY)
             {
-                ImPlot::Annotation(ppos.x, ppos.y, ImColor(ImU32(t->code_key | 0xFF000000)), ImVec2(xo + xd, -yo), true, "+%s", t->code);
+                ImPlot::Annotation(ppos.x, ppos.y, ImColor(ImU32(t->code_key | 0xFF000000)), offset, true, "+%s", t->code);
             }
             else
             {
-                ImPlot::Annotation(ppos.x, ppos.y, ImColor(ImU32(t->code_key | 0xAA110000)), ImVec2(xo + xd, yo), true, "-%s", t->code);
+                ImPlot::Annotation(ppos.x, ppos.y, ImColor(ImU32(t->code_key | 0xAA110000)), offset, true, "-%s", t->code);
             }
         }
     }
@@ -704,13 +697,64 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
 
 FOUNDATION_STATIC void timeline_report_toolbar(timeline_report_t* report)
 {
+    const unsigned transaction_count = array_size(report->transactions);
+    if (report == nullptr || transaction_count == 0)
+        return;
+
+    constexpr string_const_t LARGE_AMOUNT_FORMAT = CTEXT("9" THIN_SPACE "999" THIN_SPACE "999" THIN_SPACE ICON_MD_ATTACH_MONEY);
+    
     ImGui::BeginGroup();
 
-    auto d = array_last(report->days);
-    string_const_t date_string = string_from_date(d->date);
-    ImGui::Text(ICON_MD_STACKED_LINE_CHART " [%u] %.*s " ICON_MD_WALLET " %.2lf $ " ICON_MD_DIFFERENCE " %.2lf $ " ICON_MD_ASSIGNMENT_RETURN " %.2lf $ " ICON_MD_SAVINGS " %.2lf $ " ICON_MD_ACCOUNT_BALANCE_WALLET " %.2lf $",
-            array_size(report->transactions), STRING_FORMAT(date_string),
-            d->total_fund, d->total_gain, d->total_dividends, /*d->total_value, */d->total_investment, d->total_value + d->total_dividends + d->total_fund);
+    auto last_day = array_last(report->days);
+    string_const_t last_date_string = string_from_date(last_day->date);
+
+    ImGui::Text(ICON_MD_STACKED_LINE_CHART " [%u] %.*s", transaction_count, STRING_FORMAT(last_date_string));
+    if (ImGui::IsItemHovered())
+    {
+        auto first_day = &report->days[0];
+        string_const_t first_date_string = string_from_date(first_day->date);
+        ImGui::SetTooltip("You've made %u transactions since %.*s", transaction_count, STRING_FORMAT(first_date_string));
+    }
+
+    ImGui::SameLine();
+    ImGui::Text(ICON_MD_WALLET " %.2lf $", last_day->total_fund);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("You should have about %.0lf $ fund remaining as of %.*s", last_day->total_fund, STRING_FORMAT(last_date_string));
+
+    ImGui::SameLine();
+    ImGui::Text(ICON_MD_DIFFERENCE " %.2lf $", last_day->total_gain);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("You've made about %.0lf $ by selling stock so far", last_day->total_gain);
+
+    ImGui::SameLine();
+    ImGui::Text(ICON_MD_ASSIGNMENT_RETURN " %.2lf $", last_day->total_dividends);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("You've made about %.0lf $ in dividend's return.", last_day->total_dividends);
+
+    ImGui::SameLine();
+    const double raw_investment_cost = last_day->total_investment - last_day->total_dividends - last_day->total_gain;
+    string_const_t currency_formatted = string_from_currency(raw_investment_cost, STRING_ARGS(LARGE_AMOUNT_FORMAT));
+    ImGui::Text(ICON_MD_SAVINGS " %.*s", STRING_FORMAT(currency_formatted));
+    if (ImGui::IsItemHovered())
+    {
+        const double imin = min(raw_investment_cost, last_day->total_investment);
+        const double imax = max(raw_investment_cost, last_day->total_investment);
+        ImGui::SetTooltip("You've taken about %.0lf $ out of your wallet to make those investments and re-invested gain for about %.0lf $.", imin, imax);
+    }
+
+    ImGui::SameLine();
+    const double total_value_adjusted = last_day->total_value + last_day->total_dividends + last_day->total_fund;
+    currency_formatted = string_from_currency(total_value_adjusted, STRING_ARGS(LARGE_AMOUNT_FORMAT));
+    ImGui::Text(ICON_MD_ACCOUNT_BALANCE_WALLET " %.*s", STRING_FORMAT(currency_formatted));
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("As of %.*s your stock value is worth about %.0lf $.", STRING_FORMAT(last_date_string), total_value_adjusted);
+
+    ImGui::SameLine();
+    const double total_gain = total_value_adjusted - raw_investment_cost;
+    currency_formatted = string_from_currency(total_gain, STRING_ARGS(LARGE_AMOUNT_FORMAT));
+    ImGui::Text(ICON_MD_PRICE_CHANGE " %.*s", STRING_FORMAT(currency_formatted));
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("As of %.*s you can say that you've gain or lost about %.0lf $.", STRING_FORMAT(last_date_string), total_gain);
 
     ImGui::EndGroup();
 }
@@ -747,7 +791,7 @@ void timeline_render_graph(const report_t* report)
 
     // Insert new days with updated total current value
     auto days = timeline_report->days;
-    for (time_t d = days[0].date, end = time_now() + time_one_day(); d <= end; d += time_one_day())
+    for (time_t d = days[0].date, end = time_now() + time_one_day() / 2; d <= end; d += time_one_day())
     {
         int didx = array_binary_search(days, array_size(days), d);
         if (didx >= 0)

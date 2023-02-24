@@ -176,8 +176,8 @@ FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, s
         log_warnf(0, WARNING_INVALID_VALUE, STRING_CONST("Word too long, truncating to %u characters: %.*s"), SEARCH_INDEX_WORD_MAX_LENGTH, (int)word_length, word);
 
     string_t word_lower = lower_case_word ? 
-        string_to_lower_utf8(STRING_CONST_BUFFER(word_lower_buffer), word, word_length) :
-        string_copy(STRING_CONST_BUFFER(word_lower_buffer), word, word_length);
+        string_to_lower_utf8(STRING_BUFFER(word_lower_buffer), word, word_length) :
+        string_copy(STRING_BUFFER(word_lower_buffer), word, word_length);
 
     if (remove_ponctuations)
     {
@@ -891,6 +891,7 @@ FOUNDATION_STATIC search_result_t* search_database_query_property(
     if (key.crc <= 0)
         return nullptr;
         
+    time_t date;
     string_const_t property_value = search_database_format_word(STRING_ARGS(value), indexing_flags);
     if (string_try_convert_number(STRING_ARGS(property_value), key.number))
     {
@@ -900,6 +901,12 @@ FOUNDATION_STATIC search_result_t* search_database_query_property(
         {
             return search_database_query_property_number(db, eval_flags, key, and_set, results);
         }
+    }
+    else if (string_try_convert_date(STRING_ARGS(property_value), date))
+    {
+        key.number = (double)date;
+        key.type = SearchIndexType::Number;
+        return search_database_query_property_number(db, eval_flags, key, and_set, results);
     }
     else
     {
@@ -1115,6 +1122,27 @@ bool search_database_load(search_database_t* db, stream_t* stream)
     db->strings = strings;    
     
     return true;
+}
+
+string_t* search_database_property_keywords(search_database_t* database)
+{
+    string_t* keywords = nullptr;
+
+    // Iterate all indexes with the type property
+    SHARED_READ_LOCK(database->mutex);
+    
+    for (uint32_t i = 0; i < array_size(database->indexes); ++i)
+    {
+        const search_index_t* index = database->indexes + i;
+        if (index->key.type == SearchIndexType::Property || index->key.type == SearchIndexType::Number)
+        {
+            string_const_t keyword = string_table_to_string_const(database->strings, index->key.crc);
+            if (keyword.length && !array_contains(keywords, keyword, LC2(string_equal(STRING_ARGS(_1), STRING_ARGS(_2)))))
+                array_push(keywords, string_clone(STRING_ARGS(keyword)));
+        }
+    }
+
+    return keywords;
 }
 
 bool search_database_save(search_database_t* db, stream_t* stream)

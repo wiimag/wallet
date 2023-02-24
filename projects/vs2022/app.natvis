@@ -37,8 +37,4 @@
 	<Type Name="string_t">
 		<DisplayString>({length}) {str,[length]s8}</DisplayString>
 	</Type>
-
-	<Type Name="search_index_t*">
-		<DisplayString>{(int*)this-3}</DisplayString>
-	</Type>
 </AutoVisualizer>

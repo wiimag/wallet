@@ -82,10 +82,10 @@ TEST_SUITE("Dispatcher")
             CHECK_NE(event_listener_id, INVALID_DISPATCHER_EVENT_LISTENER_ID);
 
             static char answer[42] = "life, the universe, and everything";
-            dispatcher_post_event(EVENT_POST_42_HASH, STRING_CONST_CAPACITY(answer));
+            dispatcher_post_event(EVENT_POST_42_HASH, STRING_BUFFER(answer));
             dispatcher_process_events();
 
-            REQUIRE_EQ(posted, string_hash(STRING_CONST_CAPACITY(answer)));
+            REQUIRE_EQ(posted, string_hash(STRING_BUFFER(answer)));
             REQUIRE(dispatcher_unregister_event_listener(event_listener_id));
         }
     }

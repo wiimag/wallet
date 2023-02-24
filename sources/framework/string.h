@@ -269,6 +269,18 @@ string_t string_remove_character(char* buf, size_t size, size_t capacity, char c
  */
 bool string_try_convert_number(const char* str, size_t length, double& out_value);
 
+/*! Try to convert a string to a date. It will return false if the string is not a valid date.
+ * 
+ * It only support format such as YYYY-MM-DD for now.
+ *
+ * @param str    The string to convert.
+ * @param length The length of the string.
+ * @param date   The date to write to.
+ * 
+ * @return True if the string is a valid date, false otherwise.
+ */
+bool string_try_convert_date(const char* str, size_t length, time_t& date);
+
 /*! Helper function to deallocate a string and set its member to null.
  *
  * @param str The string to deallocate.

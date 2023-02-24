@@ -79,7 +79,7 @@ struct SearchQueryException
     {
         va_list list;
         va_start(list, fmt);
-        string_vformat(STRING_CONST_BUFFER(msg), fmt, string_length(msg), list);
+        string_vformat(STRING_BUFFER(msg), fmt, string_length(msg), list);
         va_end(list);
     }
 };

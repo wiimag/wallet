@@ -171,10 +171,10 @@ struct TestReporter : public doctest::IReporter
 
         const size_t pattern_length = string_length(pattern);
         static char filling_buffer[32] = {'\0'};
-        string_t filling = string_copy(STRING_CONST_CAPACITY(filling_buffer), pattern, pattern_length);
+        string_t filling = string_copy(STRING_BUFFER(filling_buffer), pattern, pattern_length);
         for (int i = 1; i < level; ++i)
         {
-            filling = string_concat(STRING_CONST_CAPACITY(filling_buffer), 
+            filling = string_concat(STRING_BUFFER(filling_buffer),
                 STRING_ARGS(filling), pattern, pattern_length);
         }
 
@@ -202,7 +202,7 @@ extern int main_tests(void* _context, GLFWwindow* window)
     {
         char test_log_path_buffer[BUILD_MAX_PATHLEN];
         string_const_t exe_dir = environment_executable_directory();
-        string_t test_log_path = path_concat(STRING_CONST_CAPACITY(test_log_path_buffer),
+        string_t test_log_path = path_concat(STRING_BUFFER(test_log_path_buffer),
             STRING_ARGS(exe_dir), 
         #if FOUNDATION_PLATFORM_WINDOWS
             STRING_CONST("../artifacts/tests.log"));

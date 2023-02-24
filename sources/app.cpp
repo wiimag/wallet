@@ -218,7 +218,7 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
                     if (context_name.length == 0)
                         context_name = CTEXT("other");
                     char current_frame_stack_buffer[512];
-                    string_t stf = stacktrace_resolve(STRING_CONST_CAPACITY(current_frame_stack_buffer), trace, min((size_t)3, depth), 0);
+                    string_t stf = stacktrace_resolve(STRING_BUFFER(current_frame_stack_buffer), trace, min((size_t)3, depth), 0);
                     if (size > 256 * 1024)
                     {
                         log_warnf(HASH_MEMORY, WARNING_MEMORY, STRING_CONST("%.*s: 0x%p, %.3g mb [%.*s]\n%.*s"), STRING_FORMAT(context_name), addr, size / 1024.0f / 1024.0f,
@@ -261,7 +261,7 @@ FOUNDATION_STATIC void app_tabs_content_filter()
 {
     if (shortcut_executed(true, ImGuiKey_F))
         ImGui::SetKeyboardFocusHere();
-    ImGui::InputTextEx("##SearchFilter", "Filter... " ICON_MD_FILTER_LIST_ALT, STRING_CONST_CAPACITY(SETTINGS.search_filter),
+    ImGui::InputTextEx("##SearchFilter", "Filter... " ICON_MD_FILTER_LIST_ALT, STRING_BUFFER(SETTINGS.search_filter),
         ImVec2(imgui_get_font_ui_scale(300.0f), 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
 }
 
@@ -368,7 +368,7 @@ void app_open_dialog(const char* title, app_dialog_handler_t&& handler, uint32_t
     dlg.handler = std::move(handler);
     dlg.close_handler = std::move(close_handler);
     dlg.user_data = user_data;
-    string_copy(STRING_CONST_CAPACITY(dlg.title), title, string_length(title));
+    string_copy(STRING_BUFFER(dlg.title), title, string_length(title));
     array_push_memcpy(_dialogs, &dlg);
 }
 

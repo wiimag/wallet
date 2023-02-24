@@ -113,7 +113,7 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
 
         char preview_buffer[256];
         string_const_t log_msg = string_table_to_string_const(_console_string_table, m.msg_symbol);
-        string_const_t preview = string_remove_line_returns(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(log_msg));
+        string_const_t preview = string_remove_line_returns(STRING_BUFFER(preview_buffer), STRING_ARGS(log_msg));
 
         m.preview_symbol = console_string_encode(STRING_ARGS(preview));
         array_push_memcpy(_messages, &m);
@@ -227,7 +227,7 @@ FOUNDATION_STATIC void console_render_toolbar()
 {
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(100.0f));
-    if (ImGui::InputTextWithHint("##SearchLog", "Search logs...", STRING_CONST_CAPACITY(_log_search_filter)))
+    if (ImGui::InputTextWithHint("##SearchLog", "Search logs...", STRING_BUFFER(_log_search_filter)))
     {
         _filtered_message_count = 0;
         const size_t filter_length = string_length(_log_search_filter);
@@ -270,7 +270,7 @@ FOUNDATION_STATIC void console_render_evaluator()
         if (!_console_expression_explicitly_set && _saved_expressions.size())
         {
             const string_t last_expression = _saved_expressions.current();
-            string_copy(STRING_CONST_CAPACITY(_console_expression_buffer), STRING_ARGS(last_expression));
+            string_copy(STRING_BUFFER(_console_expression_buffer), STRING_ARGS(last_expression));
         }
         _console_expression_explicitly_set = false;
     }
@@ -281,15 +281,15 @@ FOUNDATION_STATIC void console_render_evaluator()
         if (ImGui::Shortcut(ImGuiKey_UpArrow | ImGuiMod_Alt))
         {
             const string_t& last_expression = _saved_expressions.move(-1);
-            string_t ec = string_copy(STRING_CONST_CAPACITY(_console_expression_buffer), STRING_ARGS(last_expression));
-            string_format(STRING_CONST_CAPACITY(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
+            string_t ec = string_copy(STRING_BUFFER(_console_expression_buffer), STRING_ARGS(last_expression));
+            string_format(STRING_BUFFER(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
             focus_text_field = true;
         }
         else if (ImGui::Shortcut(ImGuiKey_DownArrow | ImGuiMod_Alt))
         {
             const string_t& last_expression = _saved_expressions.move(+1);
-            string_t ec = string_copy(STRING_CONST_CAPACITY(_console_expression_buffer), STRING_ARGS(last_expression));
-            string_format(STRING_CONST_CAPACITY(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
+            string_t ec = string_copy(STRING_BUFFER(_console_expression_buffer), STRING_ARGS(last_expression));
+            string_format(STRING_BUFFER(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
             focus_text_field = true;
         }
     }
@@ -300,7 +300,7 @@ FOUNDATION_STATIC void console_render_evaluator()
     }
     
     bool evaluate = false;
-    if (ImGui::InputTextMultiline(input_id, STRING_CONST_CAPACITY(_console_expression_buffer),
+    if (ImGui::InputTextMultiline(input_id, STRING_BUFFER(_console_expression_buffer),
         ImVec2(imgui_get_font_ui_scale(-98.0f), -1), 
         ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine | ImGuiInputTextFlags_AllowTabInput |
         (focus_text_field ? ImGuiInputTextFlags_AutoSelectAll : ImGuiInputTextFlags_None)))
@@ -414,7 +414,7 @@ void console_hide()
 
 void console_set_expression(const char* expression, size_t expression_length)
 {
-    string_copy(STRING_CONST_CAPACITY(_console_expression_buffer), expression, expression_length);
+    string_copy(STRING_BUFFER(_console_expression_buffer), expression, expression_length);
     _console_expression_explicitly_set = true;
     console_show();
 }
