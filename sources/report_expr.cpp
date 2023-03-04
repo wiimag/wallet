@@ -815,7 +815,7 @@ FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr
 
     app_open_dialog(table_name.str, 
         L1(report_eval_table_dialog((dynamic_report_t*)_1)), 800, 600, true,
-        L1(report_eval_dynamic_table_deallocate((dynamic_report_t*)_1)), report);
+        report, L1(report_eval_dynamic_table_deallocate((dynamic_report_t*)_1)));
     return elements;
 }
 

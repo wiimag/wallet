@@ -76,9 +76,18 @@ string_t string_utf8_unescape(const char* s, size_t length)
                 utf8.str[utf8.length++] = utf_chars_buffer[j];
             c += 5;
         }
-        else if (size_t(c + 1 - s) < length && c[1] == '/')
+        else if (size_t(c + 1 - s) < length && (c[1] == '/' || c[1] == '"'))
         {
             utf8.str[utf8.length++] = *(++c);
+        }
+        else if (size_t(c + 1 - s) < length && c[1] == 'n')
+        {
+            ++c;
+            utf8.str[utf8.length++] = '\n';
+        }
+        else if (size_t(c + 1 - s) < length && c[1] == 'r')
+        {
+            ++c;
         }
         else
         {
@@ -355,7 +364,7 @@ string_const_t string_remove_line_returns(char* buffer, size_t capacity, const c
     for (size_t i = 0; i < length && result.length < capacity-1; ++i)
     {
         const char tok = str[i];
-        if (tok <= ' ')
+        if (tok < ' ')
         {
             if (!space_injected)
             {
@@ -2141,7 +2150,7 @@ string_t string_remove_line_returns(const char* str, size_t length)
     for (size_t i = 0; i < length; ++i)
     {
         const char tok = str[i];
-        if (tok <= ' ')
+        if (tok < ' ')
         {
             if (!space_injected)
             {

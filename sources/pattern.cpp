@@ -9,6 +9,7 @@
 #include "bulk.h"
 #include "settings.h"
 #include "report.h"
+#include "news.h"
 
 #include <framework/jobs.h>
 #include <framework/session.h>
@@ -73,6 +74,8 @@ const FetchLevel FETCH_ALL =
     FetchLevel::TECHNICAL_SLOPE |
     FetchLevel::TECHNICAL_CCI |
     FetchLevel::TECHNICAL_SAR;
+
+constexpr int MAX_LCF_DAY_COUNT = 180;
 
 static int FIXED_MARKS[] = { 1, 3, 7, 14, 30, 90, 180, 365, 365 * 2, 365 * 3, 365 * 6, -1 };
 static const char* DAY_LABELS[] = { "1D", "3D", "1W", "2W", "1M",  "3M",  "6M",  "1Y", "2Y", "3Y",  "6Y", "MAX" };
@@ -975,7 +978,10 @@ void pattern_fetch_lcf_data(const pattern_t* pattern, const json_object_t& json,
         return;
 
     bulk_t ps{};
+    ps.name = pattern->stock->name;
     ps.code = pattern->stock->symbol;
+    ps.type = pattern->stock->type;
+    ps.exchange = pattern->stock->exchange;
     ps.close = ed->adjusted_close;
     ps.open = ed->open;
     ps.date = ed->date;
@@ -988,16 +994,21 @@ void pattern_fetch_lcf_data(const pattern_t* pattern, const json_object_t& json,
 
     for (int i = 0, end = json.root->value_length; i != end; ++i)
     {
-        json_object_t e = json[i];
+        const json_object_t& e = json[i];
+
         bulk_t s{};
         s.code = string_table_encode(e["code"].as_string());
         if (s.code == ps.code)
             continue;
 
+        s.type = string_table_encode(e["type"].as_string());
+
+        if (s.type != pattern->stock->type)
+            continue;
+
         s.date = string_to_date(STRING_ARGS(e["date"].as_string()));		
         s.code = string_table_encode(e["code"].as_string());
         s.name = string_table_encode_unescape(e["name"].as_string());
-        s.type = string_table_encode(e["type"].as_string());
         s.exchange = string_table_encode(e["exchange_short_name"].as_string());
         s.market_capitalization = e["MarketCapitalization"].as_number();
         s.beta = e["Beta"].as_number();
@@ -1024,31 +1035,127 @@ void pattern_fetch_lcf_data(const pattern_t* pattern, const json_object_t& json,
 
 FOUNDATION_STATIC int pattern_load_lcf_thread(payload_t* payload)
 {
+    pattern_lcf_t* lcfarr = nullptr;
     pattern_t* pattern = (pattern_t*)payload;
 
     time_t ref_date = pattern->date;
-    while ((int)array_size(pattern->lcf) < min(pattern->range, 90))
+    while ((int)array_size(lcfarr) < min(pattern->range, MAX_LCF_DAY_COUNT))
     {
         pattern_lcf_t lcf{ ref_date, nullptr };
-
-        pattern->lcf_fetch_time = time_current();
         string_const_t exchange = string_table_decode_const(pattern->stock->exchange);
         string_const_t first_date_string = string_from_date(ref_date);
         if (eod_fetch("eod-bulk-last-day", exchange.str, FORMAT_JSON_CACHE,
             "filter", "extended",
             ref_date != pattern->date ? "date" : "ignore", first_date_string.str,
-            [pattern, &lcf](const json_object_t& _1) { pattern_fetch_lcf_data(pattern, _1, &lcf); }, 24 * 60 * 60ULL))
+            [pattern, &lcf](const json_object_t& _1) { pattern_fetch_lcf_data(pattern, _1, &lcf); }, 30 * 24 * 60 * 60ULL))
         {
             if (lcf.symbols != nullptr)
             {
                 ref_date = lcf.date = lcf.symbols[0].date;
-                pattern->lcf = array_push(pattern->lcf, lcf);
+                array_push(lcfarr, lcf);
             }
         }
 
         ref_date -= time_one_day();
     }
 
+    pattern_lcf_symbol_t* lcf_symbols = nullptr;
+
+    // Find days with most symbols
+    int date_count = array_size(lcfarr);
+    const pattern_lcf_t& first_lcf = lcfarr[0];
+    const bulk_t* symbols = first_lcf.symbols;
+    unsigned symbol_count = array_size(first_lcf.symbols);
+    for (size_t i = 1; i < date_count; ++i)
+    {
+        unsigned cz = array_size(lcfarr[i].symbols);
+        if (cz > symbol_count)
+        {
+            symbols = lcfarr[i].symbols;
+            symbol_count = cz;
+        }
+    }
+
+    double total_match = 0;
+    static double average_match = 0;
+
+    int ref_matches = 0;
+    for (unsigned n = 0; n < symbol_count; ++n)
+    {
+        const string_table_symbol_t code = symbols[n].code;
+        if (code == 0)
+            continue;
+
+        pattern_lcf_symbol_t lcfs{};
+        lcfs.bulk = &symbols[n];
+        lcfs.code = code;
+        lcfs.matches = 0;
+        lcfs.sequence = nullptr;
+        array_reserve(lcfs.sequence, date_count);
+        
+        for (size_t i = 0; i < min(pattern->range, date_count); ++i)
+        {
+            const pattern_lcf_t& lcf = lcfarr[i];
+            if (lcf.type == 0)
+                continue;
+
+            bool ignored = true;
+
+            for (size_t s = 0; s < symbol_count; ++s)
+            {
+                if (s >= array_size(lcf.symbols) || lcf.symbols[s].code != code)
+                    continue;
+
+                const bulk_t& sl = lcf.symbols[s];
+                if (lcf.type == 1)
+                {
+                    if (sl.close > sl.open)
+                    {
+                        ignored = false;
+                        array_push(lcfs.sequence, 'U');
+                        lcfs.matches++;
+                    }
+                    else
+                    {
+                        ignored = false;
+                        array_push(lcfs.sequence, 'X');
+                    }
+                }
+                else if (lcf.type == -1)
+                {
+                    if (sl.close < sl.open)
+                    {
+                        ignored = false;
+                        array_push(lcfs.sequence, 'D');
+                        lcfs.matches++;
+                    }
+                    else
+                    {
+                        ignored = false;
+                        array_push(lcfs.sequence, 'X');
+                    }
+                }
+
+                break;
+            }
+
+            if (ignored)
+                array_push(lcfs.sequence, '_');
+        }
+
+        array_push(lcf_symbols, lcfs);
+    }
+
+    foreach(lcfs, pattern->lcf_symbols)
+        array_deallocate(lcfs->sequence);
+    array_deallocate(pattern->lcf_symbols);
+
+    foreach(e, pattern->lcf)
+        array_deallocate(e->symbols);
+    array_deallocate(pattern->lcf);
+    
+    pattern->lcf = lcfarr;
+    pattern->lcf_symbols = array_sort_by(lcf_symbols, LC2(_2.matches - _1.matches));
     return 0;
 }
 
@@ -1072,25 +1179,14 @@ FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
         ImGui::TableSetupColumn(string_format_static(STRING_CONST("DNA (%d)"), min(pattern->range, date_count)).str, ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableSetupColumn("Hits", ImGuiTableColumnFlags_None);
         ImGui::TableHeadersRow();
-
-        // Find days with most symbols
-        pattern_lcf_t first_lcf = pattern->lcf[0];
-        bulk_t* symbols = first_lcf.symbols;
-        int symbol_count = array_size(first_lcf.symbols);
-        for (size_t i = 1; i < date_count; ++i)
-        {
-            int cz = (int)array_size(pattern->lcf[i].symbols);
-            if (cz > symbol_count)
-            {
-                symbols = pattern->lcf[i].symbols;
-                symbol_count = cz;
-            }
-        }
-
+        
         double total_match = 0;
         static double average_match = 0;
 
-        int ref_matches = 0;
+        const int ref_matches = date_count;
+        const int symbol_count = array_size(pattern->lcf_symbols);
+        const pattern_lcf_symbol_t* symbols = pattern->lcf_symbols;
+        
         ImGuiListClipper clipper;
         clipper.Begin(symbol_count);
         while (clipper.Step())
@@ -1101,7 +1197,7 @@ FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
                 if (code == 0)
                     continue;
 
-                int matches = 0;
+                int matches = symbols[n].matches;
                 ImGui::TableNextRow();
                 {
                     ImGui::TableNextColumn();
@@ -1112,86 +1208,36 @@ FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
                     {
                         if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
                         {
-                            string_const_t code_id = string_format_static(STRING_CONST("%s.%s"), code_string.str, string_table_decode(symbols[n].exchange));
+                            string_const_t code_id = string_format_static(STRING_CONST("%s.%s"), code_string.str, string_table_decode(symbols[n].bulk->exchange));
                             pattern_open(STRING_ARGS(code_id));
                         }
                         else
                         {
-                            ImGui::SetTooltip("%s\n%s", string_table_decode(symbols[n].name), string_table_decode(symbols[n].type));
+                            ImGui::SetTooltip("%s\n%s", string_table_decode(symbols[n].bulk->name), string_table_decode(symbols[n].bulk->type));
                         }
                     }
                 }
 
                 {
                     ImGui::TableNextColumn();
-                    string_t dna_buffer = string_static_buffer(date_count);
-                    string_t dna = string_t{ dna_buffer.str, 0 };
-                    for (size_t i = 0; i < min(pattern->range, date_count); ++i)
-                    {
-                        const pattern_lcf_t& lcf = pattern->lcf[i];
-                        if (lcf.type == 0)
-                            continue;
-
-                        bool ignored = true;
-
-                        for (size_t s = 0; s < symbol_count; ++s)
-                        {
-                            if (lcf.symbols[s].code != code)
-                                continue;
-
-                            const bulk_t& sl = lcf.symbols[s];
-                            if (lcf.type == 1)
-                            {
-                                if (sl.close > sl.open)
-                                {
-                                    ignored = false;
-                                    dna = string_concat(STRING_ARGS(dna_buffer), STRING_ARGS(dna), STRING_CONST("U"));
-                                    matches++;
-                                }
-                                else
-                                {
-                                    ignored = false;
-                                    dna = string_concat(STRING_ARGS(dna_buffer), STRING_ARGS(dna), STRING_CONST("X"));
-                                }
-                            }
-                            else if (lcf.type == -1)
-                            {
-                                if (sl.close < sl.open)
-                                {
-                                    ignored = false;
-                                    dna = string_concat(STRING_ARGS(dna_buffer), STRING_ARGS(dna), STRING_CONST("D"));
-                                    matches++;
-                                }
-                                else
-                                {
-                                    ignored = false;
-                                    dna = string_concat(STRING_ARGS(dna_buffer), STRING_ARGS(dna), STRING_CONST("X"));
-                                }
-                            }
-
-                            break;
-                        }
-
-                        if (ignored)
-                            dna = string_concat(STRING_ARGS(dna_buffer), STRING_ARGS(dna), STRING_CONST("_"));
-                    }
-
+                   
                     bool first_write = true;
                     int offset = 0;
                     ImGui::BeginGroup();
-                    for (int c = 0; c < dna.length; ++c)
+                    for (unsigned c = 0; c < array_size(symbols[n].sequence); ++c)
                     {
-                        if (dna.str[c] == 'D')
+                        const char ch = symbols[n].sequence[c];
+                        if (ch == 'D')
                         {
                             if (!first_write) ImGui::SameLine(0, 1); else first_write = false;
                             ImGui::TextColored(ImVec4(0.6f, 0.4f, 0.3f, 1.0f), "D");
                         }
-                        else if (dna.str[c] == 'U')
+                        else if (ch == 'U')
                         {
                             if (!first_write) ImGui::SameLine(0, 1); else first_write = false;
                             ImGui::TextColored(ImVec4(0.2f, 0.9f, 0.3f, 1.0f), "U");
                         }
-                        else if (dna.str[c] == 'X')
+                        else if (ch == 'X')
                         {
                             if (!first_write) ImGui::SameLine(0, 1); else first_write = false;
                             ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.3f, 0.1f), "X");
@@ -1205,19 +1251,13 @@ FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
                     ImGui::EndGroup();
                 }
 
-                if (matches > 0)
+                if (symbols[n].matches > 0)
                 {
                     ImGui::TableNextColumn();
-                    if (ref_matches == 0)
-                        ref_matches = matches;
-                    if (matches > (ref_matches * 0.8))
+                    if (matches > (ref_matches * pattern->percent / 100.0))
                     {
                         ImGui::TextColored(ImVec4(0.2f, matches / (float)average_match, 0.3f, matches / (float)ref_matches),
                             "%.3g %%", matches / (double)ref_matches * 100.0);
-                    }
-                    else if (matches < (ref_matches * 0.1))
-                    {
-                        ImGui::TextColored(ImColor(TEXT_WARN_COLOR), "%.3g %%", matches / (double)ref_matches * 100.0);
                     }
 
                     total_match += matches;
@@ -1242,7 +1282,7 @@ FOUNDATION_STATIC void pattern_render_lcf(pattern_t* pattern, pattern_graph_data
     }
 
     size_t lcf_count = array_size(pattern->lcf);
-    if (lcf_count > 0 && lcf_count >= min(pattern->range, 90))
+    if (lcf_count > 0 && lcf_count == min(pattern->range, MAX_LCF_DAY_COUNT))
     {
         if (pattern->lcf_job && job_completed(pattern->lcf_job))
         {
@@ -1622,6 +1662,15 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
         if (ImGui::Checkbox("Invert Time", &pattern->x_axis_inverted))
             graph.refresh = true;
     }
+    else if (pattern->type == PATTERN_LONG_COORDINATED_FLEX)
+    {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
+        if (ImGui::SliderFloat("##Percent", &pattern->percent, 0, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
+        {
+            graph.refresh = true;
+        }
+    }
 
     ImGui::SameLine();
     if (ImGui::Button("Refresh"))
@@ -1897,6 +1946,9 @@ void pattern_menu(pattern_handle_t handle)
 
             if (ImGui::MenuItem("EOD", nullptr, nullptr, true))
                 open_in_shell(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
+
+            if (ImGui::MenuItem("Read News"))
+                news_open_window(STRING_ARGS(code));
 
             if (ImGui::MenuItem("Trends", nullptr, nullptr, true))
                 open_in_shell(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
@@ -2243,6 +2295,11 @@ FOUNDATION_STATIC void pattern_shutdown()
             }
 
             job_deallocate(pattern.lcf_job);
+
+            foreach(lcfs, pattern.lcf_symbols)
+                array_deallocate(lcfs->sequence);
+            array_deallocate(pattern.lcf_symbols);
+
             foreach (e, pattern.lcf)
                 array_deallocate(e->symbols);
             array_deallocate(pattern.lcf);

@@ -49,6 +49,12 @@ typedef function<void(GLFWwindow* window, int frame_width, int frame_height)> ap
     std::remove_reference<decltype(_ARR)>::type _VAR_NAME = array_size(_ARR) > 0 ? &_ARR[0] : nullptr; \
     for (unsigned i = 0, end = array_size(_ARR); i < end; _VAR_NAME = &_ARR[++i])
 
+template<typename T>
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool array_empty(const T* arr)
+{
+    return array_size(arr) == 0;
+}
+
 template<typename T> T* array_last(T* arr)
 {
     const size_t count = array_size(arr);

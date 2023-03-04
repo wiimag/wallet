@@ -14,6 +14,7 @@
 #include <framework/service.h>
 #include <framework/dispatcher.h>
 #include <framework/string.h>
+#include <framework/console.h>
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>
@@ -99,10 +100,11 @@ string_t eod_get_key()
 bool eod_save_key(string_t eod_key)
 {
     eod_key.length = string_length(eod_key.str);
-    log_infof(0, STRING_CONST("Saving EOD %.*s"), STRING_FORMAT(eod_key));
-
     if (eod_key.str != EOD->KEY)
         string_copy(STRING_BUFFER(EOD->KEY), STRING_ARGS(eod_key));
+        
+    if (eod_key.length)
+        console_add_secret_key_token(STRING_ARGS(eod_key));
 
     const string_const_t& eod_key_file_path = session_get_user_file_path(STRING_CONST("eod.key"));
     stream_t* key_stream = fs_open_file(STRING_ARGS(eod_key_file_path), STREAM_CREATE | STREAM_OUT | STREAM_TRUNCATE);
@@ -306,7 +308,7 @@ FOUNDATION_STATIC void eod_update_window_title()
     else if (!is_main_branch)
         branch_name = string_to_const(GIT_BRANCH);
 
-    string_const_t license_name = EOD->CONNECTED ? string_to_const(EOD->USER_NAME) : CTEXT("disconnected");
+    string_const_t license_name = EOD->CONNECTED && EOD->USER_NAME[0] != 0 ? string_to_const(EOD->USER_NAME) : CTEXT("disconnected");
     string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
 
     static char title[128] = PRODUCT_NAME;
@@ -422,6 +424,11 @@ FOUNDATION_STATIC void eod_main_menu_status()
 FOUNDATION_STATIC void eod_initialize()
 {
     EOD = MEM_NEW(HASH_EOD, EOD_MODULE);
+
+    const char* key = eod_ensure_key_loaded();
+    const size_t key_length = string_length(key);
+    if (key_length)
+        console_add_secret_key_token(key, key_length);
     
     service_register_update(HASH_EOD, eod_update);
 

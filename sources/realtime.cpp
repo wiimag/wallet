@@ -344,7 +344,8 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
     static string_t* codes = nullptr;
     while (!quit_thread && !thread_try_wait(60000U))
     {
-        while (!eod_connected() || eod_is_at_capacity())
+        // Sleep on the week and if EOD service is not available.
+        while (!eod_availalble() || time_is_weekend())
         {
             if (thread_try_wait(1000U))
             {
@@ -352,6 +353,7 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
                 break;
             }
         }
+
 
         if (quit_thread)
             continue;

@@ -21,16 +21,20 @@ namespace ImGui
         ImGui::GetWindowDrawList()->AddLine(min, max, col_, 1.0f);
     }
 
-    void TextURL(const char* name, const char* name_end, const char* URL, size_t URL_length, uint8_t SameLineBefore_ /*= 0*/, uint8_t SameLineAfter_ /*= 0*/)
+    bool TextURL(const char* name, const char* name_end, const char* URL, size_t URL_length, uint8_t SameLineBefore_ /*= 0*/, uint8_t SameLineAfter_ /*= 0*/)
     {
         if (1 == SameLineBefore_) { ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x); }
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
         ImGui::TextUnformatted(name, name_end);
         ImGui::PopStyleColor();
+        bool clicked = false;
         if (ImGui::IsItemHovered())
         {
             if (ImGui::IsMouseClicked(0))
+            {
                 open_in_shell(URL);
+                clicked = true;
+            }
             ImGui::AddUnderLine(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
             ImGui::SetTooltip(/*ICON_FA_LINK*/ "  %.*s", (int)URL_length, URL);
         }
@@ -39,6 +43,8 @@ namespace ImGui
             AddUnderLine(ImGui::GetStyle().Colors[ImGuiCol_Button]);
         }
         if (1 == SameLineAfter_) { ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x); }
+
+        return clicked;
     }
 
     void PushStyleCompact()
@@ -160,13 +166,9 @@ bool imgui_draw_splitter(const char* id, float* splitter_pos,
     ImVec2 screen_position = ImGui::GetCursorScreenPos();
 
     if (!right_callback)
-    {		
-        //if (ImGui::BeginChild(id, space, true, frame_flags))
-        {
-            const ImRect view_rect = ImRect(screen_position, ImVec2(screen_position.x + space.x, screen_position.y + space.y));
-            left_callback(view_rect);
-        }
-        //ImGui::EndChild();
+    {	
+        const ImRect view_rect = ImRect(screen_position, ImVec2(screen_position.x + space.x, screen_position.y + space.y));
+        left_callback(view_rect);
         return false;
     }
 
@@ -194,7 +196,7 @@ bool imgui_draw_splitter(const char* id, float* splitter_pos,
         }
     }
 
-    const float min_pixel_size = imgui_get_font_ui_scale(55.0f);
+    static const float min_pixel_size = ImGui::CalcTextSize("W").y + ImGui::GetStyle().WindowPadding.y * 2.0f;
     *splitter_pos = max(max(space_left * 0.05f, min_pixel_size), *splitter_pos);
     *splitter_pos = min(*splitter_pos, min(space_left * 0.95f, space_left - min_pixel_size));
 

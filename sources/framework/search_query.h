@@ -13,9 +13,11 @@
 struct search_result_t;
 struct search_query_node_t;
 
-typedef enum class SearchParserError : unsigned char
+typedef enum class SearchQueryError : unsigned char
 {
     None,
+
+    // Parsing errors
     UnexpectedGroupEnd,
     UnexpectedQuoteEnd,
     MissingOrRightOperand,
@@ -29,7 +31,10 @@ typedef enum class SearchParserError : unsigned char
     UnexpectedOperand,
     UnexpectedToken,
     InvalidLeafNode,
-    InvalidOperator
+    InvalidOperator,
+
+    // Evaluation errors
+    InvalidPropertyDeclaration
 } search_parser_error_t;
 
 typedef enum class SearchQueryEvalFlags
@@ -69,7 +74,7 @@ typedef enum class SearchQueryTokenType : unsigned char
 
 struct SearchQueryException
 {
-    search_parser_error_t error{ SearchParserError::None };
+    search_parser_error_t error{ SearchQueryError::None };
     string_const_t        token{};
     char                  msg[256];
 

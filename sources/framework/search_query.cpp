@@ -135,7 +135,7 @@ FOUNDATION_STATIC const char* search_query_parse_literal(const char* const tok, 
         else
         {
             search_query_deallocate_tokens(tokens);
-            throw SearchQueryException(SearchParserError::UnexpectedQuoteEnd, string_const(tok, end - tok), "Unexpected end of quoted string");
+            throw SearchQueryException(SearchQueryError::UnexpectedQuoteEnd, string_const(tok, end - tok), "Unexpected end of quoted string");
         }
     }
 
@@ -190,7 +190,7 @@ FOUNDATION_STATIC const char* search_query_parse_variable(const char* tok, const
                 if (start_value_pos == end)
                 {
                     search_query_deallocate_tokens(tokens);
-                    throw SearchQueryException(SearchParserError::MissingPropertyValue, string_const(tok, end - tok), "Unexpected end of property value");
+                    throw SearchQueryException(SearchQueryError::MissingPropertyValue, string_const(tok, end - tok), "Unexpected end of property value");
                 }
 
                 try
@@ -200,7 +200,7 @@ FOUNDATION_STATIC const char* search_query_parse_variable(const char* tok, const
                     {
                         search_query_deallocate_tokens(tokens);
                         search_query_deallocate_tokens(property.children);
-                        throw SearchQueryException(SearchParserError::MissingPropertyValue, string_const(tok, end - tok), "Unexpected end of property value");
+                        throw SearchQueryException(SearchQueryError::MissingPropertyValue, string_const(tok, end - tok), "Unexpected end of property value");
                     }
 
                     property.identifier = string_const(tok, end_value_pos - tok);
@@ -243,7 +243,7 @@ FOUNDATION_STATIC const char* search_query_parse_variable(const char* tok, const
             {
                 search_query_deallocate_tokens(tokens);
                 search_query_deallocate_tokens(function.children);
-                throw SearchQueryException(SearchParserError::MissingFunctionGroup, string_const(tok, end - tok), "Unexpected end of function group");
+                throw SearchQueryException(SearchQueryError::MissingFunctionGroup, string_const(tok, end - tok), "Unexpected end of function group");
             }
 
             function.identifier = string_const(tok, end_group_pos - tok);
@@ -314,7 +314,7 @@ FOUNDATION_STATIC const char* search_query_parse_logical_opeartors(const char* c
             }
             else
             {
-                throw SearchQueryException(SearchParserError::UnexpectedToken, string_const(tok, 1), "Unexpected token");
+                throw SearchQueryException(SearchQueryError::UnexpectedToken, string_const(tok, 1), "Unexpected token");
             }
 
             return next_tok;
@@ -359,14 +359,14 @@ const char* search_query_parse_block(const char* const tok, const char* const en
         else
         {
             search_query_deallocate_tokens(tokens);
-            throw SearchQueryException(SearchParserError::UnexpectedGroupEnd, string_const(tok, end - tok), "Unexpected end of group");
+            throw SearchQueryException(SearchQueryError::UnexpectedGroupEnd, string_const(tok, end - tok), "Unexpected end of group");
         }
     }
 
     if (*tok == ')')
     {
         search_query_deallocate_tokens(tokens);
-        throw SearchQueryException(SearchParserError::UnexpectedGroupEnd, string_const(tok, end - tok), "Unexpected ')'");
+        throw SearchQueryException(SearchQueryError::UnexpectedGroupEnd, string_const(tok, end - tok), "Unexpected ')'");
     }
 
     // Check for quoted string
@@ -495,7 +495,7 @@ FOUNDATION_STATIC search_query_node_t* search_query_allocate_node(search_query_t
         return node;
     }
     
-    throw SearchQueryException(SearchParserError::InvalidLeafNode, token->identifier, "Invalid leaf node");
+    throw SearchQueryException(SearchQueryError::InvalidLeafNode, token->identifier, "Invalid leaf node");
 }
 
 FOUNDATION_STATIC search_result_t* search_query_merge_sets(search_result_t*& lhs, search_result_t*& rhs)
@@ -558,11 +558,20 @@ FOUNDATION_STATIC search_result_t* search_query_evaluate_node(
         FOUNDATION_ASSERT(node->token->value.str && node->token->value.length > 0);
         FOUNDATION_ASSERT(node->token->identifier.str && node->token->identifier.length > 0);
 
+        if (array_size(node->token->children) == 0)
+        {
+            throw SearchQueryException(SearchQueryError::InvalidPropertyDeclaration, node->token->identifier,
+                "A property must have a value to evaluate after the operator (i.e. property>=value)");
+        }
+
         FOUNDATION_ASSERT(node->left == nullptr);
         FOUNDATION_ASSERT(node->right == nullptr);
-        FOUNDATION_ASSERT(node->token->children && (
-            node->token->children[0].type == SearchQueryTokenType::Word || 
-            node->token->children[0].type == SearchQueryTokenType::Literal));
+        if (node->token->children[0].type != SearchQueryTokenType::Word &&
+            node->token->children[0].type != SearchQueryTokenType::Literal)
+        {
+            throw SearchQueryException(SearchQueryError::InvalidPropertyDeclaration, node->token->identifier, 
+                "Invalid property declaration, property only support word or literal as the right hand side");
+        }
         
         string_const_t op_token = { 
             node->token->identifier.str + node->token->name.length, 
@@ -588,7 +597,7 @@ FOUNDATION_STATIC search_result_t* search_query_evaluate_node(
         else if (string_equal(STRING_ARGS(op_token), STRING_CONST("<=")))
             eval_flags |= SearchQueryEvalFlags::OpLessEq;
         else
-            throw SearchQueryException(SearchParserError::InvalidOperator, op_token, "Invalid operator");
+            throw SearchQueryException(SearchQueryError::InvalidOperator, op_token, "Invalid operator");
             
         return handler(node->token->name, node->token->value, eval_flags, and_set, user_data);
     }
@@ -724,10 +733,10 @@ search_query_node_t* search_query_scan_operator_node(search_query_token_t* token
         if (token->type == SearchQueryTokenType::And || token->type == SearchQueryTokenType::Or)
         {
             if (op_token)
-                throw SearchQueryException(SearchParserError::UnexpectedOperator, token->identifier, "Unexpected operator");
+                throw SearchQueryException(SearchQueryError::UnexpectedOperator, token->identifier, "Unexpected operator");
 
             if (left_token == nullptr && node == nullptr)
-                throw SearchQueryException(SearchParserError::MissingLeftOperand, token->identifier, "Missing left operand");
+                throw SearchQueryException(SearchQueryError::MissingLeftOperand, token->identifier, "Missing left operand");
                 
             op_token = token;
         }
@@ -744,12 +753,12 @@ search_query_node_t* search_query_scan_operator_node(search_query_token_t* token
                 right_token = token;
             else
             {
-                throw SearchQueryException(SearchParserError::UnexpectedOperand, token->identifier, "Unexpected operand");
+                throw SearchQueryException(SearchQueryError::UnexpectedOperand, token->identifier, "Unexpected operand");
             }
         }
         else
         {
-            throw SearchQueryException(SearchParserError::UnexpectedToken, token->identifier, "Unexpected token");
+            throw SearchQueryException(SearchQueryError::UnexpectedToken, token->identifier, "Unexpected token");
         }
 
         if ((node && right_token) ||
@@ -780,7 +789,7 @@ search_query_node_t* search_query_scan_operator_node(search_query_token_t* token
             }
             else
             {
-                throw SearchQueryException(SearchParserError::InvalidOperator, op_token->identifier, "Invalid operator");
+                throw SearchQueryException(SearchQueryError::InvalidOperator, op_token->identifier, "Invalid operator");
             }
             
             node->left = prev ? prev : search_query_allocate_node(left_token);
@@ -902,7 +911,7 @@ search_query_token_t* search_query_parse_tokens(const char* text, size_t length)
             else
             {
                 search_query_deallocate_tokens(tokens);
-                throw SearchQueryException(SearchParserError::UnexpectedToken, string_const(tok, 1), "Unexpected token");
+                throw SearchQueryException(SearchQueryError::UnexpectedToken, string_const(tok, 1), "Unexpected token");
             }
         }
 

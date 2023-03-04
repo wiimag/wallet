@@ -1,6 +1,8 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
+ * 
+ * TODO: Rename module to http
  */
 
 #include "query.h"
@@ -398,7 +400,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
         curl_easy_getinfo(req, CURLINFO_SPEED_UPLOAD_T, &speed_upload);
         curl_easy_getinfo(req, CURLINFO_TOTAL_TIME_T, &total_time);
 
-        log_infof(HASH_QUERY, STRING_CONST("File %.*s was uploaded (Speed: %lu bytes/sec during %lu.%06lu seconds)"),
+        log_debugf(HASH_QUERY, STRING_CONST("File %.*s was uploaded (Speed: %lu bytes/sec during %lu.%06lu seconds)"),
             STRING_FORMAT(file_path),
             (unsigned long)speed_upload,
             (unsigned long)(total_time / 1000000),
@@ -500,7 +502,9 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
         return false;
 
     if (!warning_logged)
+    {
         log_infof(HASH_QUERY, STRING_CONST("Executing query %s"), query);
+    }
     if ((has_body_content ? req.post(query, body) : req.execute(query)) || format == FORMAT_JSON_WITH_ERROR)
     {
         json_object_t json = json_parse(req.json);

@@ -61,7 +61,7 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
 
     SHARED_READ_LOCK(_db_lock);
     const stock_t* s = &_db_stocks[stock_index];
-    if (s == nullptr)
+    if (s == nullptr || !s->has_resolve(FetchLevel::FUNDAMENTALS))
         return false;
 
     value = NAN;

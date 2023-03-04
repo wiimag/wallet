@@ -299,7 +299,7 @@ FOUNDATION_STATIC void app_render_dialogs()
 
         if (ImGui::Begin(dlg.title, &dlg.opened, (ImGuiWindowFlags_NoCollapse) | (dlg.can_resize ? ImGuiWindowFlags_None : ImGuiWindowFlags_NoResize)))
         {
-            if (shortcut_executed(ImGuiKey_Escape))
+            if (ImGui::IsWindowFocused() && shortcut_executed(ImGuiKey_Escape))
                 dlg.opened = false;
 
             if (!dlg.opened || !dlg.handler(dlg.user_data))
@@ -347,7 +347,7 @@ FOUNDATION_STATIC void app_main_window(GLFWwindow* window, const char* window_ti
 // # PUBLIC API
 //
 
-void app_open_dialog(const char* title, app_dialog_handler_t&& handler, uint32_t width, uint32_t height, bool can_resize, app_dialog_close_handler_t&& close_handler, void* user_data)
+void app_open_dialog(const char* title, app_dialog_handler_t&& handler, uint32_t width, uint32_t height, bool can_resize, void* user_data, app_dialog_close_handler_t&& close_handler)
 {
     FOUNDATION_ASSERT(handler);
 

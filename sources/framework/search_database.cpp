@@ -463,7 +463,7 @@ search_document_handle_t search_database_find_document(search_database_t* db, co
     for (unsigned doc_index = 1, end = array_size(db->documents); doc_index < end; ++doc_index)
     {
         search_document_t& doc = db->documents[doc_index];
-        if (string_equal(STRING_ARGS(doc.name), name, name_length))
+        if (string_equal_nocase(STRING_ARGS(doc.name), name, name_length))
             return doc_index;
     }
 
@@ -1260,6 +1260,18 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
                     break;
                 }
             }
+        }
+
+        if (index.document_count == 0)
+        {
+            
+            const char* value = (int32_t)index.key.hash > 0 ? string_table_to_string(db->strings, (uint32_t)index.key.hash) : nullptr;
+            log_warnf(0, WARNING_STANDARD, STRING_CONST("Deleting index %u (%d) -> %s:%s(%.lf)"), 
+                i, index.key.type, 
+                string_table_to_string(db->strings, (int32_t)index.key.crc),
+                value ? value : "NA", index.key.number);
+            array_erase_ordered_safe(db->indexes, i);
+            --i;
         }
     }
 

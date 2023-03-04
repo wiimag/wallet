@@ -16,6 +16,7 @@
 #include "wallet.h"
 #include "pattern.h"
 #include "timeline.h"
+#include "news.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -497,6 +498,10 @@ FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_h
     ImGui::MoveCursor(8.0f, 2.0f);
     if (ImGui::MenuItem("Load Pattern"))
         pattern_open(title->code, title->code_length);
+
+    ImGui::MoveCursor(8.0f, 2.0f);
+    if (ImGui::MenuItem("Read News"))
+        news_open_window(title->code, title->code_length);
 
     ImGui::MoveCursor(0.0f, 2.0f);
 }
@@ -1408,7 +1413,7 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
 
 FOUNDATION_STATIC void report_open_expression_columns_dialog(report_t* report)
 {
-    app_open_dialog(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns", report_render_expression_columns_dialog, 900U, 400U, true, nullptr, report);
+    app_open_dialog(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns", report_render_expression_columns_dialog, 900U, 400U, true, report, nullptr);
 }
 
 FOUNDATION_STATIC void report_table_context_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)

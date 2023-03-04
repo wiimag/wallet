@@ -31,6 +31,7 @@ struct log_message_t
     string_table_symbol_t preview_symbol{ STRING_TABLE_NULL_SYMBOL };
     size_t occurence{ 1 };
     bool selectable{ false };
+    bool prefix{ false };
     hash_t context;
 };
 
@@ -47,6 +48,8 @@ static char _console_expression_buffer[4096]{ "" };
 static bool _console_expression_explicitly_set = false;
 static mutex_t* _message_lock = nullptr;
 static log_message_t* _messages = nullptr;
+static size_t _console_max_context_name_length = 0;
+static string_t* _console_secret_keys = nullptr;
 
 FOUNDATION_STATIC string_table_symbol_t console_string_encode(const char* s, size_t length /* = 0*/)
 {
@@ -56,12 +59,23 @@ FOUNDATION_STATIC string_table_symbol_t console_string_encode(const char* s, siz
     if (length == 0)
         return STRING_TABLE_NULL_SYMBOL;
 
-    string_table_symbol_t symbol = string_table_to_symbol(_console_string_table, s, length);
+    string_t str = string_clone(s, length);
+
+    // Remove secret key tokens
+    for (size_t i = 0; i < array_size(_console_secret_keys); ++i)
+    {
+        string_t key = _console_secret_keys[i];
+        str = string_replace(STRING_ARGS_CAPACITY(str), STRING_ARGS(key), STRING_CONST("***"), true);
+    }
+
+    string_table_symbol_t symbol = string_table_to_symbol(_console_string_table, STRING_ARGS(str));
     while (symbol == STRING_TABLE_FULL)
     {
         string_table_grow(&_console_string_table, (int)(_console_string_table->allocated_bytes * 2.0f));
-        symbol = string_table_to_symbol(_console_string_table, s, length);
+        symbol = string_table_to_symbol(_console_string_table, STRING_ARGS(str));
     }
+
+    string_deallocate(str.str);
 
     return symbol;
 }
@@ -87,6 +101,7 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
     {
         log_message_t m{ _next_log_message_id++, string_hash(msg, length), severity };
         m.context = context;
+        m.prefix = log_is_prefix_enabled();
 
         #if BUILD_ENABLE_STATIC_HASH_DEBUG
         context = context ? context : HASH_DEFAULT;
@@ -97,9 +112,10 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
         scoped_mutex_t lock(_message_lock);
         if (context_name.length != 0 && hash_code_start != STRING_NPOS && hash_code_end != STRING_NPOS)
         {
-            string_t formatted_msg = string_allocate_format(STRING_CONST("%.*s %11.*s : %.*s"), 
-                (int)hash_code_start, msg,
-                STRING_FORMAT(context_name),
+            _console_max_context_name_length = max(_console_max_context_name_length, context_name.length);
+            string_t formatted_msg = string_allocate_format(STRING_CONST("%.*s %-*.*s : %.*s"), 
+                (int)hash_code_start - 1, msg,
+                _console_max_context_name_length, STRING_FORMAT(context_name),
                 (int)(length - hash_code_end - 1), msg + hash_code_end + 2);
 
             m.msg_symbol = console_string_encode(formatted_msg.str, formatted_msg.length);
@@ -123,6 +139,24 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
     memory_context_pop();
 }
 
+FOUNDATION_STATIC string_const_t console_get_log_trimmed_text(const log_message_t& log)
+{
+    // Find the first : character and truncate the text length
+    string_const_t tooltip_log_message = string_table_to_string_const(_console_string_table, log.msg_symbol);
+    if (!log.prefix)
+        return tooltip_log_message;
+    
+    constexpr size_t log_prefix_time_skip_char_count = 13;
+    const size_t sep_pos = string_find(STRING_ARGS(tooltip_log_message), ':', log_prefix_time_skip_char_count);
+    if (sep_pos == STRING_NPOS)
+        return tooltip_log_message;
+
+    tooltip_log_message.str += sep_pos + 1;
+    tooltip_log_message.length -= sep_pos + 1;
+    tooltip_log_message = string_trim(string_trim(tooltip_log_message), '\n');
+    return tooltip_log_message;
+}
+
 FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
 {
     const size_t log_count = array_size(_messages);
@@ -136,7 +170,8 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
 
         if (mutex_lock(_message_lock))
         {
-            const float item_width = ImGui::GetContentRegionAvail().x;
+            const float window_width = ImGui::GetWindowWidth();
+            const float item_available_width = ImGui::GetContentRegionAvail().x;
             for (size_t i = clipper.DisplayStart; i < min(clipper.DisplayEnd, (int)array_size(_messages)); ++i)
             {
                 log_message_t& log = _messages[i];
@@ -150,17 +185,28 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
                 string_const_t msg_str = log.preview_symbol != STRING_TABLE_NULL_SYMBOL ? 
                     string_table_to_string_const(_console_string_table,log.preview_symbol) :
                     string_table_to_string_const(_console_string_table, log.msg_symbol);
+
                 if (ImGui::Selectable(msg_str.str, &log.selectable, ImGuiSelectableFlags_DontClosePopups, {0, 0}))
                 {
                     string_deallocate(_selected_msg.str);
-                    string_const_t csmm = string_table_to_string_const(_console_string_table, log.msg_symbol);
+                    string_const_t csmm = console_get_log_trimmed_text(log);
                     _selected_msg = string_clone(STRING_ARGS(csmm));
+                    ImGui::SetClipboardText(_selected_msg.str);
                 }
                 ImGui::PopStyleVar();
 
-                if (log.severity == ERRORLEVEL_ERROR && ImGui::IsItemHovered())
+                // Check if last item is clipped in order to display a tooltip if it is the case.
+                const float item_renderered_width = ImGui::GetItemRectMax().x - ImGui::GetItemRectMin().x;
+                if (ImGui::IsItemHovered() && item_renderered_width > window_width)
                 {
-                    ImGui::SetTooltip("%s", string_table_to_string(_console_string_table, log.msg_symbol));
+                    ImGui::SetNextWindowSize({ window_width * 0.9f, 0 });
+                    ImGui::BeginTooltip();
+                    {
+                        string_const_t tooltip_log_message = console_get_log_trimmed_text(log);
+                        ImGui::TextWrapped("%.*s", STRING_FORMAT(tooltip_log_message));
+                    }
+                    ImGui::EndTooltip();
+                    
                 }
 
                 if (log.severity == ERRORLEVEL_ERROR || log.severity == ERRORLEVEL_WARNING)
@@ -172,9 +218,17 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
 
     if (_logger_focus_last_message)
     {
-        ImGui::Dummy({});
-        ImGui::ScrollToItem();
-        ImGui::SetItemDefaultFocus();
+        // First check if the view is already scrolled up?
+        const float sm = ImGui::GetScrollMaxY();
+        const float sy = ImGui::GetScrollY();
+
+        if (sy >= sm)
+        {
+            ImGui::Dummy({});
+            ImGui::ScrollToItem();
+            ImGui::SetItemDefaultFocus();
+        }
+
         _logger_focus_last_message = false;
     }
 }
@@ -219,6 +273,7 @@ FOUNDATION_STATIC void console_clear_all()
     int new_size = to_int(_console_string_table->allocated_bytes);
     string_table_deallocate(_console_string_table);
     _console_string_table = string_table_allocate(new_size, 64);
+    _console_max_context_name_length = 0;
     
     mutex_unlock(_message_lock);
 }
@@ -419,6 +474,12 @@ void console_set_expression(const char* expression, size_t expression_length)
     console_show();
 }
 
+void console_add_secret_key_token(const char* key, size_t key_length)
+{
+    string_t secret_key = string_clone(key, key_length);
+    array_push(_console_secret_keys, secret_key);
+}
+
 //
 // # SYSTEM
 //
@@ -465,6 +526,7 @@ FOUNDATION_STATIC void console_shutdown()
     }
 
     string_table_deallocate(_console_string_table);
+    string_array_deallocate(_console_secret_keys);
 }
 
 DEFINE_SERVICE(CONSOLE, console_initialize, console_shutdown, SERVICE_PRIORITY_UI_HEADLESS);

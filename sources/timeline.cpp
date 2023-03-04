@@ -826,7 +826,7 @@ void timeline_render_graph(const report_t* report)
 
     app_open_dialog(timeline_report->title.str, 
         timeline_report_graph_dialog, 1200, 900, true, 
-        timeline_report_graph_close, timeline_report);
+        timeline_report, timeline_report_graph_close);
 }
 
 //
