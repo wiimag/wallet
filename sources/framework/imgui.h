@@ -101,7 +101,7 @@ namespace ImGui
         return imgui_right_aligned_button(label, same_line, in_space_left);
     }
 
-    void TextURL(const char* name, const char* name_end, const char* URL, size_t URL_length, uint8_t SameLineBefore_ = 0, uint8_t SameLineAfter_ = 0);
+    bool TextURL(const char* name, const char* name_end, const char* URL, size_t URL_length, uint8_t SameLineBefore_ = 0, uint8_t SameLineAfter_ = 0);
 
     FOUNDATION_FORCEINLINE void TextUnformatted(string_const_t text, bool same_line = false)
     {

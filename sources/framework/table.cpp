@@ -5,10 +5,11 @@
 
 #include "table.h"
 
-#include "common.h"
-#include "session.h"
-#include "scoped_string.h"
-#include "imgui.h"
+#include <framework/common.h>
+#include <framework/session.h>
+#include <framework/scoped_string.h>
+#include <framework/imgui.h>
+#include <framework/string.h>
 
 #include <foundation/assert.h>
 #include <foundation/math.h>
@@ -303,6 +304,7 @@ FOUNDATION_STATIC bool table_default_sorter(table_t* table, column_t* sorting_co
     if (table == nullptr || sorting_column == nullptr)
         return true;
 
+    sorting_column->flags |= COLUMN_SORTING_ELEMENT;
     table_sorting_context_t sorting_context{ table, sorting_column, sort_direction };
     sorting_context.search_filter = table->search_filter;
     #if FOUNDATION_PLATFORM_WINDOWS
@@ -313,6 +315,7 @@ FOUNDATION_STATIC bool table_default_sorter(table_t* table, column_t* sorting_co
         return table_qsort_cells(&sorting_context, &a, &b) < 0;
     });
     #endif
+    sorting_column->flags &= ~COLUMN_SORTING_ELEMENT;
 
     return sorting_context.completly_sorted;
 }
@@ -708,7 +711,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             row.fetched = table->update(element);
 
         char cell_id_buf[64];
-        string_t cell_id = string_format(STRING_CONST_CAPACITY(cell_id_buf), STRING_CONST("cell_%d_%d"), element_index, column_index);
+        string_t cell_id = string_format(STRING_BUFFER(cell_id_buf), STRING_CONST("cell_%d_%d"), element_index, column_index);
         ImGui::PushID(cell_id.str, cell_id.str + cell_id.length);
 
         cell_t cell = column.fetch_value ? column.fetch_value(element, &column) : cell_t{};
@@ -787,7 +790,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             ImGui::PopStyleColor();
 
         // Handle tooltip
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered()/* && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)*/)
         {
             if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             {

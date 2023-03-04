@@ -193,6 +193,18 @@
     <ClInclude Include="..\..\sources\search.h">
       <Filter>app</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sources\framework\search_query.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\framework\search_database.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\framework\string.h">
+      <Filter>framework</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\sources\news.h">
+      <Filter>app</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sources\stock.cpp">
@@ -354,6 +366,18 @@
     <ClCompile Include="..\..\sources\tests\search_tests.cpp">
       <Filter>tests</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\sources\framework\search_database.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\search_query.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\string.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\news.cpp">
+      <Filter>app</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <Image Include="../../resources/main.ico">
@@ -388,6 +412,12 @@
     <Filter Include="tests">
       <UniqueIdentifier>{5f0b09dc-f66f-41ce-9418-3b16548735c9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="resources\fonts">
+      <UniqueIdentifier>{c0e86f80-049c-4972-b045-39e0056ad433}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="resources\natvis">
+      <UniqueIdentifier>{37df067c-e15e-4089-bc90-c28429267894}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="../../sources/app.rc">
@@ -396,13 +426,13 @@
   </ItemGroup>
   <ItemGroup>
     <Natvis Include="app.natvis">
-      <Filter>resources</Filter>
+      <Filter>resources\natvis</Filter>
     </Natvis>
     <Natvis Include="bgfx.natvis">
-      <Filter>resources</Filter>
+      <Filter>resources\natvis</Filter>
     </Natvis>
     <Natvis Include="bx.natvis">
-      <Filter>resources</Filter>
+      <Filter>resources\natvis</Filter>
     </Natvis>
   </ItemGroup>
   <ItemGroup>
@@ -411,8 +441,16 @@
     </Manifest>
   </ItemGroup>
   <ItemGroup>
-    <Font Include="..\..\resources\JetBrainsMono-ExtraLight.ttf">
+    <None Include="..\..\sources\cpp.hint">
       <Filter>resources</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="..\..\resources\JetBrainsMono-ExtraLight.ttf">
+      <Filter>resources\fonts</Filter>
+    </Font>
+    <Font Include="..\..\resources\MaterialIcons-Regular.ttf">
+      <Filter>resources\fonts</Filter>
     </Font>
   </ItemGroup>
 </Project>

@@ -12,12 +12,12 @@
 #include <framework/imgui.h>
 #include <framework/common.h>
 #include <framework/jobs.h>
- 
+#include <framework/string.h>
+
 #include <foundation/environment.h>
 #include <foundation/path.h>
 #include <foundation/assert.h>
 #include <foundation/fs.h>
-#include <foundation/string.h>
 
 static const char IMGUI_FILE_NAME[] = "imgui.ini";
 
@@ -55,7 +55,7 @@ FOUNDATION_STATIC void session_backup(const char* _session_dir, size_t _session_
 {
     session_backup_info_t backup_info;
     
-    string_t session_dir = string_copy(STRING_CONST_CAPACITY(backup_info.session_dir_buffer), _session_dir, _session_dir_length);
+    string_t session_dir = string_copy(STRING_BUFFER(backup_info.session_dir_buffer), _session_dir, _session_dir_length);
 
     // Generate folder backup name
     string_const_t root_dir = path_directory_name(STRING_ARGS(session_dir));
@@ -64,12 +64,12 @@ FOUNDATION_STATIC void session_backup(const char* _session_dir, size_t _session_
     string_const_t today_date_string = string_from_date(time_now());
 
     char backup_folder_name_buffer[BUILD_MAX_PATHLEN];
-    string_t backup_folder_name = string_copy(STRING_CONST_CAPACITY(backup_folder_name_buffer), STRING_ARGS(root_folder_name));
-    backup_folder_name = string_concat(STRING_CONST_CAPACITY(backup_folder_name_buffer), STRING_ARGS(backup_folder_name), STRING_CONST("_"));
-    backup_folder_name = string_concat(STRING_CONST_CAPACITY(backup_folder_name_buffer), STRING_ARGS(backup_folder_name), STRING_ARGS(today_date_string));
+    string_t backup_folder_name = string_copy(STRING_BUFFER(backup_folder_name_buffer), STRING_ARGS(root_folder_name));
+    backup_folder_name = string_concat(STRING_BUFFER(backup_folder_name_buffer), STRING_ARGS(backup_folder_name), STRING_CONST("_"));
+    backup_folder_name = string_concat(STRING_BUFFER(backup_folder_name_buffer), STRING_ARGS(backup_folder_name), STRING_ARGS(today_date_string));
     
-    string_t backup_folder_path = string_copy(STRING_CONST_CAPACITY(backup_info.backup_folder_path_buffer), STRING_ARGS(root_dir));
-    backup_folder_path = path_concat(STRING_CONST_CAPACITY(backup_info.backup_folder_path_buffer), STRING_ARGS(backup_folder_path), STRING_ARGS(backup_folder_name));
+    string_t backup_folder_path = string_copy(STRING_BUFFER(backup_info.backup_folder_path_buffer), STRING_ARGS(root_dir));
+    backup_folder_path = path_concat(STRING_BUFFER(backup_info.backup_folder_path_buffer), STRING_ARGS(backup_folder_path), STRING_ARGS(backup_folder_name));
 
     if (fs_is_directory(STRING_ARGS(backup_folder_path)))
         return; // Backup already did for today.
@@ -89,14 +89,14 @@ FOUNDATION_STATIC void session_backup(const char* _session_dir, size_t _session_
         foreach(f, filenames)
         {
             char source_path_buffer[BUILD_MAX_PATHLEN];
-            string_t source_file_path = path_concat(STRING_CONST_CAPACITY(source_path_buffer), STRING_ARGS(session_dir), STRING_ARGS(*f));
+            string_t source_file_path = path_concat(STRING_BUFFER(source_path_buffer), STRING_ARGS(session_dir), STRING_ARGS(*f));
 
             // Skip filename starting with cache/
             if (string_starts_with(STRING_ARGS(*f), STRING_CONST("cache/")))
                 continue;
 
             char dest_path_buffer[BUILD_MAX_PATHLEN];
-            string_t backup_file_path = path_concat(STRING_CONST_CAPACITY(dest_path_buffer), STRING_ARGS(backup_folder_path), STRING_ARGS(*f));
+            string_t backup_file_path = path_concat(STRING_BUFFER(dest_path_buffer), STRING_ARGS(backup_folder_path), STRING_ARGS(*f));
             string_const_t backup_file_path_dir = path_directory_name(STRING_ARGS(backup_file_path));
 
             if (!fs_is_directory(STRING_ARGS(backup_file_path_dir)) && !fs_make_directory(STRING_ARGS(backup_file_path_dir)))
@@ -191,17 +191,17 @@ string_const_t session_get_user_dir()
 
     string_const_t app_dir = environment_application_directory();
 
-    string_t unformatted_user_dir = string_copy(STRING_CONST_CAPACITY(user_dir_buffer), STRING_ARGS(app_dir));
+    string_t unformatted_user_dir = string_copy(STRING_BUFFER(user_dir_buffer), STRING_ARGS(app_dir));
     string_t user_dir = string_replace(STRING_ARGS(unformatted_user_dir), BUILD_MAX_PATHLEN, STRING_CONST("."), STRING_CONST(""), true);
 
     if (main_is_running_tests())
-        user_dir = string_concat(STRING_CONST_CAPACITY(user_dir_buffer), STRING_ARGS(user_dir), STRING_CONST("_tests"));
+        user_dir = string_concat(STRING_BUFFER(user_dir_buffer), STRING_ARGS(user_dir), STRING_CONST("_tests"));
     
     string_const_t profile_name{};
     if (environment_command_line_arg("session", &profile_name) && profile_name.length > 0)
     {
-        user_dir = string_concat(STRING_CONST_CAPACITY(user_dir_buffer), STRING_ARGS(user_dir), STRING_CONST("_"));
-        user_dir = string_concat(STRING_CONST_CAPACITY(user_dir_buffer), STRING_ARGS(user_dir), STRING_ARGS(profile_name));
+        user_dir = string_concat(STRING_BUFFER(user_dir_buffer), STRING_ARGS(user_dir), STRING_CONST("_"));
+        user_dir = string_concat(STRING_BUFFER(user_dir_buffer), STRING_ARGS(user_dir), STRING_ARGS(profile_name));
     }
     user_dir = path_clean(STRING_ARGS(user_dir), BUILD_MAX_PATHLEN);
 

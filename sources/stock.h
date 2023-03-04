@@ -34,7 +34,6 @@ typedef enum class FetchLevel /*: unsigned int*/ {
 } fetch_level_t;
 DEFINE_ENUM_FLAGS(FetchLevel);
 
-
 FOUNDATION_ALIGNED_STRUCT(stock_realtime_record_t, 8)
 {
     time_t timestamp;
@@ -103,6 +102,12 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     string_table_symbol_t country{};
     string_table_symbol_t type{};
     string_table_symbol_t currency{};
+    string_table_symbol_t isin{};
+    string_table_symbol_t industry{};
+    string_table_symbol_t sector{};
+    string_table_symbol_t group{};
+    string_table_symbol_t activity{};
+    string_table_symbol_t category{};
     string_table_symbol_t url{};
     string_table_symbol_t logo{};
     string_table_symbol_t updated_at{};
@@ -211,6 +216,13 @@ struct stock_handle_t
         if (id == 0)
             return false;
         return this->operator*() != nullptr;
+    }
+
+    FOUNDATION_FORCEINLINE bool initialized() const
+    {
+        if (id == 0)
+            return false;
+        return true;
     }
 
     FOUNDATION_FORCEINLINE const stock_t* operator*() const { return resolve(); }

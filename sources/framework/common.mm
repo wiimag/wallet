@@ -56,7 +56,7 @@ extern void* _window_handle;
                     NSString* path = [[selection path] stringByResolvingSymlinksInPath];
                     
                     static char selected_file_path_buffer[BUILD_MAX_PATHLEN];
-                    string_t selected_file_path = string_copy(STRING_CONST_CAPACITY(selected_file_path_buffer),
+                    string_t selected_file_path = string_copy(STRING_BUFFER(selected_file_path_buffer),
                                                               path.UTF8String, path.length);
                     selected_file_callback(string_to_const(selected_file_path));
                 }

@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include <foundation/platform.h>
+#include <foundation/assert.h>
 
 #if FOUNDATION_PLATFORM_WINDOWS
 #include <foundation/windows.h>
@@ -123,19 +123,22 @@ struct shared_mutex_read_lock
     const bool locked;
     shared_mutex& _mutex;
 
-    FOUNDATION_FORCEINLINE shared_mutex_read_lock(shared_mutex& mutex)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL shared_mutex_read_lock(shared_mutex& mutex)
         : _mutex(mutex)
         , locked(mutex.shared_lock())
     {
+        FOUNDATION_ASSERT(locked);
     }
 
-    FOUNDATION_FORCEINLINE ~shared_mutex_read_lock()
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL ~shared_mutex_read_lock()
     {
-        if (locked)
-            _mutex.shared_unlock();
+        if (!locked)
+            return;
+        const bool unlock_success = _mutex.shared_unlock();
+        FOUNDATION_ASSERT(unlock_success);
     }
 
-    FOUNDATION_FORCEINLINE operator bool() const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL operator bool() const
     {
         return locked;
     }
@@ -146,19 +149,23 @@ struct shared_mutex_write_lock
     const bool locked;
     shared_mutex& _mutex;
 
-    FOUNDATION_FORCEINLINE shared_mutex_write_lock(shared_mutex& mutex)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL shared_mutex_write_lock(shared_mutex& mutex)
         : _mutex(mutex)
         , locked(mutex.exclusive_lock())
     {
+        FOUNDATION_ASSERT(locked);
     }
 
-    FOUNDATION_FORCEINLINE ~shared_mutex_write_lock()
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL ~shared_mutex_write_lock()
     {
-        if (locked)
-            _mutex.exclusive_unlock();
+        if (!locked)
+            return;
+         
+        const bool unlock_success = _mutex.exclusive_unlock();
+        FOUNDATION_ASSERT(unlock_success);
     }
 
-    FOUNDATION_FORCEINLINE operator bool() const
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL operator bool() const
     {
         return locked;
     }

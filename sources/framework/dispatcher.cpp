@@ -14,22 +14,24 @@
 #include <foundation/mutex.h>
 #include <foundation/event.h>
 #include <foundation/hashstrings.h>
+#include <foundation/objectmap.h>
 
 struct dispatcher_thread_t
 {
-    thread_t* thread;
-    
-    void* payload;
+    thread_t* thread{ nullptr };    
+    void* payload{ nullptr };
+    bool completed{ false };
     function<void* (void*)> thread_fn;
-    function<void(void*)> complted_fn;
+    function<void(void)> completed_fn;
 };
 
-struct event_listener_t
+struct dispatcher_event_listener_t
 {
     dispatcher_event_listener_id_t id;
-    dispatcher_event_name_t event_name;
-    dispatcher_event_handler_t callback;
-    dispatcher_event_options_t options;
+    dispatcher_event_name_t        event_name;
+    dispatcher_event_handler_t     callback;
+    dispatcher_event_options_t     options;
+    void*                          user_data;
 };
 
 struct dispatcher_event_t
@@ -60,7 +62,8 @@ static dispatcher_handler_t* _dispatcher_actions = nullptr;
 
 static dispatcher_event_listener_id_t _next_listener_id = 1;
 static event_stream_t* _event_stream = nullptr;
-static event_listener_t* _event_listeners = nullptr;
+static dispatcher_event_listener_t* _event_listeners = nullptr;
+static objectmap_t* _dispatcher_threads = nullptr;
 
 //
 // # PRIVATE
@@ -89,6 +92,7 @@ FOUNDATION_EXTERN bool dispatcher_process_events()
                     args.data = (uint8_t*)de->data;
                     args.size = de->data_size;
                     args.options = de->options;
+                    args.user_data = e->user_data;
                     e->callback.invoke(args);
                 }
             }
@@ -148,15 +152,19 @@ bool dispatch(const function<void()>& callback, uint32_t delay_milliseconds /*= 
     const tick_t ticks_per_milliseconds = time_ticks_per_second() / 1000LL;
 
     signal_thread();
+    dispatcher_wakeup_main_thread();
     if (!mutex_lock(_dispatcher_lock))
+    {
+        log_errorf(0, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to lock dispatcher mutex"));
         return false;
+    }
         
     dispatcher_handler_t d{};
     d.handler = callback;
     d.trigger_at = time_current() + ticks_per_milliseconds * delay_milliseconds;
     array_push_memcpy(_dispatcher_actions, &d);
     return mutex_unlock(_dispatcher_lock);
-
+    
     return false;
 }
 
@@ -217,7 +225,8 @@ bool dispatcher_post_event(
 dispatcher_event_listener_id_t dispatcher_register_event_listener(
     dispatcher_event_name_t name,
     const dispatcher_event_handler_t& callback,
-    dispatcher_event_options_t options /*= DISPATCHER_EVENT_OPTION_NONE*/)
+    dispatcher_event_options_t options /*= DISPATCHER_EVENT_OPTION_NONE*/,
+    void* user_data /*= nullptr*/)
 {
     FOUNDATION_ASSERT(name != HASH_EMPTY_STRING);
 
@@ -227,10 +236,11 @@ dispatcher_event_listener_id_t dispatcher_register_event_listener(
         return INVALID_DISPATCHER_EVENT_LISTENER_ID;
     }
     
-    event_listener_t elistener;
+    dispatcher_event_listener_t elistener;
     elistener.id = _next_listener_id++;
     elistener.event_name = name;
     elistener.options = options;
+    elistener.user_data = user_data;
     array_push_memcpy(_event_listeners, &elistener);
 
     /// The callback is assigned here, because we do not want the copy to be destroyed 
@@ -245,9 +255,10 @@ dispatcher_event_listener_id_t dispatcher_register_event_listener(
 dispatcher_event_listener_id_t dispatcher_register_event_listener(
     const char* event_name, size_t event_name_length,
     const dispatcher_event_handler_t& callback,
-    dispatcher_event_options_t options /*= DISPATCHER_EVENT_OPTION_NONE*/)
+    dispatcher_event_options_t options /*= DISPATCHER_EVENT_OPTION_NONE*/,
+    void* user_data /*= nullptr*/)
 {
-    return dispatcher_register_event_listener(string_hash(event_name, event_name_length), callback, options);
+    return dispatcher_register_event_listener(string_hash(event_name, event_name_length), callback, options, user_data);
 }
 
 bool dispatcher_unregister_event_listener(dispatcher_event_listener_id_t event_listener_id)
@@ -267,6 +278,11 @@ bool dispatcher_unregister_event_listener(dispatcher_event_listener_id_t event_l
         }
 
         mutex_unlock(_dispatcher_lock);
+    }
+    else
+    {
+        log_errorf(0, ERROR_SYSTEM_CALL_FAIL, 
+            STRING_CONST("Failed to lock dispatcher and unregister event listener %u"), event_listener_id);
     }
 
     return unregistered;
@@ -316,60 +332,125 @@ bool dispatcher_wait_for_wakeup_main_thread(int timeout_ms)
     return _main_thread_wake_up_event.wait(timeout_ms) == 0;
 }
 
-FOUNDATION_STATIC void dispatch_execute_thread_completed(dispatcher_thread_t* dt)
+
+
+FOUNDATION_STATIC void dispatch_execute_thread_completed(void* obj)
 {
-    FOUNDATION_ASSERT(dt);
-    
+    dispatcher_thread_t* dt = (dispatcher_thread_t*)obj;
+    if (dt == nullptr || dt->completed)
+        return;
+        
+    FOUNDATION_ASSERT(dt->thread);
+    FOUNDATION_ASSERT(!dt->completed);
+
     thread_signal(dt->thread);
-    dt->complted_fn.invoke(dt->thread->result);
-
-    thread_deallocate(dt->thread);
-
+    dt->completed = true;
     dt->thread_fn.~function();
-    dt->complted_fn.~function();
+    
+    thread_t* thread = dt->thread;
+    dispatch(dt->completed_fn);
+    dispatch(L0(thread_deallocate(thread)));
+    dt->thread = nullptr;
+    
     memory_deallocate(dt);
 }
 
-dispatcher_thread_id dispatch_thread(const function<void*(void*)>& thread_fn, const function<void(void*)> complted_fn /*= nullptr*/, void* payload /*= nullptr*/)
+dispatcher_thread_handle_t dispatch_thread(
+    const char* name, size_t name_length, 
+    const function<void*(void*)>& thread_fn, 
+    const function<void(void)> completed_fn /*= nullptr*/,
+    void* payload /*= nullptr*/)
 {
     FOUNDATION_ASSERT(thread_fn);
+
+    dispatcher_thread_handle_t thread_handle = objectmap_reserve(_dispatcher_threads);
+    if (thread_handle == 0)
+    {
+        log_errorf(0, ERROR_OUT_OF_MEMORY, STRING_CONST("Failed to allocate thread handle"));
+        return 0;
+    }
     
     dispatcher_thread_t* dispatcher_thread = (dispatcher_thread_t*)memory_allocate(
         0, sizeof(dispatcher_thread_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
 
     dispatcher_thread->payload = payload;
     dispatcher_thread->thread_fn = thread_fn;
-    dispatcher_thread->complted_fn = complted_fn;
+    dispatcher_thread->completed_fn = completed_fn;
+    dispatcher_thread->completed = false;
+
+    if (!objectmap_set(_dispatcher_threads, thread_handle, dispatcher_thread))
+    {
+        log_errorf(0, ERROR_OUT_OF_MEMORY, STRING_CONST("Failed to store thread handle"));
+        memory_deallocate(dispatcher_thread);
+        objectmap_free(_dispatcher_threads, thread_handle);
+        return 0;
+    }
 
     dispatcher_thread->thread = thread_allocate([](void* thread_data)->void*
     {
-        dispatcher_thread_t* dt = (dispatcher_thread_t*)thread_data;
-        FOUNDATION_ASSERT(dt);
+        dispatcher_thread_handle_t dispatcher_thread_handle = to_opaque<dispatcher_thread_handle_t>(thread_data);
+        dispatcher_thread_t* dt = (dispatcher_thread_t*)objectmap_acquire(_dispatcher_threads, dispatcher_thread_handle);
+        if (dt == nullptr)
+        {
+            log_errorf(0, ERROR_INVALID_VALUE, STRING_CONST("Invalid thread handle or thread was already stopped"));
+            return nullptr;
+        }
         
         void* result_ptr = dt->thread_fn.invoke(dt->payload);
-        dispatch(L0(dispatch_execute_thread_completed(dt))); 
         
+        if (objectmap_release(_dispatcher_threads, dispatcher_thread_handle, dispatch_execute_thread_completed))
+        {
+            dispatcher_wakeup_main_thread();
+
+            if (objectmap_free(_dispatcher_threads, dispatcher_thread_handle))
+                dispatch_execute_thread_completed(dt);
+            else
+                log_errorf(0, ERROR_INVALID_VALUE, STRING_CONST("Failed to free thread handle"));
+        }
+
         return result_ptr;        
-    }, dispatcher_thread, STRING_CONST("Dispatcher Thread"), THREAD_PRIORITY_NORMAL, 0);
+    }, to_ptr(thread_handle), name, name_length, THREAD_PRIORITY_NORMAL, 0);
 
     bool thread_started = thread_start(dispatcher_thread->thread);
     FOUNDATION_ASSERT(thread_started);
-    return dispatcher_thread;
+    
+    return thread_handle;
 }
 
-bool dispatcher_thread_stop(dispatcher_thread_id thread_id)
+bool dispatcher_thread_stop(dispatcher_thread_handle_t thread_handle, double timeout_seconds /*= 30.0*/)
 {
-    if (thread_id == 0)
-        return false;
-
     bool thread_aborted = false;
-    dispatcher_thread_t* dt = (dispatcher_thread_t*)thread_id;
-    if (thread_is_running(dt->thread))
-        thread_aborted = thread_abort(dt->thread);
+    tick_t timeout = time_current();
+    
+    dispatcher_thread_t* dt = (dispatcher_thread_t*)objectmap_acquire(_dispatcher_threads, thread_handle);
+    if (dt)
+    {
+        TIME_TRACKER(2.0, "Stopping dispatcher thread %.*s", STRING_FORMAT(dt->thread->name));
         
-    if (thread_aborted)
-        dispatch_execute_thread_completed(dt);    
-    return thread_aborted;
+        while (!dt->completed && !thread_try_join(dt->thread, 100, nullptr) && time_elapsed(timeout) < timeout_seconds)
+            dispatcher_wait_for_wakeup_main_thread(200);
+        
+        if (!dt->completed && thread_is_running(dt->thread))
+        {
+            log_warnf(0, WARNING_DEADLOCK, STRING_CONST("Thread %.*s did not stop in time (%.3lg), aborting..."),
+                STRING_FORMAT(dt->thread->name), time_elapsed(timeout));
+
+            thread_aborted = thread_abort(dt->thread);
+        }
+
+        if (objectmap_release(_dispatcher_threads, thread_handle, dispatch_execute_thread_completed))
+        {
+            dispatch_execute_thread_completed(dt);
+            if (!objectmap_free(_dispatcher_threads, thread_handle))
+                log_errorf(0, ERROR_INVALID_VALUE, STRING_CONST("Failed to free thread handle"));
+        }
+    }
+    else
+    {
+        log_warnf(0, WARNING_INVALID_VALUE, STRING_CONST("Invalid thread handle or thread was already stopped"));
+    }
+    
+    return !thread_aborted;
 }
 
 //
@@ -380,6 +461,7 @@ void dispatcher_initialize()
 {
     _event_stream = event_stream_allocate(256);
     _dispatcher_lock = mutex_allocate(STRING_CONST("Dispatcher"));
+    _dispatcher_threads = objectmap_allocate(32);
 }
 
 void dispatcher_shutdown()
@@ -390,6 +472,7 @@ void dispatcher_shutdown()
 
     // Empty event queue by processing all remaining messages 
     // making sure any allocated memory is freed.
+    dispatcher_update();
     dispatcher_process_events();
 
     event_stream_deallocate(_event_stream);
@@ -399,4 +482,7 @@ void dispatcher_shutdown()
     array_deallocate(_dispatcher_actions);
     _dispatcher_lock = nullptr;
     _dispatcher_actions = nullptr;
+
+    objectmap_deallocate(_dispatcher_threads);
+    _dispatcher_threads = nullptr;
 }

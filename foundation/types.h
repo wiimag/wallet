@@ -127,8 +127,6 @@ typedef enum {
 	WARNING_NETWORK,
     /*! Standard warning */
     WARNING_STANDARD,
-	/*! Used for network and cloud warning */
-	WARNING_CLOUD,
     /*! Used for UI warnings */
     WARNING_UI,
     /*! Timeout */

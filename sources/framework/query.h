@@ -1,6 +1,8 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
+ * 
+ * TODO: Rename module to http
  */
 
 #pragma once
@@ -18,7 +20,7 @@
 #endif
 #endif
 
-#define HASH_QUERY static_hash_string("query", 5, 0x3e5d5820a8a43840)
+#define HASH_QUERY static_hash_string("http", 4, 0xbcccd6bcde9fa872ULL)
 
 struct config_handle_t;
 

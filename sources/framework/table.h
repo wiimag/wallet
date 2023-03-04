@@ -32,10 +32,13 @@ typedef enum : unsigned int {
     COLUMN_NUMBER_ABBREVIATION = 1 << 14,
     COLUMN_SUMMARY_AVERAGE = 1 << 15,
     COLUMN_SEARCHABLE = 1 << 16,
-    COLUMN_COMPUTE_SUMMARY = 1 << 17,
-    COLUMN_RENDER_ELEMENT = 1 << 18,
+    
     COLUMN_DEFAULT_SORT = 1 << 19,
     COLUMN_VALIGN_TOP = 1 << 20,
+
+    COLUMN_COMPUTE_SUMMARY = 1 << 27,
+    COLUMN_RENDER_ELEMENT = 1 << 28,
+    COLUMN_SORTING_ELEMENT = 1 << 29,
 
     COLUMN_ALIGNMENT_MASK = COLUMN_LEFT_ALIGN | COLUMN_RIGHT_ALIGN | COLUMN_MIDDLE_ALIGN,
 } column_flag_t;
@@ -155,7 +158,15 @@ struct row_t;
 
 typedef function<cell_t(table_element_ptr_t element, const column_t* column)> cell_fetch_value_handler_t;
 typedef function<void(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)> cell_callback_handler_t;
+
+/*! Cell style handler
+ *  @param element The element associated with the cell
+ *  @param column  The column associated with the cell
+ *  @param cell    The element cell being process
+ *  @param style   The style to be applied to the cell which should be modified by the handler.
+ */
 typedef function<void(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)> cell_style_handler_t;
+
 typedef function<bool(table_element_ptr_t element)> table_update_cell_handler_t;
 typedef function<bool(table_element_ptr_const_t element, const char*, size_t)> table_search_handler_t;
 typedef function<bool(table_t* table, column_t*, int sort_direction)> table_sort_handler_t;
@@ -187,6 +198,12 @@ struct column_t
         return string_table_decode_const(name);
     }
 
+    /*! Sets the style formatter callback for a given column.
+     *  The style formatter callback is called for each cell in the column
+     * 
+     *  @param handler The style formatter callback (See #cell_style_handler_t)
+     *  @return The column
+     */
     column_t& set_style_formatter(const cell_style_handler_t& handler)
     {
         style_formatter = handler;
@@ -298,6 +315,16 @@ template <size_t N> FOUNDATION_FORCEINLINE
 column_t& table_add_column(table_t* table,
     const char(&name)[N],
     const cell_fetch_value_handler_t& fetch_value_handler,
+    column_format_t format = COLUMN_FORMAT_TEXT,
+    column_flags_t flags = COLUMN_OPTIONS_NONE)
+{
+    return table_add_column(table, name, N, fetch_value_handler, format, flags);
+}
+
+template <size_t N> FOUNDATION_FORCEINLINE
+column_t& table_add_column(table_t* table,
+    const cell_fetch_value_handler_t& fetch_value_handler,
+    const char(&name)[N],
     column_format_t format = COLUMN_FORMAT_TEXT,
     column_flags_t flags = COLUMN_OPTIONS_NONE)
 {

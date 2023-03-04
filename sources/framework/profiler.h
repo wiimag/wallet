@@ -33,7 +33,7 @@ struct TrackerScope
         va_list list;
         va_start(list, fmt);
         char vname_buffer[64];
-        string_t vname = string_vformat(STRING_CONST_CAPACITY(vname_buffer), fmt, string_length(fmt), list);
+        string_t vname = string_vformat(STRING_BUFFER(vname_buffer), fmt, string_length(fmt), list);
         va_end(list);
         profile_begin_block(STRING_ARGS(vname));
     }

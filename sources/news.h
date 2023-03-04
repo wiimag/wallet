@@ -5,5 +5,4 @@
 
 #pragma once
 
-/*! Returns true if the search service is ready to be used. */
-bool search_available();
+void news_open_window(const char* symbol, size_t symbol_length);

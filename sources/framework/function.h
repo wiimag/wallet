@@ -11,15 +11,34 @@
 #include <new>
 #include <type_traits>
 
-// Lambda macros (these macro do not work with referenced values i.e. ..., double& value)
+ /*! Generate a simple lambda expression that can be used to capture a variable by reference.
+  *
+  *  @param EXPRESSION The expression to return from the lambda.
+  *  @param ...        The list of variables to be captured. i.e.
+  *                         > F(execute_fn_and_return_value_to_callee())                                   // Nothing is captured (simplest form)
+  *                         > F(local_var + 99), =local_var)                                               // Capture #local_var by value
+  *                         > F(string_try_convert_number(STRING_ARGS(str), &local_number), &local_number) // Capture #local_number by reference
+  *                         > F2(double d, int i, i + math_round(d))                                       // No capture but we define a lambda with two arguments
+  */
+#define F(EXPRESSION, ...) [__VA_ARGS__](){ return EXPRESSION; }
+#define F1(ARG1, EXPRESSION, ...) [__VA_ARGS__](ARG1){ return EXPRESSION; }
+#define F2(ARG1, ARG2, EXPRESSION, ...) [__VA_ARGS__](ARG1, ARG2){ return EXPRESSION; }
+#define F3(ARG1, ARG2, ARG3, EXPRESSION, ...) [__VA_ARGS__](ARG1, ARG2, ARG3){ return EXPRESSION; }
+#define F4(ARG1, ARG2, ARG3, ARG4, EXPRESSION, ...) [__VA_ARGS__](ARG1, ARG2, ARG3, ARG4){ return EXPRESSION; }
+#define F5(ARG1, ARG2, ARG3, ARG4, ARG5, EXPRESSION, ...) [__VA_ARGS__](ARG1, ARG2, ARG3, ARG4, ARG5){ return EXPRESSION; }
+#define F6(ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, EXPRESSION, ...) [__VA_ARGS__](ARG1, ARG2, ARG3, ARG4, ARG5, ARG6){ return EXPRESSION; }
+#define F7(ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, ARG7, EXPRESSION, ...) [__VA_ARGS__](ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, ARG7){ return EXPRESSION; }
+#define F8(ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, ARG7, ARG8, EXPRESSION, ...) [__VA_ARGS__](ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, ARG7, ARG8){ return EXPRESSION; }
+#define F9(ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, ARG7, ARG8, ARG9, EXPRESSION, ...) [__VA_ARGS__](ARG1, ARG2, ARG3, ARG4, ARG5, ARG6, ARG7, ARG8, ARG9){ return EXPRESSION; }
+
+// Lambda macros that can be used to simplify the creation of lambdas for readability purposes (i.e. one-liners)
 #define L0(EXPRESSION, ...) [=](__VA_ARGS__){ return EXPRESSION; }
-#define L1(EXPRESSION) [=](auto _1){ return EXPRESSION; }
-#define L2(EXPRESSION) [=](auto _1, auto _2){ return EXPRESSION; }
-#define L3(EXPRESSION) [=](auto _1, auto _2, auto _3){ return EXPRESSION; }
-#define SL0(EXPRESSION, ...) [](__VA_ARGS__){ return EXPRESSION; }
+#define L1(EXPRESSION) F1(auto _1, EXPRESSION, =)
+#define L2(EXPRESSION) F2(auto _1, auto _2, EXPRESSION, =)
+#define L3(EXPRESSION) F3(auto _1, auto _2, auto _3, EXPRESSION, =)
+#define SL0(EXPRESSION) [](){ return EXPRESSION; }
 #define SL1(EXPRESSION) [](auto _1){ return EXPRESSION; }
 #define SL2(EXPRESSION) [](auto _1, auto _2){ return EXPRESSION; }
-#define SL3(EXPRESSION) [](auto _1, auto _2, auto _3){ return EXPRESSION; }
 #define SC1(EXPRESSION) [](const auto& _1){ return EXPRESSION; }
 #define SC2(EXPRESSION) [](const auto& _1, const auto& _2){ return EXPRESSION; }
 #define SC3(EXPRESSION) [](const auto& _1, const auto& _2, const auto& _3){ return EXPRESSION; }
@@ -30,11 +49,27 @@
 #define LR2(EXPRESSION) [=](auto& _1, auto& _2){ return EXPRESSION; }
 #define LR3(EXPRESSION) [=](auto& _1, auto& _2, auto& _3){ return EXPRESSION; }
 
-#define R1(EXPRESSION) [=](auto& _1){ return EXPRESSION; }
+#define LCCCR(EXPRESSION, ...) F4(const auto& _1, const auto& _2, const auto& _3, auto& _4, EXPRESSION, __VA_ARGS__)
 
-template <typename T>
-struct function;
+template <typename T> struct function;
 
+/*! Function wrapper that can hold any callable object. 
+ * 
+ *  This is a very simple implementation of std::function, but it is not 
+ *  compatible with std::function. It is only compatible with the same
+ *  function wrapper.
+ * 
+ *  The function wrapper is designed to be used with small objects, and
+ *  it will allocate memory on the heap if the object is too large to fit
+ *  in the fixed size buffer.
+ * 
+ *  The function wrapper is not thread safe, and it is not designed to be
+ *  used with objects that are not copy-constructible.
+ * 
+ *  @type R       The return type of the function.
+ *  @type Args... The argument types of the function.
+ *  @type Functor The type of the functor to wrap.
+ */
 template <typename R, typename... Args>
 struct function<R(Args...)>
 {

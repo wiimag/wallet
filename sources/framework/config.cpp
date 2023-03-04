@@ -5,9 +5,10 @@
 
 #include "config.h"
 
-#include "common.h"
-#include "scoped_string.h"
-#include "string_table.h"
+#include <framework/common.h>
+#include <framework/scoped_string.h>
+#include <framework/string_table.h>
+#include <framework/string.h>
 
 #include <foundation/fs.h>
 #include <foundation/array.h>
@@ -385,16 +386,16 @@ string_const_t config_value_as_string(config_handle_t h, const char* fmt)
 
         static thread_local char number_string_buffer[64];
         if (fmt != nullptr)
-            return string_to_const(string_format(STRING_CONST_CAPACITY(number_string_buffer), fmt, string_length(fmt), v.number));
+            return string_to_const(string_format(STRING_BUFFER(number_string_buffer), fmt, string_length(fmt), v.number));
             
         if (h.config->options & CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS)
         {
             if (v.number < 0.1)
-                return string_to_const(string_format(STRING_CONST_CAPACITY(number_string_buffer), STRING_CONST("%.4lf"), v.number));
+                return string_to_const(string_format(STRING_BUFFER(number_string_buffer), STRING_CONST("%.4lf"), v.number));
 
             if (v.number < 1.0)
-                return string_to_const(string_format(STRING_CONST_CAPACITY(number_string_buffer), STRING_CONST("%.3lf"), v.number));
-            return string_to_const(string_format(STRING_CONST_CAPACITY(number_string_buffer), STRING_CONST("%.2lf"), v.number));
+                return string_to_const(string_format(STRING_BUFFER(number_string_buffer), STRING_CONST("%.3lf"), v.number));
+            return string_to_const(string_format(STRING_BUFFER(number_string_buffer), STRING_CONST("%.2lf"), v.number));
         }
         return string_from_real_static(v.number, 0, 0, 0);
     }
@@ -1691,7 +1692,7 @@ bool config_write_file(string_const_t _file_path, config_handle_t data, config_o
 {
     bool success = true;
     char local_copy_file_path_buffer[BUILD_MAX_PATHLEN];
-    string_t file_path = string_copy(STRING_CONST_CAPACITY(local_copy_file_path_buffer), STRING_ARGS(_file_path));
+    string_t file_path = string_copy(STRING_BUFFER(local_copy_file_path_buffer), STRING_ARGS(_file_path));
     config_sjson_const_t sjson = config_sjson(data, write_json_flags);
     size_t sjson_length = array_size(sjson);
 

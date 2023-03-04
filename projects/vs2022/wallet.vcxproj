@@ -98,14 +98,18 @@
     <ClCompile Include="..\..\sources\framework\query.cpp" />
     <ClCompile Include="..\..\sources\framework\query_json.cpp" />
     <ClCompile Include="..\..\sources\framework\query_mock.cpp" />
+    <ClCompile Include="..\..\sources\framework\search_database.cpp" />
+    <ClCompile Include="..\..\sources\framework\search_query.cpp" />
     <ClCompile Include="..\..\sources\framework\service.cpp" />
     <ClCompile Include="..\..\sources\framework\session.cpp" />
     <ClCompile Include="..\..\sources\framework\shared_mutex.cpp" />
+    <ClCompile Include="..\..\sources\framework\string.cpp" />
     <ClCompile Include="..\..\sources\framework\string_table.cpp" />
     <ClCompile Include="..\..\sources\framework\table.cpp" />
     <ClCompile Include="..\..\sources\framework\tabs.cpp" />
     <ClCompile Include="..\..\sources\indicators.cpp" />
     <ClCompile Include="..\..\sources\logo.cpp" />
+    <ClCompile Include="..\..\sources\news.cpp" />
     <ClCompile Include="..\..\sources\pattern.cpp" />
     <ClCompile Include="..\..\sources\realtime.cpp" />
     <ClCompile Include="..\..\sources\report.cpp" />
@@ -173,14 +177,18 @@
     <ClInclude Include="..\..\sources\framework\query_json.h" />
     <ClInclude Include="..\..\sources\framework\scoped_mutex.h" />
     <ClInclude Include="..\..\sources\framework\scoped_string.h" />
+    <ClInclude Include="..\..\sources\framework\search_database.h" />
+    <ClInclude Include="..\..\sources\framework\search_query.h" />
     <ClInclude Include="..\..\sources\framework\service.h" />
     <ClInclude Include="..\..\sources\framework\session.h" />
     <ClInclude Include="..\..\sources\framework\shared_mutex.h" />
+    <ClInclude Include="..\..\sources\framework\string.h" />
     <ClInclude Include="..\..\sources\framework\string_table.h" />
     <ClInclude Include="..\..\sources\framework\table.h" />
     <ClInclude Include="..\..\sources\framework\tabs.h" />
     <ClInclude Include="..\..\sources\indicators.h" />
     <ClInclude Include="..\..\sources\logo.h" />
+    <ClInclude Include="..\..\sources\news.h" />
     <ClInclude Include="..\..\sources\pattern.h" />
     <ClInclude Include="..\..\sources\realtime.h" />
     <ClInclude Include="..\..\sources\report.h" />
@@ -210,6 +218,7 @@
   </ItemGroup>
   <ItemGroup>
     <Font Include="..\..\resources\JetBrainsMono-ExtraLight.ttf" />
+    <Font Include="..\..\resources\MaterialIcons-Regular.ttf" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="astc-encoder.vcxproj">
@@ -230,6 +239,9 @@
     <ProjectReference Include="imgui.vcxproj">
       <Project>{42768918-4951-4f79-b35c-49d3aa5e635f}</Project>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\sources\cpp.hint" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

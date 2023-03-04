@@ -12,6 +12,7 @@
 #include <framework/imgui.h>
 #include <framework/table.h>
 #include <framework/math.h>
+#include <framework/string.h>
 
 #include <algorithm>
 

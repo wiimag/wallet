@@ -55,6 +55,14 @@ struct pattern_lcf_t
     int type{ 0 };
 };
 
+struct pattern_lcf_symbol_t
+{
+    string_table_symbol_t code;
+    const bulk_t* bulk{ nullptr };
+    char* sequence{ nullptr };
+    int matches{ 0 };
+};
+
 struct pattern_limits_t
 {
     double xmin{ NAN }, xmax{ NAN };
@@ -85,14 +93,15 @@ struct pattern_t
     bool show_limits{ true };
     bool x_axis_inverted{ false };
     int range { 90 };
+    float percent{ 90 };
     int type{ 0 };
     pattern_limits_t price_limits;
     char notes[2048]{ '\0' };
 
     // LCF
-    tick_t lcf_fetch_time{ 0 };
     job_t* lcf_job{ nullptr };
     pattern_lcf_t* lcf{ nullptr };
+    pattern_lcf_symbol_t* lcf_symbols{ nullptr };
 };
 
 pattern_handle_t pattern_find(const char* code, size_t code_length);

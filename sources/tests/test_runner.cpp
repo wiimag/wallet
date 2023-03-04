@@ -8,9 +8,9 @@
 #include <framework/session.h>
 #include <framework/table.h>
 #include <framework/imgui.h>
+#include <framework/string.h>
 
 #include <foundation/path.h>
-#include <foundation/string.h>
 
 #if BUILD_DEVELOPMENT
 
@@ -136,8 +136,8 @@ FOUNDATION_STATIC void test_runner_run_case(test_runner_case_t* tc)
     }
 
     char test_log_path_buffer[BUILD_MAX_PATHLEN];
-    string_t tests_log_path = path_make_temporary(STRING_CONST_CAPACITY(test_log_path_buffer));
-    tests_log_path = string_concat(STRING_CONST_CAPACITY(test_log_path_buffer), STRING_ARGS(tests_log_path), STRING_CONST(".log"));
+    string_t tests_log_path = path_make_temporary(STRING_BUFFER(test_log_path_buffer));
+    tests_log_path = string_concat(STRING_BUFFER(test_log_path_buffer), STRING_ARGS(tests_log_path), STRING_CONST(".log"));
     tests_log_path = path_clean(STRING_ARGS(tests_log_path), BUILD_MAX_PATHLEN);
     string_const_t tests_log_dir = path_directory_name(STRING_ARGS(tests_log_path));
     if (!fs_is_directory(STRING_ARGS(tests_log_dir)))
@@ -260,7 +260,7 @@ FOUNDATION_STATIC void test_runner_window_render()
 
         ImGui::BeginGroup();
         if (ImGui::InputTextWithHint("##SearchFilter", "Filter test cases...", 
-            STRING_CONST_CAPACITY(_test_runner_search_filter), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EscapeClearsAll))
+            STRING_BUFFER(_test_runner_search_filter), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EscapeClearsAll))
         {
             _test_runner_table->search_filter = string_const(_test_runner_search_filter, string_length(_test_runner_search_filter));
         }
@@ -323,7 +323,7 @@ FOUNDATION_STATIC void test_runner_initialize()
 {
     _test_runner_window_opened = session_get_bool("test_runner_window_opened", _test_runner_window_opened);
     string_const_t test_runner_search_filter = session_get_string("test_runner_search_filter", "");
-    string_copy(STRING_CONST_CAPACITY(_test_runner_search_filter), STRING_ARGS(test_runner_search_filter));
+    string_copy(STRING_BUFFER(_test_runner_search_filter), STRING_ARGS(test_runner_search_filter));
     service_register_menu(HASH_TEST_RUNNER, test_runner_menu);
 }
 

@@ -29,4 +29,12 @@
 			<Item Name="[3]">row4</Item>
 		</Expand>
 	</Type>
+
+	<Type Name="string_const_t">
+		<DisplayString>({length}) {str,[length]s8}</DisplayString>
+	</Type>
+
+	<Type Name="string_t">
+		<DisplayString>({length}) {str,[length]s8}</DisplayString>
+	</Type>
 </AutoVisualizer>

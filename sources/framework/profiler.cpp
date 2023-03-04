@@ -14,6 +14,7 @@
 #include <framework/shared_mutex.h>
 #include <framework/table.h>
 #include <framework/math.h>
+#include <framework/string.h>
 
 #include <foundation/stream.h>
 #include <foundation/environment.h>
@@ -75,7 +76,7 @@ FOUNDATION_STATIC void profiler_tracker(void* buffer, size_t size)
     if (b->id == PROFILE_ID_ENDFRAME)
     {
         //char profile_msg_buffer[128];
-        //string_t profile_msg = string_format(STRING_CONST_CAPACITY(profile_msg_buffer), S("====== FRAME %llu ======\n"), b->end);
+        //string_t profile_msg = string_format(STRING_BUFFER(profile_msg_buffer), S("====== FRAME %llu ======\n"), b->end);
         //process_debug_output(STRING_ARGS(profile_msg));
     }
     else
@@ -89,7 +90,7 @@ FOUNDATION_STATIC void profiler_tracker(void* buffer, size_t size)
 
             #if 0
             char profile_msg_buffer[128];
-            string_t profile_msg = string_format(STRING_CONST_CAPACITY(profile_msg_buffer), S("[%d:%d] %.*s(%llu) -> %.4lg ms\n"), b->id, b->parentid, (int)string_length(b->name), b->name, key, diff_ms);
+            string_t profile_msg = string_format(STRING_BUFFER_msg_buffer), S("[%d:%d] %.*s(%llu) -> %.4lg ms\n"), b->id, b->parentid, (int)string_length(b->name), b->name, key, diff_ms);
             process_debug_output(STRING_ARGS(profile_msg));
             #endif
 
@@ -147,7 +148,7 @@ FOUNDATION_STATIC void profiler_tracker(void* buffer, size_t size)
         else
         {
             //char profile_msg[128];
-            //string_format(STRING_CONST_CAPACITY(profile_msg), S("====== EVENT (%s:%llu) %d ======\n"), b->name, b->end, b->id);
+            //string_format(STRING_BUFFER(profile_msg), S("====== EVENT (%s:%llu) %d ======\n"), b->name, b->end, b->id);
             //process_debug_output(profile_msg);
         }
     }
@@ -295,12 +296,12 @@ void profiler_menu_timer()
         char frame_time[32];
         if (tick_elapsed_time < smooth_elapsed_time - 1)
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), STRING_CONST("%.0lf/%.0lf ms (%.4lg mb)"),
+            string_format(STRING_BUFFER(frame_time), STRING_CONST("%.0lf/%.0lf ms (%.4lg mb)"),
                 tick_elapsed_time, smooth_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
         }
         else
         {
-            string_format(STRING_CONST_CAPACITY(frame_time), STRING_CONST("%.0lf ms (%.4lg mb)"),
+            string_format(STRING_BUFFER(frame_time), STRING_CONST("%.0lf ms (%.4lg mb)"),
                 tick_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
         }
 

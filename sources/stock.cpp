@@ -15,6 +15,7 @@
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
 #include <framework/math.h>
+#include <framework/string.h>
 
 #include <foundation/path.h>
 #include <foundation/hashtable.h>
@@ -60,7 +61,7 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
 
     SHARED_READ_LOCK(_db_lock);
     const stock_t* s = &_db_stocks[stock_index];
-    if (s == nullptr)
+    if (s == nullptr || !s->has_resolve(FetchLevel::FUNDAMENTALS))
         return false;
 
     value = NAN;
@@ -225,7 +226,27 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     entry.logo = string_table_encode_unescape(general["LogoURL"].as_string());
     entry.updated_at = string_table_encode(general["UpdatedAt"].as_string());
     entry.exchange = string_table_encode(general["Exchange"].as_string());
+    entry.isin = string_table_encode(general["ISIN"].as_string());
     entry.description = string_table_encode_unescape(general["Description"].as_string());
+
+    string_const_t sector = general["GicSector"].as_string();
+    if (string_is_null(sector))
+        sector = general["Sector"].as_string();
+    entry.sector = string_table_encode(sector);
+    
+    string_const_t group = general["GicGroup"].as_string();
+    entry.group = string_table_encode(group);
+    
+    string_const_t industry = general["GicIndustry"].as_string();
+    if (string_is_null(industry))
+        industry = general["Industry"].as_string();
+    entry.industry = string_table_encode(industry);
+
+    string_const_t subindustry = general["GicSubIndustry"].as_string();
+    entry.activity = string_table_encode(subindustry);
+
+    string_const_t category = general["HomeCategory"].as_string();
+    entry.category = string_table_encode(category);
 
     const json_object_t& hightlights = json["Highlights"];
     entry.dividends_yield = hightlights["DividendYield"].as_number(0.0);
@@ -323,7 +344,7 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
                 log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Failed to fetch technical results %d for %s"), entry->fetch_errors, access_level, ticker);
             }
         }
-        else
+        else if (eod_availalble())
         {
             const uint32_t postpone_time_ms = min((uint32_t)(1000.0 - time_elapsed(entry->last_update_time) * 1000.0), 1000U);
             log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Missing EOD data to fetch technical results %d for %s (%u)"), 
@@ -523,7 +544,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
     // Fetch stock data
     char ticker[64] { 0 };
     string_const_t code_string = string_table_decode_const(handle.code);
-    string_copy(STRING_CONST_CAPACITY(ticker), STRING_ARGS(code_string));
+    string_copy(STRING_BUFFER(ticker), STRING_ARGS(code_string));
 
     status_t status = STATUS_OK;
     if ((fetch_levels & FetchLevel::REALTIME) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::REALTIME) == 0)

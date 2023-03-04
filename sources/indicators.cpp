@@ -15,6 +15,7 @@
 #include <framework/database.h>
 #include <framework/query.h>
 #include <framework/dispatcher.h>
+#include <framework/string.h>
 
 #define HASH_INDICATORS static_hash_string("indicators", 10, 0x80f942b8e488d9c0ULL)
 
@@ -212,18 +213,18 @@ FOUNDATION_STATIC bool indicators_render_indicators_selector()
 
         if (added == 0)
         {
-            string_copy(STRING_CONST_CAPACITY(preview_single_code), STRING_ARGS(c.code));
-            preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.description));
+            string_copy(STRING_BUFFER(preview_single_code), STRING_ARGS(c.code));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.description));
         }
         else if (added == 1)
         {
-            preview = string_copy(STRING_CONST_CAPACITY(preview_buffer), preview_single_code, string_length(preview_single_code));
+            preview = string_copy(STRING_BUFFER(preview_buffer), preview_single_code, string_length(preview_single_code));
         }
         
         if (added > 0)
         {
-            preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
-            preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.code));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.code));
         }
         
         added++;
@@ -273,8 +274,8 @@ FOUNDATION_STATIC bool indicators_render_country_selector()
         if (!c.selected)
             continue;
         if (added > 0)
-            preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
-        preview = string_concat(STRING_CONST_CAPACITY(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.code));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
+        preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.code));
         added++;
     }
     
@@ -549,7 +550,7 @@ FOUNDATION_STATIC void indicators_load_settings()
         {
             auto& c = COUNTRIES[i];
             c.key = string_hash(STRING_ARGS(c.code));
-            if (array_contains<string_t, string_const_t>(codes, L2(string_equal(_1, _2)), c.code))
+            if (array_contains(codes, c.code, LC2(string_equal(_1, _2))))
                 c.selected = true;
         }
         string_array_deallocate(codes);
@@ -562,7 +563,7 @@ FOUNDATION_STATIC void indicators_load_settings()
         {
             auto& c = MACRO_INDICATORS[i];
             c.key = string_hash(STRING_ARGS(c.name));
-            if (array_contains<string_t, string_const_t>(codes, L2(string_equal(_1, _2)), c.code))
+            if (array_contains(codes, c.code, LC2(string_equal(_1, _2))))
                 c.selected = true;
         }
         string_array_deallocate(codes);

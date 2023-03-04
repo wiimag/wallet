@@ -5,6 +5,7 @@
  
 #include "wallet.h"
 
+#include "eod.h"
 #include "report.h"
 #include "settings.h"
 
@@ -12,7 +13,8 @@
 #include <framework/table.h>
 #include <framework/common.h>
 #include <framework/math.h>
-// 
+#include <framework/string.h>
+ 
 #include <foundation/hash.h>
 #include <foundation/array.h>
 #include <foundation/uuid.h>
@@ -77,11 +79,11 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::TextUnformatted("Currency");
 
         char currency[64];
-        string_copy(STRING_CONST_CAPACITY(currency), STRING_ARGS(wallet->preferred_currency));
+        string_copy(STRING_BUFFER(currency), STRING_ARGS(wallet->preferred_currency));
 
         ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(26.0f), 0, true);
         ImGui::SetNextItemWidth(imgui_get_font_ui_scale(96.0f));
-        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_CONST_CAPACITY(currency), ImGuiInputTextFlags_AutoSelectAll))
+        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(currency), ImGuiInputTextFlags_AutoSelectAll))
         {
             char* old = wallet->preferred_currency.str;
             wallet->preferred_currency = string_clone(currency, string_length(currency));
@@ -113,13 +115,13 @@ FOUNDATION_STATIC void wallet_history_sort(wallet_t* wallet)
     });
 }
 
-FOUNDATION_STATIC void wallet_history_update_entry(report_t* report, wallet_t* wallet, history_t& entry)
+FOUNDATION_STATIC bool wallet_history_update_entry(report_t* report, wallet_t* wallet, history_t& entry)
 {
     if (!report_sync_titles(report))
     {
         log_warnf(HASH_REPORT, WARNING_TIMEOUT,
             STRING_CONST("Failed to sync %s report titles, cannot update wallet history. Please retry later..."), SYMBOL_CSTR(report->name));
-        return;
+        return false;
     }
     
     report->dirty = true;
@@ -130,6 +132,8 @@ FOUNDATION_STATIC void wallet_history_update_entry(report_t* report, wallet_t* w
     entry.investments = report->total_investment;
     entry.total_value = report->total_value;
     entry.gain = report->wallet->sell_total_gain;
+
+    return true;
 }
 
 FOUNDATION_STATIC void wallet_history_add_new_entry(report_t* report, wallet_t* wallet)
@@ -141,24 +145,27 @@ FOUNDATION_STATIC void wallet_history_add_new_entry(report_t* report, wallet_t* 
     {
         if (time_date_equal(today, h->date))
         {
-            wallet_history_update_entry(report, wallet, *h);
-            h->show_edit_ui = true;
-            return;
+            if (wallet_history_update_entry(report, wallet, *h))
+            {
+                h->show_edit_ui = true;
+                return;
+            }
         }
     }
 
     history_t new_entry{ today };
-    wallet_history_update_entry(report, wallet, new_entry);
-
-    if (array_size(wallet->history) > 0)
+    if (wallet_history_update_entry(report, wallet, new_entry))
     {
-        const history_t& fh = wallet->history[0];
-        new_entry.broker_value = fh.broker_value;
-        new_entry.other_assets = fh.other_assets;
-    }
+        if (array_size(wallet->history) > 0)
+        {
+            const history_t& fh = wallet->history[0];
+            new_entry.broker_value = fh.broker_value;
+            new_entry.other_assets = fh.other_assets;
+        }
 
-    wallet->history = array_push(wallet->history, new_entry);
-    wallet_history_sort(wallet);
+        wallet->history = array_push(wallet->history, new_entry);
+        wallet_history_sort(wallet);
+    }
 }
 
 FOUNDATION_STATIC void wallet_history_delete_entry(report_t* report, history_t* h)
@@ -207,10 +214,12 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
     {
         wallet_t* wallet = selected_report->wallet;
         ImGui::SameLine();
+        ImGui::BeginDisabled(!eod_availalble());
         if (ImGui::Button("Add Entry"))
         {
             wallet_history_add_new_entry(selected_report, wallet);
         }
+        ImGui::EndDisabled();
 
         ImGui::SameLine(0, 100.0f);
         if (ImGui::Checkbox("Show Extra Charts", &wallet->show_extra_charts))
@@ -485,7 +494,7 @@ FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, histo
             wallet_history_delete_entry(report, h);
         ImGui::PopStyleColor(1);
 
-        if ((h - &h->source->history[0]) == 0)
+        if (h->source && (h - &h->source->history[0]) == 0)
         {
             ImGui::SameLine(0, control_width - 120.0f);
             if (ImGui::Button("Update"))

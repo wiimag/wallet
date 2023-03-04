@@ -9,6 +9,7 @@
 #include <framework/profiler.h>
 #include <framework/shared_mutex.h>
 #include <framework/scoped_string.h>
+#include <framework/string.h>
 
 #include <foundation/hash.h>
 #include <foundation/memory.h>
@@ -348,7 +349,9 @@ string_table_symbol_t string_table_find_symbol(const string_table_t* st, const c
 
 const char* string_table_to_string(string_table_t* st, string_table_symbol_t symbol)
 {
-    return st->strings(symbol);
+    if (symbol > 0 && symbol <= st->string_bytes)
+        return st->strings(symbol);
+    return nullptr;
 }
 
 string_const_t string_table_to_string_const(string_table_t* st, string_table_symbol_t symbol)

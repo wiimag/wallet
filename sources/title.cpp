@@ -10,6 +10,7 @@
  
 #include <framework/math.h>
 #include <framework/query.h>
+#include <framework/string.h>
 
 #define FIELD_FILTERS_INTERNAL "::filters"
 
@@ -326,7 +327,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     t->average_exchange_rate = 1;
 
     string_const_t title_code = config_name(data);
-    t->code_length = string_copy(STRING_CONST_CAPACITY(t->code), STRING_ARGS(title_code)).length;
+    t->code_length = string_copy(STRING_BUFFER(t->code), STRING_ARGS(title_code)).length;
 
     // Initiate to resolve the title stock right away in case it has never been done before.
     if (main_is_interactive_mode(true) && t->wallet && t->wallet->track_history)

@@ -9,9 +9,10 @@
 #include "stock.h"
 #include "logo.h"
 
-#include "framework/common.h"
-#include "framework/session.h"
-#include "framework/imgui.h"
+#include <framework/imgui.h>
+#include <framework/common.h>
+#include <framework/session.h>
+#include <framework/string.h>
 
 #define SESSION_KEY_SEARCH_TERMS "search_terms"
 #define SESSION_KEY_SEARCH_FILTER "search_filter"
@@ -43,7 +44,7 @@ void settings_draw()
         ImGui::TextURL("Currency", nullptr, STRING_CONST("https://eodhistoricaldata.com/financial-apis/list-supported-forex-currencies/"));
 
         ImGui::NextColumn();
-        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_CONST_CAPACITY(SETTINGS.preferred_currency), ImGuiInputTextFlags_AutoSelectAll))
+        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(SETTINGS.preferred_currency), ImGuiInputTextFlags_AutoSelectAll))
         {
         }
 
@@ -127,7 +128,7 @@ void settings_draw()
         ImGui::NextColumn();
         int frame_throttling = session_get_integer("frame_throttling", 16);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::SliderInt("##frame_throttling", &frame_throttling, 0, 120, "%d milliseconds", ImGuiSliderFlags_AlwaysClamp))
+        if (ImGui::SliderInt("##frame_throttling", &frame_throttling, 0, 1000, "%d milliseconds", ImGuiSliderFlags_AlwaysClamp))
             session_set_integer("frame_throttling", frame_throttling);
 
         ImGui::NextColumn();
@@ -151,9 +152,9 @@ void settings_initialize()
     SETTINGS.font_scaling = session_get_float("font_scaling", 1.0f);
 
     // Restore some session settings from the user registry
-    string_copy(STRING_CONST_CAPACITY(SETTINGS.search_terms), STRING_ARGS(session_get_string(SESSION_KEY_SEARCH_TERMS, "")));
-    string_copy(STRING_CONST_CAPACITY(SETTINGS.search_filter), STRING_ARGS(session_get_string(SESSION_KEY_SEARCH_FILTER, "")));
-    string_copy(STRING_CONST_CAPACITY(SETTINGS.preferred_currency), STRING_ARGS(session_get_string("preferred_currency", "CAD")));
+    string_copy(STRING_BUFFER(SETTINGS.search_terms), STRING_ARGS(session_get_string(SESSION_KEY_SEARCH_TERMS, "")));
+    string_copy(STRING_BUFFER(SETTINGS.search_filter), STRING_ARGS(session_get_string(SESSION_KEY_SEARCH_FILTER, "")));
+    string_copy(STRING_BUFFER(SETTINGS.preferred_currency), STRING_ARGS(session_get_string("preferred_currency", "CAD")));
 }
 
 void settings_shutdown()

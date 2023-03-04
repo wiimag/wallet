@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
@@ -22,35 +22,9 @@ struct expr_t;
 struct expr_func_t;
 struct expr_result_t;
 
-template<typename T>
-struct vec
-{
-    T* buf{ nullptr };
-    int len{ 0 };
-    int cap{ 0 };
-
-    T* get(int index)
-    {
-        FOUNDATION_ASSERT(index < len);
-        return &buf[index];
-    }
-
-    const T* get(int index) const
-    {
-        FOUNDATION_ASSERT(index < len);
-        return &buf[index];
-    }
-};
-
-typedef vec<expr_t> vec_expr_t;
-
-expr_result_t expr_eval(expr_t* e);
-const char* expr_error_cstr(int error_code);
-string_const_t expr_result_to_string(const expr_result_t& result, const char* fmt = "%.6g");
-
-typedef void (*exprfn_cleanup_t)(const expr_func_t* f, void* context);
-typedef expr_result_t(*exprfn_t)(const expr_func_t* f, vec_expr_t* args, void* context);
-
+/*
+ * Expression error codes
+ */
 typedef enum ExprErrorCode : int {
     EXPR_ERROR_NONE = 0,
     EXPR_ERROR_BAD_PARENS,
@@ -73,19 +47,65 @@ typedef enum ExprErrorCode : int {
     EXPR_ERROR_UNEXPECTED_SET = -8,				// unexpected set, i.e. {1, 2, 3}
 } expr_error_code_t;
 
-/*
- * Expression data types
- */
-typedef enum ExprResultType {
-    EXPR_RESULT_NULL,
-    EXPR_RESULT_FALSE,
-    EXPR_RESULT_TRUE,
-    EXPR_RESULT_NUMBER,
-    EXPR_RESULT_SYMBOL, // string stored using string_table_enconde (global string table)
-    EXPR_RESULT_ARRAY,
-    EXPR_RESULT_POINTER,
-} expr_result_type_t;
+/*! Error message for the last expression evaluation */
+extern thread_local char EXPR_ERROR_MSG[256];
 
+/*! Error code for the last expression evaluation */
+extern thread_local expr_error_code_t EXPR_ERROR_CODE;
+
+/*! Expression string typedef for visibility. */
+typedef string_const_t expr_string_t;
+
+/*! Returns the constant string for the given error code. 
+ * 
+ *  @param error_code Error code to get the string for
+ * 
+ *  @return Constant string for the given error code
+ */
+const char* expr_error_cstr(int error_code);
+
+/*! Simple vector template to store expression buffers. */
+template<typename T>
+struct vec
+{
+    T* buf{ nullptr };
+    int len{ 0 };
+    int cap{ 0 };
+
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T* get(int index)
+    {
+        FOUNDATION_ASSERT(index < len);
+        return &buf[index];
+    }
+
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const T* get(int index) const
+    {
+        FOUNDATION_ASSERT(index < len);
+        return &buf[index];
+    }
+};
+
+/*! Expression buffer type */
+typedef vec<expr_t> vec_expr_t;
+
+/*! Expression cleanup handler signature
+ *
+ *  @param f Function that is invoked to cleanup the function allocated context
+ *  @param context Context pointer to cleanup
+ */
+typedef void (*exprfn_cleanup_t)(const expr_func_t* f, void* context);
+
+/*! Expression function signature
+ *
+ *  @param f       Function that is invoked to evaluate the expression
+ *  @param args    Arguments to the function
+ *  @param context Context pointer to pass to the function
+ *
+ *  @return Result of the function evaluation
+ */
+typedef expr_result_t(*exprfn_t)(const expr_func_t* f, vec_expr_t* args, void* context);
+
+/*! Expression operator types. */
 typedef enum ExprOperatorType {
     OP_UNKNOWN,
     OP_UNARY_MINUS,
@@ -128,6 +148,7 @@ typedef enum ExprOperatorType {
     OP_COUNT
 } expr_type_t;
 
+/*! Expression error thrown when parsing or evaluating an expression. */
 typedef struct ExprError
 {
     expr_error_code_t code;
@@ -142,20 +163,19 @@ typedef struct ExprError
         {
             va_list list;
             va_start(list, msg);
-            message_length = string_vformat(STRING_CONST_CAPACITY(message), msg, string_length(msg), list).length;
+            message_length = string_vformat(STRING_BUFFER(message), msg, string_length(msg), list).length;
             va_end(list);
         }
         else
         {
             const char* expr_error_msg = expr_error_cstr(code);
             size_t expr_error_msg_length = string_length(expr_error_msg);
-            message_length = string_copy(STRING_CONST_CAPACITY(message), expr_error_msg, expr_error_msg_length).length;
+            message_length = string_copy(STRING_BUFFER(message), expr_error_msg, expr_error_msg_length).length;
         }
     }
 } expr_error_t;
 
-typedef string_const_t expr_string_t;
-
+/*! Flags used to represent an expression result storing a pointer value. */
 enum EXPR_POINTER_CONTENT : uint64_t
 {
     EXPR_POINTER_NONE = 0,
@@ -173,35 +193,62 @@ enum EXPR_POINTER_CONTENT : uint64_t
     EXPR_POINTER_ELEMENT_COUNT_SHIFT = 0ULL,
 };
 
+/*
+ * Expression data types
+ */
+typedef enum ExprResultType {
+    EXPR_RESULT_NULL,
+    EXPR_RESULT_FALSE,
+    EXPR_RESULT_TRUE,
+    EXPR_RESULT_NUMBER,
+    EXPR_RESULT_SYMBOL, // string stored using string_table_enconde (global string table)
+    EXPR_RESULT_ARRAY,
+    EXPR_RESULT_POINTER,
+} expr_result_type_t;
+
+/*! Expression result. 
+ * 
+ *  @note The @list member is used to store the result of an expression that
+ *        returns an set of values, such as a function call. The @index member
+ *        is used to store the index of the result in the global result buffer.
+ */
 struct expr_result_t
 {
+    /*! Nil result */
     static thread_local const expr_result_t NIL;
 
+    /*! Expression result type. The type indicates how the result should be interpret. */
     expr_result_type_t type{ EXPR_RESULT_NULL };
 
-    // @index will be used as a flags if type is EXPR_RESULT_POINTER, see @EXPR_POINTER_CONTENT
+    /*! #index will be used as a flags if type is EXPR_RESULT_POINTER, see @EXPR_POINTER_CONTENT */
     size_t index{ NO_INDEX };
 
+    /*! Result value */
     union {
+        /*! Numeric value if the expression result type is #EXPR_RESULT_NUMBER */
         double value{ 0 };
+
+        /*! Symbol value if the expression result type is #EXPR_RESULT_ARRAY */
         const expr_result_t* list;
+
+        /*! Symbol value if the expression result type is #EXPR_RESULT_POINTER */
         void* ptr;
     };
 
-    expr_result_t(expr_result_type_t type = EXPR_RESULT_NULL)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(expr_result_type_t type = EXPR_RESULT_NULL)
         : type(type)
         , list(nullptr)
     {
     }
 
-    expr_result_t(expr_result_type_t type, int symbol, size_t length)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(expr_result_type_t type, int symbol, size_t length)
         : type(type)
         , value(symbol)
         , index(length)
     {
     }
 
-    expr_result_t(double value)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(double value)
         : type(EXPR_RESULT_NUMBER)
         , value(value)
     {
@@ -213,42 +260,42 @@ struct expr_result_t
     {
     }
 
-    expr_result_t(const char* FOUNDATION_RESTRICT str)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(const char* FOUNDATION_RESTRICT str)
         : type(str ? EXPR_RESULT_SYMBOL : EXPR_RESULT_NULL)
         , index(string_length(str))
         , value(string_table_encode(str, index))
     {
     }
 
-    expr_result_t(string_const_t str)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(string_const_t str)
         : type(str.length ? EXPR_RESULT_SYMBOL : EXPR_RESULT_NULL)
         , index(str.length)
         , value(string_table_encode(str))
     {
     }
 
-    expr_result_t(const expr_result_t* list, size_t index = NO_INDEX)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(const expr_result_t* list, size_t index = NO_INDEX)
         : type(list ? EXPR_RESULT_ARRAY : EXPR_RESULT_NULL)
         , list(list)
         , index(index)
     {
     }
 
-    expr_result_t(std::nullptr_t)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(std::nullptr_t)
         : type(EXPR_RESULT_NULL)
         , ptr(nullptr)
         , index(0)
     {
     }
 
-    expr_result_t(void* ptr, size_t size = EXPR_POINTER_UNSAFE)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(void* ptr, size_t size = EXPR_POINTER_UNSAFE)
         : type(ptr ? EXPR_RESULT_POINTER : EXPR_RESULT_NULL)
         , ptr(ptr)
         , index(size)
     {
     }
 
-    expr_result_t(void* arr, uint16_t element_size, uint32_t element_count, uint64_t content_flags = EXPR_POINTER_UNSAFE)
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(void* arr, uint16_t element_size, uint32_t element_count, uint64_t content_flags = EXPR_POINTER_UNSAFE)
         : type(arr ? EXPR_RESULT_POINTER : EXPR_RESULT_NULL)
         , ptr(arr)
         , index((EXPR_POINTER_ARRAY | content_flags) |
@@ -257,6 +304,13 @@ struct expr_result_t
     {
     }
 
+    /*! Returns the numeric value of a result, or the default value if the result is not a number 
+     * 
+     *  @param default_value Default value to return if the result is not a number
+     *  @param vindex        Index of the value to return if the result is an array
+     * 
+     *  @return Numeric value of the result, or the default value if the result is not a number
+     */
     double as_number(double default_value = NAN, size_t vindex = NO_INDEX) const
     {
         if (type == EXPR_RESULT_NULL)
@@ -332,8 +386,20 @@ struct expr_result_t
         return default_value;
     }
 
+    /*! Returns the string value of a result, or the default value if the result is not a string
+     *
+     *  @param fmt          Format string to use for conversion if the value is a number for instance.
+     *
+     *  @return String representation of the result
+     */
     string_const_t as_string(const char* fmt = nullptr) const;
 
+    /*! Checks if the value is null (not defined or not a number)
+     *  
+     *  @param vindex Index of the value to check if the result is an array.
+     *  
+     *  @return True if the value is null, false otherwise
+     */
     bool is_null(size_t vindex = NO_INDEX) const
     {
         if (type == EXPR_RESULT_NULL)
@@ -371,7 +437,11 @@ struct expr_result_t
         return true;
     }
 
-    bool is_set() const
+    /*! Checks if the value representation a set of value, i.e. when the type is an array or a pointer
+     *
+     *  @return True if the value can be used as a set or to be enumerated using #begin and #end
+     */
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool is_set() const
     {
         if (type == EXPR_RESULT_ARRAY && array_size(list) > 0)
             return true;
@@ -380,14 +450,25 @@ struct expr_result_t
         return false;
     }
 
-    bool is_raw_array() const
+    /*! Checks if the value is a pointer to a raw array
+     *
+     *  @return True if the value is a pointer to a raw array
+     */
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool is_raw_array() const
     {
         if (type == EXPR_RESULT_POINTER && (index & EXPR_POINTER_ARRAY) == EXPR_POINTER_ARRAY)
             return true;
         return false;
     }
 
-    expr_result_t element_at(unsigned vindex) const
+    /*! Get the element value at a given index in case the result is a set of value.
+     *  If the result is not a set, the result is returned.
+     * 
+     *  @param vindex Index of the value to get if the result is an array.
+     * 
+     *  @return Value at the given index
+     */
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t element_at(unsigned vindex) const
     {
         if (type == EXPR_RESULT_ARRAY)
         {
@@ -403,6 +484,13 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Get the element sizeof of a set of value. 
+     *  If the result is not a set, 0 is returned.
+     * 
+     *  @remark This is useful for result of type array or pointer or when enumerating a set.
+     *
+     *  @return Element size of the set of value
+     */
     uint16_t element_size() const
     {
         if (element_count() == 0)
@@ -427,6 +515,13 @@ struct expr_result_t
         return sizeof(value);
     }
 
+    /*! Get the element count of a set of value.
+     *  If the result is not a set, 1 is returned.
+     *
+     *  @remark This is useful for result of type array or pointer or when enumerating a set.
+     *
+     *  @return Element count of the set of value
+     */
     uint32_t element_count() const
     {
         if (type == EXPR_RESULT_NULL)
@@ -441,13 +536,15 @@ struct expr_result_t
         return 1;
     }
 
-    operator bool() const
+    /*! Returns true if the value is defined (i.e. not nil). */
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL operator bool() const
     {
         if (type == EXPR_RESULT_NUMBER && math_real_is_zero(value))
             return false;
         return !is_null();
     }
 
+    /*! Returns the negated value of the result. */
     expr_result_t operator-() const
     {
         if (type == EXPR_RESULT_NUMBER)
@@ -463,6 +560,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the result of the multiplication of the two values. */
     expr_result_t operator*(const expr_result_t& rhs) const
     {
         if (is_null() || rhs.is_null())
@@ -482,6 +580,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the result of the division of the two values. */
     expr_result_t operator/(const expr_result_t& rhs) const
     {
         if (is_null() || rhs.is_null())
@@ -494,6 +593,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the result of the addition of the two values. */
     expr_result_t operator+(const expr_result_t& rhs) const
     {
         if (is_null() || rhs.is_null())
@@ -506,6 +606,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the result of the addition with another value. */
     expr_result_t& operator+=(const expr_result_t& rhs)
     {
         if (type == EXPR_RESULT_NUMBER)
@@ -525,6 +626,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the result of the subtraction of the two values. */
     expr_result_t operator-(const expr_result_t& rhs) const
     {
         if (is_null() || rhs.is_null())
@@ -537,6 +639,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns a boolean result if the current value is less than the other value. */
     expr_result_t operator<(const expr_result_t& rhs) const
     {
         if (is_null(index))
@@ -554,6 +657,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns a boolean result if the current value is greater than the other value. */
     expr_result_t operator>(const expr_result_t& rhs) const
     {
         if (is_null(index))
@@ -571,6 +675,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns a boolean result if the current value is less than or equal to the other value. */
     expr_result_t operator<=(const expr_result_t& rhs) const
     {
         if (type == EXPR_RESULT_NUMBER)
@@ -580,6 +685,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns a boolean result if the current value is greater than or equal to the other value. */
     expr_result_t operator>=(const expr_result_t& rhs) const
     {
         if (type == EXPR_RESULT_NUMBER)
@@ -589,6 +695,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns a boolean result if the current value is equal to the other value. */
     expr_result_t operator==(const expr_result_t& rhs) const
     {
         if (type == EXPR_RESULT_NULL && rhs.type == EXPR_RESULT_NULL)
@@ -635,11 +742,13 @@ struct expr_result_t
         return *this;
     }
 
-    expr_result_t operator!=(const expr_result_t& rhs) const
+    /*! Returns a boolean result if the current value is not equal to the other value. */
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t operator!=(const expr_result_t& rhs) const
     {
         return !operator==(rhs);
     }
 
+    /*! Returns the result of the logical and of the two values. */
     expr_result_t operator!() const
     {
         if (type == EXPR_RESULT_NUMBER)
@@ -655,6 +764,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the result of the logical and of the two values. */
     expr_result_t operator~() const
     {
         if (type == EXPR_RESULT_NUMBER)
@@ -670,6 +780,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the result of shifting the value. */
     expr_result_t operator<<(const expr_result_t& rhs) const
     {
         if (type == EXPR_RESULT_NUMBER && rhs.type == EXPR_RESULT_NUMBER)
@@ -679,6 +790,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the result of shifting the value. */
     expr_result_t operator>>(const expr_result_t& rhs) const
     {
         if (type == EXPR_RESULT_NUMBER && rhs.type == EXPR_RESULT_NUMBER)
@@ -688,6 +800,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the & result of two value. */
     expr_result_t operator&(const expr_result_t& rhs) const
     {
         if (type == EXPR_RESULT_NUMBER && rhs.type == EXPR_RESULT_NUMBER)
@@ -697,6 +810,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the | result of two value. */
     expr_result_t operator|(const expr_result_t& rhs) const
     {
         if (type == EXPR_RESULT_NUMBER && rhs.type == EXPR_RESULT_NUMBER)
@@ -706,6 +820,7 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Returns the ^ result of two value. */
     expr_result_t operator^(const expr_result_t& rhs) const
     {
         if (type == EXPR_RESULT_NUMBER && rhs.type == EXPR_RESULT_NUMBER)
@@ -715,49 +830,154 @@ struct expr_result_t
         return *this;
     }
 
+    /*! Represent an iterator over the elements of an array. */
     struct iterator
     {
         unsigned index;
         const expr_result_t* set;
 
-        bool operator!=(const iterator& other) const
+        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator!=(const iterator& other) const
         {
             if (set != other.set)
                 return true;
             return (index != other.index);
         }
 
-        bool operator==(const iterator& other) const
+        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator==(const iterator& other) const
         {
             if (set != other.set)
                 return false;
             return (index == other.index);
         }
 
-        iterator& operator++()
+        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL iterator& operator++()
         {
             ++index;
             return *this;
         }
 
-        expr_result_t operator*() const
+        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t operator*() const
         {
             FOUNDATION_ASSERT(set && index != UINT_MAX);
             return set->element_at(index);
         }
     };
 
-    iterator begin() const
+    /*! Returns an iterator to the first element of the array. */
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL iterator begin() const
     {
         FOUNDATION_ASSERT(is_set());
         return iterator{ 0, this };
     }
 
-    iterator end() const
+    /*! Returns an iterator to the end of the array. */
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL iterator end() const
     {
         FOUNDATION_ASSERT(is_set());
         return iterator{ element_count(), this };
     }
+};
+
+/*! Null value used statically when evaluating an expression */
+thread_local const expr_result_t NIL = expr_result_t::NIL;
+
+/*! Expression function. */
+struct expr_func_t
+{
+    /*! Function name. */
+    expr_string_t name;
+
+    /*! Function handler. */
+    exprfn_t handler;
+
+    /*! Function cleanup handler. */
+    exprfn_cleanup_t cleanup;
+
+    /*! Function context size. */
+    size_t ctxsz;
+};
+
+/*! Expression node. */
+struct expr_t
+{
+    /*! Expression type. */
+    expr_type_t type;
+
+    /*! Expression arguments. */
+    vec_expr_t args{};
+
+    /*! Expression parameters based on the node type. */
+    union {
+
+        /*! Expression function. */
+        struct {
+            /*! Function pointer. */
+            expr_func_t* f{ nullptr };
+            
+            /*! Function context dynamically allocated. */
+            void* context{ nullptr };
+        } func;
+
+        /*! Expression result used for intermediate expression evaluation for to store the last evaluated node . */
+        struct {
+            expr_result_t value{ EXPR_RESULT_NULL };
+        } result;
+
+        /*! Expression variable payload. */
+        struct {
+            expr_result_t* value;
+        } var;
+    } param;
+
+    /*! Expression token from the original expression. */
+    expr_string_t token;
+};
+
+/*! Expression variable. 
+ * 
+ *  IMPORTANT: Variable string name buffer is stored at the end of the structure and name points to it.
+ *  
+ *  The actual expression var size is > sizeof(#expr_var_t) + strlen(name) + 1.
+ */
+struct expr_var_t
+{
+    /*! Variable value if non constant. */
+    expr_result_t value;
+
+    /*! Next variable in the list. */
+    expr_var_t* next;
+
+    /*! Variable name. */
+    string_t name;
+    
+    // IMPORTANT: Variable string name buffer is stored at the end of the structure and name points to it.
+};
+
+/*! Expression variable list. */
+struct expr_var_list_t
+{
+    /* Variable list head */
+    expr_var_t* head;
+};
+
+/*! Expression argument list. */
+struct expr_arg_t
+{
+    /* Operator stack length */
+    int oslen{};
+
+    /* Expression stack length */
+    int eslen{};
+
+    /* Expression arguments buffer */
+    vec_expr_t args{};
+};
+
+/*! Expression macro used to declare a dynamic function. */
+struct expr_macro_t
+{
+    expr_string_t name;
+    vec_expr_t body;
 };
 
 struct expr_record_t
@@ -768,6 +988,7 @@ struct expr_record_t
     double value{ NAN };
 };
 
+/*! Expression evaluator. */
 struct expr_evaluator_t
 {
     char code[32]{ '\0' };
@@ -781,90 +1002,135 @@ struct expr_evaluator_t
     time_t last_run_time{ 0 };
 };
 
-struct expr_func_t
-{
-    expr_string_t name;
-    exprfn_t handler;
-    exprfn_cleanup_t cleanup;
-    size_t ctxsz;
-};
+/*! Evaluate an expression node.
+ *
+ *  @param e Expression node to evaluate.
+ *
+ *  @return Result of the expression evaluation.
+ */
+expr_result_t expr_eval(expr_t* e);
 
-struct expr_t
-{
-    expr_type_t type;
-    vec_expr_t args{};
-
-    union {
-        struct {
-            expr_func_t* f{ nullptr };
-            void* context{ nullptr };
-        } func;
-
-        struct {
-            expr_result_t value{ EXPR_RESULT_NULL };
-        } result;
-
-        struct {
-            expr_result_t* value;
-        } var;
-    } param;
-
-    expr_string_t token;
-
-};
-
-struct expr_var_t
-{
-    expr_result_t value;
-    expr_var_t* next;
-    string_t name;
-    // IMPORTANT: string buffer is stored at the end of the structure and name points to it.
-};
-
-struct expr_var_list_t
-{
-    expr_var_t* head;
-};
-
-struct expr_arg_t
-{
-    int oslen{};
-    int eslen{};
-    vec_expr_t args{};
-};
-
-struct expr_macro_t
-{
-    expr_string_t name;
-    vec_expr_t body;
-};
-
-extern thread_local char EXPR_ERROR_MSG[256];
-extern thread_local expr_error_code_t EXPR_ERROR_CODE;
-thread_local const expr_result_t NIL = expr_result_t::NIL;
-
+/*! Evaluate an expression.
+ * 
+ *  @param expression Expression to evaluate.
+ * 
+ *  @return Result of the expression evaluation.
+ */
 expr_result_t eval(string_const_t expression);
+
+/*! Evaluate an expression.
+ *
+ *  @param expression Expression to evaluate.
+ *  @param expression_length Length of the expression string, or -1 if null terminated.
+ *
+ *  @return Result of the expression evaluation.
+ */
 expr_result_t eval(const char* expression, size_t expression_length = -1);
 
+/*! Create an evaluation list that will be managed by the expression system.
+ *
+ *  @param list Newly created expression result list that will get disposed next update.
+ *
+ *  @return Stored expression result list.
+ */
 const expr_result_t* expr_eval_list(const expr_result_t* list);
-bool eval_set_global_var(const char* name, void* ptr, size_t size = 0);
-void eval_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t cleanup = nullptr, size_t context_size = 0);
-bool eval_unregister_function(const char* name, exprfn_t fn = nullptr);
-expr_var_t* eval_get_or_create_global_var(const char* name, size_t name_length = 0ULL);
-expr_var_t* eval_set_or_create_global_var(const char* name, size_t name_length, const expr_result_t& value);
 
-void eval_register_vec_mat_functions(expr_func_t*& funcs);
+/*! Set a global expression variable to point to an application pointer.
+ * 
+ *  @remark Nothing special is done to manage the ptr lifespan. It is up to the application to ensure
+ *          the pointer is valid for the duration of the expression evaluation.
+ * 
+ *  @param name Name of the variable.
+ *  @param ptr  Pointer to the variable.
+ *  @param size Size of the variable data payload, or 0 if unknown.
+ */
+bool expr_set_global_var(const char* name, void* ptr, size_t size = 0);
 
+/*! Register a function with the expression system.
+ *
+ *  @param name         Name of the function.
+ *  @param fn           Function pointer to register.
+ *  @param cleanup      Function pointer to cleanup function, or nullptr if none.
+ *  @param context_size Size of the context to allocate for the function, or 0 if none.
+ */
+void expr_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t cleanup = nullptr, size_t context_size = 0);
+
+/*! Unregister a function from the expression system.
+ *
+ *  @param name Name of the function.
+ *  @param fn   Function pointer to unregister, or nullptr to unregister all functions with the given name.
+ *
+ *  @return True if the function was unregistered, false if not found.
+ */
+bool expr_unregister_function(const char* name, exprfn_t fn = nullptr);
+
+/*! Get a global variable accessible thought the expression system.
+ *  If the variable does not exist, it will be created with a NULL value.
+ *
+ *  @param name Name of the variable.
+ *  @param name_length Length of the name, or 0 if null terminated.
+ *
+ *  @return Variable if found, or a null value if newly created.
+ */
+expr_var_t* expr_get_or_create_global_var(const char* name, size_t name_length = 0ULL);
+
+/*! Set or create a global variable accessible thought the expression system.
+ *
+ *  @param name  Name of the variable.
+ *  @param value Value to set.
+ *
+ *  @return Variable that was set.
+ */
+expr_var_t* expr_set_or_create_global_var(const char* name, size_t name_length, const expr_result_t& value);
+
+/*! Register a set of functions for vector and matrix operations.
+ *
+ *  @param funcs Array of functions to register.
+ */
+void expr_register_vec_mat_functions(expr_func_t*& funcs);
+
+/*! Create an expression result from a symbol from the global string table.
+ *
+ *  @param symbol Symbol to evaluate.
+ *
+ *  @return Expression result converted to a string.
+ */
 expr_result_t expr_eval_symbol(string_table_symbol_t symbol);
-expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& value);
-expr_result_t expr_eval_merge(const expr_result_t& key, const expr_result_t& value, bool keep_nulls);
-string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message);
-string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message);
 
-void eval_render_evaluators();
+/*! Merge a key value pair into an expression result set, i.e. [key, value]
+ *
+ *  @param key   Key to pair.
+ *  @param value Value to pair.
+ *
+ *  @return Paired expression result.
+ */
+expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& value);
+
+/*! Evaluate a merge expression.
+ *
+ *  @param key        Key to merge.
+ *  @param value      Value to merge.
+ *  @param keep_nulls If true, then null values will be kept in the result.
+ *
+ *  @return Merged expression result.
+ */
+expr_result_t expr_eval_merge(const expr_result_t& key, const expr_result_t& value, bool keep_nulls);
+
+/*! Evaluates the expression argument at a given index to a string.
+ * 
+ *  If the argument is not an evaluable argument, then we return the variable name as the constant string.
+ * 
+ *  @param args     Expression argument vector.
+ *  @param idx      Index of the argument to evaluate.
+ *  @param message  Error message if evaluation fails.
+ * 
+ *  @return String value of the argument.
+ */
+string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message);
 
 /*! Log expression result to the console
- \param expression_string   The expression string
- \param result              The result of the expression
+ * 
+ *  @param expression_string   The expression string
+ *  @param result              The result of the expression
  */
 void expr_log_evaluation_result(string_const_t expression_string, const expr_result_t& result);

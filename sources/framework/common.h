@@ -12,24 +12,29 @@
 #include <foundation/array.h>
  
 #include <time.h>
+#include <limits>
 
 // ## MACROS
 
 constexpr double DNAN = __builtin_nan("0");
-#define CTEXT(str) string_const(STRING_CONST(str))
 #define ARRAY_COUNT(ARR) (sizeof(ARR) / sizeof(ARR[0]))
 
 #define DEFINE_ENUM_FLAGS(T) \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator~ (T a) { return static_cast<T>(~(unsigned int)a); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator== (const T a, const int b) { return (unsigned int)a == b; } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const T b) { return (unsigned int)a != 0 && (unsigned int)b != 0; } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const bool b) { return (unsigned int)a != 0 && b; } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator| (const T a, const T b) { return (T)((unsigned int)a | (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator& (const T a, const T b) { return (T)((unsigned int)a & (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator^ (const T a, const T b) { return (T)((unsigned int)a ^ (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator|= (T& a, const T b) { return (T&)((unsigned int&)a |= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator&= (T& a, const T b) { return (T&)((unsigned int&)a &= (unsigned int)b); } \
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator^= (T& a, const T b) { return (T&)((unsigned int&)a ^= (unsigned int)b); }
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator~ (T a) { return static_cast<T>(~(std::underlying_type_t<T>)a); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator!= (const T a, const std::underlying_type_t<T> b) { return (std::underlying_type_t<T>)a != b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator== (const T a, const std::underlying_type_t<T> b) { return (std::underlying_type_t<T>)a == b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const T b) { return (std::underlying_type_t<T>)a != 0 && (std::underlying_type_t<T>)b != 0; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool operator&& (const T a, const bool b) { return (std::underlying_type_t<T>)a != 0 && b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator| (const T a, const T b) { return (T)((std::underlying_type_t<T>)a | (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator& (const T a, const T b) { return (T)((std::underlying_type_t<T>)a & (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const T operator^ (const T a, const T b) { return (T)((std::underlying_type_t<T>)a ^ (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator|= (T& a, const T b) { return (T&)((std::underlying_type_t<T>&)a |= (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator&= (T& a, const T b) { return (T&)((std::underlying_type_t<T>&)a &= (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T& operator^= (T& a, const T b) { return (T&)((std::underlying_type_t<T>&)a ^= (std::underlying_type_t<T>)b); } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool test(const T a, const T b) { return (a & b) == b; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool any(const T a, const T b) { return (a & b) != 0; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool none(const T a, const T b) { return (a & b) == 0; } \
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr const bool one(const T a, const T b) { const auto bits = ((std::underlying_type_t<T>)a & (std::underlying_type_t<T>)b); return bits && !(bits & (bits-1)); }
 
 template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
 template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
@@ -38,217 +43,17 @@ typedef struct GLFWwindow GLFWwindow;
 typedef function<void(GLFWwindow* window)> app_update_handler_t;
 typedef function<void(GLFWwindow* window, int frame_width, int frame_height)> app_render_handler_t;
 
-// ## STRUCTURES
-
-struct lines_t
-{
-    size_t count{};
-    string_const_t* items{};
-
-    const string_const_t& operator[](size_t index)
-    {
-        FOUNDATION_ASSERT(index < count);
-        return items[index];
-    }
-};
-
-// ## STRINGS
-
-size_t string_occurence(const char* str, size_t len, char c);
-size_t string_line_count(const char* str, size_t len);
-lines_t string_split_lines(const char* str, size_t len);
-string_t* string_split(string_const_t str, string_const_t sep);
-void string_lines_finalize(lines_t& lines);
-bool string_contains_nocase(const char* lhs, size_t lhs_length, const char* rhs, size_t rhs_length);
-bool string_equal_ignore_whitespace(const char* lhs, size_t lhs_length, const char* rhs, size_t rhs_length);
-string_t string_utf8_unescape(const char* s, size_t length);
-string_const_t string_from_date(const tm& tm);
-string_const_t string_from_date(time_t at);
-string_t string_static_buffer(size_t required_length = 64, bool clear_memory = false);
-string_const_t string_from_currency(double value, const char* fmt = nullptr, size_t fmt_length = 0);
-const char* string_format_static_const(const char fmt[], ...);
-string_const_t string_format_static(const char* fmt, size_t fmt_length, ...);
-time_t string_to_date(const char* date_str, size_t date_str_length, tm* out_tm = nullptr);
-string_const_t string_to_const(const char* str);
-string_const_t string_trim(string_const_t str, char c = ' ');
-bool string_compare_less(const char* str1, const char* str2);
-bool string_compare_less(const char* str1, size_t str1_length, const char* str2, size_t str2_length);
-string_const_t string_remove_line_returns(char* buffer, size_t capacity, const char* str, size_t length);
-string_t string_remove_line_returns(const char* str, size_t length);
-string_t string_to_lower_ascii(char* buf, size_t capacity, const char* str, size_t length);
-string_t string_to_upper_ascii(char* buf, size_t capacity, const char* str, size_t length);
-string_t string_to_lower_utf8(char* buf, size_t capacity, const char* str, size_t length);
-string_t string_to_upper_utf8(char* buf, size_t capacity, const char* str, size_t length);
-string_t string_remove_character(char* buf, size_t size, size_t capacity, char char_to_remove);
-
-void string_deallocate(string_t& str);
-
-FOUNDATION_FORCEINLINE bool is_whitespace(char c)
-{
-    if (c == ' ' || c == '\t' || c == '\n' || c == '\r')
-        return true;
-    return false;
-}
-
-template <size_t N> FOUNDATION_FORCEINLINE constexpr string_const_t string_const(const char(&s)[N]) 
-{ 
-    return string_const(s, min(N-1, string_length(s)));
-}
-
-FOUNDATION_FORCEINLINE bool string_is_null(string_const_t s)
-{
-    return s.str == nullptr || s.length == 0;
-}
-
-FOUNDATION_FORCEINLINE bool string_equal(string_const_t lhs, string_const_t rhs)
-{
-    return string_equal(STRING_ARGS(lhs), STRING_ARGS(rhs));
-}
-
-FOUNDATION_FORCEINLINE bool string_equal(string_t lhs, string_const_t rhs)
-{
-    return string_equal(STRING_ARGS(lhs), STRING_ARGS(rhs));
-}
-
-FOUNDATION_FORCEINLINE bool string_equal(string_const_t lhs, string_t rhs)
-{
-    return string_equal(STRING_ARGS(lhs), STRING_ARGS(rhs));
-}
-
-FOUNDATION_FORCEINLINE bool string_is_null(string_t s)
-{
-    return s.str == nullptr || s.length == 0;
-}
-
-FOUNDATION_FORCEINLINE bool string_starts_with(const char* str, size_t str_length, const char* prefix, size_t prefix_length)
-{
-    if (str_length < prefix_length)
-        return false;
-    return string_equal(str, prefix_length, prefix, prefix_length);
-}
-
-FOUNDATION_FORCEINLINE bool is_char_alpha_num_hex(char c)
-{
-    if (c >= '0' && c <= '9')
-        return true;
-    if (c >= 'a' && c <= 'f')
-        return true;
-    if (c >= 'A' && c <= 'F')
-        return true;
-    return false;
-}
-
-FOUNDATION_FORCEINLINE uint8_t hex_value(char c)
-{
-    if (c >= '0' && c <= '9')
-        return 9 - ('9' - c);
-    if (c >= 'a' && c <= 'f')
-        return 15 - ('f' - c);
-    if (c >= 'A' && c <= 'F')
-        return 15 - ('F' - c);
-    return -1;
-}
-//decltype(declval<typename Iter>().operator*())
-template<typename Iter>
-string_const_t string_join(Iter begin, Iter end, const function<string_const_t(const typename Iter::type& e)>& iter,
-    string_const_t sep = { ", ", 2 },
-    string_const_t open_token = { nullptr, 0 },
-    string_const_t close_token = { nullptr, 0 })
-{
-    string_t b_list{ nullptr, 0 };
-    string_t join_list_string = { nullptr, 0 };
-
-    if (!string_is_null(open_token))
-        join_list_string = string_allocate_concat(nullptr, 0, STRING_ARGS(open_token));
-
-    int added = 0;
-    for (Iter it = begin; it != end; ++it)
-    {
-        string_const_t e_str = iter(*it);
-        if (string_is_null(e_str))
-            continue;
-
-        b_list = join_list_string;
-        if (added > 0)
-        {
-            join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(sep));
-            string_deallocate(b_list.str);
-        }
-
-        b_list = join_list_string;
-        join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(e_str));
-        string_deallocate(b_list.str);
-        added++;
-    }
-
-    if (!string_is_null(close_token))
-    {
-        b_list = join_list_string;
-        join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(close_token));
-        string_deallocate(b_list.str);
-    }
-
-    string_t static_buf = string_static_buffer(min(16384ULL, join_list_string.length + 1ULL));
-    string_const_t res = string_to_const(string_copy(static_buf.str, static_buf.length, STRING_ARGS(join_list_string)));
-    string_deallocate(join_list_string.str);
-    return res;
-}
-
-template<typename T>
-string_const_t string_join(T* const list, size_t count, const function<string_const_t(T& e)>& iter,
-    string_const_t sep = { ", ", 2 }, 
-    string_const_t open_token = { nullptr, 0 }, 
-    string_const_t close_token = { nullptr, 0 })
-{
-    string_t b_list{ nullptr, 0 };
-    string_t join_list_string = {nullptr, 0};
-    
-    if (!string_is_null(open_token))
-        join_list_string = string_allocate_concat(nullptr, 0, STRING_ARGS(open_token));
-
-    for (size_t i = 0; i < count; ++i)
-    {
-        b_list = join_list_string;
-
-        if (i > 0)
-        {
-            join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(sep));
-            string_deallocate(b_list.str);
-        }
-
-        string_const_t e_str = iter(list[i]);
-        b_list = join_list_string;
-        join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(e_str));
-        string_deallocate(b_list.str);
-    }
-
-    if (!string_is_null(close_token))
-    {
-        b_list = join_list_string;
-        join_list_string = string_allocate_concat(STRING_ARGS(join_list_string), STRING_ARGS(close_token));
-        string_deallocate(b_list.str);
-    }
-
-    string_t static_buf = string_static_buffer(min(16384ULL, join_list_string.length + 1ULL));
-    string_const_t res = string_to_const(string_copy(static_buf.str, static_buf.length, STRING_ARGS(join_list_string)));
-    string_deallocate(join_list_string.str);
-    return res;
-}
-
-template<typename T>
-string_const_t string_join(T* const list, const function<string_const_t(T& e)>& iter,
-    string_const_t sep = { ", ", 2 },
-    string_const_t open_token = { nullptr, 0 },
-    string_const_t close_token = { nullptr, 0 })
-{
-    return string_join(list, array_size(list), iter, sep, open_token, close_token);
-}
-
 // ## Array
 
 #define foreach(_VAR_NAME, _ARR) \
     std::remove_reference<decltype(_ARR)>::type _VAR_NAME = array_size(_ARR) > 0 ? &_ARR[0] : nullptr; \
     for (unsigned i = 0, end = array_size(_ARR); i < end; _VAR_NAME = &_ARR[++i])
+
+template<typename T>
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool array_empty(const T* arr)
+{
+    return array_size(arr) == 0;
+}
 
 template<typename T> T* array_last(T* arr)
 {
@@ -288,8 +93,8 @@ T array_sort_by(T arr, const function<int(const typename std::remove_pointer<T>:
     return arr;
 }
 
-template<typename T, typename U>
-bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& compare_equal, const U& v)
+template<typename T, typename U, typename Compare>
+bool array_contains(const T* arr, const U& v, const Compare& compare_equal)
 {
     for (unsigned i = 0, end = array_size(arr); i < end; ++i)
     {
@@ -298,6 +103,12 @@ bool array_contains(const T* arr, const function<bool(const T& a, const U& b)>& 
     }
 
     return false;
+}
+
+template<typename T, typename U>
+bool array_contains(const T* arr, const U& v)
+{
+    return array_contains(arr, v, [](const T& a, const U& b) { return a == b; });
 }
 
 template<typename T, typename V>
@@ -326,8 +137,8 @@ int array_binary_search(const T* array, const V& _key)
     return array_binary_search<T, V>(array, array_size(array), _key);
 }
 
-template<typename T, typename V>
-int array_binary_search_compare(const T array, const typename V& _key, int(*compare)(const typename std::remove_pointer<T>::type& a, const typename V& b))
+template<typename T, typename V, typename Comparer>
+int array_binary_search_compare(const T array, const typename V& _key, Comparer compare)
 {
     uint32_t offset = 0;
     for (uint32_t ll = array_size(array); offset < ll;)
@@ -539,10 +350,43 @@ void execute_tool(const string_const_t& name, string_const_t* argv, size_t argc,
 
 void on_thread_exit(function<void()> func);
 
+/*! Returns the true if the application is running in daemon mode, meaning that it is either running as a service or as a background process.
+ * 
+ *  @remark Running tests is considered daemon mode, as it is a background process that does not require user interaction.
+ * 
+ *  @return True if the application is running in daemon mode.
+ */
+extern bool main_is_daemon_mode();
+
+/*! Returns true if the application is running in batch mode, meaning that it is running without a graphical user interface.
+ *
+ *  @remark Running tests is considered batch mode, as it is a background process that does not require user interaction.
+ *
+ *  @return True if the application is running in batch mode.
+ */
 extern bool main_is_batch_mode();
+
+/*! Returns true if the application is running in graphical mode, meaning that it is running with a graphical user interface.
+ *
+ *  @return True if the application is running in graphical mode.
+ */
 extern bool main_is_graphical_mode();
+
+/*! Returns true if the application is running in interactive mode, meaning that it is running with a graphical user interface and the user is interacting with it.
+ *
+ *  @remark Running tests is considered interactive mode, as it is a background process that does not require user interaction.
+ *
+ *  @return True if the application is running in interactive mode.
+ */
 extern bool main_is_interactive_mode(bool exclude_debugger = false);
+
+/*! Returns true if the application is running in test mode, meaning that it is running unit tests.
+ *
+ *  @return True if the application is running in test mode.
+ */
 extern bool main_is_running_tests();
+
+
 extern double main_tick_elapsed_time_ms();
 
 bool process_release_console();
@@ -580,7 +424,7 @@ struct TimeMarkerScope
     {
         va_list list;
         va_start(list, fmt);
-        string_vformat(STRING_CONST_CAPACITY(label), fmt, string_length(fmt), list);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
         va_end(list);   
         
         start_time = time_current();
@@ -590,7 +434,7 @@ struct TimeMarkerScope
         TimeMarkerScope(const char(&name)[N])
         : context(memory_context())
     {
-        string_copy(STRING_CONST_CAPACITY(label), name, N);
+        string_copy(STRING_BUFFER(label), name, N);
         start_time = time_current();
     }
 
@@ -599,7 +443,7 @@ struct TimeMarkerScope
     {
         va_list list;
         va_start(list, fmt);
-        string_vformat(STRING_CONST_CAPACITY(label), fmt, string_length(fmt), list);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
         va_end(list);
 
         start_time = time_current();
@@ -611,7 +455,7 @@ struct TimeMarkerScope
     {
         va_list list;
         va_start(list, fmt);
-        string_vformat(STRING_CONST_CAPACITY(label), fmt, string_length(fmt), list);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
         va_end(list);
 
         start_time = time_current();
@@ -622,7 +466,9 @@ struct TimeMarkerScope
         const double elapsed_time = time_elapsed(start_time);
         if (elapsed_time > less_ignored_elapsed_time)
         {
-            if (elapsed_time < 1.0)
+            if (elapsed_time < 0.1)
+                log_debugf(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
+            else if (elapsed_time < 1.0)
                 log_infof(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
             else
                 log_warnf(context, WARNING_PERFORMANCE, STRING_CONST("%s took %.3lg seconds <<<"), label, elapsed_time);
@@ -680,10 +526,30 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t to_uint(int32_t v
     return (uint32_t)v;
 }
 
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr size_t to_size(int64_t v)
+{
+    FOUNDATION_ASSERT_MSGFORMAT(v >= 0, "%lld<0", v);
+    return (size_t)v;
+}
+
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t to_uint(size_t v)
 {
     FOUNDATION_ASSERT(v <= UINT_MAX);
     return (uint32_t)v;
+}
+
+template<typename T = void> 
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T* to_ptr(uint32_t v)
+{
+    return (T*)(uintptr_t)(v);
+}
+
+template<typename T>
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T to_opaque(void* ptr)
+{
+    const auto v = (intptr_t)(ptr);
+    FOUNDATION_ASSERT(std::numeric_limits<T>::min() <= v && v <= std::numeric_limits<T>::max());
+    return (T)v;
 }
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t rgb_to_abgr(const uint32_t v, const uint8_t alpha = 0xFF)
@@ -708,5 +574,3 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t
 {
     return hash_combine(hash_combine(h1, h2), hash_combine(h3, h4));
 }
-
-string_const_t random_string(char* buf, size_t capacity);

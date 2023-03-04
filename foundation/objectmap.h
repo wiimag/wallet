@@ -109,7 +109,7 @@ objectmap_lookup(const objectmap_t* map, object_t id);
 the sense that it will only return an object pointer if the ref count was successfully
 increased and object is still valid. Once the caller has finished using the object
 returned, the handle should be released and reference count decreased by a call to the
-appropriate destroy function (for eaxmple, a thread this would be thread_destroy).
+appropriate destroy function (for example, a thread this would be thread_destroy).
 Alternatively the #objectmap_release function can be used if the object deallocation
 function is known.
 \param map Object map

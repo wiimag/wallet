@@ -18,6 +18,7 @@
 #include <framework/query.h>
 #include <framework/imgui.h>
 #include <framework/table.h>
+#include <framework/string.h>
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>
@@ -198,11 +199,11 @@ FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
 
     char temp_path_buffer[BUILD_MAX_PATHLEN];
     string_const_t temp_path_const = stream_path(migrate_stream);
-    string_t temp_path = string_copy(STRING_CONST_CAPACITY(temp_path_buffer), temp_path_const.str, temp_path_const.length);
+    string_t temp_path = string_copy(STRING_BUFFER(temp_path_buffer), temp_path_const.str, temp_path_const.length);
 
     char current_stream_path_buffer[BUILD_MAX_PATHLEN];
     string_const_t current_stream_path_const = stream_path(_realtime->stream);
-    string_t current_stream_path = string_copy(STRING_CONST_CAPACITY(current_stream_path_buffer), current_stream_path_const.str, current_stream_path_const.length);
+    string_t current_stream_path = string_copy(STRING_BUFFER(current_stream_path_buffer), current_stream_path_const.str, current_stream_path_const.length);
     
     if (from == 0 && to == 1)
     {
@@ -343,6 +344,20 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
     static string_t* codes = nullptr;
     while (!quit_thread && !thread_try_wait(60000U))
     {
+        // Sleep on the week and if EOD service is not available.
+        while (!eod_availalble() || time_is_weekend())
+        {
+            if (thread_try_wait(1000U))
+            {
+                quit_thread = true;
+                break;
+            }
+        }
+
+
+        if (quit_thread)
+            continue;
+
         const time_t now = time_now();
         {
             SHARED_READ_LOCK(mutex);
@@ -695,7 +710,7 @@ FOUNDATION_STATIC void realtime_menu()
     if (!ImGui::BeginMenuBar())
         return;
     
-    if (ImGui::BeginMenu("Windows"))
+    if (ImGui::BeginMenu("Modules"))
     {
         ImGui::MenuItem(ICON_MD_RADIO_BUTTON_ON " Realtime", nullptr, &_realtime->show_window);
         ImGui::EndMenu();
@@ -734,7 +749,7 @@ FOUNDATION_STATIC void realtime_initialize()
     _realtime->stream = realtime_open_stream();
 
     // Create thread to query realtime stock
-    if (!environment_command_line_arg("disable-realtime"))
+    if (main_is_interactive_mode() && !environment_command_line_arg("disable-realtime"))
     {
         _realtime->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
         if (_realtime->background_thread == nullptr || !thread_start(_realtime->background_thread))

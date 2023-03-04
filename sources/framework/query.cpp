@@ -1,20 +1,23 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
+ * 
+ * TODO: Rename module to http
  */
 
 #include "query.h"
 
-#include "common.h"
-#include "config.h"
-#include "session.h"
-#include "scoped_string.h"
-#include "progress.h"
-#include "generics.h"
-#include "concurrent_queue.h"
-#include "profiler.h"
-#include "string_table.h"
-#include "dispatcher.h"
+#include <framework/common.h>
+#include <framework/config.h>
+#include <framework/session.h>
+#include <framework/scoped_string.h>
+#include <framework/progress.h>
+#include <framework/generics.h>
+#include <framework/concurrent_queue.h>
+#include <framework/profiler.h>
+#include <framework/string_table.h>
+#include <framework/dispatcher.h>
+#include <framework/string.h>
 
 #include <foundation/log.h>
 #include <foundation/hashstrings.h>
@@ -122,7 +125,7 @@ FOUNDATION_STATIC CURL* query_create_curl_request()
         {
             static thread_local char user_agent_header[256];
             const application_t* app = environment_application();
-            string_format(STRING_CONST_CAPACITY(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"), 
+            string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
                 STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
             _req_json_header_chunk = curl_slist_append(_req_json_header_chunk, user_agent_header);
             _req_json_header_chunk = curl_slist_append(_req_json_header_chunk, "Content-Type: application/json");
@@ -171,7 +174,7 @@ struct CURLRequest
         curl_easy_getinfo(req, CURLINFO_RESPONSE_CODE, &response_code);
         if (status != CURLE_OK)
         {
-            log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+            log_warnf(HASH_QUERY, WARNING_NETWORK,
                 STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(status), status, query);
             return false;
         }
@@ -251,7 +254,7 @@ struct JSONRequest : public CURLRequest
 
         if (status != CURLE_OK)
         {
-            log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+            log_errorf(HASH_QUERY, ERROR_NETWORK,
                 STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(status), status, query);
             return false;
         }
@@ -271,7 +274,7 @@ struct JSONRequest : public CURLRequest
         curl_easy_getinfo(req, CURLINFO_RESPONSE_CODE, &response_code);
         if (status != CURLE_OK)
         {
-            log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+            log_errorf(HASH_QUERY, ERROR_NETWORK,
                 STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(status), status, query);
         }
 
@@ -377,7 +380,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
 
     char user_agent_header[256];
     const application_t* app = environment_application();
-    string_format(STRING_CONST_CAPACITY(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
+    string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
         STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
     curl_slist* headerlist = curl_slist_append(NULL, user_agent_header);
     headerlist = curl_slist_append(headerlist, "Expect:");
@@ -388,7 +391,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
     req.status = curl_easy_perform(req);
     if (req.status != CURLE_OK)
     {
-        log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+        log_errorf(HASH_QUERY, ERROR_NETWORK,
             STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(req.status), req.status, query);
     }
     else
@@ -397,7 +400,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
         curl_easy_getinfo(req, CURLINFO_SPEED_UPLOAD_T, &speed_upload);
         curl_easy_getinfo(req, CURLINFO_TOTAL_TIME_T, &total_time);
 
-        log_infof(HASH_QUERY, STRING_CONST("File %.*s was uploaded (Speed: %lu bytes/sec during %lu.%06lu seconds)"),
+        log_debugf(HASH_QUERY, STRING_CONST("File %.*s was uploaded (Speed: %lu bytes/sec during %lu.%06lu seconds)"),
             STRING_FORMAT(file_path),
             (unsigned long)speed_upload,
             (unsigned long)(total_time / 1000000),
@@ -418,7 +421,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
     {
         json_object_t json = json_parse(req.json);
         static thread_local char query_copy_buffer[2048];
-        string_t query_copy = string_copy(STRING_CONST_CAPACITY(query_copy_buffer), query, string_length(query));
+        string_t query_copy = string_copy(STRING_BUFFER(query_copy_buffer), query, string_length(query));
         json.query = string_to_const(query_copy);
         json.status_code = req.response_code;
         json.error_code = req.response_code < 400 ? req.status : CURL_LAST;
@@ -434,7 +437,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
     MEMORY_TRACKER(HASH_QUERY);
 
     static thread_local char query_copy_buffer[2048];
-    string_t query_copy = string_copy(STRING_CONST_CAPACITY(query_copy_buffer), query, string_length(query));
+    string_t query_copy = string_copy(STRING_BUFFER(query_copy_buffer), query, string_length(query));
 
     bool warning_logged = false;
     const bool has_body_content = !string_is_null(body);
@@ -455,12 +458,25 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
 
                 json_object_t json = json_parse(json_string);
                 json.query = string_to_const(query_copy);
+                json.resolved_from_cache = true;
                 stream_deallocate(cache_file_stream);
 
                 if (json.root != nullptr)
                 {
-                    callback(json);
-                    signal_thread();
+                    if (callback)
+                    {
+                        try
+                        {
+                            callback(json);
+                            signal_thread();
+                        }
+                        catch (...)
+                        {
+                            log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("Failed to execute JSON callback for %s [%.*s...]"), query, 64, json.buffer);
+                            return false;
+                        }
+                    }
+                    
                     return true;
                 }
                 else
@@ -486,7 +502,9 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
         return false;
 
     if (!warning_logged)
+    {
         log_infof(HASH_QUERY, STRING_CONST("Executing query %s"), query);
+    }
     if ((has_body_content ? req.post(query, body) : req.execute(query)) || format == FORMAT_JSON_WITH_ERROR)
     {
         json_object_t json = json_parse(req.json);
@@ -564,7 +582,7 @@ bool query_execute_async_json(const char* query, query_format_t format, const qu
 {
     FOUNDATION_ASSERT(string_equal(query, 4, STRING_CONST("http")));
     const size_t query_length = string_length(query);
-    log_debugf(HASH_QUERY, STRING_CONST("Queueing GET query [%zu] %.*s"), _fetcher_requests.size(), (int)query_length, query);
+    //log_debugf(HASH_QUERY, STRING_CONST("Queueing GET query [%zu] %.*s"), _fetcher_requests.size(), (int)query_length, query);
     json_query_request_t request;    
     request.query = string_clone(query, query_length);
     request.format = format;
@@ -620,7 +638,7 @@ FOUNDATION_STATIC void* fetcher_thread_fn(void* arg)
             {
                 if (req.format != FORMAT_JSON_WITH_ERROR)
                 {
-                    log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+                    log_errorf(HASH_QUERY, ERROR_NETWORK,
                         STRING_CONST("Failed to execute query %.*s"), STRING_FORMAT(req.query));
                 }
             }
@@ -665,7 +683,7 @@ bool query_post_json(const char* url, const config_handle_t& post_data, const qu
             }
             catch (...)
             {
-                log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("Failed to post JSON or %s"), url);
+                log_errorf(HASH_QUERY, ERROR_NETWORK, STRING_CONST("Failed to post JSON or %s"), url);
                 return false;
             }
         }
@@ -695,7 +713,7 @@ stream_t* query_execute_download_file(const char* query)
     CURLcode status = curl_easy_perform(req);
     if (status != CURLE_OK)
     {
-        log_errorf(HASH_QUERY, ERROR_EXCEPTION,
+        log_errorf(HASH_QUERY, ERROR_NETWORK,
             STRING_CONST("CURL %s (%d): %s"), curl_easy_strerror(status), status, query);
         stream_deallocate(download_stream);
         return nullptr;
@@ -769,7 +787,7 @@ void query_initialize()
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK)
     {
-        log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("curl_global_init() failed(%d) : %s"), res, curl_easy_strerror(res));
+        log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("CULR init failed(%d) : %s"), res, curl_easy_strerror(res));
         return;
     }
 
