@@ -1226,7 +1226,7 @@ FOUNDATION_STATIC expr_var_t* expr_var(expr_var_list_t* vars, const char* s, siz
     memset(v, 0, sizeof(expr_var_t) + len + 1);
     v->next = vars->head;
     v->name = string_copy((char*)v + sizeof(expr_var_t), len + 1, s, len);
-    v->value = expr_result_t(EXPR_RESULT_SYMBOL, string_table_encode(v->name.str), v->name.length);
+    v->value = expr_result_t(EXPR_RESULT_SYMBOL, string_table_encode(STRING_ARGS(v->name)), v->name.length);
     vars->head = v;
     return v;
 }

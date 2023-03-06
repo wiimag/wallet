@@ -110,7 +110,6 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     string_table_symbol_t category{};
     string_table_symbol_t url{};
     string_table_symbol_t logo{};
-    string_table_symbol_t updated_at{};
     string_table_symbol_t exchange{};
     double shares_count{ DNAN };
     double low_52{ DNAN };
@@ -128,6 +127,8 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     double short_percent{ DNAN };
     double profit_margin{ DNAN };
     double diluted_eps_ttm{ DNAN };
+
+    time_t updated_at{ 0 };
 
     day_result_t current{};
     day_result_t* history{ nullptr };

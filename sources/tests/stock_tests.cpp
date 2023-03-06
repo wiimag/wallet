@@ -607,6 +607,21 @@ TEST_SUITE("Stocks")
         CHECK_LT(ed->date, time_now());
         CHECK_FALSE(math_real_is_nan(ed->open));
     }
+
+    TEST_CASE("AC.TO Fundamental data")
+    {
+        string_const_t code = CTEXT("AC.TO");
+        stock_handle_t handle = stock_request(STRING_ARGS(code), FetchLevel::FUNDAMENTALS);
+        while (!handle->has_resolve(FetchLevel::FUNDAMENTALS))
+            dispatcher_wait_for_wakeup_main_thread();
+
+        // Test sector and industry
+        const stock_t* s = handle;
+        REQUIRE_NE(s, nullptr);
+        
+        CHECK_EQ(SYMBOL_CONST(s->sector), CTEXT("Industrials"));
+        CHECK_EQ(SYMBOL_CONST(s->industry), CTEXT("Airlines"));
+    }
 }
 
 #endif // BUILD_DEVELOPMENT

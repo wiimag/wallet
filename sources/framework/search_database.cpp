@@ -374,11 +374,6 @@ FOUNDATION_STATIC bool search_database_index_word(
         // Skip spaces at the end
         if (word.str[word.length - 1] == ' ')
             continue;
-
-        // TODO: Do not add variations to the string table?
-        //key.hash = string_hash(word.str, word.length);
-        //key.crc = search_database_string_to_symbol(db, str, length);
-        //return -to_int(length);
             
         search_database_string_to_key(db, word.str, word.length, key);
         search_database_insert_index(db, doc, key);
@@ -441,6 +436,21 @@ bool search_database_is_dirty(search_database_t* database)
 {
     FOUNDATION_ASSERT(database);
     return database->dirty;
+}
+
+bool search_database_document_update_timestamp(search_database_t* db, search_document_handle_t document, time_t timestamp /*= 0*/)
+{
+    if (!search_database_is_document_valid(db, document))
+        return false;
+
+    if (timestamp == 0)
+        timestamp = time_now();
+
+    SHARED_WRITE_LOCK(db->mutex);
+    if (db->documents[document].timestamp == timestamp)
+        return false;
+    db->dirty = true;
+    return (db->documents[document].timestamp = timestamp) > 0;
 }
 
 time_t search_database_document_timestamp(search_database_t* db, search_document_handle_t document)
@@ -706,7 +716,7 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL search_document_handle_t search_data
     return idx.docs_list[element_at];
 }
 
-FOUNDATION_STATIC void search_database_insert_result(search_result_t*& results, const search_result_t& new_entry)
+FOUNDATION_STATIC bool search_database_insert_result(search_result_t*& results, const search_result_t& new_entry)
 {
     int ridx = array_binary_search_compare(results, new_entry, [](const search_result_t& lhs, const search_result_t& rhs) 
     {
@@ -723,17 +733,18 @@ FOUNDATION_STATIC void search_database_insert_result(search_result_t*& results, 
     {
         ridx = ~ridx;
         array_insert_memcpy(results, ridx, &new_entry);
+        return true;
     }
-    else
-    {
-        search_result_t& entry = results[ridx];
-        entry.score = min(new_entry.score, entry.score);
-    }
+
+    search_result_t& entry = results[ridx];
+    entry.score = min(new_entry.score, entry.score);
+    return false;
 }
 
 FOUNDATION_STATIC search_result_t* search_database_get_index_document_results(search_database_t* db, const search_index_t& idx, const search_result_t* and_set, search_result_t*& results)
 {
     search_result_t entry;
+    search_result_t* matches = nullptr;
     for (uint32_t i = 0; i < idx.document_count; ++i)
     {
         entry.id = search_database_get_indexed_document(idx, i);
@@ -741,11 +752,12 @@ FOUNDATION_STATIC search_result_t* search_database_get_index_document_results(se
         if (and_set == nullptr || array_contains(and_set, entry.id))
         {
             entry.score = idx.key.score;
-            search_database_insert_result(results, entry);
+            if (search_database_insert_result(results, entry))
+                matches = results;
         }
     }
 
-    return results;
+    return matches;
 }
 
 FOUNDATION_STATIC search_result_t* search_database_get_key_document_results(search_database_t* db, const search_index_key_t& key, const search_result_t* and_set, search_result_t*& results)
@@ -941,11 +953,13 @@ FOUNDATION_STATIC search_result_t* search_database_query_word(
         return nullptr;
 
     search_database_get_key_document_results(db, key, and_set, results);
-
-    if (any(indexing_flags, SearchIndexingFlags::Variations))
+    if (test(eval_flags, SearchQueryEvalFlags::OpContains))
     {
-        key.type = SearchIndexType::Variation;
-        search_database_get_key_document_results(db, key, and_set, results);
+        if (any(indexing_flags, SearchIndexingFlags::Variations))
+        {
+            key.type = SearchIndexType::Variation;
+            search_database_get_key_document_results(db, key, and_set, results);
+        }
     }
     
     return results;

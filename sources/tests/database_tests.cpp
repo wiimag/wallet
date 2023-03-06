@@ -264,8 +264,8 @@ TEST_SUITE("Database")
 
         {
             auto t = db[u.id];
-            t->name = string_table_encode("Unity");
-            t->exchange = string_table_encode("US");
+            t->name = string_table_encode(STRING_CONST("Unity"));
+            t->exchange = string_table_encode(STRING_CONST("US"));
         }
 
         print_stock(db[p.id]);
@@ -274,8 +274,8 @@ TEST_SUITE("Database")
         print_stock_day_result(db[p.id]->current);
         print_stock_day_result(db.lock(p.id)->current);
 
-        db[s.id]->country = string_table_encode("Canada");
-        db[s.id]->exchange = string_table_encode("Venture");
+        db[s.id]->country = string_table_encode(STRING_CONST("Canada"));
+        db[s.id]->exchange = string_table_encode(STRING_CONST("Venture"));
 
         db.put(stock_t{ hash(STRING_CONST("U.US")), 0, FetchLevel::REALTIME });
         REQUIRE_EQ(db.size(), 3);

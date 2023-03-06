@@ -159,7 +159,7 @@ static struct {
     { "type",           SC2(string_table_decode(_2->type)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
     { "currency",       SC2(string_table_decode(_2->currency)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
     { "url",            SC2(string_table_decode(_2->url)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
-    { "updated_at",     SC2(string_table_decode(_2->updated_at)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
+    { "updated_at",     SC2((double)_2->updated_at), nullptr, FetchLevel::FUNDAMENTALS },
     { "exchange",       SC2(string_table_decode(_2->exchange)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
     { "symbol",         SC2(string_table_decode(_2->symbol)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
 

@@ -215,7 +215,7 @@ struct json_object_t
 
     const json_object_t get(size_t index) const
     {
-        if (root->child == 0)
+        if (root == nullptr || root->child == 0)
             return json_object_t{};
 
         const json_token_t* c = &tokens[root->child];

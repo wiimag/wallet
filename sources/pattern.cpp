@@ -19,6 +19,7 @@
 #include <framework/math.h>
 #include <framework/config.h>
 #include <framework/string.h>
+#include <framework/profiler.h>
 
 #include <algorithm>
 
@@ -436,11 +437,16 @@ FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
     if (s)
     {
         url = string_table_decode_const(s->url);
-        updated_at = string_table_decode_const(s->updated_at);
+        updated_at = string_from_date(s->updated_at);
     }
 
+    const double updated_elapsed_time = time_elapsed_days(s->updated_at, time_now());
     pattern_render_planning_url(code, url, pattern, 1);
+    if (s->updated_at != 0 && updated_elapsed_time > 15)
+        ImGui::PushStyleColor(ImGuiCol_Text, TEXT_WARN_COLOR);
     pattern_render_planning_line(updated_at, pattern, 2);
+    if (s->updated_at != 0 && updated_elapsed_time > 15)
+        ImGui::PopStyleColor();
     pattern_render_planning_line(pattern_price(pattern), pattern, 3);
     pattern_render_planning_line(pattern_currency_conversion(pattern), pattern, 4);
 
@@ -1035,6 +1041,8 @@ void pattern_fetch_lcf_data(const pattern_t* pattern, const json_object_t& json,
 
 FOUNDATION_STATIC int pattern_load_lcf_thread(payload_t* payload)
 {
+    MEMORY_TRACKER(HASH_PATTERN);
+    
     pattern_lcf_t* lcfarr = nullptr;
     pattern_t* pattern = (pattern_t*)payload;
 

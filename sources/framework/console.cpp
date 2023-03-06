@@ -16,6 +16,7 @@
 
 #include <foundation/log.h>
 #include <foundation/array.h>
+#include <foundation/error.h>
 #include <foundation/hashstrings.h>
 
 #include <algorithm>
@@ -82,6 +83,11 @@ FOUNDATION_STATIC string_table_symbol_t console_string_encode(const char* s, siz
 
 FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char* msg, size_t length)
 {
+	#if BUILD_DEBUG
+    if (error() == ERROR_ASSERT)
+        return;
+	#endif
+
     memory_context_push(HASH_CONSOLE);
 
     if (_console_concat_messages)

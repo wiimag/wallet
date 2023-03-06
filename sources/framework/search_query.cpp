@@ -548,7 +548,13 @@ FOUNDATION_STATIC search_result_t* search_query_evaluate_node(
         FOUNDATION_ASSERT(node->right == nullptr);
         FOUNDATION_ASSERT(node->token->children == nullptr);
         
-        eval_flags |= SearchQueryEvalFlags::Word | SearchQueryEvalFlags::OpContains;
+        eval_flags |= SearchQueryEvalFlags::Word;
+
+        if (node->token->type == SearchQueryTokenType::Literal)
+            eval_flags |= SearchQueryEvalFlags::OpEqual;
+        else
+            eval_flags |= SearchQueryEvalFlags::OpContains;
+
         return handler(node->token->name, node->token->value, eval_flags, and_set, user_data);
     }
     else if (node->type == SearchQueryNodeType::Property)

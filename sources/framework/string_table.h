@@ -185,7 +185,7 @@ size_t string_table_average_string_length(string_table_t* st);
 /// <param name="s"></param>
 /// <param name="length"></param>
 /// <returns></returns>
-string_table_symbol_t string_table_encode(const char* s, size_t length = 0);
+string_table_symbol_t string_table_encode(const char* s, size_t length);
 
 /*! Store a string in the global string table shared by all systems in the application.
  *  @param s The string to store in the global string table.

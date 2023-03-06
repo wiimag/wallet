@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 equals-forty-two.com All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
  
@@ -317,30 +317,9 @@ FOUNDATION_STATIC cell_t wallet_history_column_assets(table_element_ptr_t elemen
     return h->other_assets;
 }
 
-FOUNDATION_STATIC double wallet_history_total_gain_p(const history_t* h)
+FOUNDATION_STATIC double wallet_history_total_value_gain(const history_t* h)
 {
-    if (h->investments == 0)
-        return NAN;
-    const double total_gain = h->total_value - h->investments;
-    const double adjusted_total_gain = total_gain + h->gain;
-    return math_ifzero(adjusted_total_gain, total_gain) / h->investments * 100.0;
-}
-
-FOUNDATION_STATIC cell_t wallet_history_column_total_gain_p(table_element_ptr_t element, const column_t* column)
-{
-    history_t* h = (history_t*)element;
-    return wallet_history_total_gain_p(h);
-}
-
-FOUNDATION_STATIC double wallet_history_wealth(const history_t* h)
-{
-    return h->total_value + h->other_assets + h->gain;
-}
-
-FOUNDATION_STATIC cell_t wallet_history_column_wealth(table_element_ptr_t element, const column_t* column)
-{
-    history_t* h = (history_t*)element;
-    return wallet_history_wealth(h);
+    return (h->total_value - h->investments) + (h->gain + h->funds);
 }
 
 FOUNDATION_STATIC const history_t* wallet_history_get_previous(const history_t* h)
@@ -370,6 +349,35 @@ FOUNDATION_STATIC const history_t* wallet_history_get_previous(const history_t* 
     return p;
 }
 
+FOUNDATION_STATIC double wallet_history_total_gain_p(const history_t* h)
+{
+    if (h->investments == 0)
+        return NAN;
+
+    const double total_gain = wallet_history_total_value_gain(h);
+    const double cash_flow = math_ifzero(h->funds, h->investments);
+    const double diff = total_gain - cash_flow;
+    const double adjusted_total_gain = total_gain + h->gain;
+    return diff / cash_flow * 100.0;
+}
+
+FOUNDATION_STATIC cell_t wallet_history_column_total_gain_p(table_element_ptr_t element, const column_t* column)
+{
+    history_t* h = (history_t*)element;
+    return wallet_history_total_gain_p(h);
+}
+
+FOUNDATION_STATIC double wallet_history_wealth(const history_t* h)
+{
+    return wallet_history_total_value_gain(h) + h->other_assets;
+}
+
+FOUNDATION_STATIC cell_t wallet_history_column_wealth(table_element_ptr_t element, const column_t* column)
+{
+    history_t* h = (history_t*)element;
+    return wallet_history_wealth(h);
+}
+
 FOUNDATION_STATIC cell_t wallet_history_column_change(table_element_ptr_t element, const column_t* column)
 {
     history_t* h = (history_t*)element;
@@ -377,7 +385,7 @@ FOUNDATION_STATIC cell_t wallet_history_column_change(table_element_ptr_t elemen
     if (!p)
         return NAN;
 
-    return (h->total_value + math_ifnan(h->gain, 0)) - (p->total_value + math_ifnan(p->gain, 0));
+    return wallet_history_total_value_gain(h) - wallet_history_total_value_gain(p);
 }
 
 FOUNDATION_STATIC double wallet_history_change_p(const history_t* h)
@@ -389,7 +397,12 @@ FOUNDATION_STATIC double wallet_history_change_p(const history_t* h)
     if (math_real_is_zero(p->total_value))
         return NAN;
 
-    return (h->total_value - p->total_value) / p->total_value * 100.0;
+    const double prev_value = wallet_history_total_value_gain(p);
+    const double diff = wallet_history_total_value_gain(h) - prev_value;
+
+    if (math_real_is_zero(prev_value) || !math_real_is_finite(prev_value))
+        return 0.0;
+    return diff / prev_value * 100.0;
 }
 
 FOUNDATION_STATIC cell_t wallet_history_column_change_p(table_element_ptr_t element, const column_t* column)
@@ -580,7 +593,8 @@ FOUNDATION_STATIC int wallet_history_format_date_monthly(double value, char* buf
 
 FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wallet)
 {
-    if (array_size(wallet->history) <= 1)
+    const unsigned history_count = array_size(wallet->history);
+    if (history_count <= 1)
     {
         ImGui::TextUnformatted("Not enough entries to display graph");
         return;
@@ -595,7 +609,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     if (!ImPlot::BeginPlot(string_format_static_const("History###%s", string_table_decode(report->name)), graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
         return;
 
-    if (array_size(wallet->history_dates) != array_size(wallet->history))
+    if (array_size(wallet->history_dates) != history_count)
     {
         array_deallocate(wallet->history_dates);
         foreach (h, wallet->history)
@@ -626,20 +640,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y2, 0.0, INFINITY);
     ImPlot::SetupAxisFormat(ImAxis_Y2, wallet_history_format_currency, nullptr);
 
-    plot_context_t c{ time_now(), array_size(wallet->history), 1, wallet->history };
-
-    if (wallet->show_extra_charts)
-    {
-        ImPlot::SetAxis(ImAxis_Y2);
-        ImPlot::PlotBarsG(ICON_MD_ACCOUNT_BALANCE "##Wealth_3", [](int idx, void* user_data)->ImPlotPoint
-        {
-            const plot_context_t* c = (plot_context_t*)user_data;
-            const history_t& h = c->history[idx];
-            const double x = (double)h.date;
-            const double y = wallet_history_wealth(&h);
-            return ImPlotPoint(x, y);
-        }, &c, (int)c.range, bar_width, ImPlotBarsFlags_None);
-    }
+    plot_context_t c{ time_now(), history_count, 1, wallet->history };
 
     ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::PlotBarsG(ICON_MD_SAVINGS "##Investments", [](int idx, void* user_data)->ImPlotPoint
@@ -658,54 +659,64 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
         const plot_context_t* c = (plot_context_t*)user_data;
         const history_t& h = c->history[idx];
         const double x = (double)h.date;
-        const double y = h.total_value + math_ifnan(h.gain, 0);
+        const double y = wallet_history_total_value_gain(&h);
         return ImPlotPoint(x, y);
     }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
 
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2);
     if (wallet->show_extra_charts)
     {
-        ImPlot::SetAxis(ImAxis_Y2);
-        ImPlot::HideNextItem(true, ImPlotCond_Once);
-        ImPlot::PlotLineG(ICON_MD_REAL_ESTATE_AGENT "##Broker", [](int idx, void* user_data)->ImPlotPoint
+        if (array_last(wallet->history)->broker_value > 0 )
         {
-            const plot_context_t* c = (plot_context_t*)user_data;
-            const history_t& h = c->history[idx];
-            const double x = (double)h.date;
-            const double y = h.broker_value;
-            return ImPlotPoint(x, y);
-        }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+            ImPlot::SetAxis(ImAxis_Y2);
+            ImPlot::HideNextItem(true, ImPlotCond_Once);
+            ImPlot::PlotLineG(ICON_MD_REAL_ESTATE_AGENT "##Broker", [](int idx, void* user_data)->ImPlotPoint
+            {
+                const plot_context_t* c = (plot_context_t*)user_data;
+                const history_t& h = c->history[idx];
+                const double x = (double)h.date;
+                const double y = h.broker_value;
+                return ImPlotPoint(x, y);
+            }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+        }
     
-        ImPlot::SetAxis(ImAxis_Y2);
-        ImPlot::PlotLineG(ICON_MD_WALLET "##Funds", [](int idx, void* user_data)->ImPlotPoint
+        if (array_last(wallet->history)->funds > 0)
         {
-            const plot_context_t* c = (plot_context_t*)user_data;
-            const history_t& h = c->history[idx];
-            const double x = (double)h.date;
-            const double y = h.funds;
-            return ImPlotPoint(x, y);
-        }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
-
-        ImPlot::SetAxis(ImAxis_Y1);
-        ImPlot::PlotLineG(ICON_MD_PRICE_CHANGE " %##Gain %", [](int idx, void* user_data)->ImPlotPoint
-        {
-            const plot_context_t* c = (plot_context_t*)user_data;
-            const history_t& h = c->history[idx];
-            const double x = (double)h.date;
-            const double y = wallet_history_total_gain_p(&h);
-            return ImPlotPoint(x, y);
-        }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+            ImPlot::SetAxis(ImAxis_Y2);
+            ImPlot::PlotLineG(ICON_MD_WALLET "##Funds", [](int idx, void* user_data)->ImPlotPoint
+            {
+                const plot_context_t* c = (plot_context_t*)user_data;
+                const history_t& h = c->history[idx];
+                const double x = (double)h.date;
+                const double y = h.funds;
+                return ImPlotPoint(x, y);
+            }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+        }
     }
 
     ImPlot::SetAxis(ImAxis_Y1);
-    ImPlot::PlotLineG(ICON_MD_CHANGE_HISTORY "##Change %", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotLineG(ICON_MD_PRICE_CHANGE " %##Gain %", [](int idx, void* user_data)->ImPlotPoint
     {
         const plot_context_t* c = (plot_context_t*)user_data;
         const history_t& h = c->history[idx];
         const double x = (double)h.date;
-        const double y = wallet_history_change_p(&h);
+        const double y = wallet_history_total_gain_p(&h);
         return ImPlotPoint(x, y);
     }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+
+    if (wallet->show_extra_charts)
+    {
+        ImPlot::SetAxis(ImAxis_Y1);
+        ImPlot::HideNextItem(true, ImPlotCond_Once);
+        ImPlot::PlotLineG(ICON_MD_CHANGE_HISTORY "##Change %", [](int idx, void* user_data)->ImPlotPoint
+        {
+            const plot_context_t* c = (plot_context_t*)user_data;
+            const history_t& h = c->history[idx];
+            const double x = (double)h.date;
+            const double y = wallet_history_change_p(&h);
+            return ImPlotPoint(x, y);
+        }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+    }
 
     ImPlot::PopStyleVar(2);
     ImPlot::EndPlot();
@@ -721,12 +732,13 @@ FOUNDATION_STATIC void wallet_history_draw_summary(report_handle_t report_id)
     if (wallet->history_table == nullptr)
         wallet->history_table = wallet_history_create_table(report);
 
+    const unsigned history_count = array_size(wallet->history);
     wallet->history_table->search_filter = string_to_const(SETTINGS.search_filter);
-    table_render(wallet->history_table, wallet->history, array_size(wallet->history), sizeof(history_t), 0, ImGui::GetContentRegionAvail().y * 0.3f);
+    table_render(wallet->history_table, wallet->history, history_count, sizeof(history_t), 0, ImGui::GetContentRegionAvail().y * 0.3f);
 
     wallet_history_draw_graph(report, wallet);
 
-    for (int i = 0, end = array_size(wallet->history); i != end; ++i)
+    for (int i = 0, end = history_count; i != end; ++i)
     {
         history_t* h = &report->wallet->history[i];
         if (h->show_edit_ui)

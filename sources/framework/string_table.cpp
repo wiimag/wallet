@@ -61,12 +61,9 @@ string_table_symbol_t string_table_encode_unescape(string_const_t value)
     return string_table_encode(STRING_ARGS(value));
 }
 
-string_table_symbol_t string_table_encode(const char* s, size_t length /* = 0*/)
+string_table_symbol_t string_table_encode(const char* s, size_t length)
 {
-    if (length == 0)
-        length = string_length(s);
-
-    if (length == 0)
+    if (s == nullptr || length == 0)
         return STRING_TABLE_NULL_SYMBOL;
 
     SHARED_WRITE_LOCK(_string_table_lock);

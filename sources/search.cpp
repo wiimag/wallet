@@ -67,14 +67,31 @@ static struct SEARCH_MODULE {
 } *_search;
 
 constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
-    CTEXT("description"),
-    CTEXT("address"),
-    CTEXT("weburl"),
-    CTEXT("seclink"),
-    CTEXT("disclaimer"),
-    CTEXT("etf_url"),
+    CTEXT("Description"),
+    CTEXT("Address"),
+    CTEXT("WebURL"),
+    CTEXT("LogoURL"),
+    CTEXT("secLink"),
+    CTEXT("Disclaimer"),
+    CTEXT("Company_URL"),
+    CTEXT("ETF_URL"),
     CTEXT("date"),
-    CTEXT("Address")
+    CTEXT("Address"),
+    CTEXT("Fixed_Income"),
+    CTEXT("Asset_Allocation"),
+    CTEXT("World_Regions"),
+    CTEXT("Sector_Weights"),
+    CTEXT("Holdings"),
+    CTEXT("outstandingShares"),
+    CTEXT("NumberDividendsByYear"),
+    CTEXT("Holders"),
+    CTEXT("InsiderTransactions"),
+    CTEXT("Earnings"),
+    CTEXT("Financials"),
+    CTEXT("Listings"),
+    CTEXT("Title"),
+    //CTEXT("ESGScores"),
+    CTEXT("Valuations_Growth"),
 };
 
 //
@@ -85,7 +102,7 @@ FOUNDATION_STATIC bool search_index_skip_fundamental_field(const char* field, si
 {
     for (const auto& skip : SEARCH_SKIP_FIELDS_FOR_INDEXING)
     {
-        if (string_equal_nocase(field, length, skip.str, skip.length))
+        if (string_equal(field, length, skip.str, skip.length))
             return true;
     }
     return false;
@@ -124,7 +141,52 @@ FOUNDATION_STATIC void search_index_news_data(const json_object_t& json, search_
     }
 }
 
-FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, search_document_handle_t doc)
+FOUNDATION_STATIC void search_index_fundamental_object_data(const json_object_t& json, search_database_t* db, search_document_handle_t doc)
+{
+    for (auto e : json)
+    {
+        if (e.root == nullptr)
+            continue;
+
+        const json_token_t& token = *e.root;
+
+        if (token.type != JSON_STRING && token.type != JSON_PRIMITIVE)
+            continue;
+
+        string_const_t id = e.id();
+        if (id.length == 0)
+            continue;
+
+        // Skip some commonly long values
+        if (search_index_skip_fundamental_field(STRING_ARGS(id)))
+            continue;
+
+        if (e.is_null())
+            continue;
+
+        string_const_t value = json_token_value(json.buffer, &token);
+        if (value.length == 0 || string_equal(STRING_ARGS(value), STRING_CONST("null")))
+            continue;
+
+        time_t date;
+        double number = NAN;
+        if (value.length < 21 && string_try_convert_number(STRING_ARGS(value), number))
+        {
+            if (math_real_is_finite(number))
+                search_database_index_property(db, doc, STRING_ARGS(id), number);
+        }
+        else if (string_try_convert_date(STRING_ARGS(value), date))
+        {
+            search_database_index_property(db, doc, STRING_ARGS(id), (double)date);
+        }
+        else
+        {
+            search_database_index_property(db, doc, STRING_ARGS(id), STRING_ARGS(value), value.length < 12);
+        }        
+    }
+}
+
+FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, search_document_handle_t& doc)
 {
     MEMORY_TRACKER(HASH_SEARCH);
 
@@ -137,13 +199,28 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     if (is_delisted || json.token_count <= 1)
     {
         log_debugf(HASH_SEARCH, STRING_CONST("%.*s is delisted, skipping for indexing"), STRING_FORMAT(code));
+        doc = 0;
         return;
+    }
+
+    time_t updated_at = 0;
+    string_const_t updated_at_string = General["UpdatedAt"].as_string();
+    if (string_try_convert_date(STRING_ARGS(updated_at_string), updated_at))
+    {
+        const double updated_elapsed_time = time_elapsed_days(updated_at, time_now());
+        if (updated_elapsed_time > 90)
+        {
+            log_debugf(HASH_SEARCH, STRING_CONST("%.*s is too old, skipping for indexing"), STRING_FORMAT(code));
+            doc = 0;
+            return;
+        }
     }
 
     search_database_index_word(db, doc, STRING_ARGS(code), true);
 
     string_const_t name = General["Name"].as_string();
     search_database_index_text(db, doc, STRING_ARGS(name), true);
+    search_database_index_word(db, doc, STRING_ARGS(name), false);
 
     // Get description
     string_const_t description = General["Description"].as_string();
@@ -184,24 +261,23 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     string_const_t home_category = General["HomeCategory"].as_string();
     if (!string_is_null(home_category))
         search_database_index_text(db, doc, STRING_ARGS(home_category), true);
+
+    // Index some quarterly financial data properties
+    const auto Financials = json["Financials"]["Balance_Sheet"]["quarterly"].get(0ULL);
+    if (Financials.is_valid())
+    {
+        time_t sheet_date;
+        const auto sheet_date_string = Financials["date"].as_string();
+        if (string_try_convert_date(STRING_ARGS(sheet_date_string), sheet_date))
+        {
+            search_database_index_property(db, doc, STRING_CONST("Financials"), (double)sheet_date);
+            search_index_fundamental_object_data(Financials, db, doc);
+        }
+    }
         
     for (unsigned i = 0; i < json.token_count; ++i)
     {
         const json_token_t& token = json.tokens[i];
-
-        // When we encounter that field we stop indexing the fundamental JSON content as what follows is
-        // a list of all the fields in the fundamental data, which is not useful for searching.
-        if (token.type == JSON_OBJECT)
-        {
-            string_const_t id = json_token_identifier(json.buffer, &token);
-            if (string_equal(STRING_ARGS(id), STRING_CONST("outstandingShares")))
-                return;
-            if (string_equal(STRING_ARGS(id), STRING_CONST("Holdings")))
-                return;
-        }
-        
-        if (token.type != JSON_STRING && token.type != JSON_PRIMITIVE)
-            continue;
         
         string_const_t id = json_token_identifier(json.buffer, &token);
         if (id.length == 0 || id.length >= SEARCH_INDEX_WORD_MAX_LENGTH-1)
@@ -209,6 +285,16 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
 
         // Skip some commonly long values
         if (search_index_skip_fundamental_field(STRING_ARGS(id)))
+        {
+            if (token.type == JSON_OBJECT || token.type == JSON_ARRAY)
+            {
+                if (token.sibling != 0)
+                    i = token.sibling-1;
+            }
+            continue;
+        }
+
+        if (token.type != JSON_STRING && token.type != JSON_PRIMITIVE)
             continue;
         
         string_const_t value = json_token_value(json.buffer, &token);
@@ -302,9 +388,16 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
         if (doc != SEARCH_DOCUMENT_INVALID_ID)
         {
-            time_t doc_timestamp = search_database_document_timestamp(db, doc);
-            if (time_elapsed_days(doc_timestamp, time_now()) < 7)
+            const time_t doc_timestamp = search_database_document_timestamp(db, doc);
+            const double days_old = time_elapsed_days(doc_timestamp, time_now());
+            if (days_old < 7.0)
                 continue;
+
+            if (days_old > 25)
+            {
+                if (search_database_remove_document(db, doc))
+                    doc = SEARCH_DOCUMENT_INVALID_ID;
+            }
         }
 
         if (doc == SEARCH_DOCUMENT_INVALID_ID)
@@ -338,13 +431,14 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
             doc, STRING_FORMAT(isin), STRING_FORMAT(symbol), STRING_FORMAT(type), STRING_FORMAT(name));
 
         // Fetch symbol fundamental data
-        if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON_CACHE, LC1(search_index_fundamental_data(_1, doc)), 90 * 24 * 60 * 60ULL))
+        if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON_CACHE, F1(const auto & _1, search_index_fundamental_data(_1, doc), &), 31 * 24 * 60 * 60ULL))
         {
             log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
         }
-        else
+        else if (doc != SEARCH_DOCUMENT_INVALID_ID)
         {
-            if (!eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", symbol.str, LC1(search_index_news_data(_1, doc)), 14 * 24 * 60 * 60ULL))
+            search_database_document_update_timestamp(db, doc);
+            if (!eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", symbol.str, LC1(search_index_news_data(_1, doc)), 8 * 24 * 60 * 60ULL))
             {
                 log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch news for symbol %*.s"), STRING_FORMAT(symbol));
             }
@@ -983,12 +1077,12 @@ FOUNDATION_STATIC expr_result_t search_expr_index_document(const expr_func_t* f,
     if (doc == SEARCH_DOCUMENT_INVALID_ID)
         return NIL;
 
-    if (!eod_fetch("fundamentals", doc_name.str, FORMAT_JSON, LC1(search_index_fundamental_data(_1, doc))))
+    if (!eod_fetch("fundamentals", doc_name.str, FORMAT_JSON, F1(const auto & _1, search_index_fundamental_data(_1, doc), &)))
     {
         log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(doc_name));
         return NIL;
     }
-    else
+    else if (doc != SEARCH_DOCUMENT_INVALID_ID)
     {
         if (!eod_fetch("news", nullptr, FORMAT_JSON, "s", doc_name.str, LC1(search_index_news_data(_1, doc))))
         {

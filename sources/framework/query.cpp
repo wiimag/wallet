@@ -28,6 +28,7 @@
 #include <foundation/fs.h>
 #include <foundation/stream.h>
 #include <foundation/environment.h>
+#include <foundation/path.h>
 
 #if FOUNDATION_PLATFORM_WINDOWS
     #undef APIENTRY
@@ -322,7 +323,7 @@ FOUNDATION_STATIC bool query_is_cache_file_valid(const char* query, query_format
         return false;
 
     char query_hash_string_buffer[32] = { 0 };
-    hash_t query_hash = hash(query, strlen(query));
+    hash_t query_hash = hash(query, string_length(query));
     string_t query_hash_string = string_format(query_hash_string_buffer, sizeof(query_hash_string_buffer), STRING_CONST("%llx"), query_hash);
     cache_file_path = session_get_user_file_path(STRING_ARGS(query_hash_string), STRING_CONST("cache"), STRING_CONST("json"));
     if (!fs_is_file(STRING_ARGS(cache_file_path)))

@@ -57,6 +57,8 @@ bool search_database_is_dirty(search_database_t* database);
 
 time_t search_database_document_timestamp(search_database_t* database, search_document_handle_t document);
 
+bool search_database_document_update_timestamp(search_database_t* database, search_document_handle_t document, time_t timestamp = 0);
+
 bool search_database_index_word(
     search_database_t* database, 
     search_document_handle_t document, 
