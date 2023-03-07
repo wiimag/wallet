@@ -419,6 +419,19 @@ struct TimeMarkerScope
     hash_t context;
     tick_t start_time;
     const double less_ignored_elapsed_time = 0.0009;
+
+    FOUNDATION_FORCEINLINE TimeMarkerScope(double max_time, hash_t _context, const char* fmt, ...)
+        : context(_context)
+        , less_ignored_elapsed_time(max_time)
+    {
+        va_list list;
+        va_start(list, fmt);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
+        va_end(list);
+
+        start_time = time_current();
+    }
+
     FOUNDATION_FORCEINLINE TimeMarkerScope(hash_t _context, const char* fmt, ...)
         : context(_context)
     {

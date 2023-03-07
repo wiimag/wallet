@@ -67,29 +67,29 @@ static struct SEARCH_MODULE {
 } *_search;
 
 constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
+    CTEXT("date"),
+    CTEXT("Title"),
     CTEXT("Description"),
     CTEXT("Address"),
+    CTEXT("NumberDividendsByYear"),
+    CTEXT("outstandingShares"),
     CTEXT("WebURL"),
     CTEXT("LogoURL"),
     CTEXT("secLink"),
     CTEXT("Disclaimer"),
     CTEXT("Company_URL"),
     CTEXT("ETF_URL"),
-    CTEXT("date"),
     CTEXT("Address"),
     CTEXT("Fixed_Income"),
     CTEXT("Asset_Allocation"),
     CTEXT("World_Regions"),
     CTEXT("Sector_Weights"),
     CTEXT("Holdings"),
-    CTEXT("outstandingShares"),
-    CTEXT("NumberDividendsByYear"),
     CTEXT("Holders"),
     CTEXT("InsiderTransactions"),
     CTEXT("Earnings"),
     CTEXT("Financials"),
     CTEXT("Listings"),
-    CTEXT("Title"),
     //CTEXT("ESGScores"),
     CTEXT("Valuations_Growth"),
 };
@@ -188,6 +188,33 @@ FOUNDATION_STATIC void search_index_fundamental_object_data(const json_object_t&
     }
 }
 
+FOUNDATION_STATIC unsigned int search_json_token_next_index(const json_token_t& token, json_token_t* tokens, unsigned int index)
+{
+    if (token.type == JSON_OBJECT || token.type == JSON_ARRAY)
+    {
+        if (token.sibling != 0)
+            return token.sibling - 1;
+        
+        if (token.child == 0)
+            return index;
+
+        // Find last child token
+        index = token.child;
+        while (index != 0)
+        {
+            json_token_t* p = &tokens[index];
+            if (p->sibling != 0)
+                index = p->sibling;
+            else if (p->child != 0)
+                index = p->child;
+            else
+                return index;
+        }
+    }
+
+    return index;
+}
+
 FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, string_const_t symbol)
 {
     MEMORY_TRACKER(HASH_SEARCH);
@@ -223,15 +250,25 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     if (string_is_null(exchange))
         return;
 
-    string_const_t isin = General["ISIN"].as_string();
-    string_const_t type = General["Type"].as_string();
-
     // Do not index FUND stock and those with no ISIN
+    string_const_t type = General["Type"].as_string();
     if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("FUND")))
         return;
 
+    string_const_t isin = General["ISIN"].as_string();
     if (string_is_null(isin) && string_equal_nocase(STRING_ARGS(type), STRING_CONST("ETF")))
         return;
+
+    string_const_t name = General["Name"].as_string();
+    string_const_t country = General["Country"].as_string();
+    string_const_t description = General["Description"].as_string();
+    string_const_t industry = General["Industry"].as_string();
+    string_const_t sector = General["Sector"].as_string();
+    string_const_t gic_sector = General["GicSector"].as_string();
+    string_const_t gic_group = General["GicGroup"].as_string();
+    string_const_t gic_sub_industry = General["GicSubIndustry"].as_string();
+    string_const_t gic_industry = General["GicIndustry"].as_string();
+    string_const_t home_category = General["HomeCategory"].as_string();
         
     search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
     if (doc != SEARCH_DOCUMENT_INVALID_ID)
@@ -251,71 +288,28 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     if (doc == SEARCH_DOCUMENT_INVALID_ID)
         doc = search_database_add_document(db, STRING_ARGS(symbol));
 
+    TIME_TRACKER(2.0, HASH_SEARCH, "[%u] Indexing [%12.*s] %-7.*s -> %.*s -> %.*s",
+        doc, STRING_FORMAT(isin), STRING_FORMAT(symbol), STRING_FORMAT(type), STRING_FORMAT(name));
+
     // Index symbol
     search_database_index_word(db, doc, STRING_ARGS(symbol), true);
 
     // Index basic information
-    string_const_t name = General["Name"].as_string();
-    if (!string_is_null(name))
-    {
-        search_database_index_text(db, doc, STRING_ARGS(name));
-        search_database_index_word(db, doc, STRING_ARGS(name), false);
-    }
-        
-    log_infof(HASH_SEARCH, STRING_CONST("[%5u] Indexing [%12.*s] %-10.*s -> %-14.*s -> %.*s"),
-        doc, STRING_FORMAT(isin), STRING_FORMAT(symbol), STRING_FORMAT(type), STRING_FORMAT(name));
-
-    string_const_t country = General["Country"].as_string();
-    if (!string_is_null(country))
-        search_database_index_text(db, doc, STRING_ARGS(country), false);
-        
-    if (!string_is_null(isin))
-        search_database_index_exact_match(db, doc, STRING_ARGS(isin), true);
-
-    if (!string_is_null(type))
-        search_database_index_text(db, doc, STRING_ARGS(type), false);
+    search_database_index_text(db, doc, STRING_ARGS(name));
+    search_database_index_word(db, doc, STRING_ARGS(name), false);
+    search_database_index_text(db, doc, STRING_ARGS(country), false);
+    search_database_index_text(db, doc, STRING_ARGS(type), false);
+    search_database_index_text(db, doc, STRING_ARGS(description), false);
+    search_database_index_text(db, doc, STRING_ARGS(industry), true);
+    search_database_index_text(db, doc, STRING_ARGS(sector), true);
+    search_database_index_text(db, doc, STRING_ARGS(gic_sector), true);    
+    search_database_index_text(db, doc, STRING_ARGS(gic_group), true);
+    search_database_index_text(db, doc, STRING_ARGS(gic_industry), true);
+    search_database_index_text(db, doc, STRING_ARGS(gic_sub_industry), true);
+    search_database_index_text(db, doc, STRING_ARGS(home_category), true);
+    search_database_index_exact_match(db, doc, STRING_ARGS(isin), true);
 
     search_database_index_property(db, doc, STRING_CONST("exchange"), STRING_ARGS(exchange), false);
-    
-    // Get description
-    string_const_t description = General["Description"].as_string();
-    if (!string_is_null(description))
-        search_database_index_text(db, doc, STRING_ARGS(description), false);
-
-    // Get industry
-    string_const_t industry = General["Industry"].as_string();
-    if (!string_is_null(industry))
-        search_database_index_text(db, doc, STRING_ARGS(industry), true);
-
-    // Get sector
-    string_const_t sector = General["Sector"].as_string();
-    if (!string_is_null(sector))
-        search_database_index_text(db, doc, STRING_ARGS(sector), true);
-
-    // Get GicSector
-    string_const_t gic_sector = General["GicSector"].as_string();
-    if (!string_is_null(gic_sector))
-        search_database_index_text(db, doc, STRING_ARGS(gic_sector), true);
-
-    // Get GicGroup
-    string_const_t gic_group = General["GicGroup"].as_string();
-    if (!string_is_null(gic_group))
-        search_database_index_text(db, doc, STRING_ARGS(gic_group), true);
-
-    // Get GicIndustry
-    string_const_t gic_industry = General["GicIndustry"].as_string();
-    if (!string_is_null(gic_industry))
-        search_database_index_text(db, doc, STRING_ARGS(gic_industry), true);
-
-    // Get GicSubIndustry
-    string_const_t gic_sub_industry = General["GicSubIndustry"].as_string();
-    if (!string_is_null(gic_sub_industry))
-        search_database_index_text(db, doc, STRING_ARGS(gic_sub_industry), true);
-
-    // Get HomeCategory
-    string_const_t home_category = General["HomeCategory"].as_string();
-    if (!string_is_null(home_category))
-        search_database_index_text(db, doc, STRING_ARGS(home_category), true);
 
     // Index some quarterly financial data properties
     const auto Financials = json["Financials"]["Balance_Sheet"]["quarterly"].get(0ULL);
@@ -329,7 +323,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
             search_index_fundamental_object_data(Financials, db, doc);
         }
     }
-        
+      
     for (unsigned i = 0; i < json.token_count; ++i)
     {
         const json_token_t& token = json.tokens[i];
@@ -337,15 +331,11 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         string_const_t id = json_token_identifier(json.buffer, &token);
         if (id.length == 0 || id.length >= SEARCH_INDEX_WORD_MAX_LENGTH-1)
             continue;
-
+            
         // Skip some commonly long values
         if (search_index_skip_fundamental_field(STRING_ARGS(id)))
         {
-            if (token.type == JSON_OBJECT || token.type == JSON_ARRAY)
-            {
-                if (token.sibling != 0)
-                    i = token.sibling-1;
-            }
+            i = search_json_token_next_index(token, json.tokens, i);
             continue;
         }
 

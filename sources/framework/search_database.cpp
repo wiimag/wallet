@@ -345,11 +345,12 @@ FOUNDATION_STATIC bool search_database_index_word(
     const char* _word, size_t _word_length, 
     SearchIndexingFlags flags)
 {
-    if (!search_database_is_document_valid(db, doc))
+    FOUNDATION_ASSERT(db);
+
+    if (_word == nullptr || _word_length < 3)
         return false;
         
-    FOUNDATION_ASSERT(_word && _word_length > 0);
-    if (_word_length < 3)
+    if (!search_database_is_document_valid(db, doc))
         return false;
 
     string_const_t word = search_database_format_word(_word, _word_length, flags);
@@ -510,6 +511,9 @@ search_document_handle_t search_database_get_or_add_document(search_database_t* 
 
 bool search_database_index_text(search_database_t* db, search_document_handle_t doc, const char* text, size_t text_length, bool include_variations /*= true*/)
 {
+    if (text == nullptr || text_length == 0)
+        return false;
+        
     if (!search_database_is_document_valid(db, doc))
         return false;
         
@@ -552,7 +556,10 @@ bool search_database_index_text(search_database_t* db, search_document_handle_t 
 
 bool search_database_index_exact_match(search_database_t* db, search_document_handle_t document, const char* _word, size_t _word_length, bool case_sensitive /*= false*/)
 {
-    FOUNDATION_ASSERT(_word && _word_length > 0);
+    FOUNDATION_ASSERT(db);
+
+    if (!_word || _word_length == 0)
+        return false;
     
     if (!search_database_is_document_valid(db, document))
         return false;
@@ -640,7 +647,9 @@ bool search_database_index_property(
     bool include_variations /*= true*/)
 {
     FOUNDATION_ASSERT(name && name_length > 0);
-    FOUNDATION_ASSERT(value && value_length > 0);
+    
+    if (value == nullptr || value_length == 0)
+        return false;
     
     if (!search_database_is_document_valid(db, doc))
         return false;
