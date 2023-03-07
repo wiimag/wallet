@@ -371,6 +371,136 @@ struct {
     { FinancialCashFlow::totalCashFromOperatingActivities, CTEXT("Total Cash From Operating Activities"), FIELD_PLOT(totalCashFromOperatingActivities) },
 };
 
+//
+// Incomes
+//
+
+typedef enum class FinancialIncome : uint64_t
+{
+    None = 0,
+
+    researchDevelopment = 1 << 0,
+    effectOfAccountingCharges = 1 << 1,
+    incomeBeforeTax = 1 << 2,
+    minorityInterest = 1 << 3,
+    netIncome = 1 << 4,
+    sellingGeneralAdministrative = 1 << 5,
+    sellingAndMarketingExpenses = 1 << 6,
+    grossProfit = 1 << 7,
+    reconciledDepreciation = 1 << 8,
+    ebit = 1 << 9,
+    ebitda = 1 << 10,
+    depreciationAndAmortization = 1 << 11,
+    nonOperatingIncomeNetOther = 1 << 12,
+    operatingIncome = 1 << 13,
+    otherOperatingExpenses = 1 << 14,
+    interestExpense = 1 << 15,
+    taxProvision = 1 << 16,
+    interestIncome = 1 << 17,
+    netInterestIncome = 1 << 18,
+    extraordinaryItems = 1 << 19,
+    nonRecurring = 1 << 20,
+    otherItems = 1 << 21,
+    incomeTaxExpense = 1 << 22,
+    totalRevenue = 1 << 23,
+    totalOperatingExpenses = 1 << 24,
+    costOfRevenue = 1 << 25,
+    totalOtherIncomeExpenseNet = 1 << 26,
+    discontinuedOperations = 1 << 27,
+    netIncomeFromContinuingOps = 1 << 28,
+    netIncomeApplicableToCommonShares = 1 << 29,
+    preferredStockAndOtherAdjustments = 1 << 30,
+
+} financial_income_value_t;
+
+struct financial_income_sheet_t
+{
+    time_t date;
+
+    double researchDevelopment;
+    double effectOfAccountingCharges;
+    double incomeBeforeTax;
+    double minorityInterest;
+    double netIncome;
+    double sellingGeneralAdministrative;
+    double sellingAndMarketingExpenses;
+    double grossProfit;
+    double reconciledDepreciation;
+    double ebit;
+    double ebitda;
+    double depreciationAndAmortization;
+    double nonOperatingIncomeNetOther;
+    double operatingIncome;
+    double otherOperatingExpenses;
+    double interestExpense;
+    double taxProvision;
+    double interestIncome;
+    double netInterestIncome;
+    double extraordinaryItems;
+    double nonRecurring;
+    double otherItems;
+    double incomeTaxExpense;
+    double totalRevenue;
+    double totalOperatingExpenses;
+    double costOfRevenue;
+    double totalOtherIncomeExpenseNet;
+    double discontinuedOperations;
+    double netIncomeFromContinuingOps;
+    double netIncomeApplicableToCommonShares;
+    double preferredStockAndOtherAdjustments;
+
+};
+
+#undef FIELD_PLOT
+#define FIELD_PLOT(FIELD) \
+    offsetof(financial_income_sheet_t, FIELD),  \
+    [](int idx, void* user_data)->ImPlotPoint \
+    { \
+        return financial_field_plot<financial_income_sheet_t>(idx, user_data, offsetof(financial_income_sheet_t, FIELD)); \
+    } \
+
+struct {
+    financial_income_value_t code;
+    string_const_t name;
+    size_t field_offset{ 0 };
+    ImPlotGetter plot_fn{ nullptr };
+
+    bool selected{ false };
+
+} INCOME_FIELDS[] = {
+
+    { FinancialIncome::netIncome, CTEXT("Net Income"), FIELD_PLOT(netIncome), true },
+    { FinancialIncome::grossProfit, CTEXT("Gross Profit"), FIELD_PLOT(grossProfit), true },
+    { FinancialIncome::totalRevenue, CTEXT("Total Revenue"), FIELD_PLOT(totalRevenue), true },
+    { FinancialIncome::totalOperatingExpenses, CTEXT("Total Operating Expenses"), FIELD_PLOT(totalOperatingExpenses) },
+    { FinancialIncome::costOfRevenue, CTEXT("Cost Of Revenue"), FIELD_PLOT(costOfRevenue) },
+    { FinancialIncome::depreciationAndAmortization, CTEXT("Depreciation And Amortization"), FIELD_PLOT(depreciationAndAmortization) },
+    { FinancialIncome::discontinuedOperations, CTEXT("Discontinued Operations"), FIELD_PLOT(discontinuedOperations) },
+    { FinancialIncome::ebit, CTEXT("EBIT"), FIELD_PLOT(ebit) },
+    { FinancialIncome::ebitda, CTEXT("EBITDA"), FIELD_PLOT(ebitda) },
+    { FinancialIncome::effectOfAccountingCharges, CTEXT("Effect Of Accounting Charges"), FIELD_PLOT(effectOfAccountingCharges) },
+    { FinancialIncome::extraordinaryItems, CTEXT("Extraordinary Items"), FIELD_PLOT(extraordinaryItems) },
+    { FinancialIncome::incomeBeforeTax, CTEXT("Income Before Tax"), FIELD_PLOT(incomeBeforeTax) },
+    { FinancialIncome::incomeTaxExpense, CTEXT("Income Tax Expense"), FIELD_PLOT(incomeTaxExpense) },
+    { FinancialIncome::interestExpense, CTEXT("Interest Expense"), FIELD_PLOT(interestExpense) },
+    { FinancialIncome::interestIncome, CTEXT("Interest Income"), FIELD_PLOT(interestIncome) },
+    { FinancialIncome::minorityInterest, CTEXT("Minority Interest"), FIELD_PLOT(minorityInterest) },
+    { FinancialIncome::netIncomeApplicableToCommonShares, CTEXT("Net Income Applicable To Common Shares"), FIELD_PLOT(netIncomeApplicableToCommonShares) },
+    { FinancialIncome::netIncomeFromContinuingOps, CTEXT("Net Income From Continuing Ops"), FIELD_PLOT(netIncomeFromContinuingOps) },
+    { FinancialIncome::netInterestIncome, CTEXT("Net Interest Income"), FIELD_PLOT(netInterestIncome) },
+    { FinancialIncome::nonOperatingIncomeNetOther, CTEXT("Non Operating Income Net Other"), FIELD_PLOT(nonOperatingIncomeNetOther) },
+    { FinancialIncome::nonRecurring, CTEXT("Non Recurring"), FIELD_PLOT(nonRecurring) },
+    { FinancialIncome::operatingIncome, CTEXT("Operating Income"), FIELD_PLOT(operatingIncome) },
+    { FinancialIncome::otherItems, CTEXT("Other Items"), FIELD_PLOT(otherItems) },
+    { FinancialIncome::otherOperatingExpenses, CTEXT("Other Operating Expenses"), FIELD_PLOT(otherOperatingExpenses) },
+    { FinancialIncome::preferredStockAndOtherAdjustments, CTEXT("Preferred Stock And Other Adjustments"), FIELD_PLOT(preferredStockAndOtherAdjustments) },
+    { FinancialIncome::reconciledDepreciation, CTEXT("Reconciled Depreciation"), FIELD_PLOT(reconciledDepreciation) },
+    { FinancialIncome::researchDevelopment, CTEXT("R&D"), FIELD_PLOT(researchDevelopment), false },
+    { FinancialIncome::sellingAndMarketingExpenses, CTEXT("Selling And Marketing Expenses"), FIELD_PLOT(sellingAndMarketingExpenses) },
+    { FinancialIncome::sellingGeneralAdministrative, CTEXT("Selling General Administrative"), FIELD_PLOT(sellingGeneralAdministrative) },
+    { FinancialIncome::taxProvision, CTEXT("Tax Provision"), FIELD_PLOT(taxProvision) },
+    { FinancialIncome::totalOtherIncomeExpenseNet, CTEXT("Total Other Income Expense Net"), FIELD_PLOT(totalOtherIncomeExpenseNet) },
+};
 
 //
 // # PRIVATE
@@ -383,10 +513,11 @@ struct financials_window_t
 
     bool show_balance_values{ true };
     bool show_cash_flow_values{ false };
-    bool show_incomevalues{ false };
+    bool show_income_values{ false };
 
     financial_balance_sheet_t* balances{ nullptr };
     financial_cash_flow_sheet_t* cash_flows{ nullptr };
+    financial_income_sheet_t* incomes{ nullptr };
 
     time_t min_date{ 0 }, max_date{ 0 };
 };
@@ -526,6 +657,62 @@ FOUNDATION_STATIC financial_cash_flow_sheet_t* financials_fetch_cash_flows(const
     return sheets;
 }
 
+FOUNDATION_STATIC financial_income_sheet_t* financials_fetch_incomes(const json_object_t& json)
+{
+    const auto CashFlow = json["Financials"]["Income_Statement"]["quarterly"];
+    if (!CashFlow.is_valid())
+        return nullptr;
+
+    financial_income_sheet_t* sheets = nullptr;
+    for (auto e : CashFlow)
+    {
+        financial_income_sheet_t sheet{};
+
+        string_const_t date_string = e["date"].as_string();
+        if (!string_try_convert_date(STRING_ARGS(date_string), sheet.date))
+            continue;
+
+        sheet.researchDevelopment = e["researchDevelopment"].as_number();
+        sheet.effectOfAccountingCharges = e["effectOfAccountingCharges"].as_number();
+        sheet.incomeBeforeTax = e["incomeBeforeTax"].as_number();
+        sheet.minorityInterest = e["minorityInterest"].as_number();
+        sheet.netIncome = e["netIncome"].as_number();
+        sheet.sellingGeneralAdministrative = e["sellingGeneralAdministrative"].as_number();
+        sheet.sellingAndMarketingExpenses = e["sellingAndMarketingExpenses"].as_number();
+        sheet.grossProfit = e["grossProfit"].as_number();
+        sheet.reconciledDepreciation = e["reconciledDepreciation"].as_number();
+        sheet.ebit = e["ebit"].as_number();
+        sheet.ebitda = e["ebitda"].as_number();
+        sheet.depreciationAndAmortization = e["depreciationAndAmortization"].as_number();
+        sheet.nonOperatingIncomeNetOther = e["nonOperatingIncomeNetOther"].as_number();
+        sheet.operatingIncome = e["operatingIncome"].as_number();
+        sheet.otherOperatingExpenses = e["otherOperatingExpenses"].as_number();
+        sheet.interestExpense = e["interestExpense"].as_number();
+        sheet.taxProvision = e["taxProvision"].as_number();
+        sheet.interestIncome = e["interestIncome"].as_number();
+        sheet.netInterestIncome = e["netInterestIncome"].as_number();
+        sheet.extraordinaryItems = e["extraordinaryItems"].as_number();
+        sheet.nonRecurring = e["nonRecurring"].as_number();
+        sheet.otherItems = e["otherItems"].as_number();
+        sheet.incomeTaxExpense = e["incomeTaxExpense"].as_number();
+        sheet.totalRevenue = e["totalRevenue"].as_number();
+        sheet.totalOperatingExpenses = e["totalOperatingExpenses"].as_number();
+        sheet.costOfRevenue = e["costOfRevenue"].as_number();
+        sheet.totalOtherIncomeExpenseNet = e["totalOtherIncomeExpenseNet"].as_number();
+        sheet.discontinuedOperations = e["discontinuedOperations"].as_number();
+        sheet.netIncomeFromContinuingOps = e["netIncomeFromContinuingOps"].as_number();
+        sheet.netIncomeApplicableToCommonShares = e["netIncomeApplicableToCommonShares"].as_number();
+        sheet.preferredStockAndOtherAdjustments = e["preferredStockAndOtherAdjustments"].as_number();
+
+        array_push_memcpy(sheets, &sheet);
+    }
+
+    // Sort by date
+    array_sort(sheets, a.date < b.date);
+    return sheets;
+}
+
+
 FOUNDATION_STATIC void financials_fetch_data(financials_window_t* window, const json_object_t& json)
 {
     FOUNDATION_ASSERT(window);
@@ -534,6 +721,7 @@ FOUNDATION_STATIC void financials_fetch_data(financials_window_t* window, const 
 
     window->balances = financials_fetch_balance_sheets(json);
     window->cash_flows = financials_fetch_cash_flows(json);
+    window->incomes = financials_fetch_incomes(json);
     
     // Compute sheets min and max dates
     const unsigned int num_sheets = array_size(window->balances);
@@ -569,6 +757,7 @@ FOUNDATION_STATIC void financials_window_deallocate(void* _window)
 
     array_deallocate(window->balances);
     array_deallocate(window->cash_flows);
+    array_deallocate(window->incomes);
 
     MEM_DELETE(window);
 }
@@ -672,6 +861,12 @@ FOUNDATION_STATIC bool financials_window_render(void* obj)
     if (financials_render_sheet_selector("Balance", window->balances, BALANCE_FIELDS))
         ImPlot::SetNextAxesToFit();
 
+    if (ImGui::Checkbox("##IncomeCheck", &window->show_income_values))
+        ImPlot::SetNextAxesToFit();
+    ImGui::SameLine();
+    if (financials_render_sheet_selector("Incomes", window->incomes, INCOME_FIELDS))
+        ImPlot::SetNextAxesToFit();
+
     if (ImGui::Checkbox("##CashFlowCheck", &window->show_cash_flow_values))
         ImPlot::SetNextAxesToFit();
     ImGui::SameLine();
@@ -724,7 +919,7 @@ FOUNDATION_STATIC bool financials_window_render(void* obj)
         ImPlot::SetupAxisFormat(ImAxis_Y1, "-");
     }
 
-    if (window->show_cash_flow_values)
+    if (window->show_cash_flow_values || window->show_income_values)
     {
         ImPlot::SetupAxis(ImAxis_Y2, "##CashFlow", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
         ImPlot::SetupAxisFormat(ImAxis_Y2, [](double value, char* buff, int size, void* user_data)
@@ -760,6 +955,20 @@ FOUNDATION_STATIC bool financials_window_render(void* obj)
 
             const auto record_count = array_size(window->cash_flows);
             ImPlot::PlotBarsG(c.name.str, c.plot_fn, (void*)window->cash_flows, to_int(record_count), bar_size, ImPlotBarsFlags_None);
+        }
+    }
+
+    if (window->show_income_values)
+    {
+        ImPlot::SetAxis(ImAxis_Y2);
+        for (int i = 0; i < ARRAY_COUNT(INCOME_FIELDS); ++i)
+        {
+            const auto& c = INCOME_FIELDS[i];
+            if (!c.selected || c.plot_fn == nullptr)
+                continue;
+
+            const auto record_count = array_size(window->incomes);
+            ImPlot::PlotLineG(c.name.str, c.plot_fn, (void*)window->incomes, to_int(record_count), ImPlotLineFlags_SkipNaN);
         }
     }
 
