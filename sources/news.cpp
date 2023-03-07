@@ -75,7 +75,7 @@ FOUNDATION_STATIC void news_fetch_data(news_window_t* news_window, const json_ob
         news_t news{};
         news.date = date;
         news.date_string = string_clone(STRING_ARGS(date_string));
-        news.headline = string_clone(STRING_ARGS(title));
+        news.headline = string_utf8_unescape(STRING_ARGS(title));
         news.url = string_utf8_unescape(STRING_ARGS(link));
         news.summary = string_utf8_unescape(STRING_ARGS(content));
 

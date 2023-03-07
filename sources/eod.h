@@ -20,6 +20,9 @@ bool eod_connected();
 /*! Checks if the EOD usage is at capacity */
 bool eod_is_at_capacity();
 
+/*! Returns the EOD usage capacity [0..1] */
+double eod_capacity();
+
 /*! Check if the EOD service is available and usable. (i.e. connected at not at capacity) */
 bool eod_availalble();
 

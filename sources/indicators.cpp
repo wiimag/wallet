@@ -120,7 +120,7 @@ struct {
     hash_t key;
     bool selected{ false };
     
-} MACRO_INDICATORS[] = {
+} BALANCE_FIELDS[] = {
 
     { CTEXT("RIR"), CTEXT("real_interest_rate"), CTEXT("Real interest rate (%)"), MIF_PERCENTAGE},
     { CTEXT("PTT"), CTEXT("population_total"), CTEXT("Population, total"), MIF_NUMBER },
@@ -205,9 +205,9 @@ FOUNDATION_STATIC bool indicators_render_indicators_selector()
     char preview_single_code[16]{ '\0' };
     string_t preview{ preview_buffer, 0 };
 
-    for (int i = 0, added = 0, end = ARRAY_COUNT(MACRO_INDICATORS); i != end; ++i)
+    for (int i = 0, added = 0, end = ARRAY_COUNT(BALANCE_FIELDS); i != end; ++i)
     {
-        const auto& c = MACRO_INDICATORS[i];
+        const auto& c = BALANCE_FIELDS[i];
         if (!c.selected)
             continue;
 
@@ -237,9 +237,9 @@ FOUNDATION_STATIC bool indicators_render_indicators_selector()
     if (ImGui::BeginCombo("##MacroIndicator", preview.str, ImGuiComboFlags_None))
     {
         bool focused = false;
-        for (int i = 0, end = ARRAY_COUNT(MACRO_INDICATORS); i != end; ++i)
+        for (int i = 0, end = ARRAY_COUNT(BALANCE_FIELDS); i != end; ++i)
         {
-            auto& c = MACRO_INDICATORS[i];
+            auto& c = BALANCE_FIELDS[i];
 
             string_const_t ex_id = string_format_static(STRING_CONST("%.*s (%.*s)"), STRING_FORMAT(c.description), STRING_FORMAT(c.code));
             if (ImGui::Checkbox(ex_id.str, &c.selected))
@@ -335,9 +335,9 @@ FOUNDATION_STATIC macro_indicator_t indicators_query_macro_indicator(string_cons
     macro.country = country;
 
     // Find indicator format
-    for (unsigned i = 0; i < ARRAY_COUNT(MACRO_INDICATORS); ++i)
+    for (unsigned i = 0; i < ARRAY_COUNT(BALANCE_FIELDS); ++i)
     {
-        auto& c = MACRO_INDICATORS[i];
+        auto& c = BALANCE_FIELDS[i];
         c.key = string_hash(STRING_ARGS(c.name));
         if (string_equal(STRING_ARGS(macro_code), STRING_ARGS(c.name)))
         {
@@ -468,9 +468,9 @@ FOUNDATION_STATIC void indicators_render_graphs()
         if (!c.selected)
             continue;
 
-        for (int j = 0, end = ARRAY_COUNT(MACRO_INDICATORS); j != end; ++j)
+        for (int j = 0, end = ARRAY_COUNT(BALANCE_FIELDS); j != end; ++j)
         {
-            const auto& m = MACRO_INDICATORS[j];
+            const auto& m = BALANCE_FIELDS[j];
             if (!m.selected)
                 continue;
 
@@ -559,9 +559,9 @@ FOUNDATION_STATIC void indicators_load_settings()
     {
         string_const_t selected_macro_indicators = session_get_string("indicators_macro_indicators", "gdp_current_usd");
         string_t* codes = string_split(selected_macro_indicators, CTEXT(";"));
-        for (unsigned i = 0; i < ARRAY_COUNT(MACRO_INDICATORS); ++i)
+        for (unsigned i = 0; i < ARRAY_COUNT(BALANCE_FIELDS); ++i)
         {
-            auto& c = MACRO_INDICATORS[i];
+            auto& c = BALANCE_FIELDS[i];
             c.key = string_hash(STRING_ARGS(c.name));
             if (array_contains(codes, c.code, LC2(string_equal(_1, _2))))
                 c.selected = true;
@@ -578,7 +578,7 @@ FOUNDATION_STATIC void indicators_save_settings()
     string_const_t selected_countries = string_join(view.begin(), view.end(), LC1(_1.selected ? _1.code : string_null()), CTEXT(";"));
     session_set_string("indicators_country_codes", STRING_ARGS(selected_countries));
 
-    const range_view misv(MACRO_INDICATORS, ARRAY_COUNT(MACRO_INDICATORS));
+    const range_view misv(BALANCE_FIELDS, ARRAY_COUNT(BALANCE_FIELDS));
     string_const_t selected_macro_indicators = string_join(misv.begin(), misv.end(), LC1(_1.selected ? _1.code : string_null()), CTEXT(";"));
     session_set_string("indicators_macro_indicators", STRING_ARGS(selected_macro_indicators));
 }

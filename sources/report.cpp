@@ -17,6 +17,7 @@
 #include "pattern.h"
 #include "timeline.h"
 #include "news.h"
+#include "financials.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -36,6 +37,8 @@
 #include <algorithm>
 
 #define E32(FN, P1, P2, P3) L2(FN(P1, P2, P3))
+
+static const ImU32 BACKGROUND_WATCH_COLOR = ImColor::HSV(120 / 360.0f, 0.30f, 0.61f);
 
 typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_NONE = 0,
@@ -223,13 +226,17 @@ FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_
 
     row->background_color = 0;
 
-    if (row && title_is_index(t))
+    if (title_is_index(t))
     {
         return (row->background_color = BACKGROUND_INDX_COLOR);
     }
     else if (title_sold(t))
     {
         return (row->background_color = BACKGROUND_SOLD_COLOR);
+    }
+    else if (t->buy_total_count == 0 && t->sell_total_count == 0)
+    {
+        return (row->background_color = BACKGROUND_WATCH_COLOR);
     }
     else if (title_has_increased(t, nullptr, increase_timelapse, &real_time_elapsed_seconds))
     {
@@ -490,18 +497,28 @@ FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_h
     ImGui::Separator();
 
     ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Remove"))
-        report_title_remove(report_handle, title);
+    if (ImGui::MenuItem("Load Pattern"))
+        pattern_open(title->code, title->code_length);
 
     ImGui::Separator();
 
     ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Load Pattern"))
-        pattern_open(title->code, title->code_length);
-
-    ImGui::MoveCursor(8.0f, 2.0f);
     if (ImGui::MenuItem("Read News"))
         news_open_window(title->code, title->code_length);
+
+    ImGui::MoveCursor(8.0f, 2.0f);
+    if (ImGui::MenuItem("Show Financials"))
+        financials_open_window(title->code, title->code_length);
+
+    ImGui::MoveCursor(8.0f, 2.0f);
+    if (ImGui::MenuItem("Browse Fundamentals"))
+        open_in_shell(eod_build_url("fundamentals", title->code, FORMAT_JSON).str);
+
+    ImGui::Separator();
+
+    ImGui::MoveCursor(8.0f, 2.0f);
+    if (ImGui::MenuItem("Remove"))
+        report_title_remove(report_handle, title);
 
     ImGui::MoveCursor(0.0f, 2.0f);
 }

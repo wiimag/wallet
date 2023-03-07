@@ -406,9 +406,18 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
                 return;
             }
         }
+
         if (!eod_availalble())
         {
+            *stop_indexing = true;
             log_warnf(HASH_SEARCH, WARNING_NETWORK, STRING_CONST("Failed to connect to EOD services, terminating indexing"));
+            return;
+        }
+
+        if (eod_capacity() > 0.8)
+        {
+            *stop_indexing = true;
+            log_warnf(HASH_SEARCH, WARNING_NETWORK, STRING_CONST("EOD full capacity is near, stopping search indexing."));
             return;
         }
     

@@ -480,7 +480,7 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
         }
         else
             value = ref.as_number();
-    }, 12 * 60ULL * 60ULL);
+    }, 5 * 24 * 60ULL * 60ULL);
 
     return value;
 }

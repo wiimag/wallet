@@ -270,7 +270,7 @@ config_handle_t title_get_fundamental_config_value(title_t* title, const char* f
                 // No match
                 config_set(filter_value, STRING_CONST("-"));
             }
-        }, 3 * 24ULL * 3600ULL))
+        }, 15 * 24ULL * 3600ULL))
     {
         return filter_value;
     }
