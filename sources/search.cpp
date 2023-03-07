@@ -121,6 +121,7 @@ FOUNDATION_STATIC void search_index_news_data(const json_object_t& json, search_
 
         search_database_index_property(db, doc, STRING_CONST("news"), (double)date);
 
+        #if 0
         for (auto s : n["symbols"])
         {
             string_const_t symbol = s.as_string();
@@ -129,6 +130,7 @@ FOUNDATION_STATIC void search_index_news_data(const json_object_t& json, search_
 
             search_database_index_property(db, doc, STRING_CONST("news"), STRING_ARGS(symbol), false);
         }
+        #endif
 
         for (auto t : n["tags"])
         {
@@ -186,7 +188,7 @@ FOUNDATION_STATIC void search_index_fundamental_object_data(const json_object_t&
     }
 }
 
-FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, search_document_handle_t& doc)
+FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, string_const_t symbol)
 {
     MEMORY_TRACKER(HASH_SEARCH);
 
@@ -195,11 +197,13 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     const auto General = json["General"];
 
     string_const_t code = General["Code"].as_string();
+    if (string_is_null(code))
+        return;
+        
     const bool is_delisted = General["IsDelisted"].as_boolean();
     if (is_delisted || json.token_count <= 1)
     {
         log_debugf(HASH_SEARCH, STRING_CONST("%.*s is delisted, skipping for indexing"), STRING_FORMAT(code));
-        doc = 0;
         return;
     }
 
@@ -211,17 +215,68 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         if (updated_elapsed_time > 90)
         {
             log_debugf(HASH_SEARCH, STRING_CONST("%.*s is too old, skipping for indexing"), STRING_FORMAT(code));
-            doc = 0;
             return;
         }
     }
+    
+    string_const_t exchange = General["Exchange"].as_string();
+    if (string_is_null(exchange))
+        return;
 
-    search_database_index_word(db, doc, STRING_ARGS(code), true);
+    string_const_t isin = General["ISIN"].as_string();
+    string_const_t type = General["Type"].as_string();
 
+    // Do not index FUND stock and those with no ISIN
+    if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("FUND")))
+        return;
+
+    if (string_is_null(isin) && string_equal_nocase(STRING_ARGS(type), STRING_CONST("ETF")))
+        return;
+        
+    search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
+    if (doc != SEARCH_DOCUMENT_INVALID_ID)
+    {
+        const time_t doc_timestamp = search_database_document_timestamp(db, doc);
+        const double days_old = time_elapsed_days(doc_timestamp, time_now());
+        if (days_old < 7.0)
+            return;
+
+        if (days_old > 25)
+        {
+            if (search_database_remove_document(db, doc))
+                doc = SEARCH_DOCUMENT_INVALID_ID;
+        }
+    }
+
+    if (doc == SEARCH_DOCUMENT_INVALID_ID)
+        doc = search_database_add_document(db, STRING_ARGS(symbol));
+
+    // Index symbol
+    search_database_index_word(db, doc, STRING_ARGS(symbol), true);
+
+    // Index basic information
     string_const_t name = General["Name"].as_string();
-    search_database_index_text(db, doc, STRING_ARGS(name), true);
-    search_database_index_word(db, doc, STRING_ARGS(name), false);
+    if (!string_is_null(name))
+    {
+        search_database_index_text(db, doc, STRING_ARGS(name));
+        search_database_index_word(db, doc, STRING_ARGS(name), false);
+    }
+        
+    log_infof(HASH_SEARCH, STRING_CONST("[%5u] Indexing [%12.*s] %-10.*s -> %-14.*s -> %.*s"),
+        doc, STRING_FORMAT(isin), STRING_FORMAT(symbol), STRING_FORMAT(type), STRING_FORMAT(name));
 
+    string_const_t country = General["Country"].as_string();
+    if (!string_is_null(country))
+        search_database_index_text(db, doc, STRING_ARGS(country), false);
+        
+    if (!string_is_null(isin))
+        search_database_index_exact_match(db, doc, STRING_ARGS(isin), true);
+
+    if (!string_is_null(type))
+        search_database_index_text(db, doc, STRING_ARGS(type), false);
+
+    search_database_index_property(db, doc, STRING_CONST("exchange"), STRING_ARGS(exchange), false);
+    
     // Get description
     string_const_t description = General["Description"].as_string();
     if (!string_is_null(description))
@@ -334,6 +389,13 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
                 search_database_index_property(db, doc, STRING_ARGS(id), STRING_ARGS(value), value.length < 12);
         }
     }
+    
+    if (!eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", symbol.str, LC1(search_index_news_data(_1, doc)), 8 * 24 * 60 * 60ULL))
+    {
+        log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch news for symbol %*.s"), STRING_FORMAT(symbol));
+    }
+
+    search_database_document_update_timestamp(db, doc);
 }
 
 FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, const char* market, size_t market_length, bool* stop_indexing)
@@ -385,69 +447,17 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         char symbol_buffer[SEARCH_INDEX_WORD_MAX_LENGTH];
         string_t symbol = string_format(STRING_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), to_int(market_length), market);
 
-        search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
-        if (doc != SEARCH_DOCUMENT_INVALID_ID)
-        {
-            const time_t doc_timestamp = search_database_document_timestamp(db, doc);
-            const double days_old = time_elapsed_days(doc_timestamp, time_now());
-            if (days_old < 7.0)
-                continue;
-
-            if (days_old > 25)
-            {
-                if (search_database_remove_document(db, doc))
-                    doc = SEARCH_DOCUMENT_INVALID_ID;
-            }
-        }
-
-        if (doc == SEARCH_DOCUMENT_INVALID_ID)
-            doc = search_database_add_document(db, STRING_ARGS(symbol));
-
-        // Index symbol
-        search_database_index_word(db, doc, STRING_ARGS(symbol), true);
-            
-        // Index basic information
-        string_const_t name = e["Name"].as_string();
-        if (!string_is_null(name))
-            search_database_index_text(db, doc, STRING_ARGS(name));
-
-        string_const_t country = e["Country"].as_string();
-        if (!string_is_null(country))
-            search_database_index_text(db, doc, STRING_ARGS(country), false);
-
-        string_const_t currency = e["Currency"].as_string();
-        if (!string_is_null(currency))
-            search_database_index_word(db, doc, STRING_ARGS(currency), false);
-            
-        if (!string_is_null(isin))
-            search_database_index_word(db, doc, STRING_ARGS(isin), false);
-
-        if (!string_is_null(type))
-            search_database_index_text(db, doc, STRING_ARGS(type), false);
-
-        search_database_index_property(db, doc, STRING_CONST("exchange"), STRING_ARGS(exchange), false);
-
-        log_infof(HASH_SEARCH, STRING_CONST("[%5u] Indexing [%12.*s] %-10.*s -> %-14.*s -> %.*s"), 
-            doc, STRING_FORMAT(isin), STRING_FORMAT(symbol), STRING_FORMAT(type), STRING_FORMAT(name));
-
         // Fetch symbol fundamental data
-        if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON_CACHE, F1(const auto & _1, search_index_fundamental_data(_1, doc), &), 31 * 24 * 60 * 60ULL))
+        if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON_CACHE, 
+            LC1(search_index_fundamental_data(_1, string_to_const(symbol))), 31 * 24 * 60 * 60ULL))
         {
             log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
         }
-        else if (doc != SEARCH_DOCUMENT_INVALID_ID)
+            
+        if (thread_try_wait(0))
         {
-            search_database_document_update_timestamp(db, doc);
-            if (!eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", symbol.str, LC1(search_index_news_data(_1, doc)), 8 * 24 * 60 * 60ULL))
-            {
-                log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch news for symbol %*.s"), STRING_FORMAT(symbol));
-            }
-
-            if (thread_try_wait(time_elapsed(st) > 1.0 ? 100 : 1000))
-            {
-                *stop_indexing = true;
-                break;
-            }
+            *stop_indexing = true;
+            break;
         }
     }
 }
@@ -1072,31 +1082,15 @@ FOUNDATION_STATIC expr_result_t search_expr_index_document(const expr_func_t* f,
     search_database_t* db = _search->db;
     FOUNDATION_ASSERT(db);
 
-    string_const_t doc_name = expr_eval_get_string_arg(args, 0, "Failed to get document name");
-    auto doc = search_database_get_or_add_document(db, STRING_ARGS(doc_name));
-    if (doc == SEARCH_DOCUMENT_INVALID_ID)
-        return NIL;
-
-    if (!eod_fetch("fundamentals", doc_name.str, FORMAT_JSON, F1(const auto & _1, search_index_fundamental_data(_1, doc), &)))
+    string_const_t symbol = expr_eval_get_string_arg(args, 0, "Failed to get document name");
+    if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON, LC1(search_index_fundamental_data(_1, symbol))))
     {
-        log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(doc_name));
-        return NIL;
-    }
-    else if (doc != SEARCH_DOCUMENT_INVALID_ID)
-    {
-        if (!eod_fetch("news", nullptr, FORMAT_JSON, "s", doc_name.str, LC1(search_index_news_data(_1, doc))))
-        {
-            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch news for symbol %*.s"), STRING_FORMAT(doc_name));
-            return NIL;
-        }
-        else
-        {
-            // Raise event for search window to refresh itself.
-            dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);
-        }
+        log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
+        return false;
     }
 
-    return (double)doc;
+    // Raise event for search window to refresh itself.
+    return dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);
 }
 
 FOUNDATION_STATIC expr_result_t search_expr_remove_document(const expr_func_t* f, vec_expr_t* args, void* context)

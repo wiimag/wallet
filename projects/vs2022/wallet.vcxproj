@@ -81,6 +81,7 @@
     <ClCompile Include="..\..\sources\app.cpp" />
     <ClCompile Include="..\..\sources\bulk.cpp" />
     <ClCompile Include="..\..\sources\eod.cpp" />
+    <ClCompile Include="..\..\sources\financials.cpp" />
     <ClCompile Include="..\..\sources\framework\boot.cpp" />
     <ClCompile Include="..\..\sources\framework\common.cpp" />
     <ClCompile Include="..\..\sources\framework\config.cpp" />
@@ -156,6 +157,7 @@
     <ClInclude Include="..\..\sources\bulk.h" />
     <ClInclude Include="..\..\sources\eod.h" />
     <ClInclude Include="..\..\sources\events.h" />
+    <ClInclude Include="..\..\sources\financials.h" />
     <ClInclude Include="..\..\sources\framework\common.h" />
     <ClInclude Include="..\..\sources\framework\database.h" />
     <ClInclude Include="..\..\sources\framework\concurrent_queue.h" />
