@@ -37,16 +37,20 @@ struct window_t
      */
     object_t handle{ 0 };
 
+    /*! Window flags */
+    window_flags_t flags{ WindowFlags::None };
+
+    /*! Window state */
     double time{ 0.0 };
     bool prepared{ false };
-
-    int frame_width{ 0 }, frame_height{ 0 };
     double last_valid_mouse_pos[2]{ 0, 0 };
+    int frame_width{ 0 }, frame_height{ 0 };
 
     /*! GLFW window handle */
     GLFWwindow* glfw_window{ nullptr };
     GLFWcursor* glfw_mouse_cursors[ImGuiMouseCursor_COUNT] = { nullptr };
 
+    /*! BGFX resources */
     uint8_t                 bgfx_view{ 255 };
     bgfx::VertexLayout      bgfx_imgui_vertex_layout;
     bgfx::TextureHandle     bgfx_imgui_font_texture{ BGFX_INVALID_HANDLE };
@@ -58,12 +62,15 @@ struct window_t
     ImGuiContext* imgui_context{ nullptr };
     ImPlotContext* implot_context{ nullptr };
 
+    /*! Window event handlers */
     window_handler_t open{ nullptr };
     window_handler_t close{ nullptr };
     window_handler_t render{ nullptr };
     
+    /*! Window user data */
     string_t title{};
     void* user_data{ nullptr };
+    config_handle_t config{ nullptr };
 };
 
 struct WindowContext
@@ -100,6 +107,8 @@ struct WindowContext
 static struct WINDOW_MODULE {
 
     window_t** windows{ nullptr };
+
+    config_handle_t configs;
     
 } *_window_module;
 
@@ -107,7 +116,18 @@ static struct WINDOW_MODULE {
 // # PRIVATE
 //
 
-FOUNDATION_STATIC window_t* window_allocate(GLFWwindow* glfw_window)
+FOUNDATION_STATIC unsigned int window_index(window_handle_t window_handle)
+{
+    FOUNDATION_ASSERT(window_handle >= 1 && window_handle <= array_size(_window_module->windows));
+    return window_handle - 1;
+}
+
+FOUNDATION_STATIC window_t* window_get(window_handle_t window_handle)
+{
+    return _window_module->windows[window_index(window_handle)];
+}
+
+FOUNDATION_STATIC window_t* window_allocate(GLFWwindow* glfw_window, window_flags_t flags)
 {
     FOUNDATION_ASSERT(glfw_window);
 
@@ -116,9 +136,15 @@ FOUNDATION_STATIC window_t* window_allocate(GLFWwindow* glfw_window)
     new_window->handle = array_size(_window_module->windows) + 1;
     new_window->glfw_window = glfw_window;
 
+    // Set the window user pointer
+    glfwSetWindowUserPointer(glfw_window, new_window);
+
     // Create the IMGUI context
     new_window->imgui_context = ImGui::CreateContext();
     new_window->implot_context = ImPlot::CreateContext();
+
+    // Set the window flags
+    new_window->flags = flags;
 
     // Store the window object
     array_push(_window_module->windows, new_window);
@@ -146,17 +172,39 @@ FOUNDATION_STATIC void window_bgfx_invalidate_device_objects(window_t* win)
     }
 }
 
+FOUNDATION_STATIC void window_save_settings(window_t* win)
+{
+    FOUNDATION_ASSERT(win && win->glfw_window);
+
+    if (!win->config)
+        return;
+
+    int window_x = 0, window_y = 0;
+    int window_width = 0, window_height = 0;
+    glfwGetWindowPos(win->glfw_window, &window_x, &window_y);
+    glfwGetWindowSize(win->glfw_window, &window_width, &window_height);
+    const int window_maximized = glfwGetWindowAttrib(win->glfw_window, GLFW_MAXIMIZED);
+
+    config_set(win->config, "x", (double)window_x);
+    config_set(win->config, "y", (double)window_y);
+    config_set(win->config, "width", (double)window_width);
+    config_set(win->config, "height", (double)window_height);
+    config_set(win->config, "maximized", window_maximized == GLFW_TRUE);
+}
+
 FOUNDATION_STATIC void window_deallocate(window_t* win)
 {
     if (!win)
         return;
 
+    // Let the user do anything before closing the window
+    win->close.invoke(win->handle);
+
+    // Save the window settings
+    window_save_settings(win);
+
     const unsigned window_count = array_size(_window_module->windows);
-    FOUNDATION_ASSERT(window_count > 0);
-    FOUNDATION_ASSERT(win->handle != OBJECT_INVALID);
-    FOUNDATION_ASSERT(win->handle > 0 && win->handle <= window_count);
-    
-    const unsigned window_index = win->handle - 1;
+    const unsigned window_index = ::window_index(win->handle);
     if (_window_module->windows[window_count - 1] == win)
     {
         // We can safely delete the last window as the window handle id shouldn't be reused.
@@ -421,8 +469,7 @@ FOUNDATION_STATIC bool window_imgui_init(window_t* win)
     io.ClipboardUserData = win->glfw_window;
     io.SetClipboardTextFn = window_glfw_set_clipboard_text;
     io.GetClipboardTextFn = window_glfw_get_clipboard_text;
-
-    glfwSetWindowUserPointer(win->glfw_window, win);
+    
     glfwSetMouseButtonCallback(win->glfw_window, window_glfw_mouse_button_callback);
     glfwSetScrollCallback(win->glfw_window, window_glfw_scroll_callback);
     glfwSetKeyCallback(win->glfw_window, window_glfw_key_callback);
@@ -691,17 +738,6 @@ FOUNDATION_STATIC void window_update()
     ImGui::SetCurrentContext(current_imgui_context);
 }
 
-FOUNDATION_STATIC unsigned int window_index(window_handle_t window_handle)
-{
-    FOUNDATION_ASSERT(window_handle >= 1 && window_handle <= array_size(_window_module->windows));
-    return window_handle - 1;
-}
-
-FOUNDATION_STATIC window_t* window_get(window_handle_t window_handle)
-{
-    return _window_module->windows[window_index(window_handle)];
-}
-
 //
 // # PUBLIC API
 //
@@ -715,25 +751,76 @@ const char* window_title(window_handle_t window_handle)
     return window->title.str;
 }
 
-window_handle_t window_open(const char* window_title, const window_handler_t& render_callback)
+GLFWwindow* window_create(const char* window_title, config_handle_t config, window_flags_t flags)
+{
+    FOUNDATION_ASSERT(window_title);
+
+    const int window_x = math_trunc(config["x"].as_number(INT_MAX));
+    const int window_y = math_trunc(config["y"].as_number(INT_MAX));
+    const int window_width = math_trunc(config["width"].as_number(1280));
+    const int window_height = math_trunc(config["height"].as_number(720));
+    const bool window_maximized = config["maximized"].as_boolean(false);
+
+    GLFWmonitor* monitor = glfw_find_window_monitor(window_x, window_y);
+    if (monitor == glfwGetPrimaryMonitor())
+        glfwWindowHint(GLFW_MAXIMIZED, window_maximized ? GLFW_TRUE : GLFW_FALSE);
+
+    float scale_x = 1.0f, scale_y = 1.0f;
+    #if FOUNDATION_PLATFORM_WINDOWS
+    glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
+    #endif
+    
+    // Create GLFW window
+    glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    GLFWwindow* window = glfwCreateWindow(
+        (int)(window_width / scale_x), (int)(window_height / scale_y), 
+        window_title, nullptr, nullptr);
+    if (window == nullptr)
+        return nullptr;
+
+    // TODO: Add option to override the window icon
+    glfw_set_window_main_icon(window);
+
+    const bool has_position = config_exists(config, STRING_CONST("x"));
+    if (has_position)
+    {
+        if (window_x != INT_MAX && window_y != INT_MAX)
+        {
+            glfwSetWindowPos(window, window_x, window_y);
+        }
+
+        if (window_maximized)
+            glfwMaximizeWindow(window);
+    }
+    else
+    {
+        glfw_set_window_center(window);
+    }
+    
+    glfwShowWindow(window);
+    glfwFocusWindow(window);
+
+    return window;
+}
+
+window_handle_t window_open(const char* window_title, const window_handler_t& render_callback, window_flags_t flags /*= WindowFlags::None*/)
 {
     FOUNDATION_ASSERT(window_title);
     FOUNDATION_ASSERT(render_callback);
 
+    // Restore window settings
+    config_handle_t config = config_set_object(_window_module->configs, window_title, string_length(window_title));
+
     // Create GLFW window
-    glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
-    glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
-    GLFWwindow* glfw_window = glfwCreateWindow(1280, 720, window_title, nullptr, nullptr);
+    GLFWwindow* glfw_window = window_create(window_title, config, flags);
     if (glfw_window == nullptr)
     {
         log_errorf(HASH_WINDOW, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to create GLFW window"));
         return OBJECT_INVALID;
     }
-
-    // TODO: Add option to override the window icon
-    glfw_set_window_main_icon(glfw_window);
     
-    window_t* new_window = window_allocate(glfw_window);
+    window_t* new_window = window_allocate(glfw_window, flags);
     if (new_window == nullptr)
     {
         glfwDestroyWindow(glfw_window);
@@ -742,6 +829,7 @@ window_handle_t window_open(const char* window_title, const window_handler_t& re
     }
 
     // Set new window properties
+    new_window->config = config;
     new_window->title = string_clone(window_title, string_length(window_title));
     new_window->render = render_callback;    
 
@@ -755,7 +843,13 @@ window_handle_t window_open(const char* window_title, const window_handler_t& re
 FOUNDATION_STATIC void window_initialize()
 {
     _window_module = MEM_NEW(HASH_WINDOW, WINDOW_MODULE);
+
+    string_const_t window_config_file_path = session_get_user_file_path(STRING_CONST("windows.json"));
+    _window_module->configs = config_parse_file(STRING_ARGS(window_config_file_path));
+    if (_window_module->configs == nullptr)
+        _window_module->configs = config_allocate(CONFIG_VALUE_OBJECT);
     
+    #if BUILD_DEBUG
     service_register_menu(HASH_WINDOW, []()
     {
         if (!ImGui::BeginMenuBar())
@@ -781,6 +875,8 @@ FOUNDATION_STATIC void window_initialize()
 
         ImGui::EndMenuBar();
     });
+    #endif
+    
     service_register_update(HASH_WINDOW, window_update);
 }
 
@@ -795,6 +891,12 @@ FOUNDATION_STATIC void window_shutdown()
         window_deallocate(win);
     }
     array_deallocate(_window_module->windows);
+
+    // Save window configurations
+    string_const_t window_config_file_path = session_get_user_file_path(STRING_CONST("windows.json"));
+    if (!config_write_file(window_config_file_path, _window_module->configs))
+        log_warnf(HASH_WINDOW, WARNING_RESOURCE, STRING_CONST("Failed to save window settings"));
+    config_deallocate(_window_module->configs);
 
     MEM_DELETE(_window_module);
 }

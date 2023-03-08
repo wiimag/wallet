@@ -129,7 +129,7 @@ void session_setup(const char* root_path)
     // Setup can be called multiple times, so cleaning up first.
     session_cleanup();
     
-    _session_working_dir =  string_clone_string(environment_current_working_directory());
+    _session_working_dir = string_clone_string(environment_current_working_directory());
 
     // Make sure user dir is created
     const string_const_t& user_dir = session_get_user_dir();
