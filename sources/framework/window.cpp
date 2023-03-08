@@ -57,6 +57,13 @@ struct window_t
     /*! ImGui window context */
     ImGuiContext* imgui_context{ nullptr };
     ImPlotContext* implot_context{ nullptr };
+
+    window_handler_t open{ nullptr };
+    window_handler_t close{ nullptr };
+    window_handler_t render{ nullptr };
+    
+    string_t title{};
+    void* user_data{ nullptr };
 };
 
 struct WindowContext
@@ -178,6 +185,8 @@ FOUNDATION_STATIC void window_deallocate(window_t* win)
         
         glfwDestroyWindow(win->glfw_window);
     }
+
+    string_deallocate(win->title.str);
         
     MEM_DELETE(win);
 }
@@ -627,24 +636,18 @@ FOUNDATION_STATIC void window_render(window_t* win)
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2((float)win->frame_width , (float)win->frame_height));
-
+    
     // Render window context
+    // TODO: Add options to personalize the window visual style
     if (ImGui::Begin("Hello World!", nullptr,
         ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoResize |
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoTitleBar |
-        ImGuiWindowFlags_MenuBar))
+        ImGuiWindowFlags_NoTitleBar/* |
+        ImGuiWindowFlags_MenuBar*/))
     {
-        static char input_buffer[256];
-        ImGui::Text("Hello World!");
-        ImGui::Button("Click me!");
-        ImGui::InputTextMultiline("##input", input_buffer, sizeof(input_buffer));
-
-        if (ImGui::IsKeyDown(ImGuiKey_O))
-            ImGui::Text("Ooooooooo!");
-
+        win->render.invoke(win->handle);
     } ImGui::End();
         
     // Render IMGUI frame
@@ -688,12 +691,35 @@ FOUNDATION_STATIC void window_update()
     ImGui::SetCurrentContext(current_imgui_context);
 }
 
+FOUNDATION_STATIC unsigned int window_index(window_handle_t window_handle)
+{
+    FOUNDATION_ASSERT(window_handle >= 1 && window_handle <= array_size(_window_module->windows));
+    return window_handle - 1;
+}
+
+FOUNDATION_STATIC window_t* window_get(window_handle_t window_handle)
+{
+    return _window_module->windows[window_index(window_handle)];
+}
+
 //
 // # PUBLIC API
 //
 
-window_handle_t window_open(const char* window_title)
+const char* window_title(window_handle_t window_handle)
 {
+    window_t* window = window_get(window_handle);
+    FOUNDATION_ASSERT(window);
+    FOUNDATION_ASSERT(window->glfw_window);
+    
+    return window->title.str;
+}
+
+window_handle_t window_open(const char* window_title, const window_handler_t& render_callback)
+{
+    FOUNDATION_ASSERT(window_title);
+    FOUNDATION_ASSERT(render_callback);
+
     // Create GLFW window
     glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
@@ -703,6 +729,9 @@ window_handle_t window_open(const char* window_title)
         log_errorf(HASH_WINDOW, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to create GLFW window"));
         return OBJECT_INVALID;
     }
+
+    // TODO: Add option to override the window icon
+    glfw_set_window_main_icon(glfw_window);
     
     window_t* new_window = window_allocate(glfw_window);
     if (new_window == nullptr)
@@ -712,7 +741,9 @@ window_handle_t window_open(const char* window_title)
         return OBJECT_INVALID;
     }
 
-    glfw_set_window_main_icon(glfw_window);
+    // Set new window properties
+    new_window->title = string_clone(window_title, string_length(window_title));
+    new_window->render = render_callback;    
 
     return new_window->handle;
 }
@@ -734,7 +765,16 @@ FOUNDATION_STATIC void window_initialize()
         {
             if (ImGui::MenuItem(ICON_MD_LOGO_DEV " Test"))
             {
-                window_open("Test Window");
+                window_open("Test Window", [](window_handle_t w)
+                {
+                    static char input_buffer[256];
+                    ImGui::Text("Hello World!");
+                    ImGui::Button("Click me!");
+                    ImGui::InputTextMultiline("##input", input_buffer, sizeof(input_buffer));
+
+                    if (ImGui::IsKeyDown(ImGuiKey_O))
+                        ImGui::Text("Ooooooooo!");
+                });
             }
             ImGui::EndMenu();
         }

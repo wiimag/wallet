@@ -7,7 +7,6 @@
 #include "version.h"
 #include "settings.h"
 
-// Framework includes
 #include <framework/glfw.h>
 #include <framework/imgui.h>
 #include <framework/service.h>
