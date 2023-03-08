@@ -151,7 +151,7 @@ void service_register_menu(hash_t service_key, const service_invoke_handler_t& m
 {
     if (main_is_batch_mode())
         return;
-
+        
     service_register_handler(service_key, HASH_SERVICE_MENU, menu_handler);
 }
 

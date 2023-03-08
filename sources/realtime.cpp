@@ -41,7 +41,7 @@ static struct REALTIME_MODULE {
 
     char search[32]{ '\0' };
     int time_lapse{ 24 * 31 }; // In hours
-} *_realtime;
+} *_realtime_module;
 
 //
 // # PRIVATE
@@ -87,12 +87,12 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
     r.volume = stock_realtime->volume;
     r.timestamp = stock_realtime->timestamp;
         
-    SHARED_WRITE_LOCK(_realtime->stocks_mutex);
+    SHARED_WRITE_LOCK(_realtime_module->stocks_mutex);
      
-    int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), stock_realtime->key);
+    int fidx = array_binary_search(_realtime_module->stocks, array_size(_realtime_module->stocks), stock_realtime->key);
     if (fidx >= 0)
     {        
-        stock_realtime = &_realtime->stocks[fidx];
+        stock_realtime = &_realtime_module->stocks[fidx];
         // Mark the stock as to be refreshed
         stock_realtime->refresh = true;
         return realtime_stock_add_record(stock_realtime, r);
@@ -103,7 +103,7 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
     realtime_stock_add_record(stock_realtime, r);
 
     fidx = ~fidx;
-    array_insert_memcpy(_realtime->stocks, fidx, stock_realtime);
+    array_insert_memcpy(_realtime_module->stocks, fidx, stock_realtime);
     log_debugf(HASH_REALTIME, STRING_CONST("Registering new realtime stock %.*s (%" PRIhash ")"), STRING_FORMAT(code), stock_realtime->key);
     return true;
 }
@@ -136,34 +136,34 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
 
         r.volume = e["volume"].as_number(0);
 
-        if (_realtime->stream == nullptr)
+        if (_realtime_module->stream == nullptr)
             break;
 
         string_const_t code = e["code"].as_string();
         const hash_t key = hash(STRING_ARGS(code));
         
-        SHARED_READ_LOCK(_realtime->stocks_mutex);
+        SHARED_READ_LOCK(_realtime_module->stocks_mutex);
      
-        int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
+        int fidx = array_binary_search(_realtime_module->stocks, array_size(_realtime_module->stocks), key);
         if (fidx >= 0)
         {
-            stock_realtime_t& stock = _realtime->stocks[fidx];
+            stock_realtime_t& stock = _realtime_module->stocks[fidx];
                 
             if (realtime_stock_add_record(&stock, r))
             {
                 log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime values %.*s (%lld) > %lf (%" PRIsize " kb)"),
-                    STRING_FORMAT(code), (int64_t)r.timestamp, r.price, stream_size(_realtime->stream) / 1024ULL);
+                    STRING_FORMAT(code), (int64_t)r.timestamp, r.price, stream_size(_realtime_module->stream) / 1024ULL);
                         
-                stream_write(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
-                stream_write(_realtime->stream, stock.code, sizeof(stock.code));
-                stream_write(_realtime->stream, &r.price, sizeof(r.price));
-                stream_write(_realtime->stream, &r.volume, sizeof(r.volume));
+                stream_write(_realtime_module->stream, &r.timestamp, sizeof(r.timestamp));
+                stream_write(_realtime_module->stream, stock.code, sizeof(stock.code));
+                stream_write(_realtime_module->stream, &r.price, sizeof(r.price));
+                stream_write(_realtime_module->stream, &r.volume, sizeof(r.volume));
             }
         }
     }
 
-    if (_realtime->stream)
-        stream_flush(_realtime->stream);
+    if (_realtime_module->stream)
+        stream_flush(_realtime_module->stream);
 }
 
 FOUNDATION_STATIC stream_t* realtime_open_stream()
@@ -202,21 +202,21 @@ FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
     string_t temp_path = string_copy(STRING_BUFFER(temp_path_buffer), temp_path_const.str, temp_path_const.length);
 
     char current_stream_path_buffer[BUILD_MAX_PATHLEN];
-    string_const_t current_stream_path_const = stream_path(_realtime->stream);
+    string_const_t current_stream_path_const = stream_path(_realtime_module->stream);
     string_t current_stream_path = string_copy(STRING_BUFFER(current_stream_path_buffer), current_stream_path_const.str, current_stream_path_const.length);
     
     if (from == 0 && to == 1)
     {
-        stream_seek(_realtime->stream, 0, STREAM_SEEK_BEGIN);
-        while (!stream_eos(_realtime->stream))
+        stream_seek(_realtime_module->stream, 0, STREAM_SEEK_BEGIN);
+        while (!stream_eos(_realtime_module->stream))
         {
             stock_realtime_t stock;
             stock_realtime_record_t r;
             r.volume = 0;
 
-            stream_read(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
-            stream_read(_realtime->stream, stock.code, sizeof(stock.code));
-            stream_read(_realtime->stream, &r.price, sizeof(r.price));
+            stream_read(_realtime_module->stream, &r.timestamp, sizeof(r.timestamp));
+            stream_read(_realtime_module->stream, stock.code, sizeof(stock.code));
+            stream_read(_realtime_module->stream, &r.price, sizeof(r.price));
 
             if (r.timestamp <= 0 || math_real_is_nan(r.price))
                 continue;
@@ -231,14 +231,14 @@ FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
     }
 
     stream_deallocate(migrate_stream);
-    stream_deallocate(_realtime->stream);
+    stream_deallocate(_realtime_module->stream);
     if (fs_copy_file(STRING_ARGS(temp_path), STRING_ARGS(current_stream_path)))
     {
-        _realtime->stream = realtime_open_stream();
+        _realtime_module->stream = realtime_open_stream();
         
         // Read header
         char file_format[4] = { '\0' };
-        stream_read(_realtime->stream, file_format, sizeof(file_format));
+        stream_read(_realtime_module->stream, file_format, sizeof(file_format));
         if (!string_equal(file_format, 4, STRING_CONST("REAL")))
         {
             log_errorf(HASH_REALTIME, ERROR_INVALID_VALUE, STRING_CONST("Failed to migrate realtime stream"));
@@ -246,7 +246,7 @@ FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
         }
 
         int stream_version;
-        stream_read(_realtime->stream, &stream_version, sizeof(stream_version));
+        stream_read(_realtime_module->stream, &stream_version, sizeof(stream_version));
         if (stream_version != REALTIME_STREAM_VERSION)
         {
             log_errorf(HASH_REALTIME, ERROR_INVALID_VALUE, STRING_CONST("Failed to migrate realtime stream"));
@@ -254,23 +254,23 @@ FOUNDATION_STATIC void realtime_migrate_stream(int& from, int to)
         }
 
         // Skip padding
-        stream_seek(_realtime->stream, 56, STREAM_SEEK_CURRENT);
+        stream_seek(_realtime_module->stream, 56, STREAM_SEEK_CURRENT);
     }
 
-    FOUNDATION_ASSERT(_realtime->stream);
+    FOUNDATION_ASSERT(_realtime_module->stream);
 }
 
 FOUNDATION_STATIC void realtime_stream_stock_entries()
 {    
     // Read stream version
     int stream_version = 0;
-    if (!stream_eos(_realtime->stream))
+    if (!stream_eos(_realtime_module->stream))
     {
         char file_format[4] = { '\0' };
-        stream_read(_realtime->stream, file_format, sizeof(file_format));
+        stream_read(_realtime_module->stream, file_format, sizeof(file_format));
         if (!string_equal(file_format, 4, STRING_CONST("REAL")))
             realtime_migrate_stream(stream_version, REALTIME_STREAM_VERSION);
-        else if (stream_read(_realtime->stream, &stream_version, sizeof(stream_version)) == sizeof(stream_version))
+        else if (stream_read(_realtime_module->stream, &stream_version, sizeof(stream_version)) == sizeof(stream_version))
         {
             if (stream_version != REALTIME_STREAM_VERSION)
                 realtime_migrate_stream(stream_version, REALTIME_STREAM_VERSION);
@@ -278,25 +278,25 @@ FOUNDATION_STATIC void realtime_stream_stock_entries()
             {
                 // Read padding
                 char padding[56] = { '\0' };
-                stream_read(_realtime->stream, padding, sizeof(padding));
+                stream_read(_realtime_module->stream, padding, sizeof(padding));
             }
         }
     }
     else
     {
-        realtime_write_stream_header(_realtime->stream);
+        realtime_write_stream_header(_realtime_module->stream);
     }
 
-    shared_mutex& mutex = _realtime->stocks_mutex;
-    while (!thread_try_wait(0) && stream_version == REALTIME_STREAM_VERSION && !stream_eos(_realtime->stream))
+    shared_mutex& mutex = _realtime_module->stocks_mutex;
+    while (!thread_try_wait(0) && stream_version == REALTIME_STREAM_VERSION && !stream_eos(_realtime_module->stream))
     {
         stock_realtime_t stock;
         stock_realtime_record_t r;
 
-        stream_read(_realtime->stream, &r.timestamp, sizeof(r.timestamp));
-        stream_read(_realtime->stream, stock.code, sizeof(stock.code));
-        stream_read(_realtime->stream, &r.price, sizeof(r.price));
-        stream_read(_realtime->stream, &r.volume, sizeof(r.volume));
+        stream_read(_realtime_module->stream, &r.timestamp, sizeof(r.timestamp));
+        stream_read(_realtime_module->stream, stock.code, sizeof(stock.code));
+        stream_read(_realtime_module->stream, &r.price, sizeof(r.price));
+        stream_read(_realtime_module->stream, &r.volume, sizeof(r.volume));
 
         if ((stock.code[0] < 'A' || stock.code[0] > 'Z') && stock.code[0] != '.' && stock.code[0] != '-')
             continue;
@@ -314,7 +314,7 @@ FOUNDATION_STATIC void realtime_stream_stock_entries()
         stock.key = hash(stock.code, code_length);
 
         SHARED_WRITE_LOCK(mutex);
-        int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), stock.key);
+        int fidx = array_binary_search(_realtime_module->stocks, array_size(_realtime_module->stocks), stock.key);
         if (fidx < 0)
         {
             stock.price = r.price;
@@ -324,19 +324,19 @@ FOUNDATION_STATIC void realtime_stream_stock_entries()
             stock.refresh = false;
             array_push_memcpy(stock.records, &r);
 
-            array_insert_memcpy(_realtime->stocks, ~fidx, &stock);
+            array_insert_memcpy(_realtime_module->stocks, ~fidx, &stock);
             log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime stock %s (%" PRIhash ")"), stock.code, stock.key);
         }
         else
         {
-            realtime_stock_add_record(&_realtime->stocks[fidx], r);
+            realtime_stock_add_record(&_realtime_module->stocks[fidx], r);
         }
     }
 }
 
 FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
 {
-    shared_mutex& mutex = _realtime->stocks_mutex;
+    shared_mutex& mutex = _realtime_module->stocks_mutex;
     
     realtime_stream_stock_entries();
     
@@ -361,9 +361,9 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
         const time_t now = time_now();
         {
             SHARED_READ_LOCK(mutex);
-            for (size_t i = 0, end = array_size(_realtime->stocks); i < end; ++i)
+            for (size_t i = 0, end = array_size(_realtime_module->stocks); i < end; ++i)
             {
-                const stock_realtime_t& stock = _realtime->stocks[i];
+                const stock_realtime_t& stock = _realtime_module->stocks[i];
 
                 if (stock.refresh == false)
                     continue;
@@ -617,9 +617,9 @@ FOUNDATION_STATIC cell_t realtime_table_draw_monitor(table_element_ptr_t element
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         const size_t record_count = array_size(s->records);
-        const time_t since = _realtime->time_lapse > 0 ? time_add_hours(time_now(), -_realtime->time_lapse) : 0;
-        ImGui::PushID(_realtime->time_lapse);
-        if (record_count < 2 || !realtime_render_graph(s, since, -1.0f, _realtime->table->row_fixed_height))
+        const time_t since = _realtime_module->time_lapse > 0 ? time_add_hours(time_now(), -_realtime_module->time_lapse) : 0;
+        ImGui::PushID(_realtime_module->time_lapse);
+        if (record_count < 2 || !realtime_render_graph(s, since, -1.0f, _realtime_module->table->row_fixed_height))
         {
             ImGui::TextUnformatted("Not enough data");
         }
@@ -644,17 +644,17 @@ FOUNDATION_STATIC void realtime_render_window_tootlbar()
     ImGui::TextUnformatted("Search");
     ImGui::SameLine();
     ImGui::PushItemWidth(ImGui::GetFontSize() * 14.0f);
-    if (ImGui::InputTextWithHint("##Search", "Filter stock titles...", _realtime->search, sizeof(_realtime->search)))
+    if (ImGui::InputTextWithHint("##Search", "Filter stock titles...", _realtime_module->search, sizeof(_realtime_module->search)))
     {
         // Update table search filter
-        table_set_search_filter(_realtime->table, _realtime->search, string_length(_realtime->search));
+        table_set_search_filter(_realtime_module->table, _realtime_module->search, string_length(_realtime_module->search));
     }
 
     ImGui::SameLine();
-    bool show_all = _realtime->time_lapse == 0;
+    bool show_all = _realtime_module->time_lapse == 0;
     if (ImGui::Checkbox("Show all records", &show_all))
     {
-        _realtime->time_lapse = show_all ? 0 : max(1, session_get_integer("realtime_time_lapse_days", 24));
+        _realtime_module->time_lapse = show_all ? 0 : max(1, session_get_integer("realtime_time_lapse_days", 24));
     }
 
     if (!show_all)
@@ -662,8 +662,8 @@ FOUNDATION_STATIC void realtime_render_window_tootlbar()
         // Render time lapse slider in days
         ImGui::SameLine();
         ImGui::PushItemWidth(ImGui::GetFontSize() * 20.0f);
-        if (ImGui::SliderInt("##TimeLapse", &_realtime->time_lapse, 1, 3 * 24, "%d hour(s)"))
-            session_set_integer("realtime_time_lapse_days", _realtime->time_lapse);
+        if (ImGui::SliderInt("##TimeLapse", &_realtime_module->time_lapse, 1, 3 * 24, "%d hour(s)"))
+            session_set_integer("realtime_time_lapse_days", _realtime_module->time_lapse);
     }
 
     ImGui::EndGroup();
@@ -671,36 +671,36 @@ FOUNDATION_STATIC void realtime_render_window_tootlbar()
 
 FOUNDATION_STATIC void realtime_render_window()
 {
-    if (_realtime->show_window == false)
+    if (_realtime_module->show_window == false)
         return;
 
     static bool has_ever_shown_window = session_key_exists("show_realtime_window");
     if (!has_ever_shown_window)
         ImGui::SetNextWindowSize(ImVec2(1280, 720), ImGuiCond_Once);
 
-    if (ImGui::Begin("Realtime Stocks##1", &_realtime->show_window, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoCollapse))
+    if (ImGui::Begin("Realtime Stocks##1", &_realtime_module->show_window, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoCollapse))
     {
-        if (_realtime->table == nullptr)
+        if (_realtime_module->table == nullptr)
         {
-            _realtime->table = table_allocate("realtime");
-            _realtime->table->row_fixed_height = imgui_get_font_ui_scale(250.0f);
-            table_add_column(_realtime->table, "Title", realtime_table_draw_title, COLUMN_FORMAT_TEXT, 
+            _realtime_module->table = table_allocate("realtime");
+            _realtime_module->table->row_fixed_height = imgui_get_font_ui_scale(250.0f);
+            table_add_column(_realtime_module->table, "Title", realtime_table_draw_title, COLUMN_FORMAT_TEXT, 
                 COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING | COLUMN_NOCLIP_CONTENT | COLUMN_SEARCHABLE)
                 .set_selected_callback(realtime_code_selected);
-            table_add_column(_realtime->table, "Time", realtime_table_column_time, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING);
-            table_add_column(_realtime->table, "Price", realtime_table_column_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_VALIGN_TOP);
-            table_add_column(_realtime->table, "Volume", realtime_table_column_volume, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT | COLUMN_NUMBER_ABBREVIATION);
-            table_add_column(_realtime->table, "%||Change %", realtime_table_column_last_change_p, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT);
-            table_add_column(_realtime->table, "Monitor", realtime_table_draw_monitor, COLUMN_FORMAT_NUMBER, 
+            table_add_column(_realtime_module->table, "Time", realtime_table_column_time, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING);
+            table_add_column(_realtime_module->table, "Price", realtime_table_column_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_VALIGN_TOP);
+            table_add_column(_realtime_module->table, "Volume", realtime_table_column_volume, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT | COLUMN_NUMBER_ABBREVIATION);
+            table_add_column(_realtime_module->table, "%||Change %", realtime_table_column_last_change_p, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT);
+            table_add_column(_realtime_module->table, "Monitor", realtime_table_draw_monitor, COLUMN_FORMAT_NUMBER, 
                 COLUMN_SORTABLE | COLUMN_STRETCH | COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_DEFAULT_SORT);
-            table_add_column(_realtime->table, "#||Samples", realtime_table_column_sample_count, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT);
+            table_add_column(_realtime_module->table, "#||Samples", realtime_table_column_sample_count, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_VALIGN_TOP | COLUMN_HIDE_DEFAULT);
         }
 
         realtime_render_window_tootlbar();
 
         {
-            SHARED_READ_LOCK(_realtime->stocks_mutex);
-            table_render(_realtime->table, _realtime->stocks, array_size(_realtime->stocks), sizeof(stock_realtime_t), 0, 0);
+            SHARED_READ_LOCK(_realtime_module->stocks_mutex);
+            table_render(_realtime_module->table, _realtime_module->stocks, array_size(_realtime_module->stocks), sizeof(stock_realtime_t), 0, 0);
         }
     } ImGui::End();
 }
@@ -712,7 +712,7 @@ FOUNDATION_STATIC void realtime_menu()
     
     if (ImGui::BeginMenu("Modules"))
     {
-        ImGui::MenuItem(ICON_MD_RADIO_BUTTON_ON " Realtime", nullptr, &_realtime->show_window);
+        ImGui::MenuItem(ICON_MD_RADIO_BUTTON_ON " Realtime", nullptr, &_realtime_module->show_window);
         ImGui::EndMenu();
     }
 
@@ -726,11 +726,11 @@ FOUNDATION_STATIC void realtime_menu()
 bool realtime_render_graph(const char* code, size_t code_length, time_t since /*= 0*/, float width /*= -1.0f*/, float height /*= -1.0f*/)
 {
     const hash_t key = hash(code, code_length);
-    const int fidx = array_binary_search(_realtime->stocks, array_size(_realtime->stocks), key);
+    const int fidx = array_binary_search(_realtime_module->stocks, array_size(_realtime_module->stocks), key);
     if (fidx < 0)
         return false;
     
-    const stock_realtime_t* s = &_realtime->stocks[fidx];
+    const stock_realtime_t* s = &_realtime_module->stocks[fidx];
     return realtime_render_graph(s, since, width, height);
 }
 
@@ -740,19 +740,19 @@ bool realtime_render_graph(const char* code, size_t code_length, time_t since /*
 
 FOUNDATION_STATIC void realtime_initialize()
 {
-    _realtime = MEM_NEW(HASH_REALTIME, REALTIME_MODULE);
+    _realtime_module = MEM_NEW(HASH_REALTIME, REALTIME_MODULE);
 
-    _realtime->show_window = session_get_bool("realtime_show_window", _realtime->show_window);
-    _realtime->time_lapse = session_get_integer("realtime_time_lapse_days", _realtime->time_lapse);
+    _realtime_module->show_window = session_get_bool("realtime_show_window", _realtime_module->show_window);
+    _realtime_module->time_lapse = session_get_integer("realtime_time_lapse_days", _realtime_module->time_lapse);
 
     // Open realtime stock stream.
-    _realtime->stream = realtime_open_stream();
+    _realtime_module->stream = realtime_open_stream();
 
     // Create thread to query realtime stock
     if (main_is_interactive_mode() && !environment_command_line_arg("disable-realtime"))
     {
-        _realtime->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
-        if (_realtime->background_thread == nullptr || !thread_start(_realtime->background_thread))
+        _realtime_module->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
+        if (_realtime_module->background_thread == nullptr || !thread_start(_realtime_module->background_thread))
         {
             log_panic(HASH_REALTIME, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to create realtime background thread"));
             return;
@@ -767,29 +767,29 @@ FOUNDATION_STATIC void realtime_initialize()
 
 FOUNDATION_STATIC void realtime_shutdown()
 {   
-    session_set_bool("realtime_show_window", _realtime->show_window);
-    session_set_integer("realtime_time_lapse_days", _realtime->time_lapse);
+    session_set_bool("realtime_show_window", _realtime_module->show_window);
+    session_set_integer("realtime_time_lapse_days", _realtime_module->time_lapse);
     
-    table_deallocate(_realtime->table);
+    table_deallocate(_realtime_module->table);
 
-    if (_realtime->background_thread)
+    if (_realtime_module->background_thread)
     {
-        while (!thread_try_join(_realtime->background_thread, 1, nullptr))
-            thread_signal(_realtime->background_thread);
-        thread_deallocate(_realtime->background_thread);
+        while (!thread_try_join(_realtime_module->background_thread, 1, nullptr))
+            thread_signal(_realtime_module->background_thread);
+        thread_deallocate(_realtime_module->background_thread);
     }
 
     {
-        SHARED_WRITE_LOCK(_realtime->stocks_mutex);
-        stream_deallocate(_realtime->stream);
-        _realtime->stream = nullptr;
+        SHARED_WRITE_LOCK(_realtime_module->stocks_mutex);
+        stream_deallocate(_realtime_module->stream);
+        _realtime_module->stream = nullptr;
     }
 
-    foreach(s, _realtime->stocks)
+    foreach(s, _realtime_module->stocks)
         array_deallocate(s->records);
-    array_deallocate(_realtime->stocks);
+    array_deallocate(_realtime_module->stocks);
 
-    MEM_DELETE(_realtime);
+    MEM_DELETE(_realtime_module);
 }
 
 DEFINE_SERVICE(REALTIME, realtime_initialize, realtime_shutdown, SERVICE_PRIORITY_UI_HEADLESS);

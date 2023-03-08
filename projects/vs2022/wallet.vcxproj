@@ -108,6 +108,7 @@
     <ClCompile Include="..\..\sources\framework\string_table.cpp" />
     <ClCompile Include="..\..\sources\framework\table.cpp" />
     <ClCompile Include="..\..\sources\framework\tabs.cpp" />
+    <ClCompile Include="..\..\sources\framework\window.cpp" />
     <ClCompile Include="..\..\sources\indicators.cpp" />
     <ClCompile Include="..\..\sources\logo.cpp" />
     <ClCompile Include="..\..\sources\news.cpp" />
@@ -188,6 +189,7 @@
     <ClInclude Include="..\..\sources\framework\string_table.h" />
     <ClInclude Include="..\..\sources\framework\table.h" />
     <ClInclude Include="..\..\sources\framework\tabs.h" />
+    <ClInclude Include="..\..\sources\framework\window.h" />
     <ClInclude Include="..\..\sources\indicators.h" />
     <ClInclude Include="..\..\sources\logo.h" />
     <ClInclude Include="..\..\sources\news.h" />

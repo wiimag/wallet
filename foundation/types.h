@@ -431,6 +431,9 @@ an error occurs during spawning */
 /*! Process exit code, generic success */
 #define PROCESS_EXIT_SUCCESS EXIT_SUCCESS
 
+/*! Invalid object id */
+#define OBJECT_INVALID (0)
+
 /*! Virtual array flag for normal memory allocated storage */
 #define VIRTUALARRAY_MEMORY_ALLOCATED 1
 

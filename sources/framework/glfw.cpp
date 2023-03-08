@@ -95,9 +95,9 @@ GLFWwindow* glfw_create_window_geometry(const char* window_title)
         glfwWindowHint(GLFW_MAXIMIZED, main_window_maximized ? GLFW_TRUE : GLFW_FALSE);
 
     float scale_x = 1.0f, scale_y = 1.0f;
-#if FOUNDATION_PLATFORM_WINDOWS
+    #if FOUNDATION_PLATFORM_WINDOWS
     glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
-#endif
+    #endif
 
     GLFWwindow* window = glfwCreateWindow((int)(window_width / scale_x), (int)(window_height / scale_y), window_title, nullptr, nullptr);
     if (window == nullptr)

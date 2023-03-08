@@ -208,6 +208,9 @@
     <ClInclude Include="..\..\sources\financials.h">
       <Filter>app</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sources\framework\window.h">
+      <Filter>framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sources\stock.cpp">
@@ -383,6 +386,9 @@
     </ClCompile>
     <ClCompile Include="..\..\sources\financials.cpp">
       <Filter>app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\window.cpp">
+      <Filter>framework</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
