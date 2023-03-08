@@ -22,7 +22,7 @@
 
     #include <iostream>
 
-    extern HWND _window_handle;
+    extern void* _window_handle;
 #endif
 
 #define HASH_COMMON (static_hash_string("common", 6, 14370257353172364778ULL))
@@ -244,7 +244,7 @@ string_const_t fs_clean_file_name(const char* filename, size_t filename_length)
         OPENFILENAMEA ofn;
         ZeroMemory(&ofn, sizeof(ofn));
         ofn.lStructSize = sizeof(ofn);
-        ofn.hwndOwner = _window_handle;
+        ofn.hwndOwner = (HWND)_window_handle;
         ofn.lpstrFile = file_path_buffer.str;
         ofn.nMaxFile = (DWORD)file_path_buffer.length;
         if (extension == nullptr)

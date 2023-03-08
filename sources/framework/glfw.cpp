@@ -1,16 +1,28 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
 #include "glfw.h"
 
-#include "session.h"
-#include "common.h"
+#include <framework/string.h>
+#include <framework/common.h>
+#include <framework/session.h>
+
+#include <foundation/environment.h>
+
+/*! Main window platform handle */
+void* _window_handle = nullptr;
+
+// GLFW data
+// TODO: Replace with new window_t*
+GLFWwindow* _glfw_main_window = nullptr;
 
 #if FOUNDATION_PLATFORM_WINDOWS
 
     #pragma comment( lib, "glfw3.lib" )
+
+    #include <GLFW/glfw3native.h>
 
 #elif FOUNDATION_PLATFORM_MACOS
 
@@ -175,11 +187,11 @@ GLFWmonitor* glfw_find_window_monitor(int window_x, int window_y)
 
 bool glfw_is_window_focused(GLFWwindow* window)
 {
-#ifdef __EMSCRIPTEN__
-    return true;
-#else
-    return glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
-#endif
+    #ifdef __EMSCRIPTEN__
+        return true;
+    #else
+        return glfwGetWindowAttrib(window, GLFW_FOCUSED) != 0;
+    #endif
 }
 
 bool glfw_is_any_mouse_button_down(GLFWwindow* window)
@@ -191,4 +203,131 @@ bool glfw_is_any_mouse_button_down(GLFWwindow* window)
     }
 
     return false;
+}
+
+int glfw_translate_untranslated_key(int key, int scancode)
+{
+    #if GLFW_HAS_GETKEYNAME && !defined(__EMSCRIPTEN__)
+        // GLFW 3.1+ attempts to "untranslated" keys, which goes the opposite of what every other framework does, making using lettered shortcuts difficult.
+        // (It had reasons to do so: namely GLFW is/was more likely to be used for WASD-type game controls rather than lettered shortcuts, but IHMO the 3.1 change could have been done differently)
+        // See https://github.com/glfw/glfw/issues/1502 for details.
+        // Adding a workaround to undo this (so our keys are translated->untranslated->translated, likely a lossy process).
+        // This won't cover edge cases but this is at least going to cover common cases.
+        if (key >= GLFW_KEY_KP_0 && key <= GLFW_KEY_KP_EQUAL)
+            return key;
+        const char* key_name = glfwGetKeyName(key, scancode);
+        if (key_name && key_name[0] != 0 && key_name[1] == 0)
+        {
+            const char char_names[] = "`-=[]\\,;\'./";
+            const int char_keys[] = { 
+                GLFW_KEY_GRAVE_ACCENT, GLFW_KEY_MINUS, GLFW_KEY_EQUAL, GLFW_KEY_LEFT_BRACKET, 
+                GLFW_KEY_RIGHT_BRACKET, GLFW_KEY_BACKSLASH, GLFW_KEY_COMMA, GLFW_KEY_SEMICOLON, 
+                GLFW_KEY_APOSTROPHE, GLFW_KEY_PERIOD, GLFW_KEY_SLASH, 0 };
+            FOUNDATION_ASSERT(ARRAY_COUNT(char_names) == ARRAY_COUNT(char_keys));
+            if (key_name[0] >= '0' && key_name[0] <= '9') { key = GLFW_KEY_0 + (key_name[0] - '0'); }
+            else if (key_name[0] >= 'A' && key_name[0] <= 'Z') { key = GLFW_KEY_A + (key_name[0] - 'A'); }
+            else if (key_name[0] >= 'a' && key_name[0] <= 'z') { key = GLFW_KEY_A + (key_name[0] - 'a'); }
+            else if (const char* p = strchr(char_names, key_name[0])) { key = char_keys[p - char_names]; }
+        }
+        // if (action == GLFW_PRESS) printf("key %d scancode %d name '%s'\n", key, scancode, key_name);
+    #else
+        FOUNDATION_UNUSED(scancode);
+    #endif
+    return key;
+}
+
+int glfw_key_to_modifier(int key)
+{
+    if (key == GLFW_KEY_LEFT_CONTROL || key == GLFW_KEY_RIGHT_CONTROL)
+        return GLFW_MOD_CONTROL;
+    if (key == GLFW_KEY_LEFT_SHIFT || key == GLFW_KEY_RIGHT_SHIFT)
+        return GLFW_MOD_SHIFT;
+    if (key == GLFW_KEY_LEFT_ALT || key == GLFW_KEY_RIGHT_ALT)
+        return GLFW_MOD_ALT;
+    if (key == GLFW_KEY_LEFT_SUPER || key == GLFW_KEY_RIGHT_SUPER)
+        return GLFW_MOD_SUPER;
+    return 0;
+}
+
+void glfw_log_error(int error, const char* description)
+{
+    log_errorf(0, ERROR_EXCEPTION, STRING_CONST("GLFW Error %d: %s"), error, description);
+}
+
+void glfw_set_window_main_icon(GLFWwindow* window)
+{
+    #if FOUNDATION_PLATFORM_WINDOWS
+        HWND window_handle = glfwGetWin32Window(window);
+        HINSTANCE module_handle = ::GetModuleHandle(nullptr);
+        HANDLE big_icon = LoadImageA(module_handle, MAKEINTRESOURCEA(GLFW_ICON), IMAGE_ICON, GetSystemMetrics(SM_CXICON), GetSystemMetrics(SM_CYICON), LR_DEFAULTCOLOR);
+        HANDLE small_icon = LoadImageA(module_handle, MAKEINTRESOURCEA(GLFW_ICON), IMAGE_ICON, GetSystemMetrics(SM_CXSMICON), GetSystemMetrics(SM_CYSMICON), LR_DEFAULTCOLOR);
+        if (big_icon)
+            SendMessage(window_handle, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(big_icon));
+        if (small_icon)
+            SendMessage(window_handle, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(small_icon));
+    #endif
+}
+
+void* glfw_platform_window_handle(GLFWwindow* window)
+{
+    void* window_handle = nullptr;
+    #if FOUNDATION_PLATFORM_LINUX
+        window_handle = (void*)(uintptr_t)glfwGetX11Window(window);
+    #elif FOUNDATION_PLATFORM_MACOS
+        window_handle = glfwGetCocoaWindow(window);
+    #elif FOUNDATION_PLATFORM_WINDOWS
+        window_handle = glfwGetWin32Window(window);
+    #else
+        #error Not implemented
+    #endif
+
+    return window_handle;
+}
+
+void glfw_shutdown()
+{
+    glfwDestroyWindow(_glfw_main_window);
+    glfwTerminate();
+
+    _glfw_main_window = nullptr;
+}
+
+GLFWwindow* glfw_main_window(const char* window_title /*= nullptr*/)
+{
+    if (window_title == nullptr && _glfw_main_window)
+        return _glfw_main_window;
+
+    FOUNDATION_ASSERT(_glfw_main_window == nullptr);
+
+    // Setup window
+    glfwSetErrorCallback(glfw_log_error);
+    if (!glfwInit())
+        return nullptr;
+
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+    #if FOUNDATION_PLATFORM_MACOS
+        glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_FALSE);
+        glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_FALSE);
+    #else
+        glfwWindowHint(GLFW_SCALE_TO_MONITOR, GLFW_TRUE);
+    #endif
+
+    GLFWwindow* window = glfw_create_window_geometry(window_title);
+    if (window == nullptr)
+        return nullptr;
+
+    const application_t* app = environment_application();
+    string_const_t version_string = string_from_version_static(app->version);
+    glfwSetWindowTitle(window, string_format_static_const("%s v.%.*s", window_title, STRING_FORMAT(version_string)));
+    glfw_set_window_main_icon(window);
+
+    // Set global window handles if not set already.
+    if (_glfw_main_window == nullptr)
+        _glfw_main_window = window;
+
+    if (_window_handle == 0)
+        _window_handle = glfw_platform_window_handle(window);
+
+    return window;
 }

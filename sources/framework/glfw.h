@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
@@ -9,10 +9,9 @@
 
 #if FOUNDATION_PLATFORM_WINDOWS
 
-    #include <foundation/windows.h>
-
     #include <resource.h>
-
+    #include <foundation/windows.h>
+    
     #define GLFW_EXPOSE_NATIVE_WIN32
     #define GLFW_EXPOSE_NATIVE_WGL
     #undef THREAD_PRIORITY_NORMAL
@@ -36,13 +35,23 @@
 #define GLFW_HAS_GAMEPAD_API            (GLFW_VERSION_COMBINED >= 3300) // 3.3+ glfwGetGamepadState() new api
 #define GLFW_HAS_GETKEYNAME             (GLFW_VERSION_COMBINED >= 3200) // 3.2+ glfwGetKeyName()
 
-/*! @brief  Returns the main window.
+/*! Create or return the GLFW main window.
+ * 
+ *  @param window_title The window title when creating the main window.
+ * 
  *  @return The main window.
  */
-extern GLFWwindow* main_window();
+GLFWwindow* glfw_main_window(const char* window_title = nullptr);
+
+/*! @brief Releases GLFW global resources. 
+ * 
+ *  The main window will be destroyed if still alive.
+ */
+void glfw_shutdown();
 
 /*! @brief Center the window on the user main monitor.
- * @param window The window to center.
+ * 
+ *  @param window The window to center.
  */
 void glfw_set_window_center(GLFWwindow* window);
 
@@ -81,3 +90,35 @@ bool glfw_is_window_focused(GLFWwindow* window);
  * @return True if the mouse is over the window, false otherwise.
  */
 bool glfw_is_any_mouse_button_down(GLFWwindow* window);
+
+/*! Translate key code from GLFW to our own.
+ * @param key The key code to translate.
+ * @param scancode The scancode of the key.
+ * @return The translated key code.
+ */
+int glfw_translate_untranslated_key(int key, int scancode);
+
+/*! Converts a GLFW key to a modifier.
+ * @param key The key to convert.
+ * @return The modifier.
+ */
+int glfw_key_to_modifier(int key);
+
+/*! Log GLFW errors.
+ * 
+ * @param error The error code.
+ * @param description The error description.
+ */
+void glfw_log_error(int error, const char* description);
+
+/*! @brief Set the main icon of the window.
+ *  @param window The window to set the icon for.
+ */
+void glfw_set_window_main_icon(GLFWwindow* window);
+
+/*! Return the GLFW platform specific window handle.
+ * 
+ *  @param window The window to get the handle for.
+ *  @return The platform specific window handle.
+ */
+void* glfw_platform_window_handle(GLFWwindow* window);

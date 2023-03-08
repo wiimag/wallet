@@ -12,7 +12,7 @@
 #endif
 
 #if FOUNDATION_PLATFORM_WINDOWS
-extern HWND _window_handle;
+extern void* _window_handle;
 ITaskbarList3* g_task_bar_list = nullptr;
 #endif
 
@@ -26,7 +26,7 @@ void progress_initialize()
         CoCreateInstance(
             CLSID_TaskbarList, NULL, CLSCTX_ALL,
             IID_ITaskbarList3, (void**)&g_task_bar_list);
-        g_task_bar_list->SetProgressState(_window_handle, TBPF_NOPROGRESS);
+        g_task_bar_list->SetProgressState((HWND)_window_handle, TBPF_NOPROGRESS);
     #elif FOUNDATION_PLATFORM_MACOS
         // Not supported yet
     #else
@@ -43,8 +43,8 @@ void progress_stop()
 
         FOUNDATION_ASSERT(g_task_bar_list);
 
-        FlashWindow(_window_handle, FALSE);
-        g_task_bar_list->SetProgressState(_window_handle, TBPF_NOPROGRESS);
+        FlashWindow((HWND)_window_handle, FALSE);
+        g_task_bar_list->SetProgressState((HWND)_window_handle, TBPF_NOPROGRESS);
     #elif FOUNDATION_PLATFORM_MACOS
         // Not supported yet
     #else
@@ -74,7 +74,7 @@ void progress_set(size_t current, size_t total)
     #if FOUNDATION_PLATFORM_WINDOWS
         if (!g_task_bar_list || _window_handle == nullptr)
             return;
-        g_task_bar_list->SetProgressValue(_window_handle, current, total);
+        g_task_bar_list->SetProgressValue((HWND)_window_handle, current, total);
     #elif FOUNDATION_PLATFORM_MACOS
         // Not supported yet
     #else

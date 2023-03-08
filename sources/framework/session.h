@@ -14,11 +14,6 @@ typedef struct string_const_t string_const_t;
 void session_setup(const char* root_path = nullptr);
 
 /// <summary>
-/// Periodically update the current session data
-/// </summary>
-void session_update();
-
-/// <summary>
 /// Save to disk system and user configuration.
 /// </summary>
 void session_save();

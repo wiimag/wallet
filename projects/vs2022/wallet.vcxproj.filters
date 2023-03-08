@@ -211,6 +211,9 @@
     <ClInclude Include="..\..\sources\framework\window.h">
       <Filter>framework</Filter>
     </ClInclude>
+    <ClInclude Include="..\..\sources\framework\bgfx.h">
+      <Filter>framework</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\sources\stock.cpp">
@@ -388,6 +391,9 @@
       <Filter>app</Filter>
     </ClCompile>
     <ClCompile Include="..\..\sources\framework\window.cpp">
+      <Filter>framework</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\sources\framework\bgfx.cpp">
       <Filter>framework</Filter>
     </ClCompile>
   </ItemGroup>

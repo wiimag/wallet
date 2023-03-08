@@ -150,11 +150,6 @@ void session_shutdown()
     session_cleanup();
 }
 
-void session_update()
-{
-    
-}
-
 string_const_t session_get_file_path()
 {
    return session_get_user_file_path(STRING_CONST("session.json"));

@@ -9,6 +9,6 @@
 
 typedef object_t window_handle_t;
 
-window_handle_t window_open();
+window_handle_t window_open(const char* title);
 
 
