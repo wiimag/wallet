@@ -1289,7 +1289,7 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
         {
             
             const char* value = (int32_t)index.key.hash > 0 ? string_table_to_string(db->strings, (uint32_t)index.key.hash) : nullptr;
-            log_warnf(0, WARNING_STANDARD, STRING_CONST("Deleting index %u (%d) -> %s:%s(%.lf)"), 
+            log_debugf(0, STRING_CONST("Deleting index %u (%d) -> %s:%s(%.lf)"), 
                 i, index.key.type, 
                 string_table_to_string(db->strings, (int32_t)index.key.crc),
                 value ? value : "NA", index.key.number);

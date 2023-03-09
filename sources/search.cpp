@@ -976,14 +976,16 @@ FOUNDATION_STATIC table_t* search_create_table()
         .set_width(imgui_get_font_ui_scale(120.0f));
 
     table_add_column(table, search_table_column_change_p, " Day %||" ICON_MD_PRICE_CHANGE " Day % ", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
-        .set_width(imgui_get_font_ui_scale(100.0f));
+        .set_width(imgui_get_font_ui_scale(100.0f))
+    .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 2.9)));
 
     table_add_column(table, search_table_column_change_week, "  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER)
-        .set_width(imgui_get_font_ui_scale(80.0f));
+        .set_width(imgui_get_font_ui_scale(80.0f))
+        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 1.6)));
     
     table_add_column(table, search_table_column_change_month, "  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER)
         .set_width(imgui_get_font_ui_scale(80.0f))
-        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 3.0)));
+        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 4.0)));
 
     table_add_column(table, search_table_column_change_year, "1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER)
         .set_width(imgui_get_font_ui_scale(80.0f))
@@ -1087,6 +1089,9 @@ FOUNDATION_STATIC expr_result_t search_expr_index_document(const expr_func_t* f,
         log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
         return false;
     }
+
+    log_infof(HASH_SEARCH, STRING_CONST("Indexed %.*s\n\tSymbols: %u\n\tProperties: %u"), 
+        STRING_FORMAT(symbol), search_database_document_count(db), search_database_index_count(db));
 
     // Raise event for search window to refresh itself.
     return dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);
