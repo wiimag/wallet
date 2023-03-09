@@ -905,8 +905,6 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
             ImGui::PopID();
         }
     }
-    
-    ImGui::EndTable();
 }
 
 void table_render(table_t* table, table_element_ptr_const_t elements, const int element_count, size_t element_size, float outer_size_x, float outer_size_y)
@@ -942,6 +940,8 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
     table_render_sort_rows(table);
 
     table_render_elements(table, column_count);
+
+    ImGui::EndTable();
 }
 
 void table_clear_columns(table_t* table)

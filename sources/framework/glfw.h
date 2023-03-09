@@ -122,3 +122,22 @@ void glfw_set_window_main_icon(GLFWwindow* window);
  *  @return The platform specific window handle.
  */
 void* glfw_platform_window_handle(GLFWwindow* window);
+
+/*! Get the monitor size on which the window is located.
+ *
+ *  @param window The window to get the monitor size for.
+ *  @param monitor_width The monitor width.
+ *  @param monitor_height The monitor height.
+ *  @return True if the monitor size was found, false otherwise.
+ */
+bool glfw_get_window_monitor_size(GLFWwindow* window, int* monitor_width, int* monitor_height);
+
+/*! Get the monitor size on which the window is located given its top-left coordinates.
+ *
+ *  @param window_x The window x position.
+ *  @param window_y The window y position.
+ *  @param monitor_width The monitor width.
+ *  @param monitor_height The monitor height.
+ *  @return True if the monitor size was found, false otherwise.
+ */
+bool glfw_get_window_monitor_size(int window_x, int window_y, int* monitor_width, int* monitor_height);

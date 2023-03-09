@@ -535,3 +535,19 @@ bool time_is_weekend()
         return false;
     return (tm_now.tm_wday == 0) || (tm_now.tm_wday == 6);
 }
+
+string_t path_normalize_name(char* buff, size_t capacity, const char* _path, size_t path_length, const char replacement_char /*= '_'*/)
+{
+    string_t path = string_copy(buff, capacity, _path, path_length);
+    path = path_clean(STRING_ARGS(path), capacity);
+
+    // Remove any file path illegal characters
+    char* p = path.str;
+    for (size_t i = 0, end = path.length; i < end; ++i)
+    {
+        if (p[i] == '<' || p[i] == '>' || p[i] == ':' || p[i] == '"' || p[i] == '/' || p[i] == '\\' || p[i] == '|' || p[i] == '?' || p[i] == '*')
+            p[i] = replacement_char;
+    }
+
+    return path;
+}

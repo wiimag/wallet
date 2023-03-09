@@ -217,6 +217,18 @@ string_const_t url_decode(const char* str, size_t str_length = 0);
 
 bool path_equals(const char* a, size_t a_length, const char* b, size_t b_length);
 
+/*! Normalize path name, removing any redundant path components and by removing any illegal chars.
+ * 
+ *  @param buff Buffer to write normalized path to
+ *  @param capacity Capacity of buffer
+ *  @param path Path to normalize
+ *  @param path_length Length of path
+ *  @param replacement_char Character to replace illegal chars with
+ * 
+ *  @return Normalized path
+ */
+string_t path_normalize_name(char* buff, size_t capacity, const char* path, size_t path_length, const char replacement_char = '_');
+
 // ##FS
 
 string_t fs_read_text(const char* path, size_t path_length);

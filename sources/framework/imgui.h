@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <framework/common.h>
 #include <framework/function.h>
 
 #undef IMGUI_DEFINE_MATH_OPERATORS
@@ -294,4 +295,19 @@ namespace ImGui
     
     /*! Pops the compact style pushed by #PushStyleCompact */
     void PopStyleCompact();
+}
+
+typedef enum class ImGuiCalcTextFlags : int {
+    None = 0,
+
+    Padding = 1 << 0
+} imgui_calc_text_flags_t;
+DEFINE_ENUM_FLAGS(ImGuiCalcTextFlags);
+
+float imgui_calc_text_width(const char* text, size_t length, imgui_calc_text_flags_t flags = ImGuiCalcTextFlags::None);
+
+template<size_t N>
+float imgui_calc_text_width(const char(&text)[N], imgui_calc_text_flags_t flags = ImGuiCalcTextFlags::None)
+{
+    return imgui_calc_text_width(text, N-1, flags);
 }

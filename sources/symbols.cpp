@@ -651,7 +651,6 @@ FOUNDATION_STATIC void symbols_render_menus()
     if (ImGui::BeginMenu("Symbols"))
     {
         ImGui::MenuItem("Indexes", nullptr, &SETTINGS.show_symbols_INDX);
-        ImGui::MenuItem("Last Day", nullptr, &SETTINGS.show_bulk_eod);
         if (ImGui::MenuItem("La Presse", nullptr, nullptr, true))
             open_in_shell("https://www.google.com/search?q=bourse+site:lapresse.ca&tbas=0&source=lnt&tbs=qdr:w&sa=X&biw=1920&bih=902&dpr=2");
 

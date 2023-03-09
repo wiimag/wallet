@@ -28,6 +28,82 @@ GLFWwindow* _glfw_main_window = nullptr;
 
 #endif
 
+bool glfw_get_window_monitor_size(int window_x, int window_y, int* monitor_width, int* monitor_height)
+{
+    FOUNDATION_ASSERT(monitor_width);
+    FOUNDATION_ASSERT(monitor_height);
+    
+    // Get the list of monitors
+    int monitors_length;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitors_length);
+
+    if (monitors == NULL)
+        return false;
+
+    // Figure out which monitor the window is in
+    for (int i = 0; i < monitors_length; i++)
+    {
+        // Get the monitor position
+        int monitor_x, monitor_y;
+        glfwGetMonitorPos(monitors[i], &monitor_x, &monitor_y);
+
+        GLFWvidmode* monitor_vidmode = (GLFWvidmode*)glfwGetVideoMode(monitors[i]);
+
+        if (monitor_vidmode == NULL)
+            continue; // Video mode is required for width and height, so skip this monitor
+
+        *monitor_width = monitor_vidmode->width;
+        *monitor_height = monitor_vidmode->height;
+
+        if (window_x == INT_MAX || window_y == INT_MAX)
+            return true; // Default position, take the first monitor for the specs
+
+        // Set the owner to this monitor if the center of the window is within its bounding box
+        if ((window_x > monitor_x && window_x < (monitor_x + *monitor_width)) && (window_y > monitor_y && window_y < (monitor_y + *monitor_height)))
+            return true;
+    }
+
+    return false;
+}
+
+bool glfw_get_window_monitor_size(GLFWwindow* window, int* monitor_width, int* monitor_height)
+{
+    FOUNDATION_ASSERT(monitor_width);
+    FOUNDATION_ASSERT(monitor_height);
+
+    // Get the list of monitors
+    int monitors_length;
+    GLFWmonitor** monitors = glfwGetMonitors(&monitors_length);
+
+    if (monitors == NULL)
+        return false;
+        
+    int window_x, window_y;
+    glfwGetWindowPos(window, &window_x, &window_y);
+
+    // Figure out which monitor the window is in
+    for (int i = 0; i < monitors_length; i++) 
+    {
+        // Get the monitor position
+        int monitor_x, monitor_y;
+        glfwGetMonitorPos(monitors[i], &monitor_x, &monitor_y);
+
+        GLFWvidmode* monitor_vidmode = (GLFWvidmode*)glfwGetVideoMode(monitors[i]);
+
+        if (monitor_vidmode == NULL)
+            continue; // Video mode is required for width and height, so skip this monitor
+
+        *monitor_width = monitor_vidmode->width;
+        *monitor_height = monitor_vidmode->height;
+
+        // Set the owner to this monitor if the center of the window is within its bounding box
+        if ((window_x > monitor_x && window_x < (monitor_x + *monitor_width)) && (window_y > monitor_y && window_y < (monitor_y + *monitor_height))) 
+            return true;
+    }
+
+    return false;
+}
+
 void glfw_set_window_center(GLFWwindow* window)
 {
     // Get window position and size

@@ -497,6 +497,10 @@ FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_h
     ImGui::Separator();
 
     ImGui::MoveCursor(8.0f, 2.0f);
+    if (ImGui::MenuItem("Open Pattern"))
+        pattern_open_window(title->code, title->code_length);
+
+    ImGui::MoveCursor(8.0f, 2.0f);
     if (ImGui::MenuItem("Load Pattern"))
         pattern_open(title->code, title->code_length);
 
@@ -1145,22 +1149,22 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         report_column_get_date, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_details_view);
 
-    table_add_column(table, STRING_CONST("  " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"),
+    table_add_column(table, STRING_CONST(" " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_details_view);
 
-    table_add_column(table, STRING_CONST("   Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"),
+    table_add_column(table, STRING_CONST("  Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"),
         report_column_get_buy_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_buy_view)
         .set_tooltip_callback(report_title_adjusted_price_tooltip);
 
-    table_add_column(table, STRING_CONST(" Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"),
+    table_add_column(table, STRING_CONST("Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_details_view)
         .set_tooltip_callback(report_title_live_price_tooltip)
         .set_style_formatter(report_title_price_alerts_formatter);
 
-    table_add_column(table, STRING_CONST("   Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"),
+    table_add_column(table, STRING_CONST("  Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"),
         report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_sell_view)
         .set_tooltip_callback(report_title_ask_price_gain_tooltip);
@@ -1222,7 +1226,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE/* | COLUMN_ROUND_NUMBER*/)
         .set_style_formatter(report_title_total_gain_alerts_formatter)
         .set_tooltip_callback(report_title_gain_total_tooltip);
-    table_add_column(table, STRING_CONST("  % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "),
+    table_add_column(table, STRING_CONST(" % " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain % "),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN_P), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER)
         .set_style_formatter(report_title_total_gain_p_alerts_formatter);
 
@@ -1232,7 +1236,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         E32(report_column_get_fundamental_value, _1, _2, STRING_CONST("General.Sector|Category|Type")), COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SEARCHABLE)
         .width = 200.0f;
 
-    table_add_column(table, STRING_CONST(" " ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"),
+    table_add_column(table, STRING_CONST(ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER,
         COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER | COLUMN_MIDDLE_ALIGN);
 

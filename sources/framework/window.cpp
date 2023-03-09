@@ -45,6 +45,7 @@ struct window_t
     bool prepared{ false };
     double last_valid_mouse_pos[2]{ 0, 0 };
     int frame_width{ 0 }, frame_height{ 0 };
+    float scale{ 1.0f };
 
     /*! GLFW window handle */
     GLFWwindow* glfw_window{ nullptr };
@@ -63,11 +64,13 @@ struct window_t
     ImPlotContext* implot_context{ nullptr };
 
     /*! Window event handlers */
-    window_handler_t open{ nullptr };
-    window_handler_t close{ nullptr };
-    window_handler_t render{ nullptr };
+    window_event_handler_t open{ nullptr };
+    window_event_handler_t close{ nullptr };
+    window_event_handler_t render{ nullptr };
+    window_resize_callback_t resize{ nullptr };
     
     /*! Window user data */
+    string_t id{};
     string_t title{};
     void* user_data{ nullptr };
     config_handle_t config{ nullptr };
@@ -80,18 +83,23 @@ struct WindowContext
     ImGuiContext* prev_imgui_context;
     ImPlotContext* prev_implot_context;
 
-    WindowContext(GLFWwindow* glfw_window)
-        : window((window_t*)glfwGetWindowUserPointer(glfw_window))
+    WindowContext(window_t* win)
+        : window(win)
         , prev_imgui_context(ImGui::GetCurrentContext())
         , prev_implot_context(ImPlot::GetCurrentContext())
     {
         FOUNDATION_ASSERT(window);
         FOUNDATION_ASSERT(window->imgui_context);
         FOUNDATION_ASSERT(window->implot_context);
-        FOUNDATION_ASSERT(window->glfw_window == glfw_window);
 
         ImGui::SetCurrentContext((ImGuiContext*)window->imgui_context);
         ImPlot::SetCurrentContext((ImPlotContext*)window->implot_context);
+    }
+
+    WindowContext(GLFWwindow* glfw_window)
+        : WindowContext((window_t*)glfwGetWindowUserPointer(glfw_window))
+    {
+        FOUNDATION_ASSERT(window->glfw_window == glfw_window);
     }
 
     ~WindowContext()
@@ -172,6 +180,23 @@ FOUNDATION_STATIC void window_bgfx_invalidate_device_objects(window_t* win)
     }
 }
 
+FOUNDATION_STATIC void window_restore_settings(window_t* win, config_handle_t config)
+{
+    win->scale = (float)config["scale"].as_number(1.0);
+    win->config = config;
+}
+
+FOUNDATION_STATIC string_const_t window_get_imgui_save_path(window_t* win)
+{
+    char normalized_window_id_buffer[BUILD_MAX_PATHLEN];
+    string_t normalized_window_id = path_normalize_name(normalized_window_id_buffer, sizeof(normalized_window_id_buffer), STRING_ARGS(win->id));
+    string_const_t window_imgui_save_path = session_get_user_file_path(
+        STRING_ARGS(normalized_window_id),
+        STRING_CONST("imgui"),
+        STRING_CONST("ini"), true);
+    return window_imgui_save_path;
+}
+
 FOUNDATION_STATIC void window_save_settings(window_t* win)
 {
     FOUNDATION_ASSERT(win && win->glfw_window);
@@ -190,6 +215,11 @@ FOUNDATION_STATIC void window_save_settings(window_t* win)
     config_set(win->config, "width", (double)window_width);
     config_set(win->config, "height", (double)window_height);
     config_set(win->config, "maximized", window_maximized == GLFW_TRUE);
+    config_set(win->config, "scale", (double)win->scale);
+    
+    WindowContext ctx(win);
+    string_const_t window_imgui_save_path = window_get_imgui_save_path(win);
+    ImGui::SaveIniSettingsToDisk(window_imgui_save_path.str);
 }
 
 FOUNDATION_STATIC void window_deallocate(window_t* win)
@@ -234,6 +264,7 @@ FOUNDATION_STATIC void window_deallocate(window_t* win)
         glfwDestroyWindow(win->glfw_window);
     }
 
+    string_deallocate(win->id.str);
     string_deallocate(win->title.str);
         
     MEM_DELETE(win);
@@ -535,6 +566,8 @@ FOUNDATION_STATIC void window_resize(window_t* win, int frame_width, int frame_h
 
     win->bgfx_imgui_frame_buffer_handle = bgfx::createFrameBuffer(
         window_handle, (uint16_t)frame_width, (uint16_t)frame_height);
+
+    win->resize.invoke(win->handle, frame_width, frame_height);
 }
 
 FOUNDATION_STATIC void window_prepare(window_t* win)
@@ -550,6 +583,14 @@ FOUNDATION_STATIC void window_prepare(window_t* win)
     {
         window_bgfx_init(win);
         window_imgui_init(win);
+
+        // Load IMGUI settings
+        if (none(win->flags, WindowFlags::Transient))
+        {
+            string_const_t window_imgui_save_path = window_get_imgui_save_path(win);
+            if (fs_is_file(STRING_ARGS(window_imgui_save_path)))
+                ImGui::LoadIniSettingsFromDisk(window_imgui_save_path.str);
+        }
 
         win->prepared = true;
     }
@@ -579,17 +620,9 @@ FOUNDATION_STATIC void window_imgui_new_frame(window_t* win)
     io.DeltaTime = win->time > 0.0 ? (float)(current_time - win->time) : (float)(1.0f / 60.0f);
     win->time = current_time;
 
-    //imgui_update_mouse_data(window);
-    //imgui_update_mouse_cursor(window);
-
     ImGui::NewFrame();
 }
 
-// This is the main rendering function that you have to implement and call after
-// ImGui::Render(). Pass ImGui::GetDrawData() to this function.
-// Note: If text or lines are blurry when integrating ImGui into your engine,
-// in your Render function, try translating your projection matrix by
-// (0.5f,0.5f) or (0.375f,0.375f)
 FOUNDATION_STATIC void window_bgfx_render_draw_lists(window_t* win, ImDrawData* draw_data)
 {
     if (win->frame_width <= 0 || win->frame_height <= 0)
@@ -673,6 +706,24 @@ FOUNDATION_STATIC void window_bgfx_render_draw_lists(window_t* win, ImDrawData* 
     }
 }
 
+FOUNDATION_STATIC void window_handle_global_shortcuts(window_t* win)
+{
+    if (ImGui::Shortcut(ImGuiMod_Shift | ImGuiMod_Ctrl | ImGuiKey_Minus))
+    {
+        win->scale = max(0.2f, win->scale - 0.1f);
+    }
+    else if (ImGui::Shortcut(ImGuiMod_Shift | ImGuiMod_Ctrl | ImGuiKey_Equal))
+    {
+        win->scale = min(win->scale + 0.1f, 4.0f);
+    }
+    else if (ImGui::Shortcut(ImGuiMod_Shift | ImGuiMod_Ctrl | ImGuiKey_0))
+    {
+        win->scale = 1.0f;
+    }
+
+    ImGui::GetIO().FontGlobalScale = win->scale;
+}
+
 FOUNDATION_STATIC void window_render(window_t* win)
 {        
     const bool graphical_mode = !main_is_batch_mode();
@@ -694,6 +745,7 @@ FOUNDATION_STATIC void window_render(window_t* win)
         ImGuiWindowFlags_NoTitleBar/* |
         ImGuiWindowFlags_MenuBar*/))
     {
+        window_handle_global_shortcuts(win);
         win->render.invoke(win->handle);
     } ImGui::End();
         
@@ -742,6 +794,14 @@ FOUNDATION_STATIC void window_update()
 // # PUBLIC API
 //
 
+void* window_get_user_data(window_handle_t window_handle)
+{
+    window_t* window = window_get(window_handle);
+    FOUNDATION_ASSERT(window);
+
+    return window->user_data;
+}
+
 const char* window_title(window_handle_t window_handle)
 {
     window_t* window = window_get(window_handle);
@@ -751,15 +811,60 @@ const char* window_title(window_handle_t window_handle)
     return window->title.str;
 }
 
-GLFWwindow* window_create(const char* window_title, config_handle_t config, window_flags_t flags)
+void window_set_title(window_handle_t window_handle, const char* title, size_t title_length)
+{
+    window_t* window = window_get(window_handle);
+    FOUNDATION_ASSERT(window);
+    FOUNDATION_ASSERT(window->glfw_window);
+    FOUNDATION_ASSERT(title && title_length);
+
+    string_const_t title_str = string_const(title, title_length);
+
+    string_deallocate(window->title.str);
+    window->title = string_clone(title, title_length);
+    glfwSetWindowTitle(window->glfw_window, window->title.str);
+}
+
+void window_set_render_callback(window_handle_t window_handle, const window_event_handler_t& callback)
+{
+    window_t* window = window_get(window_handle);
+    FOUNDATION_ASSERT(window);
+    FOUNDATION_ASSERT(window->glfw_window);
+    FOUNDATION_ASSERT(callback);
+
+    window->render = callback;
+}
+
+void window_set_resize_callback(window_handle_t window_handle, const window_resize_callback_t& callback)
+{
+    window_t* window = window_get(window_handle);
+    FOUNDATION_ASSERT(window);
+    FOUNDATION_ASSERT(window->glfw_window);
+    FOUNDATION_ASSERT(callback);
+
+    window->resize = callback;
+}
+
+void window_set_close_callback(window_handle_t window_handle, const window_event_handler_t& callback)
+{
+    window_t* window = window_get(window_handle);
+    FOUNDATION_ASSERT(window);
+    FOUNDATION_ASSERT(window->glfw_window);
+    FOUNDATION_ASSERT(callback);
+
+    window->close = callback;
+}
+
+FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t window_title_length, config_handle_t config, window_flags_t flags)
 {
     FOUNDATION_ASSERT(window_title);
 
+    const bool user_requested_maximized = test(flags, WindowFlags::Maximized);
+
+    const bool has_position = config_exists(config, STRING_CONST("x"));
     const int window_x = math_trunc(config["x"].as_number(INT_MAX));
     const int window_y = math_trunc(config["y"].as_number(INT_MAX));
-    const int window_width = math_trunc(config["width"].as_number(1280));
-    const int window_height = math_trunc(config["height"].as_number(720));
-    const bool window_maximized = config["maximized"].as_boolean(false);
+    const bool window_maximized = config["maximized"].as_boolean(user_requested_maximized);
 
     GLFWmonitor* monitor = glfw_find_window_monitor(window_x, window_y);
     if (monitor == glfwGetPrimaryMonitor())
@@ -767,22 +872,42 @@ GLFWwindow* window_create(const char* window_title, config_handle_t config, wind
 
     float scale_x = 1.0f, scale_y = 1.0f;
     #if FOUNDATION_PLATFORM_WINDOWS
-    glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
+        glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
     #endif
+
+    // If not window settings are passed, then we assume #InitialProportionalSize is the default.
+    if (flags == WindowFlags::None)
+        flags = WindowFlags::InitialProportionalSize;
+
+    // Compute the best initialize size of the window if not was saved previously
+    int initial_width = 1280, initial_height = 720;
+    if (!user_requested_maximized && !has_position && test(flags, WindowFlags::InitialProportionalSize))
+    {
+        if (glfw_get_window_monitor_size(window_x, window_y, &initial_width, &initial_height))
+        {
+            initial_width = math_round(initial_width * 0.8f);
+            initial_height = math_round(initial_height * 0.85f);
+        }
+    }
+
+    const int window_width = math_trunc(config["width"].as_number(initial_width));
+    const int window_height = math_trunc(config["height"].as_number(initial_height));
     
+    char window_title_null_terminated_buffer[512];
+    string_copy(STRING_BUFFER(window_title_null_terminated_buffer), window_title, window_title_length);
+
     // Create GLFW window
     glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
     GLFWwindow* window = glfwCreateWindow(
         (int)(window_width / scale_x), (int)(window_height / scale_y), 
-        window_title, nullptr, nullptr);
+        window_title_null_terminated_buffer, nullptr, nullptr);
     if (window == nullptr)
         return nullptr;
 
     // TODO: Add option to override the window icon
     glfw_set_window_main_icon(window);
 
-    const bool has_position = config_exists(config, STRING_CONST("x"));
     if (has_position)
     {
         if (window_x != INT_MAX && window_y != INT_MAX)
@@ -792,6 +917,10 @@ GLFWwindow* window_create(const char* window_title, config_handle_t config, wind
 
         if (window_maximized)
             glfwMaximizeWindow(window);
+    }
+    else if (window_maximized)
+    {
+        glfwMaximizeWindow(window);
     }
     else
     {
@@ -804,22 +933,65 @@ GLFWwindow* window_create(const char* window_title, config_handle_t config, wind
     return window;
 }
 
-window_handle_t window_open(const char* window_title, const window_handler_t& render_callback, window_flags_t flags /*= WindowFlags::None*/)
+FOUNDATION_STATIC window_t* window_find_by_id(string_const_t window_id)
 {
-    FOUNDATION_ASSERT(window_title);
+    for (unsigned i = 0, end = array_size(_window_module->windows); i != end; ++i)
+    {
+        window_t* w = _window_module->windows[i];
+        if (string_equal(STRING_ARGS(window_id), STRING_ARGS(w->id)))
+            return w;
+    }
+
+    return nullptr;
+}
+
+bool window_focus(window_handle_t window_handle)
+{
+    window_t* window = window_get(window_handle);
+    FOUNDATION_ASSERT(window);
+
+    if (window->glfw_window == nullptr)
+        return false;
+
+    glfwFocusWindow(window->glfw_window);
+    return glfwGetWindowAttrib(window->glfw_window, GLFW_FOCUSED) == 1;
+}
+
+window_handle_t window_open(
+    const char* FOUNDATION_RESTRICT _window_id,
+    const char* title, size_t title_length,
+    const window_event_handler_t& render_callback,
+    const window_event_handler_t& close_callback,
+    void* user_data /*= nullptr*/, window_flags_t flags /*= WindowFlags::None*/)
+{
+    FOUNDATION_ASSERT(_window_id);
+    FOUNDATION_ASSERT(title && title_length > 0);
     FOUNDATION_ASSERT(render_callback);
 
+    string_const_t window_id = string_const(_window_id, string_length(_window_id));
+
+    if (test(flags, WindowFlags::Singleton))
+    {
+        // Check if we already have an instance of the window by scanning window ids.
+        window_t* existing_window = window_find_by_id(window_id);
+        if (existing_window)
+        {
+            window_focus(existing_window->handle);
+            return existing_window->handle;
+        }
+    }
+
     // Restore window settings
-    config_handle_t config = config_set_object(_window_module->configs, window_title, string_length(window_title));
+    config_handle_t config = none(flags, WindowFlags::Transient) ? config_set_object(_window_module->configs, STRING_ARGS(window_id)) : config_null();
 
     // Create GLFW window
-    GLFWwindow* glfw_window = window_create(window_title, config, flags);
+    GLFWwindow* glfw_window = window_create(title, title_length, config, flags);
     if (glfw_window == nullptr)
     {
         log_errorf(HASH_WINDOW, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to create GLFW window"));
         return OBJECT_INVALID;
     }
-    
+
     window_t* new_window = window_allocate(glfw_window, flags);
     if (new_window == nullptr)
     {
@@ -829,11 +1001,20 @@ window_handle_t window_open(const char* window_title, const window_handler_t& re
     }
 
     // Set new window properties
-    new_window->config = config;
-    new_window->title = string_clone(window_title, string_length(window_title));
-    new_window->render = render_callback;    
+    new_window->id = string_clone(STRING_ARGS(window_id));
+    new_window->title = string_clone(title, title_length);
+    new_window->render = render_callback;
+    new_window->close = close_callback;
+    new_window->user_data = user_data;
+
+    window_restore_settings(new_window, config);
 
     return new_window->handle;
+}
+
+window_handle_t window_open(const char* window_title, const window_event_handler_t& render_callback, window_flags_t flags /*= WindowFlags::None*/)
+{
+    return window_open(window_title, window_title, string_length(window_title), render_callback, nullptr, nullptr, flags);
 }
 
 //

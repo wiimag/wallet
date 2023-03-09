@@ -17,6 +17,7 @@
 #include <framework/tabs.h>
 #include <framework/config.h>
 #include <framework/string.h>
+#include <framework/window.h>
 
 #define HASH_BULK static_hash_string("bulk", 4, 0x9a6818bbbd28c09eULL)
 
@@ -595,13 +596,22 @@ FOUNDATION_STATIC void bulk_render()
     }
 }
 
-FOUNDATION_STATIC void bulk_render_tabs()
+FOUNDATION_STATIC void bulk_menu()
 {
-    if (!SETTINGS.show_bulk_eod)
+    if (!ImGui::BeginMenuBar())
         return;
 
-    tab_set_color(TAB_COLOR_OTHER);
-    tab_draw(ICON_MD_BATCH_PREDICTION " Last Day", &SETTINGS.show_bulk_eod, bulk_render);
+    if (ImGui::BeginMenu("Symbols"))
+    {
+        if (ImGui::MenuItem("Last Day"))
+        {
+            window_open("bulk_last_day", STRING_CONST("Last Day Results"), 
+                L1(bulk_render()), nullptr, nullptr, WindowFlags::Maximized | WindowFlags::Singleton);
+        }
+
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenuBar();
 }
 
 // 
@@ -612,7 +622,7 @@ FOUNDATION_STATIC void bulk_initialize()
 {
     _symbols_lock = mutex_allocate(STRING_CONST("BulkLock"));
 
-    service_register_tabs(HASH_BULK, bulk_render_tabs);
+    service_register_menu(HASH_BULK, bulk_menu);
 }
 
 FOUNDATION_STATIC void bulk_shutdown()

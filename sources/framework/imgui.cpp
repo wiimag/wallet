@@ -901,3 +901,14 @@ void imgui_deallocate(void* ptr, void* user_data)
     memory_deallocate(ptr);
 }
 
+float imgui_calc_text_width(const char* text, size_t length, imgui_calc_text_flags_t flags /*= ImGuiCalcTextFlags::None*/)
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+    const ImVec2 label_size = ImGui::CalcTextSize(text, text + length);
+
+    float item_width = label_size.x;
+    if (test(flags, ImGuiCalcTextFlags::Padding))
+        item_width += style.ItemInnerSpacing.x * 2.0f;
+    return item_width;
+}
+
