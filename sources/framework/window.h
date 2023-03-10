@@ -29,19 +29,12 @@ typedef enum class WindowFlags {
 
     /*! Their can only be one instance of that window. */
     Singleton = 1 << 3,
+
+    /*! This flags give a dialog behavior to the window. */
+    Dialog = 1 << 4,
     
 } window_flags_t;
 DEFINE_ENUM_FLAGS(WindowFlags);
-
-/*! Create and open a new window.
- *
- *  @param title           The title of the window. The title string gets copied into managed memory.
- *  @param render_callback The callback to be called when the window is rendered.
- *  @param flags           The window flags used to create and show the window.
- * 
- *  @return              The handle of the window.
- */
-window_handle_t window_open(const char* title, const window_event_handler_t& render_callback, window_flags_t flags = WindowFlags::None);
 
 /*! Create and open a new window.
  *
@@ -60,6 +53,35 @@ window_handle_t window_open(
     const char* FOUNDATION_RESTRICT window_id, 
     const char* title, size_t title_length, 
     const window_event_handler_t& render_callback, 
+    const window_event_handler_t& close_callback,
+    void* user_data = nullptr, window_flags_t flags = WindowFlags::None);
+
+/*! Create and open a new window.
+ *
+ *  @param title           The title of the window. The title string gets copied into managed memory.
+ *  @param render_callback The callback to be called when the window is rendered.
+ *  @param flags           The window flags used to create and show the window.
+ *
+ *  @return              The handle of the window.
+ */
+window_handle_t window_open(const char* title, const window_event_handler_t& render_callback, window_flags_t flags = WindowFlags::None);
+
+/*! Create and open a new module window that will act as a singleton.
+ *
+ *  @param context         The context of the window. The context is used to identify the window.
+ *  @param title           The title of the window. The title string gets copied into managed memory.
+ *  @param title_length    The length of the title string.
+ *  @param render_callback The callback to be called when the window is rendered.
+ *  @param close_callback  The callback to be called when the window is closed.
+ *  @param user_data       The user data used to restore any user data through #window_get_user_pointer
+ *  @param flags           The window flags used to create and show the window and we add the #WindowFlags::Singleton flag.
+ *
+ *  @return              The handle of the window.
+ */
+window_handle_t window_open(
+    hash_t context,
+    const char* title, size_t title_length,
+    const window_event_handler_t& render_callback,
     const window_event_handler_t& close_callback,
     void* user_data = nullptr, window_flags_t flags = WindowFlags::None);
 
@@ -110,6 +132,13 @@ void window_set_resize_callback(window_handle_t window_handle, const window_resi
  */
 void window_set_close_callback(window_handle_t window_handle, const window_event_handler_t& callback);
 
+/*! Sets the window menu render callback. The callback is called when the window menu is rendered.
+ *
+ *  @param window_handle The handle of the window.
+ *  @param callback      The callback to be called when the window menu is rendered.
+ */
+void window_set_menu_render_callback(window_handle_t window_handle, const window_event_handler_t& callback);
+
 /*! Focus the window.
  *
  *  @param window_handle The handle of the window.
@@ -117,3 +146,9 @@ void window_set_close_callback(window_handle_t window_handle, const window_event
  *  @return              True if the window was focused, false otherwise.
  */
 bool window_focus(window_handle_t window_handle);
+
+/*! Request to close the window.
+ * 
+ *  @param window_handle The handle of the window to be closed.
+ */
+void window_close(window_handle_t window_handle);

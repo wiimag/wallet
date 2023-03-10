@@ -5,7 +5,6 @@
 
 #include "search.h"
 
-#include "app.h"
 #include "eod.h"
 #include "stock.h"
 #include "events.h"
@@ -27,6 +26,7 @@
 #include <framework/profiler.h>
 #include <framework/table.h>
 #include <framework/expr.h>
+#include <framework/window.h>
 
 #include <foundation/stream.h>
 
@@ -578,7 +578,7 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
     sw->query_tick = time_diff(sw->query_tick, time_current());
 }
 
-FOUNDATION_STATIC bool search_window_render(void* user_data)
+FOUNDATION_STATIC void search_window_render(void* user_data)
 {
     search_window_t* sw = (search_window_t*)user_data;
     FOUNDATION_ASSERT(sw && sw->db);
@@ -627,8 +627,6 @@ FOUNDATION_STATIC bool search_window_render(void* user_data)
             ImGui::SetTooltip(" Symbols: %u \n Properties: %u ", search_database_document_count(sw->db), search_database_index_count(sw->db));
         }
     }
-
-    return true;
 }
 
 FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry_t* entry, const column_t* column)
@@ -1049,8 +1047,12 @@ FOUNDATION_STATIC void search_window_deallocate(void* window)
 FOUNDATION_STATIC void search_open_quick_search()
 {
     FOUNDATION_ASSERT(_search->db);
-    
-    app_open_dialog("Search", search_window_render, 0, 0, true, search_window_allocate(), search_window_deallocate);
+
+    search_window_t* search_window = search_window_allocate();
+    window_open(HASH_SEARCH, STRING_CONST("Search"), 
+        L1(search_window_render(window_get_user_data(_1))),
+        L1(search_window_deallocate(window_get_user_data(_1))), 
+        search_window, WindowFlags::Dialog);
 }
 
 FOUNDATION_STATIC void search_menu()

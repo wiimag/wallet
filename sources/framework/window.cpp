@@ -13,6 +13,8 @@
 #include <framework/session.h>
 #include <framework/dispatcher.h>
 
+#include <foundation/hash.h>
+
 #include <imgui/fs_imgui.bin.h>
 #include <imgui/vs_imgui.bin.h>
 
@@ -46,6 +48,7 @@ struct window_t
     double last_valid_mouse_pos[2]{ 0, 0 };
     int frame_width{ 0 }, frame_height{ 0 };
     float scale{ 1.0f };
+    bool opened{ true };
 
     /*! GLFW window handle */
     GLFWwindow* glfw_window{ nullptr };
@@ -68,6 +71,7 @@ struct window_t
     window_event_handler_t close{ nullptr };
     window_event_handler_t render{ nullptr };
     window_resize_callback_t resize{ nullptr };
+    window_event_handler_t menu{ nullptr };
     
     /*! Window user data */
     string_t id{};
@@ -500,6 +504,11 @@ FOUNDATION_STATIC bool window_imgui_init(window_t* win)
     io.ClipboardUserData = win->glfw_window;
     io.SetClipboardTextFn = window_glfw_set_clipboard_text;
     io.GetClipboardTextFn = window_glfw_get_clipboard_text;
+
+    if (test(win->flags, WindowFlags::Dialog))
+    {
+        io.ConfigWindowsMoveFromTitleBarOnly = true;
+    }
     
     glfwSetMouseButtonCallback(win->glfw_window, window_glfw_mouse_button_callback);
     glfwSetScrollCallback(win->glfw_window, window_glfw_scroll_callback);
@@ -545,6 +554,8 @@ FOUNDATION_STATIC bool window_imgui_init(window_t* win)
         (void)glfwGetError(NULL);
     #endif
     glfwSetErrorCallback(prev_error_callback);
+
+    ImGui::StyleColorsDark();
 
     return true;
 }
@@ -708,6 +719,12 @@ FOUNDATION_STATIC void window_bgfx_render_draw_lists(window_t* win, ImDrawData* 
 
 FOUNDATION_STATIC void window_handle_global_shortcuts(window_t* win)
 {
+    if (test(win->flags, WindowFlags::Dialog))
+    {
+        if (ImGui::IsWindowFocused() && shortcut_executed(ImGuiKey_Escape))
+            window_close(win->handle);
+    }
+
     if (ImGui::Shortcut(ImGuiMod_Shift | ImGuiMod_Ctrl | ImGuiKey_Minus))
     {
         win->scale = max(0.2f, win->scale - 0.1f);
@@ -734,20 +751,95 @@ FOUNDATION_STATIC void window_render(window_t* win)
 
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2((float)win->frame_width , (float)win->frame_height));
+
+    const bool has_menu = win->menu.valid();
+    const bool is_dialog_window = test(win->flags, WindowFlags::Dialog);
+
+    ImGuiWindowFlags imgui_window_flags = 
+        ImGuiWindowFlags_NoBringToFrontOnFocus |
+        ImGuiWindowFlags_NoMove |
+        ImGuiWindowFlags_NoCollapse;
+
+    if (has_menu)
+        imgui_window_flags |= ImGuiWindowFlags_MenuBar;
+
+    if (!is_dialog_window)
+        imgui_window_flags |= ImGuiWindowFlags_NoDecoration;
+    else
+    {
+        imgui_window_flags |= 
+            ImGuiWindowFlags_NoNavInputs | 
+            ImGuiWindowFlags_AlwaysUseWindowPadding |
+            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize;
+    }
     
     // Render window context
     // TODO: Add options to personalize the window visual style
-    if (ImGui::Begin("Hello World!", nullptr,
-        ImGuiWindowFlags_NoBringToFrontOnFocus |
-        ImGuiWindowFlags_NoResize |
-        ImGuiWindowFlags_NoMove |
-        ImGuiWindowFlags_NoCollapse |
-        ImGuiWindowFlags_NoTitleBar/* |
-        ImGuiWindowFlags_MenuBar*/))
+    if (ImGui::Begin("Hello World!", &win->opened, imgui_window_flags))
     {
+        #if 0
+        // Check if the window title bar is being dragged.
+        if (is_dialog_window && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        {
+            const ImVec2 imgui_window_pos = ImGui::GetWindowPos();
+            const ImVec2 imgui_window_size = ImGui::GetWindowSize();
+            const ImVec2 mouse_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left); 
+            if (imgui_window_pos.x != 0 || imgui_window_pos.y != 0)
+            {
+                int position[2];
+                glfwGetWindowPos(win->glfw_window, &position[0], &position[1]);
+
+                float scale_x = 1.0f, scale_y = 1.0f;
+                GLFWmonitor* monitor = glfw_find_window_monitor(win->glfw_window);
+                if (monitor)
+                {
+                    #if FOUNDATION_PLATFORM_WINDOWS
+                    glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
+                    #endif
+                }
+
+                position[0] += math_round(mouse_delta.x / scale_x);
+                position[1] += math_round(mouse_delta.y / scale_y);
+
+                glfwSetWindowPos(win->glfw_window, position[0], position[1]);
+            }
+            else if (imgui_window_size.x != win->frame_width || imgui_window_size.y != win->frame_height)
+            {
+                float scale_x = 1.0f, scale_y = 1.0f;
+                GLFWmonitor* monitor = glfw_find_window_monitor(win->glfw_window);
+                if (monitor)
+                {
+                    #if FOUNDATION_PLATFORM_WINDOWS
+                    glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
+                    #endif
+                }
+
+                glfwSetWindowSize(win->glfw_window, (int)(imgui_window_size.x / scale_x), (int)(imgui_window_size.y / scale_y));
+            }
+        }
+        #endif
+
         window_handle_global_shortcuts(win);
+
+        if (has_menu)
+        {
+            if (ImGui::BeginMenuBar())
+            {
+                win->menu(win->handle);
+                ImGui::EndMenuBar();
+            }
+        }
+
         win->render.invoke(win->handle);
+
+
     } ImGui::End();
+
+    if (!win->opened)
+    {
+        window_close(win->handle);
+        return;
+    }
         
     // Render IMGUI frame
     ImGui::Render();
@@ -845,6 +937,16 @@ void window_set_resize_callback(window_handle_t window_handle, const window_resi
     window->resize = callback;
 }
 
+void window_set_menu_render_callback(window_handle_t window_handle, const window_event_handler_t& callback)
+{
+    window_t* window = window_get(window_handle);
+    FOUNDATION_ASSERT(window);
+    FOUNDATION_ASSERT(window->glfw_window);
+    FOUNDATION_ASSERT(callback);
+
+    window->menu = callback;
+}
+
 void window_set_close_callback(window_handle_t window_handle, const window_event_handler_t& callback)
 {
     window_t* window = window_get(window_handle);
@@ -926,6 +1028,13 @@ FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t win
     {
         glfw_set_window_center(window);
     }
+
+    if (test(flags, WindowFlags::Dialog))
+    {
+        glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_TRUE);
+        //glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+        glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_TRUE);
+    }
     
     glfwShowWindow(window);
     glfwFocusWindow(window);
@@ -943,6 +1052,17 @@ FOUNDATION_STATIC window_t* window_find_by_id(string_const_t window_id)
     }
 
     return nullptr;
+}
+
+void window_close(window_handle_t window_handle)
+{
+    window_t* window = window_get(window_handle);
+    FOUNDATION_ASSERT(window);
+    
+    if (window->glfw_window)
+    {
+        glfwSetWindowShouldClose(window->glfw_window, GLFW_TRUE);
+    }
 }
 
 bool window_focus(window_handle_t window_handle)
@@ -1017,6 +1137,17 @@ window_handle_t window_open(const char* window_title, const window_event_handler
     return window_open(window_title, window_title, string_length(window_title), render_callback, nullptr, nullptr, flags);
 }
 
+window_handle_t window_open(
+    hash_t context,
+    const char* title, size_t title_length,
+    const window_event_handler_t& render_callback,
+    const window_event_handler_t& close_callback,
+    void* user_data /*= nullptr*/, window_flags_t flags /*= WindowFlags::None*/)
+{
+    string_const_t window_id = hash_to_string(context);
+    return window_open(window_id.str, title, title_length, render_callback, close_callback, user_data, flags | WindowFlags::Singleton);
+}
+
 //
 // # SYSTEM
 //
@@ -1029,34 +1160,6 @@ FOUNDATION_STATIC void window_initialize()
     _window_module->configs = config_parse_file(STRING_ARGS(window_config_file_path));
     if (_window_module->configs == nullptr)
         _window_module->configs = config_allocate(CONFIG_VALUE_OBJECT);
-    
-    #if BUILD_DEBUG
-    service_register_menu(HASH_WINDOW, []()
-    {
-        if (!ImGui::BeginMenuBar())
-            return;
-
-        if (ImGui::BeginMenu("Windows"))
-        {
-            if (ImGui::MenuItem(ICON_MD_LOGO_DEV " Test"))
-            {
-                window_open("Test Window", [](window_handle_t w)
-                {
-                    static char input_buffer[256];
-                    ImGui::Text("Hello World!");
-                    ImGui::Button("Click me!");
-                    ImGui::InputTextMultiline("##input", input_buffer, sizeof(input_buffer));
-
-                    if (ImGui::IsKeyDown(ImGuiKey_O))
-                        ImGui::Text("Ooooooooo!");
-                });
-            }
-            ImGui::EndMenu();
-        }
-
-        ImGui::EndMenuBar();
-    });
-    #endif
     
     service_register_update(HASH_WINDOW, window_update);
 }
