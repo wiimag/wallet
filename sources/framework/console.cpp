@@ -13,9 +13,9 @@
 #include <framework/scoped_mutex.h>
 #include <framework/generics.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/log.h>
-#include <foundation/array.h>
 #include <foundation/error.h>
 #include <foundation/hashstrings.h>
 
@@ -312,7 +312,7 @@ FOUNDATION_STATIC void console_render_toolbar()
         }
         else
         {
-            array_sort(_messages, a.id < b.id);
+            array_sort(_messages, ARRAY_LESS_BY(id));
         }
     }
 

@@ -10,6 +10,13 @@
 #include <foundation/math.h>
 #include <foundation/platform.h>
 
+#if FOUNDATION_COMPILER_MSVC
+// Disable C26495 warnings for this file
+// https://docs.microsoft.com/en-us/cpp/code-quality/c26495?view=msvc-160
+#pragma warning(push)
+#pragma warning(disable: 26495)
+#endif
+
 #include <bx/math.h>
 
 typedef struct vec2_t
@@ -366,3 +373,6 @@ FOUNDATION_FORCEINLINE bool operator== (const vec3& a, const vec3& b)
     return math_float_eq(a.x, b.x, 100) && math_float_eq(a.y, b.y, 100) && math_float_eq(a.z, b.z, 100);
 }
 
+#if FOUNDATION_COMPILER_MSVC
+#pragma warning (pop)
+#endif

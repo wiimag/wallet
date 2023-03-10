@@ -15,6 +15,8 @@
 #include <framework/service.h>
 #include <framework/dispatcher.h>
 #include <framework/string.h>
+#include <framework/window.h>
+#include <framework/array.h>
 
 #define HASH_TIMELINE static_hash_string("timeline", 8, 0x8982c42357327efeULL)
 
@@ -86,6 +88,8 @@ struct timeline_report_t
     
     string_t title{};
     string_const_t preferred_currency{};
+
+    bool first_render{ true };
 };
 
 struct timeline_plot_day_t
@@ -194,7 +198,7 @@ FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(c
         }
     }
 
-    transactions = array_sort_by(transactions, [transactions](const timeline_transaction_t& a, const timeline_transaction_t& b)
+    transactions = array_sort(transactions, [transactions](const timeline_transaction_t& a, const timeline_transaction_t& b)
     {
         if (a.date < b.date)
             return -1;
@@ -779,6 +783,32 @@ FOUNDATION_STATIC void timeline_report_graph_close(void* user_data)
     timeline_report_deallocate(timeline_report);
 }
 
+FOUNDATION_STATIC void timeline_window_render_report(window_handle_t window_handle)
+{
+    timeline_report_t* report = (timeline_report_t*)window_get_user_data(window_handle);
+    FOUNDATION_ASSERT(report);
+
+    if (array_size(report->days) <= 2)
+        return ImGui::TextUnformatted("No transactions to display");
+
+    timeline_report_toolbar(report);
+    timeline_report_graph(report);
+
+    if (report->first_render)
+    {
+        ImPlot::SetNextAxesToFit();
+        report->first_render = false;
+    }
+}
+
+FOUNDATION_STATIC void timeline_window_report_close(window_handle_t window_handle)
+{
+    timeline_report_t* report = (timeline_report_t*)window_get_user_data(window_handle);
+    FOUNDATION_ASSERT(report);
+    
+    timeline_report_deallocate(report);
+}
+
 //
 // # PUBLIC API
 //
@@ -824,9 +854,16 @@ void timeline_render_graph(const report_t* report)
         timeline_report->days = array_insert(days, didx, day);
     }
 
+    #if 0
     app_open_dialog(timeline_report->title.str, 
         timeline_report_graph_dialog, 1200, 900, true, 
         timeline_report, timeline_report_graph_close);
+    #else
+    window_open(
+        "timeline_window", STRING_ARGS(timeline_report->title), 
+        timeline_window_render_report, timeline_window_report_close, 
+        timeline_report, WindowFlags::Transient | WindowFlags::Maximized);
+    #endif
 }
 
 //

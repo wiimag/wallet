@@ -24,7 +24,7 @@ struct json_object_t
     const json_token_t* root;
     long status_code{ 0 };
     long error_code{ 0 };
-    string_const_t query;
+    string_const_t query{};
     bool resolved_from_cache{ false };
 
     json_object_t()

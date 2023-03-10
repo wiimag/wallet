@@ -7,8 +7,6 @@
 
 #include <framework/query.h>
 
-typedef struct GLFWwindow GLFWwindow;
-
 /*! @brief Load and return the API EOD key.
  *  @return Returns the initialized api key.
  */

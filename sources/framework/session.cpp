@@ -5,14 +5,13 @@
 
 #include "session.h"
 
-#include "common.h"
-#include "config.h"
-#include "scoped_string.h"
-
 #include <framework/imgui.h>
 #include <framework/common.h>
+#include <framework/config.h>
 #include <framework/jobs.h>
 #include <framework/string.h>
+#include <framework/array.h>
+#include <framework/scoped_string.h>
 
 #include <foundation/environment.h>
 #include <foundation/path.h>
@@ -95,6 +94,9 @@ FOUNDATION_STATIC void session_backup(const char* _session_dir, size_t _session_
             if (string_starts_with(STRING_ARGS(*f), STRING_CONST("cache/")))
                 continue;
 
+            if (string_starts_with(STRING_ARGS(*f), STRING_CONST("thumbnails/")))
+                continue;
+
             char dest_path_buffer[BUILD_MAX_PATHLEN];
             string_t backup_file_path = path_concat(STRING_BUFFER(dest_path_buffer), STRING_ARGS(backup_folder_path), STRING_ARGS(*f));
             string_const_t backup_file_path_dir = path_directory_name(STRING_ARGS(backup_file_path));
@@ -129,7 +131,7 @@ void session_setup(const char* root_path)
     // Setup can be called multiple times, so cleaning up first.
     session_cleanup();
     
-    _session_working_dir =  string_clone_string(environment_current_working_directory());
+    _session_working_dir = string_clone_string(environment_current_working_directory());
 
     // Make sure user dir is created
     const string_const_t& user_dir = session_get_user_dir();
@@ -148,11 +150,6 @@ void session_shutdown()
 {
     session_save();
     session_cleanup();
-}
-
-void session_update()
-{
-    
 }
 
 string_const_t session_get_file_path()

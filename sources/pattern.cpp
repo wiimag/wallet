@@ -20,6 +20,9 @@
 #include <framework/config.h>
 #include <framework/string.h>
 #include <framework/profiler.h>
+#include <framework/window.h>
+#include <framework/dispatcher.h>
+#include <framework/array.h>
 
 #include <algorithm>
 
@@ -30,59 +33,63 @@
 
 #define PATTERN_FLEX_RANGE_COUNT (90U)
 
-struct pattern_activity_t
-{
-    time_t date{ 0 };
-    double polarity{ 0 };
-    double count{ 0 };
-};
+constexpr int MAX_LCF_DAY_COUNT = 180;
+
+constexpr int FIXED_MARKS[] = { 1, 3, 7, 14, 30, 90, 180, 365, 365 * 2, 365 * 3, 365 * 6, -1 };
+constexpr const char* DAY_LABELS[] = { "1D", "3D", "1W", "2W", "1M",  "3M",  "6M",  "1Y", "2Y", "3Y",  "6Y", "MAX" };
+
+const FetchLevel FETCH_ALL =
+    FetchLevel::EOD |
+    FetchLevel::REALTIME |
+    FetchLevel::FUNDAMENTALS |
+    FetchLevel::TECHNICAL_SMA |
+    FetchLevel::TECHNICAL_EMA |
+    FetchLevel::TECHNICAL_WMA |
+    FetchLevel::TECHNICAL_SLOPE |
+    FetchLevel::TECHNICAL_CCI |
+    FetchLevel::TECHNICAL_SAR;
 
 enum PatternType : int {
     PATTERN_ALL_BEGIN = 0,
     PATTERN_GRAPH_BEGIN = PATTERN_ALL_BEGIN,
-        PATTERN_GRAPH_DEFAULT = 0,
-        PATTERN_GRAPH_ANALYSIS,
-        PATTERN_GRAPH_FLEX,
-        PATTERN_GRAPH_TRENDS,
+    PATTERN_GRAPH_DEFAULT = 0,
+    PATTERN_GRAPH_ANALYSIS,
+    PATTERN_GRAPH_FLEX,
+    PATTERN_GRAPH_TRENDS,
     PATTERN_GRAPH_END,
 
     PATTERN_SIMULATION_BEGIN,
-        PATTERN_LONG_COORDINATED_FLEX,
-        PATTERN_ACTIVITY,
+    PATTERN_LONG_COORDINATED_FLEX,
+    PATTERN_ACTIVITY,
     PATTERN_SIMULATION_END,
 
     PATTERN_ALL_END = PATTERN_SIMULATION_END
 };
 
-static const char* GRAPH_TYPES[PATTERN_ALL_END] = { 
-    "Default", 
-    "Analysis", 
-    "Flex", 
-    "Trends", 
+constexpr const char* GRAPH_TYPES[PATTERN_ALL_END] = {
+    "Default",
+    "Analysis",
+    "Flex",
+    "Trends",
     nullptr,
     nullptr,
     "LCF",
     "Activity"
 };
 
-const FetchLevel FETCH_ALL =
-    FetchLevel::EOD | 
-    FetchLevel::REALTIME |
-    FetchLevel::FUNDAMENTALS | 
-    FetchLevel::TECHNICAL_SMA | 
-    FetchLevel::TECHNICAL_EMA | 
-    FetchLevel::TECHNICAL_WMA |
-    FetchLevel::TECHNICAL_SLOPE |
-    FetchLevel::TECHNICAL_CCI |
-    FetchLevel::TECHNICAL_SAR;
+typedef enum class PatternRenderFlags : int {
+    None = 0,
 
-constexpr int MAX_LCF_DAY_COUNT = 180;
+    HideTableHeaders = 1 << 0
+} pattern_render_flags_t;
+DEFINE_ENUM_FLAGS(PatternRenderFlags);
 
-static int FIXED_MARKS[] = { 1, 3, 7, 14, 30, 90, 180, 365, 365 * 2, 365 * 3, 365 * 6, -1 };
-static const char* DAY_LABELS[] = { "1D", "3D", "1W", "2W", "1M",  "3M",  "6M",  "1Y", "2Y", "3Y",  "6Y", "MAX" };
-
-static pattern_t* _patterns = nullptr;
-static pattern_activity_t* _activities{ nullptr };
+struct pattern_activity_t
+{
+    time_t date{ 0 };
+    double polarity{ 0 };
+    double count{ 0 };
+};
 
 struct plot_context_t
 {
@@ -95,26 +102,37 @@ struct plot_context_t
         const day_result_t* history;
         const pattern_flex_t* flex;
     };
-    
+
     double acc{ 0 };
     double lx{ 0.0 }, ly{ 0 }, lz{ 0 };
-    
-    double x_min { DBL_MAX }, x_max{ -DBL_MAX }, n{0};
-    double a{0}, b{0}, c{0}, d{0}, e{0}, f{0};
+
+    double x_min{ DBL_MAX }, x_max{ -DBL_MAX }, n{ 0 };
+    double a{ 0 }, b{ 0 }, c{ 0 }, d{ 0 }, e{ 0 }, f{ 0 };
 };
 
-struct pattern_graph_data_t 
+struct pattern_graph_data_t
 {
     pattern_t* pattern;
     double x_data[ARRAY_COUNT(FIXED_MARKS)];
     double y_data[ARRAY_COUNT(FIXED_MARKS)];
 
-    unsigned int x_count { ARRAY_COUNT(x_data) };
-    double min_d { DBL_MAX }, max_d { -DBL_MAX };
-    double min_p { DBL_MAX }, max_p { -DBL_MAX };
+    unsigned int x_count{ ARRAY_COUNT(x_data) };
+    double min_d{ DBL_MAX }, max_d{ -DBL_MAX };
+    double min_p{ DBL_MAX }, max_p{ -DBL_MAX };
 
-    bool refresh { false };
+    bool refresh{ false };
 };
+
+static pattern_t* _patterns = nullptr;
+static pattern_activity_t* _activities{ nullptr };
+
+FOUNDATION_STATIC pattern_t* pattern_get(pattern_handle_t handle)
+{
+    const size_t pattern_count = array_size(_patterns);
+    if (handle < 0 || handle >= pattern_count)
+        return nullptr;
+    return &_patterns[handle];
+}
 
 FOUNDATION_STATIC string_const_t pattern_today()
 {
@@ -418,7 +436,7 @@ FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
     const stock_t* s = pattern->stock;
 
     ImGui::TableSetupColumn("Labels", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("Indices", ImGuiTableColumnFlags_WidthFixed, 60.0f);
+    ImGui::TableSetupColumn("Indices", ImGuiTableColumnFlags_WidthFixed, imgui_calc_text_width("MAX", ImGuiCalcTextFlags::Padding));
     ImGui::TableSetupColumn("V1", ImGuiTableColumnFlags_WidthFixed, STATS_COLUMN_V1_WIDTH);
     ImGui::TableSetupColumn("V2", ImGuiTableColumnFlags_WidthFixed, STATS_COLUMN_V2_WIDTH);
     //ImGui::TableHeadersRow();
@@ -1163,7 +1181,7 @@ FOUNDATION_STATIC int pattern_load_lcf_thread(payload_t* payload)
     array_deallocate(pattern->lcf);
     
     pattern->lcf = lcfarr;
-    pattern->lcf_symbols = array_sort_by(lcf_symbols, LC2(_2.matches - _1.matches));
+    pattern->lcf_symbols = array_sort(lcf_symbols, LC2(_2.matches - _1.matches));
     return 0;
 }
 
@@ -1572,13 +1590,22 @@ FOUNDATION_STATIC void pattern_render_graph_analysis(pattern_t* pattern, pattern
     pattern_render_graph_end(pattern, s, graph);
 }
 
-FOUNDATION_STATIC void pattern_refresh(pattern_t* pattern)
+FOUNDATION_STATIC const stock_t* pattern_refresh(pattern_t* pattern, FetchLevel minimal_required_levels = FetchLevel::NONE)
 {
     string_const_t code = SYMBOL_CONST(pattern->code);
     pattern->stock = stock_request(STRING_ARGS(code), FETCH_ALL);
     array_deallocate(pattern->flex);
     for (auto& m : pattern->marks)
         m.fetched = false;
+
+    if (minimal_required_levels != FetchLevel::NONE)
+    {
+        tick_t timeout = time_current();
+        while (!pattern->stock->has_resolve(minimal_required_levels) && time_elapsed(timeout) < 10)
+            dispatcher_wait_for_wakeup_main_thread();
+    }
+
+    return pattern->stock;
 }
 
 FOUNDATION_STATIC void pattern_history_min_max_price(pattern_t* pattern, time_t ref, double& min, double& max)
@@ -1788,9 +1815,9 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
                     act->polarity += p;
             }
 
-            std::sort(_activities, _activities + array_size(_activities), [](const pattern_activity_t& a, const pattern_activity_t& b)
+            array_sort(_activities, [](const pattern_activity_t& a, const pattern_activity_t& b)
             {
-                return a.date < b.date;
+                return a.date - b.date;
             });
         }, 6 * 60 * 60ULL);
     }
@@ -1877,6 +1904,27 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
     ImPlot::EndPlot();
 }
 
+FOUNDATION_STATIC void pattern_add_to_report_menu(pattern_handle_t handle)
+{
+    // Gather all reports and sort them by alphabetical order
+    report_t** reports = report_sort_alphabetically();
+
+    // Add a Add To menu item for each report
+    for (size_t i = 0, end = array_size(reports); i < end; ++i)
+    {
+        report_t* report = reports[i];
+        string_const_t report_name = string_table_decode_const(report->name);
+        if (ImGui::MenuItem(report_name.str))
+        {
+            pattern_t* pattern = (pattern_t*)pattern_get(handle);
+            string_const_t title_code = string_table_decode_const(pattern->code);
+            report_add_title(report, STRING_ARGS(title_code));
+            report->opened = true;
+        }
+    }
+    array_deallocate(reports);
+}
+
 FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
 {
     pattern_graph_data_t graph_data = pattern_render_build_graph_data(pattern);
@@ -1915,74 +1963,6 @@ FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
     ImGui::SetWindowFontScale(1.0f);
 }
 
-void pattern_menu(pattern_handle_t handle)
-{
-    if (ImGui::BeginPopupContextItem())
-    {
-        if (ImGui::BeginMenu("Add"))
-        {
-            // Gather all reports and sort them by alphabetical order
-            report_t** reports = report_sort_alphabetically();            
-
-            // Add a Add To menu item for each report
-            for (size_t i = 0, end = array_size(reports); i < end; ++i)
-            {
-                report_t* report = reports[i];
-                string_const_t report_name = string_table_decode_const(report->name);
-                if (ImGui::MenuItem(report_name.str))
-                {
-                    pattern_t* pattern = (pattern_t*)pattern_get(handle);
-                    string_const_t title_code = string_table_decode_const(pattern->code);
-                    report_add_title(report, STRING_ARGS(title_code));
-                    report->opened = true;
-                }
-            }
-            array_deallocate(reports);
-            
-            ImGui::EndMenu();
-        }
-
-        ImGui::EndPopup();
-    }
-
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("Pattern"))
-        {
-            pattern_t* pattern = (pattern_t*)pattern_get(handle);
-            string_const_t code = string_table_decode_const(pattern->code);
-
-            if (ImGui::MenuItem("EOD", nullptr, nullptr, true))
-                open_in_shell(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
-
-            if (ImGui::MenuItem("Read News"))
-                news_open_window(STRING_ARGS(code));
-
-            if (ImGui::MenuItem("Trends", nullptr, nullptr, true))
-                open_in_shell(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
-
-            if (ImGui::MenuItem("Earnings", nullptr, nullptr, true))
-            {
-                time_t since_last_year = time_add_days(time_now(), -465);
-                string_const_t date_str = string_from_date(since_last_year);
-                open_in_shell(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
-            }
-
-            if (ImGui::MenuItem("Technical", nullptr, nullptr, true))
-                open_in_shell(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);
-
-            if (ImGui::MenuItem("Fundamentals", nullptr, nullptr, true))
-                open_in_shell(eod_build_url("fundamentals", code.str, FORMAT_JSON).str);
-
-            if (ImGui::MenuItem("Real-time", nullptr, nullptr, true))
-                open_in_shell(eod_build_url("real-time", code.str, FORMAT_JSON).str);
-
-            ImGui::EndMenu();
-        }
-        ImGui::EndMenuBar();
-    }
-}
-
 FOUNDATION_STATIC bool pattern_handle_shortcuts(pattern_t* pattern)
 {
     FOUNDATION_ASSERT(pattern);
@@ -1996,7 +1976,7 @@ FOUNDATION_STATIC bool pattern_handle_shortcuts(pattern_t* pattern)
     return false;
 }
 
-FOUNDATION_STATIC void pattern_render(pattern_handle_t handle)
+FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_flags_t render_flags = PatternRenderFlags::None)
 {
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
 
@@ -2032,7 +2012,8 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle)
         ImGuiTableColumnFlags_NoHeaderLabel |
         ImGuiTableColumnFlags_DefaultHide, 400.0f);
 
-    ImGui::TableHeadersRow();
+    if (none(render_flags, PatternRenderFlags::HideTableHeaders))
+        ImGui::TableHeadersRow();
 
     ImGui::TableNextRow();
 
@@ -2078,6 +2059,78 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle)
     ImGui::EndTable();	
 
     pattern_handle_shortcuts(pattern);
+}
+
+FOUNDATION_STATIC void pattern_open_floating_window(pattern_handle_t handle)
+{
+    pattern_t* pattern = (pattern_t*)pattern_get(handle);
+    const stock_t* stock = pattern_refresh(pattern, FetchLevel::FUNDAMENTALS);
+    if (stock == nullptr)
+    {
+        log_warnf(HASH_PATTERN, WARNING_INVALID_VALUE, STRING_CONST("Failed to open pattern window, stock not resolved"));
+        return;
+    }
+    
+    string_const_t pattern_name = SYMBOL_CONST(stock->name);
+    string_const_t pattern_code = SYMBOL_CONST(pattern->code);
+    const char* pattern_window_title = string_format_static_const("%.*s (%.*s)", STRING_FORMAT(pattern_name), STRING_FORMAT(pattern_code));
+    window_open(pattern_window_title, L1(pattern_render(handle, PatternRenderFlags::HideTableHeaders)), WindowFlags::InitialProportionalSize);
+}
+
+FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
+{
+    if (ImGui::BeginPopupContextItem())
+    {
+        if (ImGui::BeginMenu("Add"))
+        {
+            pattern_add_to_report_menu(handle);
+            ImGui::EndMenu();
+        }
+
+        if (ImGui::MenuItem("Float Window"))
+            pattern_open_floating_window(handle);
+
+        ImGui::EndPopup();
+    }
+
+    if (ImGui::BeginMenuBar())
+    {
+        if (ImGui::BeginMenu("Pattern"))
+        {
+            pattern_t* pattern = (pattern_t*)pattern_get(handle);
+            string_const_t code = string_table_decode_const(pattern->code);
+
+            if (ImGui::MenuItem("Read News"))
+                news_open_window(STRING_ARGS(code));
+
+            #if BUILD_DEVELOPMENT
+            if (ImGui::MenuItem("EOD", nullptr, nullptr, true))
+                open_in_shell(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
+
+            if (ImGui::MenuItem("Trends", nullptr, nullptr, true))
+                open_in_shell(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
+
+            if (ImGui::MenuItem("Earnings", nullptr, nullptr, true))
+            {
+                time_t since_last_year = time_add_days(time_now(), -465);
+                string_const_t date_str = string_from_date(since_last_year);
+                open_in_shell(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
+            }
+
+            if (ImGui::MenuItem("Technical", nullptr, nullptr, true))
+                open_in_shell(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);
+
+            if (ImGui::MenuItem("Fundamentals", nullptr, nullptr, true))
+                open_in_shell(eod_build_url("fundamentals", code.str, FORMAT_JSON).str);
+
+            if (ImGui::MenuItem("Real-time", nullptr, nullptr, true))
+                open_in_shell(eod_build_url("real-time", code.str, FORMAT_JSON).str);
+            #endif
+
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
 }
 
 FOUNDATION_STATIC bool pattern_fetch_flex_low(pattern_handle_t handle, double& value)
@@ -2130,65 +2183,14 @@ FOUNDATION_STATIC void pattern_initialize(pattern_handle_t handle)
     }
 }
 
-pattern_handle_t pattern_find(const char* code, size_t code_length)
-{
-    string_table_symbol_t code_symbol = string_table_encode(code, code_length);
-    const size_t pattern_count = array_size(_patterns);
-    for (int i = 0; i < pattern_count; ++i)
-    {
-        pattern_t& pattern = _patterns[i];
-        if (pattern.code == code_symbol)
-            return i;
-    }
-
-    return -1;
-}
-
-pattern_handle_t pattern_load(const char* code, size_t code_length)
-{
-    pattern_handle_t handle = pattern_find(code, code_length);
-    if (handle >= 0)
-        return handle;
-
-    string_table_symbol_t code_symbol = string_table_encode(code, code_length);
-    string_const_t code_str = string_table_decode_const(code_symbol);
-
-    array_push(_patterns, (pattern_t{ code_symbol }));
-    handle = array_size(_patterns) - 1;
-    pattern_initialize(handle);
-
-    return handle;
-}
-
-pattern_handle_t pattern_open(const char* code, size_t code_length)
-{
-    pattern_handle_t handle = pattern_load(code, code_length);
-    pattern_t* pattern = pattern_get(handle);
-    if (pattern)
-    {
-        pattern->save = true;
-        pattern->opened = true;
-    }
-
-    return handle;
-}
-
-pattern_t* pattern_get(pattern_handle_t handle)
-{
-    const size_t pattern_count = array_size(_patterns);
-    if (handle < 0 || handle >= pattern_count)
-        return nullptr;
-    return &_patterns[handle];
-}
-
-size_t pattern_count()
+FOUNDATION_STATIC size_t pattern_count()
 {
     if (_patterns == nullptr)
         return 0;
     return array_size(_patterns);
 }
 
-string_const_t pattern_get_user_file_path()
+FOUNDATION_STATIC string_const_t pattern_get_user_file_path()
 {
     return session_get_user_file_path(STRING_CONST("patterns.json"));
 }
@@ -2255,6 +2257,86 @@ FOUNDATION_STATIC void pattern_render_tabs()
             tab_draw(tab_id.str, &(pattern->opened), L0(pattern_render(handle)), L0(pattern_menu(handle)));
         }
     }
+}
+
+// 
+// # PUBLIC API
+//
+
+pattern_handle_t pattern_find(const char* code, size_t code_length)
+{
+    string_table_symbol_t code_symbol = string_table_encode(code, code_length);
+    const size_t pattern_count = array_size(_patterns);
+    for (int i = 0; i < pattern_count; ++i)
+    {
+        pattern_t& pattern = _patterns[i];
+        if (pattern.code == code_symbol)
+            return i;
+    }
+
+    return -1;
+}
+
+pattern_handle_t pattern_load(const char* code, size_t code_length)
+{
+    pattern_handle_t handle = pattern_find(code, code_length);
+    if (handle >= 0)
+        return handle;
+
+    string_table_symbol_t code_symbol = string_table_encode(code, code_length);
+    string_const_t code_str = string_table_decode_const(code_symbol);
+
+    array_push(_patterns, (pattern_t{ code_symbol }));
+    handle = array_size(_patterns) - 1;
+    pattern_initialize(handle);
+
+    return handle;
+}
+
+pattern_handle_t pattern_open(const char* code, size_t code_length)
+{
+    pattern_handle_t handle = pattern_load(code, code_length);
+    pattern_t* pattern = pattern_get(handle);
+    if (pattern)
+    {
+        pattern->save = true;
+        pattern->opened = true;
+    }
+
+    return handle;
+}
+
+pattern_handle_t pattern_open_window(const char* code, size_t code_length)
+{
+    pattern_handle_t handle = pattern_load(code, code_length);
+    pattern_open_floating_window(handle);
+    return handle;
+}
+
+bool pattern_menu_item(const char* symbol, size_t symbol_length)
+{
+    bool load_pattern_tab = false;
+    ImGui::AlignTextToFramePadding();
+    if (ImGui::Selectable("Load Pattern", false, ImGuiSelectableFlags_AllowItemOverlap))
+    {
+        load_pattern_tab = true;
+    }
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton(ICON_MD_OPEN_IN_NEW))
+    {
+        if (pattern_open_window(symbol, symbol_length))
+        {
+            load_pattern_tab = true;
+            ImGui::CloseCurrentPopup();
+        }
+    }
+    else if (load_pattern_tab)
+    {
+        pattern_open(symbol, symbol_length);
+    }
+
+    return load_pattern_tab;
 }
 
 //

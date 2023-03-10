@@ -18,6 +18,7 @@
 #include <framework/session.h>
 #include <framework/profiler.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/fs.h>
 #include <foundation/path.h>

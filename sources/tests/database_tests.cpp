@@ -13,6 +13,7 @@
 
 #include <framework/common.h>
 #include <framework/database.h>
+#include <framework/array.h>
 #include <framework/handle.h>
 
 #include <foundation/uuid.h>

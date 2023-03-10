@@ -1,11 +1,12 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
 #include "query.h"
 
-#include "common.h"
+#include <framework/array.h>
+#include <framework/common.h>
 
 #include <foundation/path.h>
 

@@ -17,6 +17,7 @@
 #include <framework/tabs.h>
 #include <framework/config.h>
 #include <framework/string.h>
+#include <framework/window.h>
 
 #define HASH_BULK static_hash_string("bulk", 4, 0x9a6818bbbd28c09eULL)
 
@@ -146,7 +147,7 @@ FOUNDATION_STATIC void bulk_load_symbols()
         const char* code = string_table_decode(ex->code);
         if (!eod_fetch_async("eod-bulk-last-day", code, FORMAT_JSON_CACHE,
             "date", string_from_date(_fetch_date).str,
-            "filter", "extended", bulk_fetch_exchange_symbols, 12 * 60 * 60ULL))
+            "filter", "extended", bulk_fetch_exchange_symbols, 4 * 60 * 60ULL))
         {
             log_errorf(0, ERROR_ACCESS_DENIED, STRING_CONST("Failed to fetch %s bulk data"), code);
         }
@@ -336,10 +337,10 @@ FOUNDATION_STATIC void bulk_table_context_menu(table_element_ptr_const_t element
 
     bulk_t* b = (bulk_t*)element;
 
-    if (ImGui::MenuItem("Load Pattern"))
+    string_const_t code = bulk_get_symbol_code(b);
+    if (pattern_menu_item(STRING_ARGS(code)))
     {
-        string_const_t code = bulk_get_symbol_code(b);
-        pattern_open(STRING_ARGS(code));
+
     }
 }
 
@@ -595,13 +596,35 @@ FOUNDATION_STATIC void bulk_render()
     }
 }
 
-FOUNDATION_STATIC void bulk_render_tabs()
+FOUNDATION_STATIC void bulk_open_window()
 {
-    if (!SETTINGS.show_bulk_eod)
+    auto window = window_open("bulk_last_day", STRING_CONST("Last Day Results"),
+        L1(bulk_render()), nullptr, nullptr, WindowFlags::Maximized | WindowFlags::Singleton);
+    window_set_menu_render_callback(window, [](window_handle_t window_handle)
+    {
+        if (ImGui::BeginMenu("File"))
+        {
+            if (ImGui::MenuItem(ICON_MD_CLOSE " Close"))
+                window_close(window_handle);
+
+            ImGui::EndMenu();
+        }
+    });
+}
+
+FOUNDATION_STATIC void bulk_menu()
+{
+    if (!ImGui::BeginMenuBar())
         return;
 
-    tab_set_color(TAB_COLOR_OTHER);
-    tab_draw(ICON_MD_BATCH_PREDICTION " Last Day", &SETTINGS.show_bulk_eod, bulk_render);
+    if (ImGui::BeginMenu("Symbols"))
+    {
+        if (ImGui::MenuItem("Last Day"))
+            bulk_open_window();
+
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenuBar();
 }
 
 // 
@@ -612,7 +635,7 @@ FOUNDATION_STATIC void bulk_initialize()
 {
     _symbols_lock = mutex_allocate(STRING_CONST("BulkLock"));
 
-    service_register_tabs(HASH_BULK, bulk_render_tabs);
+    service_register_menu(HASH_BULK, bulk_menu);
 }
 
 FOUNDATION_STATIC void bulk_shutdown()
@@ -621,15 +644,15 @@ FOUNDATION_STATIC void bulk_shutdown()
     {
         string_const_t selected_exchanges_file_path = session_get_user_file_path(STRING_CONST("exchanges.json"));
         config_write_file(selected_exchanges_file_path, [](config_handle_t selected_exchange_data)
+        {
+            const size_t selected_exchange_count = array_size(_selected_exchanges);
+            for (int i = 0; i < selected_exchange_count; ++i)
             {
-                const size_t selected_exchange_count = array_size(_selected_exchanges);
-                for (int i = 0; i < selected_exchange_count; ++i)
-                {
-                    const exchange_t* ex = _selected_exchanges[i];
-                    config_array_push(selected_exchange_data, STRING_ARGS(string_table_decode_const(ex->code)));
-                }
-                return true;
-            }, CONFIG_VALUE_ARRAY);
+                const exchange_t* ex = _selected_exchanges[i];
+                config_array_push(selected_exchange_data, STRING_ARGS(string_table_decode_const(ex->code)));
+            }
+            return true;
+        }, CONFIG_VALUE_ARRAY);
     }
 
     table_deallocate(_symbols_table);

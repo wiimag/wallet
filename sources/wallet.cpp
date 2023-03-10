@@ -14,12 +14,10 @@
 #include <framework/common.h>
 #include <framework/math.h>
 #include <framework/string.h>
- 
-#include <foundation/hash.h>
-#include <foundation/array.h>
-#include <foundation/uuid.h>
+#include <framework/array.h>
 
-#include <algorithm>
+#include <foundation/hash.h>
+#include <foundation/uuid.h>
 
 struct plot_context_t
 {
@@ -109,9 +107,9 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 
 FOUNDATION_STATIC void wallet_history_sort(wallet_t* wallet)
 {
-    std::sort(wallet->history, wallet->history + array_size(wallet->history), [](const history_t& a, const history_t& b)
+    array_sort(wallet->history, [](const history_t& a, const history_t& b)
     {
-        return b.date < a.date;
+        return b.date - a.date;
     });
 }
 
@@ -614,7 +612,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
         array_deallocate(wallet->history_dates);
         foreach (h, wallet->history)
             array_push(wallet->history_dates, (double)h->date);
-        array_sort(wallet->history_dates, a < b);
+        array_sort(wallet->history_dates);
         double* hd = wallet->history_dates;
         for (int i = 0, end = array_size(hd); i < end - 1; ++i)
         {

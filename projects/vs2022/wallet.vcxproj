@@ -82,6 +82,8 @@
     <ClCompile Include="..\..\sources\bulk.cpp" />
     <ClCompile Include="..\..\sources\eod.cpp" />
     <ClCompile Include="..\..\sources\financials.cpp" />
+    <ClCompile Include="..\..\sources\framework\array.cpp" />
+    <ClCompile Include="..\..\sources\framework\bgfx.cpp" />
     <ClCompile Include="..\..\sources\framework\boot.cpp" />
     <ClCompile Include="..\..\sources\framework\common.cpp" />
     <ClCompile Include="..\..\sources\framework\config.cpp" />
@@ -108,6 +110,7 @@
     <ClCompile Include="..\..\sources\framework\string_table.cpp" />
     <ClCompile Include="..\..\sources\framework\table.cpp" />
     <ClCompile Include="..\..\sources\framework\tabs.cpp" />
+    <ClCompile Include="..\..\sources\framework\window.cpp" />
     <ClCompile Include="..\..\sources\indicators.cpp" />
     <ClCompile Include="..\..\sources\logo.cpp" />
     <ClCompile Include="..\..\sources\news.cpp" />
@@ -158,6 +161,8 @@
     <ClInclude Include="..\..\sources\eod.h" />
     <ClInclude Include="..\..\sources\events.h" />
     <ClInclude Include="..\..\sources\financials.h" />
+    <ClInclude Include="..\..\sources\framework\array.h" />
+    <ClInclude Include="..\..\sources\framework\bgfx.h" />
     <ClInclude Include="..\..\sources\framework\common.h" />
     <ClInclude Include="..\..\sources\framework\database.h" />
     <ClInclude Include="..\..\sources\framework\concurrent_queue.h" />
@@ -188,6 +193,7 @@
     <ClInclude Include="..\..\sources\framework\string_table.h" />
     <ClInclude Include="..\..\sources\framework\table.h" />
     <ClInclude Include="..\..\sources\framework\tabs.h" />
+    <ClInclude Include="..\..\sources\framework\window.h" />
     <ClInclude Include="..\..\sources\indicators.h" />
     <ClInclude Include="..\..\sources\logo.h" />
     <ClInclude Include="..\..\sources\news.h" />

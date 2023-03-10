@@ -19,7 +19,6 @@ struct settings_t
     bool show_symbols_CVE{ false };
     bool show_symbols_NEO{ false };
     bool show_symbols_INDX{ false };
-    bool show_bulk_eod{ false };
     bool show_logo_banners{ true };
 
     char preferred_currency[32] { '\0' };

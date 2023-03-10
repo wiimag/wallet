@@ -13,6 +13,7 @@
 #include <framework/generics.h>
 #include <framework/math.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/random.h>
  
@@ -58,11 +59,11 @@ void report_graph_show_transactions(report_t* report)
                 }
             }
 
-            std::sort(report->transactions, report->transactions + array_size(report->transactions), [](const auto& a, const auto& b)
+            array_sort(report->transactions, [](const auto& a, const auto& b)
             {
                 if (a.date == b.date)
-                    return b.buy < a.buy;
-                return a.date < b.date;
+                    return (time_t)b.buy - (time_t)a.buy;
+                return a.date - b.date;
             });
 
             double acc = 0;

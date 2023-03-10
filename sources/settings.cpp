@@ -139,7 +139,6 @@ void settings_draw()
 
 void settings_initialize()
 {
-    SETTINGS.show_bulk_eod = session_get_bool("show_bulk_eod", SETTINGS.show_bulk_eod);
     SETTINGS.show_symbols_TO = session_get_bool("show_symbols_TO", SETTINGS.show_symbols_TO);
     SETTINGS.show_symbols_US = session_get_bool("show_symbols_US", SETTINGS.show_symbols_US);
     SETTINGS.show_symbols_CVE = session_get_bool("show_symbols_CVE", SETTINGS.show_symbols_CVE);
@@ -159,7 +158,6 @@ void settings_initialize()
 
 void settings_shutdown()
 {
-    session_set_bool("show_bulk_eod", SETTINGS.show_bulk_eod);
     session_set_bool("show_symbols_TO", SETTINGS.show_symbols_TO);
     session_set_bool("show_symbols_US", SETTINGS.show_symbols_US);
     session_set_bool("show_symbols_CVE", SETTINGS.show_symbols_CVE);

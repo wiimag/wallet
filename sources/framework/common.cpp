@@ -22,7 +22,7 @@
 
     #include <iostream>
 
-    extern HWND _window_handle;
+    extern void* _window_handle;
 #endif
 
 #define HASH_COMMON (static_hash_string("common", 6, 14370257353172364778ULL))
@@ -244,7 +244,7 @@ string_const_t fs_clean_file_name(const char* filename, size_t filename_length)
         OPENFILENAMEA ofn;
         ZeroMemory(&ofn, sizeof(ofn));
         ofn.lStructSize = sizeof(ofn);
-        ofn.hwndOwner = _window_handle;
+        ofn.hwndOwner = (HWND)_window_handle;
         ofn.lpstrFile = file_path_buffer.str;
         ofn.nMaxFile = (DWORD)file_path_buffer.length;
         if (extension == nullptr)
@@ -534,4 +534,51 @@ bool time_is_weekend()
     if (!time_to_local(now, &tm_now))
         return false;
     return (tm_now.tm_wday == 0) || (tm_now.tm_wday == 6);
+}
+
+string_t path_normalize_name(char* buff, size_t capacity, const char* _path, size_t path_length, const char replacement_char /*= '_'*/)
+{
+    string_t path = string_copy(buff, capacity, _path, path_length);
+    path = path_clean(STRING_ARGS(path), capacity);
+
+    // Remove any file path illegal characters
+    char* p = path.str;
+    for (size_t i = 0, end = path.length; i < end; ++i)
+    {
+        if (p[i] == '<' || p[i] == '>' || p[i] == ':' || p[i] == '"' || p[i] == '/' || p[i] == '\\' || p[i] == '|' || p[i] == '?' || p[i] == '*')
+            p[i] = replacement_char;
+    }
+
+    return path;
+}
+
+void system_browse_to_url(const char* url, size_t url_length)
+{
+    #if FOUNDATION_PLATFORM_WINDOWS
+        ShellExecuteA((HWND)_window_handle, "open", url, NULL, NULL, SW_SHOWNORMAL);
+    #elif FOUNDATION_PLATFORM_LINUX
+        char* cmd = (char*)alloca(url_length + 8);
+        memcpy(cmd, "xdg-open ", 9);
+        memcpy(cmd + 9, url, url_length);
+        cmd[url_length + 9] = 0;
+        system(cmd);
+    #elif FOUNDATION_PLATFORM_APPLE
+        char* cmd = (char*)alloca(url_length + 8);
+        memcpy(cmd, "open ", 5);
+        memcpy(cmd + 5, url, url_length);
+        cmd[url_length + 5] = 0;
+        system(cmd);
+    #endif
+}
+
+void system_browse_to_file(const char* path, size_t path_length)
+{
+    const size_t capacity = path_length + 8 + 1;
+    string_t url = string_allocate(0, capacity);
+    url = string_copy(url.str, capacity, "file:///", 8);
+
+    string_const_t path_dir = path_directory_name(path, path_length);
+    url = string_concat(url.str, capacity, STRING_ARGS(url), STRING_ARGS(path_dir));
+    system_browse_to_url(STRING_ARGS(url));
+    string_deallocate(url);
 }

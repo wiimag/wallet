@@ -15,6 +15,7 @@
 #include <framework/table.h>
 #include <framework/dispatcher.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/thread.h>
 

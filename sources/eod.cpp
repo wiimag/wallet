@@ -299,7 +299,7 @@ FOUNDATION_STATIC void eod_update_window_title()
     if (main_is_batch_mode())
         return;
         
-    GLFWwindow* window = main_window();
+    GLFWwindow* window = glfw_main_window();
     FOUNDATION_ASSERT(window);
 
     extern const char* app_title();
@@ -369,7 +369,7 @@ FOUNDATION_STATIC void eod_refresh()
 
 FOUNDATION_STATIC void eod_main_menu_status()
 {
-    GLFWwindow* window = main_window();
+    GLFWwindow* window = glfw_main_window();
     FOUNDATION_ASSERT(window);
 
     const ImGuiStyle& style = ImGui::GetStyle();

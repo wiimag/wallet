@@ -20,6 +20,7 @@
 //
 // Array macros
 //
+#define foreach(_VAR_NAME, _ARR)
 #define array_size(array)
 #define array_push(array, element)
 #define array_push_memcpy(array, element_ptr)

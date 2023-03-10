@@ -63,12 +63,14 @@ struct pattern_lcf_symbol_t
     int matches{ 0 };
 };
 
+/*! Pattern limits. */
 struct pattern_limits_t
 {
     double xmin{ NAN }, xmax{ NAN };
     double ymin{ NAN }, ymax{ NAN };
 };
 
+/*! Pattern data. */
 struct pattern_t
 {
     string_table_symbol_t code;
@@ -104,14 +106,12 @@ struct pattern_t
     pattern_lcf_symbol_t* lcf_symbols{ nullptr };
 };
 
-pattern_handle_t pattern_find(const char* code, size_t code_length);
+pattern_handle_t pattern_find(const char* symbol, size_t symbol_length);
 
-pattern_handle_t pattern_load(const char* code, size_t code_length);
+pattern_handle_t pattern_load(const char* symbol, size_t symbol_length);
 
-pattern_handle_t pattern_open(const char* code, size_t code_length);
+pattern_handle_t pattern_open(const char* symbol, size_t symbol_length);
 
-pattern_t* pattern_get(pattern_handle_t handle);
+pattern_handle_t pattern_open_window(const char* symbol, size_t symbol_length);
 
-size_t pattern_count();
-
-string_const_t pattern_get_user_file_path();
+bool pattern_menu_item(const char* symbol, size_t symbol_length);

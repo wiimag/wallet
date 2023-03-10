@@ -5,11 +5,12 @@
 
 #include "dispatcher.h"
 
-#include "common.h"
-#include "session.h"
-#include "shared_mutex.h"
-#include "profiler.h"
-#include "glfw.h"
+#include <framework/glfw.h>
+#include <framework/common.h>
+#include <framework/session.h>
+#include <framework/shared_mutex.h>
+#include <framework/profiler.h>
+#include <framework/array.h>
 
 #include <foundation/mutex.h>
 #include <foundation/event.h>

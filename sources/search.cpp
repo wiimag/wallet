@@ -5,7 +5,6 @@
 
 #include "search.h"
 
-#include "app.h"
 #include "eod.h"
 #include "stock.h"
 #include "events.h"
@@ -27,6 +26,8 @@
 #include <framework/profiler.h>
 #include <framework/table.h>
 #include <framework/expr.h>
+#include <framework/window.h>
+#include <framework/array.h>
 
 #include <foundation/stream.h>
 
@@ -271,20 +272,6 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     string_const_t home_category = General["HomeCategory"].as_string();
         
     search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
-    if (doc != SEARCH_DOCUMENT_INVALID_ID)
-    {
-        const time_t doc_timestamp = search_database_document_timestamp(db, doc);
-        const double days_old = time_elapsed_days(doc_timestamp, time_now());
-        if (days_old < 7.0)
-            return;
-
-        if (days_old > 25)
-        {
-            if (search_database_remove_document(db, doc))
-                doc = SEARCH_DOCUMENT_INVALID_ID;
-        }
-    }
-
     if (doc == SEARCH_DOCUMENT_INVALID_ID)
         doc = search_database_add_document(db, STRING_ARGS(symbol));
 
@@ -446,6 +433,21 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         char symbol_buffer[SEARCH_INDEX_WORD_MAX_LENGTH];
         string_t symbol = string_format(STRING_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), to_int(market_length), market);
 
+        search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
+        if (doc != SEARCH_DOCUMENT_INVALID_ID)
+        {
+            const time_t doc_timestamp = search_database_document_timestamp(db, doc);
+            const double days_old = time_elapsed_days(doc_timestamp, time_now());
+            if (days_old < 7.0)
+                continue;
+
+            if (days_old > 25)
+            {
+                if (search_database_remove_document(db, doc))
+                    doc = SEARCH_DOCUMENT_INVALID_ID;
+            }
+        }
+
         // Fetch symbol fundamental data
         if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON_CACHE, 
             LC1(search_index_fundamental_data(_1, string_to_const(symbol))), 31 * 24 * 60 * 60ULL))
@@ -453,7 +455,7 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
             log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
         }
             
-        if (thread_try_wait(0))
+        if (thread_try_wait(50))
         {
             *stop_indexing = true;
             break;
@@ -578,7 +580,7 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
     sw->query_tick = time_diff(sw->query_tick, time_current());
 }
 
-FOUNDATION_STATIC bool search_window_render(void* user_data)
+FOUNDATION_STATIC void search_window_render(void* user_data)
 {
     search_window_t* sw = (search_window_t*)user_data;
     FOUNDATION_ASSERT(sw && sw->db);
@@ -627,8 +629,6 @@ FOUNDATION_STATIC bool search_window_render(void* user_data)
             ImGui::SetTooltip(" Symbols: %u \n Properties: %u ", search_database_document_count(sw->db), search_database_index_count(sw->db));
         }
     }
-
-    return true;
 }
 
 FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry_t* entry, const column_t* column)
@@ -915,28 +915,27 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
     if (s == nullptr && string_is_null(symbol))
         return;
 
-    if (ImGui::MenuItem("Load Pattern"))
-    {
-        pattern_open(STRING_ARGS(symbol));
+    if (pattern_menu_item(STRING_ARGS(symbol)))
         entry->viewed = true;
-    }
 
     ImGui::Separator();
 
     if (ImGui::MenuItem("Read News"))
         news_open_window(STRING_ARGS(symbol));
 
+    #if BUILD_DEVELOPMENT
     if (ImGui::MenuItem("Browse News"))
         {open_in_shell(eod_build_url("news", nullptr, FORMAT_JSON, "s", symbol.str).str);}
 
     if (ImGui::MenuItem("Browse Fundamentals"))
         open_in_shell(eod_build_url("fundamentals", symbol.str, FORMAT_JSON).str);
+    #endif
 
     ImGui::Separator();
 
     if (ImGui::MenuItem("Re-index..."))
     {
-        string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(%.*s)\nSEARCH_INDEX(%.*s)"), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
+        string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s\")\nSEARCH_INDEX(\"%.*s\")"), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
         eval(STRING_ARGS(expr));
     }
 }
@@ -976,14 +975,16 @@ FOUNDATION_STATIC table_t* search_create_table()
         .set_width(imgui_get_font_ui_scale(120.0f));
 
     table_add_column(table, search_table_column_change_p, " Day %||" ICON_MD_PRICE_CHANGE " Day % ", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
-        .set_width(imgui_get_font_ui_scale(100.0f));
+        .set_width(imgui_get_font_ui_scale(100.0f))
+    .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 2.9)));
 
     table_add_column(table, search_table_column_change_week, "  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER)
-        .set_width(imgui_get_font_ui_scale(80.0f));
+        .set_width(imgui_get_font_ui_scale(80.0f))
+        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 1.6)));
     
     table_add_column(table, search_table_column_change_month, "  1M " ICON_MD_CALENDAR_VIEW_MONTH "||" ICON_MD_CALENDAR_VIEW_MONTH " % since 1 month", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER)
         .set_width(imgui_get_font_ui_scale(80.0f))
-        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 3.0)));
+        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 4.0)));
 
     table_add_column(table, search_table_column_change_year, "1Y " ICON_MD_CALENDAR_MONTH "||" ICON_MD_CALENDAR_MONTH " % since 1 year", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER)
         .set_width(imgui_get_font_ui_scale(80.0f))
@@ -1047,8 +1048,12 @@ FOUNDATION_STATIC void search_window_deallocate(void* window)
 FOUNDATION_STATIC void search_open_quick_search()
 {
     FOUNDATION_ASSERT(_search->db);
-    
-    app_open_dialog("Search", search_window_render, 0, 0, true, search_window_allocate(), search_window_deallocate);
+
+    search_window_t* search_window = search_window_allocate();
+    window_open(HASH_SEARCH, STRING_CONST("Search"), 
+        L1(search_window_render(window_get_user_data(_1))),
+        L1(search_window_deallocate(window_get_user_data(_1))), 
+        search_window, WindowFlags::Dialog);
 }
 
 FOUNDATION_STATIC void search_menu()
@@ -1087,6 +1092,9 @@ FOUNDATION_STATIC expr_result_t search_expr_index_document(const expr_func_t* f,
         log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
         return false;
     }
+
+    log_infof(HASH_SEARCH, STRING_CONST("Indexed %.*s\n\tSymbols: %u\n\tProperties: %u"), 
+        STRING_FORMAT(symbol), search_database_document_count(db), search_database_index_count(db));
 
     // Raise event for search window to refresh itself.
     return dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);

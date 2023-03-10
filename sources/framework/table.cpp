@@ -10,15 +10,14 @@
 #include <framework/scoped_string.h>
 #include <framework/imgui.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/assert.h>
 #include <foundation/math.h>
-#include <foundation/array.h>
 #include <foundation/time.h>
 
 #include <mnyfmt.h>
 #include <sys/timeb.h>
-#include <algorithm>
 
 #define ENABLE_ROW_HEIGHT_MIDDLE 1
 
@@ -307,14 +306,7 @@ FOUNDATION_STATIC bool table_default_sorter(table_t* table, column_t* sorting_co
     sorting_column->flags |= COLUMN_SORTING_ELEMENT;
     table_sorting_context_t sorting_context{ table, sorting_column, sort_direction };
     sorting_context.search_filter = table->search_filter;
-    #if FOUNDATION_PLATFORM_WINDOWS
-    qsort_s(table->rows, table->rows_visible_count, sizeof(row_t), table_qsort_cells, &sorting_context);
-    #else
-    std::sort(table->rows, table->rows + table->rows_visible_count, [&sorting_context](const row_t& a, const row_t& b)
-    {
-        return table_qsort_cells(&sorting_context, &a, &b) < 0;
-    });
-    #endif
+    array_qsort(table->rows, table->rows_visible_count, table_qsort_cells, &sorting_context);
     sorting_column->flags &= ~COLUMN_SORTING_ELEMENT;
 
     return sorting_context.completly_sorted;
@@ -905,8 +897,6 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
             ImGui::PopID();
         }
     }
-    
-    ImGui::EndTable();
 }
 
 void table_render(table_t* table, table_element_ptr_const_t elements, const int element_count, size_t element_size, float outer_size_x, float outer_size_y)
@@ -942,6 +932,8 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
     table_render_sort_rows(table);
 
     table_render_elements(table, column_count);
+
+    ImGui::EndTable();
 }
 
 void table_clear_columns(table_t* table)

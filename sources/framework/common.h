@@ -43,120 +43,6 @@ typedef struct GLFWwindow GLFWwindow;
 typedef function<void(GLFWwindow* window)> app_update_handler_t;
 typedef function<void(GLFWwindow* window, int frame_width, int frame_height)> app_render_handler_t;
 
-// ## Array
-
-#define foreach(_VAR_NAME, _ARR) \
-    std::remove_reference<decltype(_ARR)>::type _VAR_NAME = array_size(_ARR) > 0 ? &_ARR[0] : nullptr; \
-    for (unsigned i = 0, end = array_size(_ARR); i < end; _VAR_NAME = &_ARR[++i])
-
-template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool array_empty(const T* arr)
-{
-    return array_size(arr) == 0;
-}
-
-template<typename T> T* array_last(T* arr)
-{
-    const size_t count = array_size(arr);
-    if (count == 0)
-        return nullptr;
-    return &arr[count-1];
-}
-
-template<typename T> size_t array_offset(const T* arr, const T* element)
-{
-    return pointer_diff(element, arr) / sizeof(T);
-}
-
-#define array_sort(ARRAY, EXPRESSION) std::sort(ARRAY, ARRAY + array_size(ARRAY), [=](const auto& a, const auto& b){ return EXPRESSION; });
-
-template<typename T>
-T array_sort_by(T arr, const function<int(const typename std::remove_pointer<T>::type& a, const typename std::remove_pointer<T>::type& b)>& comparer)
-{
-#if FOUNDATION_PLATFORM_WINDOWS
-    qsort_s(arr, array_size(arr), sizeof(typename std::remove_pointer<T>::type), [](void* context, const void* va, const void* vb)
-#else
-    qsort_r(arr, array_size(arr), sizeof(typename std::remove_pointer<T>::type), (void*)&comparer, [](void* context, const void* va, const void* vb)
-#endif
-    {
-        const auto& comparer = *(function<int(const typename std::remove_pointer<T>::type& a, const typename std::remove_pointer<T>::type& b)>*)context;
-        const typename std::remove_pointer<T>::type& a = *(const typename std::remove_pointer<T>::type*)va;
-        const typename std::remove_pointer<T>::type& b = *(const typename std::remove_pointer<T>::type*)vb;
-        return comparer(a, b);
-
-#if FOUNDATION_PLATFORM_WINDOWS
-    }, (void*)&comparer);
-#else
-    });
-#endif
-
-    return arr;
-}
-
-template<typename T, typename U, typename Compare>
-bool array_contains(const T* arr, const U& v, const Compare& compare_equal)
-{
-    for (unsigned i = 0, end = array_size(arr); i < end; ++i)
-    {
-        if (compare_equal(arr[i], v))
-            return true;
-    }
-
-    return false;
-}
-
-template<typename T, typename U>
-bool array_contains(const T* arr, const U& v)
-{
-    return array_contains(arr, v, [](const T& a, const U& b) { return a == b; });
-}
-
-template<typename T, typename V>
-int array_binary_search(const T* array, uint32_t _num, const V& _key)
-{
-    uint32_t offset = 0;
-    for (uint32_t ll = _num; offset < ll;)
-    {
-        const uint32_t idx = (offset + ll) / 2;
-
-        const T& mid_value = array[idx];
-        if (mid_value > _key)
-            ll = idx;
-        else if (mid_value < _key)
-            offset = idx + 1;
-        else
-            return idx;
-    }
-
-    return ~offset;
-}
-
-template<typename T, typename V>
-int array_binary_search(const T* array, const V& _key)
-{
-    return array_binary_search<T, V>(array, array_size(array), _key);
-}
-
-template<typename T, typename V, typename Comparer>
-int array_binary_search_compare(const T array, const typename V& _key, Comparer compare)
-{
-    uint32_t offset = 0;
-    for (uint32_t ll = array_size(array); offset < ll;)
-    {
-        const uint32_t idx = (offset + ll) / 2;
-
-        const typename std::remove_pointer<T>::type& mid_value = array[idx];
-        const int cmp = compare(mid_value, _key);
-        if (cmp > 0)
-            ll = idx;
-        else if (cmp < 0)
-            offset = idx + 1;
-        else
-            return idx;
-    }
-
-    return ~offset;
-}
 
 template<typename T>
 struct range_view 
@@ -216,6 +102,18 @@ string_const_t url_decode(const char* str, size_t str_length = 0);
 // ## Paths
 
 bool path_equals(const char* a, size_t a_length, const char* b, size_t b_length);
+
+/*! Normalize path name, removing any redundant path components and by removing any illegal chars.
+ * 
+ *  @param buff Buffer to write normalized path to
+ *  @param capacity Capacity of buffer
+ *  @param path Path to normalize
+ *  @param path_length Length of path
+ *  @param replacement_char Character to replace illegal chars with
+ * 
+ *  @return Normalized path
+ */
+string_t path_normalize_name(char* buff, size_t capacity, const char* path, size_t path_length, const char replacement_char = '_');
 
 // ##FS
 
@@ -349,6 +247,22 @@ void open_in_shell(const char* path);
 void execute_tool(const string_const_t& name, string_const_t* argv, size_t argc, const char* working_dir = 0, size_t working_dir_length = 0);
 
 void on_thread_exit(function<void()> func);
+
+/*! Open the the URL on the system. This will open the default browser on the system.
+ *
+ *  @param url URL to open
+ *  @param url_length Length of URL
+ */
+void system_browse_to_url(const char* url, size_t url_length);
+
+/*! @bried Open the the file on the system. This will open the default application for the file type.
+ * 
+ *  We produce a file:/// url
+ *
+ *  @param path Path to file
+ *  @param path_length Length of path
+ */
+void system_browse_to_file(const char* path, size_t path_length);
 
 /*! Returns the true if the application is running in daemon mode, meaning that it is either running as a service or as a background process.
  * 
@@ -587,3 +501,5 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t
 {
     return hash_combine(hash_combine(h1, h2), hash_combine(h3, h4));
 }
+
+
