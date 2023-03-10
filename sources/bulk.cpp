@@ -147,7 +147,7 @@ FOUNDATION_STATIC void bulk_load_symbols()
         const char* code = string_table_decode(ex->code);
         if (!eod_fetch_async("eod-bulk-last-day", code, FORMAT_JSON_CACHE,
             "date", string_from_date(_fetch_date).str,
-            "filter", "extended", bulk_fetch_exchange_symbols, 12 * 60 * 60ULL))
+            "filter", "extended", bulk_fetch_exchange_symbols, 4 * 60 * 60ULL))
         {
             log_errorf(0, ERROR_ACCESS_DENIED, STRING_CONST("Failed to fetch %s bulk data"), code);
         }

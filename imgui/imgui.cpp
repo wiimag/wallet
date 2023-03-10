@@ -959,7 +959,7 @@ static const float NAV_WINDOWING_HIGHLIGHT_DELAY            = 0.20f;    // Time 
 static const float NAV_WINDOWING_LIST_APPEAR_DELAY          = 0.15f;    // Time before the window list starts to appear
 
 // Window resizing from edges (when io.ConfigWindowsResizeFromEdges = true and ImGuiBackendFlags_HasMouseCursors is set in io.BackendFlags by backend)
-static const float WINDOWS_HOVER_PADDING                    = 4.0f;     // Extend outside window for hovering/resizing (maxxed with TouchPadding) and inside windows for borders. Affect FindHoveredWindow().
+constexpr const float WINDOWS_HOVER_PADDING                 = 4.0f;     // Extend outside window for hovering/resizing (maxxed with TouchPadding) and inside windows for borders. Affect FindHoveredWindow().
 static const float WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER = 0.04f;    // Reduce visual noise by only highlighting the border after a certain time.
 static const float WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER    = 0.70f;    // Lock scrolled window (so it doesn't pick child windows that are scrolling through) for a certain time, unless mouse moved.
 
@@ -1094,6 +1094,7 @@ ImGuiStyle::ImGuiStyle()
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowTitleAlign        = ImVec2(0.0f,0.5f);// Alignment for title bar text
     WindowMenuButtonPosition= ImGuiDir_Left;    // Position of the collapsing/docking button in the title bar (left/right). Defaults to ImGuiDir_Left.
+    WindowHoverPadding = WINDOWS_HOVER_PADDING; // Extend reactive bounding box for title bar to the left-right by this amount. Useful to allow for a larger area for dragging.
     ChildRounding           = 0.0f;             // Radius of child window corners rounding. Set to 0.0f to have rectangular child windows
     ChildBorderSize         = 1.0f;             // Thickness of border around child windows. Generally set to 0.0f or 1.0f. Other values not well tested.
     PopupRounding           = 0.0f;             // Radius of popup window corners rounding. Set to 0.0f to have rectangular child windows
@@ -2989,6 +2990,9 @@ static const ImGuiStyleVarInfo GStyleVarInfo[] =
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowBorderSize) },    // ImGuiStyleVar_WindowBorderSize
     { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowMinSize) },       // ImGuiStyleVar_WindowMinSize
     { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowTitleAlign) },    // ImGuiStyleVar_WindowTitleAlign
+    // ###############################################################################
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowHoverPadding) },  // ImGuiStyleVar_WindowHoverPadding
+    // ###############################################################################
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ChildRounding) },       // ImGuiStyleVar_ChildRounding
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ChildBorderSize) },     // ImGuiStyleVar_ChildBorderSize
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, PopupRounding) },       // ImGuiStyleVar_PopupRounding
@@ -4168,6 +4172,19 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
         if (g.IO.MouseDown[0] && IsMousePosValid(&g.IO.MousePos))
         {
             ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
+
+            // ###############################################################################
+            if (g.NextWindowData.GeometryChangeCallback != NULL)
+            {
+                ImGuiSizeCallbackData args;
+                args.UserData = g.NextWindowData.GeometryChangeCallbackUserData;
+                args.Pos = pos;
+                args.CurrentSize = moving_window->Size;
+                args.DesiredSize = moving_window->SizeFull;
+                g.NextWindowData.GeometryChangeCallback(&args);
+            }
+            // ###############################################################################
+
             SetWindowPos(moving_window, pos, ImGuiCond_Always);
             FocusWindow(g.MovingWindow);
         }
@@ -4253,7 +4270,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
 {
     ImGuiContext& g = *GImGui;
     ImGuiIO& io = g.IO;
-    g.WindowsHoverPadding = ImMax(g.Style.TouchExtraPadding, ImVec2(WINDOWS_HOVER_PADDING, WINDOWS_HOVER_PADDING));
+    g.WindowsHoverPadding = ImMax(g.Style.TouchExtraPadding, ImVec2(g.Style.WindowHoverPadding, g.Style.WindowHoverPadding));
 
     // Find the window hovered by mouse:
     // - Child windows can extend beyond the limit of their parent so we need to derive HoveredRootWindow from HoveredWindow.
@@ -5604,7 +5621,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
     const int resize_border_count = g.IO.ConfigWindowsResizeFromEdges ? 4 : 0;
     const float grip_draw_size = IM_FLOOR(ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f));
     const float grip_hover_inner_size = IM_FLOOR(grip_draw_size * 0.75f);
-    const float grip_hover_outer_size = g.IO.ConfigWindowsResizeFromEdges ? WINDOWS_HOVER_PADDING : 0.0f;
+    const float grip_hover_outer_size = g.IO.ConfigWindowsResizeFromEdges ? g.Style.WindowHoverPadding : 0.0f;
 
     ImVec2 pos_target(FLT_MAX, FLT_MAX);
     ImVec2 size_target(FLT_MAX, FLT_MAX);
@@ -5659,7 +5676,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
         const ImGuiAxis axis = (border_n == ImGuiDir_Left || border_n == ImGuiDir_Right) ? ImGuiAxis_X : ImGuiAxis_Y;
 
         bool hovered, held;
-        ImRect border_rect = GetResizeBorderRect(window, border_n, grip_hover_inner_size, WINDOWS_HOVER_PADDING);
+        ImRect border_rect = GetResizeBorderRect(window, border_n, grip_hover_inner_size, g.Style.WindowHoverPadding);
         ImGuiID border_id = window->GetID(border_n + 4); // == GetWindowResizeBorderID()
         ItemAdd(border_rect, border_id, NULL, ImGuiItemFlags_NoNav);
         ButtonBehavior(border_rect, border_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
@@ -5675,7 +5692,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
             ImVec2 clamp_min(border_n == ImGuiDir_Right ? visibility_rect.Min.x : -FLT_MAX, border_n == ImGuiDir_Down ? visibility_rect.Min.y : -FLT_MAX);
             ImVec2 clamp_max(border_n == ImGuiDir_Left  ? visibility_rect.Max.x : +FLT_MAX, border_n == ImGuiDir_Up   ? visibility_rect.Max.y : +FLT_MAX);
             ImVec2 border_target = window->Pos;
-            border_target[axis] = g.IO.MousePos[axis] - g.ActiveIdClickOffset[axis] + WINDOWS_HOVER_PADDING;
+            border_target[axis] = g.IO.MousePos[axis] - g.ActiveIdClickOffset[axis] + g.Style.WindowHoverPadding;
             border_target = ImClamp(border_target, clamp_min, clamp_max);
             CalcResizePosSizeFromAnyCorner(window, border_target, ImMin(def.SegmentN1, def.SegmentN2), &pos_target, &size_target);
         }
@@ -6429,6 +6446,24 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         const ImRect host_rect = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip) ? parent_window->ClipRect : viewport_rect;
         const ImRect outer_rect = window->Rect();
         const ImRect title_bar_rect = window->TitleBarRect();
+
+        // ###############################################################################
+        if (g.NextWindowData.GeometryChangeCallback != NULL &&
+            (outer_rect.Min.x != window->OuterRectClipped.Min.x ||
+             outer_rect.Min.y != window->OuterRectClipped.Min.y ||
+             outer_rect.Max.x != window->OuterRectClipped.Max.x ||
+             outer_rect.Max.y != window->OuterRectClipped.Max.y) && (window->OuterRectClipped.GetSize().x > 0))
+        {
+            ImGuiSizeCallbackData args;
+            args.UserData = g.NextWindowData.GeometryChangeCallbackUserData;
+            args.Pos = outer_rect.Min;
+            args.CurrentSize = window->OuterRectClipped.GetSize();
+            args.DesiredSize = outer_rect.GetSize();
+            g.NextWindowData.GeometryChangeCallback(&args);
+        }
+        // ###############################################################################
+
+
         window->OuterRectClipped = outer_rect;
         window->OuterRectClipped.ClipWith(host_rect);
 
@@ -7299,6 +7334,15 @@ void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond)
     g.NextWindowData.SizeVal = size;
     g.NextWindowData.SizeCond = cond ? cond : ImGuiCond_Always;
 }
+
+// ###############################################################################
+void ImGui::SetNextWindowGeometryCallback(ImGuiSizeCallback custom_callback, void* custom_callback_data /*= NULL*/)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextWindowData.GeometryChangeCallback = custom_callback;
+    g.NextWindowData.GeometryChangeCallbackUserData = custom_callback_data;
+}
+// ###############################################################################
 
 void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeCallback custom_callback, void* custom_callback_user_data)
 {

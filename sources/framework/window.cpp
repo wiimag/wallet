@@ -24,6 +24,10 @@
 
 #include <GLFW/glfw3native.h>
 
+#ifndef ENABLE_DIALOG_NO_WINDOW_DECORATION
+    #define ENABLE_DIALOG_NO_WINDOW_DECORATION 0
+#endif
+
 #define HASH_WINDOW static_hash_string("window", 6, 0xa9008b1c524585c4ULL)
 
 static const bgfx::EmbeddedShader _bgfx_imgui_embedded_shaders[] = {
@@ -134,7 +138,7 @@ FOUNDATION_STATIC unsigned int window_index(window_handle_t window_handle)
     return window_handle - 1;
 }
 
-FOUNDATION_STATIC window_t* window_get(window_handle_t window_handle)
+FOUNDATION_STATIC window_t* window_handle_lookup(window_handle_t window_handle)
 {
     return _window_module->windows[window_index(window_handle)];
 }
@@ -505,10 +509,10 @@ FOUNDATION_STATIC bool window_imgui_init(window_t* win)
     io.SetClipboardTextFn = window_glfw_set_clipboard_text;
     io.GetClipboardTextFn = window_glfw_get_clipboard_text;
 
-    if (test(win->flags, WindowFlags::Dialog))
-    {
-        io.ConfigWindowsMoveFromTitleBarOnly = true;
-    }
+//     if (test(win->flags, WindowFlags::Dialog))
+//     {
+//         io.ConfigWindowsMoveFromTitleBarOnly = true;
+//     }
     
     glfwSetMouseButtonCallback(win->glfw_window, window_glfw_mouse_button_callback);
     glfwSetScrollCallback(win->glfw_window, window_glfw_scroll_callback);
@@ -741,6 +745,60 @@ FOUNDATION_STATIC void window_handle_global_shortcuts(window_t* win)
     ImGui::GetIO().FontGlobalScale = win->scale;
 }
 
+#if ENABLE_DIALOG_NO_WINDOW_DECORATION
+FOUNDATION_STATIC void window_imgui_resize_callback(ImGuiSizeCallbackData* args)
+{
+    window_handle_t window_handle = (window_handle_t)(uintptr_t)args->UserData;
+    window_t* win = window_handle_lookup(window_handle);
+    if (win == nullptr)
+        return;
+
+    // Check if the window was resized
+    const auto* cw = ImGui::GetCurrentWindowRead();
+    if (cw && cw == cw->RootWindow && (args->CurrentSize.x != args->DesiredSize.x || args->CurrentSize.y != args->DesiredSize.y))
+    {
+        //const ImVec2 size_delta = args->DesiredSize - args->CurrentSize;
+        int size_x = math_floor(args->DesiredSize.x);
+        int size_y = math_floor(args->DesiredSize.y);
+
+        int position[2];
+        glfwGetWindowPos(win->glfw_window, &position[0], &position[1]);
+
+        position[0] += math_floor(args->Pos.x);
+        position[1] += math_floor(args->Pos.y);
+
+        glfwSetWindowPos(win->glfw_window, position[0], position[1]);
+        glfwSetWindowSize(win->glfw_window, size_x, size_y);
+        signal_thread();
+    }
+    else if (cw == nullptr)
+    {
+        // Check if the window was moved
+        const ImVec2 move_delta = args->Pos;
+        if (move_delta.x != 0.0f || move_delta.y != 0.0f)
+        {
+            int position[2];
+            glfwGetWindowPos(win->glfw_window, &position[0], &position[1]);
+
+            float scale_x = 1.0f, scale_y = 1.0f;
+            GLFWmonitor* monitor = glfw_find_window_monitor(win->glfw_window);
+            if (monitor)
+            {
+                #if FOUNDATION_PLATFORM_WINDOWS
+                glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
+                #endif
+            }
+
+            position[0] += math_floor(move_delta.x / scale_x);
+            position[1] += math_floor(move_delta.y / scale_y);
+
+            glfwSetWindowPos(win->glfw_window, position[0], position[1]);
+            signal_thread();
+        }
+    }
+}
+#endif
+
 FOUNDATION_STATIC void window_render(window_t* win)
 {        
     const bool graphical_mode = !main_is_batch_mode();
@@ -749,76 +807,44 @@ FOUNDATION_STATIC void window_render(window_t* win)
     window_bgfx_new_frame(win);
     window_imgui_new_frame(win);
 
-    ImGui::SetNextWindowPos(ImVec2(0, 0));
-    ImGui::SetNextWindowSize(ImVec2((float)win->frame_width , (float)win->frame_height));
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2((float)win->frame_width , (float)win->frame_height), ImGuiCond_Always);
 
     const bool has_menu = win->menu.valid();
     const bool is_dialog_window = test(win->flags, WindowFlags::Dialog);
 
     ImGuiWindowFlags imgui_window_flags = 
         ImGuiWindowFlags_NoBringToFrontOnFocus |
-        ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoCollapse;
 
     if (has_menu)
         imgui_window_flags |= ImGuiWindowFlags_MenuBar;
 
-    if (!is_dialog_window)
-        imgui_window_flags |= ImGuiWindowFlags_NoDecoration;
-    else
+    #if ENABLE_DIALOG_NO_WINDOW_DECORATION
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowHoverPadding, is_dialog_window ? 7.0 : 4.0f);
+    #endif
+
+    if (is_dialog_window)
     {
         imgui_window_flags |= 
             ImGuiWindowFlags_NoNavInputs | 
-            ImGuiWindowFlags_AlwaysUseWindowPadding |
-            ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize;
+            ImGuiWindowFlags_AlwaysUseWindowPadding;
+
+        #if ENABLE_DIALOG_NO_WINDOW_DECORATION
+        ImGui::SetNextWindowGeometryCallback(window_imgui_resize_callback, (void*)(uintptr_t)win->handle);
+        #else
+        imgui_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize;
+        #endif
+    }
+    else
+    {
+        imgui_window_flags |= ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove;
     }
     
     // Render window context
     // TODO: Add options to personalize the window visual style
-    if (ImGui::Begin("Hello World!", &win->opened, imgui_window_flags))
+    if (ImGui::Begin(win->title.str, &win->opened, imgui_window_flags))
     {
-        #if 0
-        // Check if the window title bar is being dragged.
-        if (is_dialog_window && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
-        {
-            const ImVec2 imgui_window_pos = ImGui::GetWindowPos();
-            const ImVec2 imgui_window_size = ImGui::GetWindowSize();
-            const ImVec2 mouse_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left); 
-            if (imgui_window_pos.x != 0 || imgui_window_pos.y != 0)
-            {
-                int position[2];
-                glfwGetWindowPos(win->glfw_window, &position[0], &position[1]);
-
-                float scale_x = 1.0f, scale_y = 1.0f;
-                GLFWmonitor* monitor = glfw_find_window_monitor(win->glfw_window);
-                if (monitor)
-                {
-                    #if FOUNDATION_PLATFORM_WINDOWS
-                    glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
-                    #endif
-                }
-
-                position[0] += math_round(mouse_delta.x / scale_x);
-                position[1] += math_round(mouse_delta.y / scale_y);
-
-                glfwSetWindowPos(win->glfw_window, position[0], position[1]);
-            }
-            else if (imgui_window_size.x != win->frame_width || imgui_window_size.y != win->frame_height)
-            {
-                float scale_x = 1.0f, scale_y = 1.0f;
-                GLFWmonitor* monitor = glfw_find_window_monitor(win->glfw_window);
-                if (monitor)
-                {
-                    #if FOUNDATION_PLATFORM_WINDOWS
-                    glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
-                    #endif
-                }
-
-                glfwSetWindowSize(win->glfw_window, (int)(imgui_window_size.x / scale_x), (int)(imgui_window_size.y / scale_y));
-            }
-        }
-        #endif
-
         window_handle_global_shortcuts(win);
 
         if (has_menu)
@@ -834,6 +860,10 @@ FOUNDATION_STATIC void window_render(window_t* win)
 
 
     } ImGui::End();
+
+    #if ENABLE_DIALOG_NO_WINDOW_DECORATION
+    ImGui::PopStyleVar();
+    #endif
 
     if (!win->opened)
     {
@@ -888,7 +918,7 @@ FOUNDATION_STATIC void window_update()
 
 void* window_get_user_data(window_handle_t window_handle)
 {
-    window_t* window = window_get(window_handle);
+    window_t* window = window_handle_lookup(window_handle);
     FOUNDATION_ASSERT(window);
 
     return window->user_data;
@@ -896,7 +926,7 @@ void* window_get_user_data(window_handle_t window_handle)
 
 const char* window_title(window_handle_t window_handle)
 {
-    window_t* window = window_get(window_handle);
+    window_t* window = window_handle_lookup(window_handle);
     FOUNDATION_ASSERT(window);
     FOUNDATION_ASSERT(window->glfw_window);
     
@@ -905,7 +935,7 @@ const char* window_title(window_handle_t window_handle)
 
 void window_set_title(window_handle_t window_handle, const char* title, size_t title_length)
 {
-    window_t* window = window_get(window_handle);
+    window_t* window = window_handle_lookup(window_handle);
     FOUNDATION_ASSERT(window);
     FOUNDATION_ASSERT(window->glfw_window);
     FOUNDATION_ASSERT(title && title_length);
@@ -919,7 +949,7 @@ void window_set_title(window_handle_t window_handle, const char* title, size_t t
 
 void window_set_render_callback(window_handle_t window_handle, const window_event_handler_t& callback)
 {
-    window_t* window = window_get(window_handle);
+    window_t* window = window_handle_lookup(window_handle);
     FOUNDATION_ASSERT(window);
     FOUNDATION_ASSERT(window->glfw_window);
     FOUNDATION_ASSERT(callback);
@@ -929,7 +959,7 @@ void window_set_render_callback(window_handle_t window_handle, const window_even
 
 void window_set_resize_callback(window_handle_t window_handle, const window_resize_callback_t& callback)
 {
-    window_t* window = window_get(window_handle);
+    window_t* window = window_handle_lookup(window_handle);
     FOUNDATION_ASSERT(window);
     FOUNDATION_ASSERT(window->glfw_window);
     FOUNDATION_ASSERT(callback);
@@ -939,7 +969,7 @@ void window_set_resize_callback(window_handle_t window_handle, const window_resi
 
 void window_set_menu_render_callback(window_handle_t window_handle, const window_event_handler_t& callback)
 {
-    window_t* window = window_get(window_handle);
+    window_t* window = window_handle_lookup(window_handle);
     FOUNDATION_ASSERT(window);
     FOUNDATION_ASSERT(window->glfw_window);
     FOUNDATION_ASSERT(callback);
@@ -949,7 +979,7 @@ void window_set_menu_render_callback(window_handle_t window_handle, const window
 
 void window_set_close_callback(window_handle_t window_handle, const window_event_handler_t& callback)
 {
-    window_t* window = window_get(window_handle);
+    window_t* window = window_handle_lookup(window_handle);
     FOUNDATION_ASSERT(window);
     FOUNDATION_ASSERT(window->glfw_window);
     FOUNDATION_ASSERT(callback);
@@ -1032,8 +1062,11 @@ FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t win
     if (test(flags, WindowFlags::Dialog))
     {
         glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_TRUE);
-        //glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+
+        #if ENABLE_DIALOG_NO_WINDOW_DECORATION
         glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_TRUE);
+        glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+        #endif
     }
     
     glfwShowWindow(window);
@@ -1056,7 +1089,7 @@ FOUNDATION_STATIC window_t* window_find_by_id(string_const_t window_id)
 
 void window_close(window_handle_t window_handle)
 {
-    window_t* window = window_get(window_handle);
+    window_t* window = window_handle_lookup(window_handle);
     FOUNDATION_ASSERT(window);
     
     if (window->glfw_window)
@@ -1067,7 +1100,7 @@ void window_close(window_handle_t window_handle)
 
 bool window_focus(window_handle_t window_handle)
 {
-    window_t* window = window_get(window_handle);
+    window_t* window = window_handle_lookup(window_handle);
     FOUNDATION_ASSERT(window);
 
     if (window->glfw_window == nullptr)

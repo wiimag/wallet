@@ -382,6 +382,10 @@ namespace ImGui
     IMGUI_API void          SetWindowCollapsed(const char* name, bool collapsed, ImGuiCond cond = 0);   // set named window collapsed state
     IMGUI_API void          SetWindowFocus(const char* name);                                           // set named window to be focused / top-most. use NULL to remove focus.
 
+    // ###############################################################################
+    IMGUI_API void          SetNextWindowGeometryCallback(ImGuiSizeCallback custom_callback, void* custom_callback_data = NULL);
+    // ###############################################################################
+
     // Content region
     // - Retrieve available space from a given point. GetContentRegionAvail() is frequently useful.
     // - Those functions are bound to be redesigned (they are confusing, incomplete and the Min/Max return values are in local window coordinates which increases confusion)
@@ -1647,6 +1651,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_WindowBorderSize,    // float     WindowBorderSize
     ImGuiStyleVar_WindowMinSize,       // ImVec2    WindowMinSize
     ImGuiStyleVar_WindowTitleAlign,    // ImVec2    WindowTitleAlign
+    ImGuiStyleVar_WindowHoverPadding,  // float     WindowHoverPadding
     ImGuiStyleVar_ChildRounding,       // float     ChildRounding
     ImGuiStyleVar_ChildBorderSize,     // float     ChildBorderSize
     ImGuiStyleVar_PopupRounding,       // float     PopupRounding
@@ -1895,6 +1900,9 @@ struct ImGuiStyle
     ImVec2      WindowMinSize;              // Minimum window size. This is a global setting. If you want to constrain individual windows, use SetNextWindowSizeConstraints().
     ImVec2      WindowTitleAlign;           // Alignment for title bar text. Defaults to (0.0f,0.5f) for left-aligned,vertically centered.
     ImGuiDir    WindowMenuButtonPosition;   // Side of the collapsing/docking button in the title bar (None/Left/Right). Defaults to ImGuiDir_Left.
+    // ###############################################################################
+    float       WindowHoverPadding;         // Extend outside window for hovering/resizing (maxxed with TouchPadding) and inside windows for borders. Affect FindHoveredWindow().
+    // ###############################################################################
     float       ChildRounding;              // Radius of child window corners rounding. Set to 0.0f to have rectangular windows.
     float       ChildBorderSize;            // Thickness of border around child windows. Generally set to 0.0f or 1.0f. (Other values are not well tested and more CPU/GPU costly).
     float       PopupRounding;              // Radius of popup window corners rounding. (Note that tooltip windows use WindowRounding)

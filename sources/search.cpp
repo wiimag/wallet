@@ -271,20 +271,6 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     string_const_t home_category = General["HomeCategory"].as_string();
         
     search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
-    if (doc != SEARCH_DOCUMENT_INVALID_ID)
-    {
-        const time_t doc_timestamp = search_database_document_timestamp(db, doc);
-        const double days_old = time_elapsed_days(doc_timestamp, time_now());
-        if (days_old < 7.0)
-            return;
-
-        if (days_old > 25)
-        {
-            if (search_database_remove_document(db, doc))
-                doc = SEARCH_DOCUMENT_INVALID_ID;
-        }
-    }
-
     if (doc == SEARCH_DOCUMENT_INVALID_ID)
         doc = search_database_add_document(db, STRING_ARGS(symbol));
 
@@ -446,6 +432,21 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         char symbol_buffer[SEARCH_INDEX_WORD_MAX_LENGTH];
         string_t symbol = string_format(STRING_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), to_int(market_length), market);
 
+        search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
+        if (doc != SEARCH_DOCUMENT_INVALID_ID)
+        {
+            const time_t doc_timestamp = search_database_document_timestamp(db, doc);
+            const double days_old = time_elapsed_days(doc_timestamp, time_now());
+            if (days_old < 7.0)
+                continue;
+
+            if (days_old > 25)
+            {
+                if (search_database_remove_document(db, doc))
+                    doc = SEARCH_DOCUMENT_INVALID_ID;
+            }
+        }
+
         // Fetch symbol fundamental data
         if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON_CACHE, 
             LC1(search_index_fundamental_data(_1, string_to_const(symbol))), 31 * 24 * 60 * 60ULL))
@@ -453,7 +454,7 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
             log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
         }
             
-        if (thread_try_wait(0))
+        if (thread_try_wait(50))
         {
             *stop_indexing = true;
             break;
