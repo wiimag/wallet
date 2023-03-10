@@ -20,14 +20,13 @@
 #include <framework/console.h>
 #include <framework/dispatcher.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/version.h>
 #include <foundation/hashstrings.h>
 #include <foundation/stacktrace.h>
 #include <foundation/process.h>
 #include <foundation/hashtable.h>
-
-#include <algorithm>
 
 struct app_dialog_t
 {
@@ -183,7 +182,7 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
                         return 0;
                     });
 
-                    array_sort(memory_contexts, a.allocated_mem > b.allocated_mem);
+                    array_sort(memory_contexts, ARRAY_GREATER_BY(allocated_mem));
 
                     foreach(c, memory_contexts)
                     {
@@ -203,7 +202,7 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
             }
             #endif
 
-            #if BUILD_ENABLE_MEMORY_TRACKER && BUILD_ENABLE_MEMORY_CONTEXT
+            #if BUILD_DEVELOPMENT && BUILD_ENABLE_MEMORY_TRACKER && BUILD_ENABLE_MEMORY_CONTEXT
             if (ImGui::MenuItem("Show Memory Usages"))
             {
                 console_show();

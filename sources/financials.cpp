@@ -16,8 +16,7 @@
 #include <framework/dispatcher.h>
 #include <framework/string_table.h>
 #include <framework/profiler.h>
-
-#include <algorithm>
+#include <framework/array.h>
 
 #define HASH_FINANCIALS static_hash_string("financials", 10, 0x3b2f926a5f4bff66ULL)
 
@@ -600,7 +599,7 @@ FOUNDATION_STATIC financial_balance_sheet_t* financials_fetch_balance_sheets(con
     }
 
     // Sort by date
-    array_sort(sheets, a.date < b.date);
+    array_sort(sheets, ARRAY_COMPARE_EXPRESSION(a.date - b.date));
     return sheets;
 }
 
@@ -653,7 +652,7 @@ FOUNDATION_STATIC financial_cash_flow_sheet_t* financials_fetch_cash_flows(const
     }
     
     // Sort by date
-    array_sort(sheets, a.date < b.date);
+    array_sort(sheets, ARRAY_COMPARE_EXPRESSION(a.date - b.date));
     return sheets;
 }
 
@@ -708,7 +707,7 @@ FOUNDATION_STATIC financial_income_sheet_t* financials_fetch_incomes(const json_
     }
 
     // Sort by date
-    array_sort(sheets, a.date < b.date);
+    array_sort(sheets, ARRAY_COMPARE_EXPRESSION(a.date - b.date));
     return sheets;
 }
 

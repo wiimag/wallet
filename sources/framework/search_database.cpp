@@ -12,6 +12,7 @@
 #include <framework/dispatcher.h>
 #include <framework/string_table.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/stream.h>
 

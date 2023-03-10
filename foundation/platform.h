@@ -853,6 +853,7 @@ thread local storage to ensure maximum portability across supported platforms */
 #pragma warning(disable : 4510)
 #pragma warning(disable : 4512)
 #pragma warning(disable : 4610)
+#pragma warning(disable : 6011)
 #endif
 
 #if FOUNDATION_PLATFORM_WINDOWS

@@ -196,7 +196,7 @@ struct function<R(Args...)>
         return *this;
     }
 
-    FOUNDATION_FORCEINLINE function& operator=(function&& o)
+    FOUNDATION_FORCEINLINE function& operator=(function&& o) noexcept
     {
         handler = o.handler;
         construct_f = o.construct_f;

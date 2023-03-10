@@ -358,7 +358,7 @@ FOUNDATION_STATIC void imgui_add_thin_space_glyph(ImFont* font, float size_pixel
     {
         for (int y = 0; y < rect->Height; y++)
         {
-            ImU32* p = (ImU32*)tex_pixels + (rect->Y + y) * tex_width + (rect->X);
+            ImU32* p = (ImU32*)tex_pixels + ((size_t)rect->Y + (size_t)y) * (size_t)tex_width + ((size_t)rect->X);
             for (int x = rect->Width; x > 0; x--)
                 *p++ = IM_COL32(0, 0, 0, 0);
         }
@@ -374,8 +374,15 @@ FOUNDATION_STATIC bool imgui_load_font(unsigned int font_res_id, const char* res
         if (hResource)
         {
             HGLOBAL hMemory = LoadResource(hModule, hResource);
+            if (hMemory == 0)
+            {
+                FOUNDATION_ASSERT_FAIL("Failed to load font resource");
+                return false;
+            }
+            
             DWORD dwSize = SizeofResource(hModule, hResource);
             LPVOID lpAddress = LockResource(hMemory);
+            FOUNDATION_ASSERT(lpAddress);
 
             char* bytes = (char*)imgui_allocate(dwSize, nullptr);
             memcpy(bytes, lpAddress, dwSize);
@@ -912,3 +919,12 @@ float imgui_calc_text_width(const char* text, size_t length, imgui_calc_text_fla
     return item_width;
 }
 
+void ImGui::TableRowSeparator()
+{
+    ImGui::TableNextRow();
+    for (int i = 0, end = ImGui::TableGetColumnCount(); i != end; ++i)
+    {
+        ImGui::TableNextColumn();
+        ImGui::Separator();
+    }
+}

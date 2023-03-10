@@ -12,6 +12,7 @@
 #include <framework/imgui.h>
 #include <framework/service.h>
 #include <framework/dispatcher.h>
+#include <framework/array.h>
 
 #include <foundation/hashstrings.h>
 

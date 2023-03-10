@@ -9,6 +9,7 @@
 #include <framework/table.h>
 #include <framework/imgui.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/path.h>
 

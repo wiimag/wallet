@@ -5,14 +5,13 @@
 
 #include "session.h"
 
-#include "common.h"
-#include "config.h"
-#include "scoped_string.h"
-
 #include <framework/imgui.h>
 #include <framework/common.h>
+#include <framework/config.h>
 #include <framework/jobs.h>
 #include <framework/string.h>
+#include <framework/array.h>
+#include <framework/scoped_string.h>
 
 #include <foundation/environment.h>
 #include <foundation/path.h>

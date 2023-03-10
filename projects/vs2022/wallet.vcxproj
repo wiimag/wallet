@@ -82,6 +82,7 @@
     <ClCompile Include="..\..\sources\bulk.cpp" />
     <ClCompile Include="..\..\sources\eod.cpp" />
     <ClCompile Include="..\..\sources\financials.cpp" />
+    <ClCompile Include="..\..\sources\framework\array.cpp" />
     <ClCompile Include="..\..\sources\framework\bgfx.cpp" />
     <ClCompile Include="..\..\sources\framework\boot.cpp" />
     <ClCompile Include="..\..\sources\framework\common.cpp" />
@@ -160,6 +161,7 @@
     <ClInclude Include="..\..\sources\eod.h" />
     <ClInclude Include="..\..\sources\events.h" />
     <ClInclude Include="..\..\sources\financials.h" />
+    <ClInclude Include="..\..\sources\framework\array.h" />
     <ClInclude Include="..\..\sources\framework\bgfx.h" />
     <ClInclude Include="..\..\sources\framework\common.h" />
     <ClInclude Include="..\..\sources\framework\database.h" />

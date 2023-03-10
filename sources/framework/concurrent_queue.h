@@ -5,7 +5,8 @@
 
 #pragma once
 
-#include <foundation/array.h>
+#include <framework/array.h>
+
 #include <foundation/mutex.h>
 #include <foundation/beacon.h>
 

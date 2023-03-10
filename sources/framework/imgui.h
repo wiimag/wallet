@@ -42,6 +42,13 @@ static const ImU32 BACKGROUND_GOOD_COLOR = ImColor::HSV(100 / 360.0f, 0.99f, 0.7
 static const ImU32 BACKGROUND_WARN_COLOR = ImColor::HSV(13 / 360.0f, 0.89f, 0.51f); // hsv(13, 89%, 51%)
 static const ImU32 BACKGROUND_BAD_COLOR = ImColor::HSV(358 / 360.0f, 0.99f, 0.70f); // hsv(358, 91%, 69%)
 
+typedef enum class ImGuiCalcTextFlags : int {
+    None = 0,
+
+    Padding = 1 << 0
+} imgui_calc_text_flags_t;
+DEFINE_ENUM_FLAGS(ImGuiCalcTextFlags);
+
 /*! @brief Returns true if the given key is pressed.
  *
  *  @param key The key to check.
@@ -238,6 +245,27 @@ void imgui_shutdown();
  */
 ImGuiKey imgui_key_from_glfw_key(int key);
 
+/*! Computes the text width using custom flags. 
+ * 
+ *  @param text The text to compute the width of.
+ *  @param length The length of the text.
+ *  @param flags The flags to use for the computation.
+ *  @return The width of the text.
+ */
+float imgui_calc_text_width(const char* text, size_t length, imgui_calc_text_flags_t flags = ImGuiCalcTextFlags::None);
+
+/*! Computes the literal string text width using custom flags.
+ *
+ *  @param text The text to compute the width of.
+ *  @param flags The flags to use for the computation.
+ *  @return The width of the text.
+ */
+template<size_t N>
+float imgui_calc_text_width(const char(&text)[N], imgui_calc_text_flags_t flags = ImGuiCalcTextFlags::None)
+{
+    return imgui_calc_text_width(text, N - 1, flags);
+}
+
 namespace ImGui 
 {
     /*! Move the current cursor position.
@@ -295,19 +323,7 @@ namespace ImGui
     
     /*! Pops the compact style pushed by #PushStyleCompact */
     void PopStyleCompact();
-}
 
-typedef enum class ImGuiCalcTextFlags : int {
-    None = 0,
-
-    Padding = 1 << 0
-} imgui_calc_text_flags_t;
-DEFINE_ENUM_FLAGS(ImGuiCalcTextFlags);
-
-float imgui_calc_text_width(const char* text, size_t length, imgui_calc_text_flags_t flags = ImGuiCalcTextFlags::None);
-
-template<size_t N>
-float imgui_calc_text_width(const char(&text)[N], imgui_calc_text_flags_t flags = ImGuiCalcTextFlags::None)
-{
-    return imgui_calc_text_width(text, N-1, flags);
+    /*! Draw a table row with separators in its columns */
+    void TableRowSeparator();
 }

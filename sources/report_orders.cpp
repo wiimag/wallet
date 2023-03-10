@@ -13,6 +13,7 @@
 #include <framework/table.h>
 #include <framework/math.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <algorithm>
 
@@ -501,7 +502,7 @@ void report_render_title_details(report_t* report, title_t* title)
             array_push_memcpy(orders, &o);
         }
 
-        array_sort(orders, a.data["date"].as_number() > b.data["date"].as_number());
+        array_sort(orders, ARRAY_GREATER_BY(data["date"].as_number()));
     }
 
     ImGui::PushStyleCompact();

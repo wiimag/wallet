@@ -5,10 +5,9 @@
 
 #include "tabs.h"
 
-#include "imgui.h"
-#include "common.h"
-
-#include <foundation/array.h>
+#include <framework/imgui.h>
+#include <framework/array.h>
+#include <framework/common.h>
 
 struct tabbar_t 
 {

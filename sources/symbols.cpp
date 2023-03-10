@@ -460,14 +460,14 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
 
         ImGui::MoveCursor(8.0f, 2.0f);
 
+        string_const_t code = string_table_decode_const(symbol->code);
         if (selector)
         {
             if (ImGui::MenuItem("Select symbol"))
-                selector(string_table_decode_const(symbol->code));
+                selector(code);
         }
-        else if (ImGui::MenuItem("Load Pattern"))
+        else if (pattern_menu_item(STRING_ARGS(code)))
         {
-            pattern_open(STRING_ARGS(string_table_decode_const(symbol->code)));
             ((symbol_t*)symbol)->viewed = true;
         }
 
@@ -655,8 +655,10 @@ FOUNDATION_STATIC void symbols_render_menus()
             open_in_shell("https://www.google.com/search?q=bourse+site:lapresse.ca&tbas=0&source=lnt&tbs=qdr:w&sa=X&biw=1920&bih=902&dpr=2");
 
         ImGui::Separator();
+        #if BUILD_DEVELOPMENT
         if (ImGui::MenuItem("IPOs", nullptr, nullptr, true))
             open_in_shell(eod_build_url("calendar", "ipos", FORMAT_JSON).str);
+        #endif
         ImGui::MenuItem("TO Symbols", nullptr, &SETTINGS.show_symbols_TO);
         ImGui::MenuItem("CVE Symbols", nullptr, &SETTINGS.show_symbols_CVE);
         ImGui::MenuItem("NEO Symbols", nullptr, &SETTINGS.show_symbols_NEO);

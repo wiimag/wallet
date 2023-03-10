@@ -16,6 +16,7 @@
 #include <framework/dispatcher.h>
 #include <framework/string.h>
 #include <framework/window.h>
+#include <framework/array.h>
 
 #define HASH_TIMELINE static_hash_string("timeline", 8, 0x8982c42357327efeULL)
 
@@ -197,7 +198,7 @@ FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(c
         }
     }
 
-    transactions = array_sort_by(transactions, [transactions](const timeline_transaction_t& a, const timeline_transaction_t& b)
+    transactions = array_sort(transactions, [transactions](const timeline_transaction_t& a, const timeline_transaction_t& b)
     {
         if (a.date < b.date)
             return -1;
@@ -796,7 +797,7 @@ FOUNDATION_STATIC void timeline_window_render_report(window_handle_t window_hand
     if (report->first_render)
     {
         ImPlot::SetNextAxesToFit();
-        report->first_render = true;
+        report->first_render = false;
     }
 }
 

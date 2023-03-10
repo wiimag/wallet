@@ -27,6 +27,7 @@
 #include <framework/table.h>
 #include <framework/expr.h>
 #include <framework/window.h>
+#include <framework/array.h>
 
 #include <foundation/stream.h>
 
@@ -914,22 +915,21 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
     if (s == nullptr && string_is_null(symbol))
         return;
 
-    if (ImGui::MenuItem("Load Pattern"))
-    {
-        pattern_open(STRING_ARGS(symbol));
+    if (pattern_menu_item(STRING_ARGS(symbol)))
         entry->viewed = true;
-    }
 
     ImGui::Separator();
 
     if (ImGui::MenuItem("Read News"))
         news_open_window(STRING_ARGS(symbol));
 
+    #if BUILD_DEVELOPMENT
     if (ImGui::MenuItem("Browse News"))
         {open_in_shell(eod_build_url("news", nullptr, FORMAT_JSON, "s", symbol.str).str);}
 
     if (ImGui::MenuItem("Browse Fundamentals"))
         open_in_shell(eod_build_url("fundamentals", symbol.str, FORMAT_JSON).str);
+    #endif
 
     ImGui::Separator();
 

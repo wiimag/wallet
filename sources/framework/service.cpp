@@ -7,10 +7,7 @@
 
 #include <framework/common.h>
 #include <framework/profiler.h>
-
-#include <foundation/array.h>
-
-#include <algorithm>
+#include <framework/array.h>
 
 #define HASH_SERVICE_TABS (static_hash_string("service_tabs", 12, 0xeee279126075ccf8ULL))
 #define HASH_SERVICE_MENU (static_hash_string("service_menu", 12, 0x597ea6b5d910db56ULL))
@@ -58,7 +55,7 @@ Service::Service(const char* FOUNDATION_RESTRICT name, hash_t service_hash,
     s.shutdown = shutdown_handler;
 
     _services[_service_count++] = s;
-    std::sort(&_services[0], &_services[0] + _service_count, [](const auto& a, const auto& b) { return a.priority < b.priority; });
+    array_sort(_services, _service_count, [](const auto& a, const auto& b) { return a.priority - b.priority; });
 }
 
 FOUNDATION_STATIC service_t* service_find(hash_t key)

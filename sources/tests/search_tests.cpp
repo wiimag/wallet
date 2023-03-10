@@ -15,6 +15,7 @@
 #include <framework/common.h>
 #include <framework/search_query.h>
 #include <framework/search_database.h>
+#include <framework/array.h>
 
 #include <foundation/random.h>
 

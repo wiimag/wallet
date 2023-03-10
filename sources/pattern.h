@@ -106,10 +106,12 @@ struct pattern_t
     pattern_lcf_symbol_t* lcf_symbols{ nullptr };
 };
 
-pattern_handle_t pattern_find(const char* code, size_t code_length);
+pattern_handle_t pattern_find(const char* symbol, size_t symbol_length);
 
-pattern_handle_t pattern_load(const char* code, size_t code_length);
+pattern_handle_t pattern_load(const char* symbol, size_t symbol_length);
 
-pattern_handle_t pattern_open(const char* code, size_t code_length);
+pattern_handle_t pattern_open(const char* symbol, size_t symbol_length);
 
-pattern_handle_t pattern_open_window(const char* code, size_t code_length);
+pattern_handle_t pattern_open_window(const char* symbol, size_t symbol_length);
+
+bool pattern_menu_item(const char* symbol, size_t symbol_length);

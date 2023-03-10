@@ -25,6 +25,11 @@ static double _smooth_elapsed_time_ms = 0.0f;
 static bool _batch_mode = false;
 static bool _process_should_exit = false;
 
+/*! Handles the debug break command line argument.
+ * 
+ *  If the debugger is attached, it will raise a debug break exception.
+ *  If the debugger is not attached, it will wait for the debugger to attach.
+ */
 FOUNDATION_STATIC void main_handle_debug_break()
 {
     if (!environment_command_line_arg("debug-break"))
@@ -56,6 +61,10 @@ FOUNDATION_STATIC void main_handle_debug_break()
     }
 }
 
+/*! Function invoked by foundation_lib to initialize the application.
+ *
+ *  @return 0 if successful, otherwise an error code.
+ */
 extern int main_initialize()
 {
     extern const char* app_title();
@@ -101,7 +110,7 @@ extern int main_initialize()
 
     // Check if running batch mode (which is incompatible with running tests)
     const bool run_eval_mode = environment_command_line_arg("eval");
-    _batch_mode = !_run_tests && (environment_command_line_arg("batch-mode") || run_eval_mode);
+    _batch_mode = !main_is_running_tests() && (environment_command_line_arg("batch-mode") || run_eval_mode);
 
     dispatcher_initialize();
     main_handle_debug_break();
@@ -123,21 +132,43 @@ extern int main_initialize()
     return app_initialize(window);
 }
 
+/*! Checks if the application is running in batch mode. 
+ * 
+ *  @todo Move to app.h
+ */
 extern bool main_is_batch_mode()
 {
     return _batch_mode;
 }
 
+/*! Checks if the application is running in daemon mode.
+ *
+ *  @todo Move to app.h
+ */
 extern bool main_is_daemon_mode()
 {
-    return _batch_mode || _run_tests;
+    return _batch_mode || main_is_running_tests();
 }
 
+/*! Checks if the application is running in graphical mode.
+ *
+ *  @remark Normally the graphical mode is used to open a window and render graphics.
+ * 
+ *  @todo Move to app.h
+ */
 extern bool main_is_graphical_mode()
 {
     return !_batch_mode;
 }
 
+/*! Checks if the application is running in interactive mode.
+ *
+ *  @param exclude_debugger If true, running in the debugger will not be considered in interactive mode.
+ *
+ *  @todo Move to app.h
+ * 
+ *  @return True if the application is running in interactive mode, false otherwise.
+ */
 extern bool main_is_interactive_mode(bool exclude_debugger /*= false*/)
 {
     if (_batch_mode)
@@ -151,6 +182,10 @@ extern bool main_is_interactive_mode(bool exclude_debugger /*= false*/)
     return true;
 }
 
+/*! Checks if the application is running in test mode.
+ *
+ *  @todo Move to app.h
+ */
 extern bool main_is_running_tests()
 {
     #if BUILD_DEVELOPMENT
@@ -160,6 +195,12 @@ extern bool main_is_running_tests()
     #endif
 }
 
+/*! Returns how much a batch of tick took time to execute in average.
+ *
+ *  @todo Move to app.h
+ * 
+ *  @return The average time in milliseconds.
+ */
 extern double main_tick_elapsed_time_ms()
 {
     #if BUILD_ENABLE_PROFILE
@@ -169,6 +210,10 @@ extern double main_tick_elapsed_time_ms()
     #endif
 }
 
+/*! Process system events that can affects the main application.
+ *
+ *  @param window The main window.
+ */
 FOUNDATION_STATIC void main_process_system_events(GLFWwindow* window)
 {
     system_process_events();
@@ -200,6 +245,11 @@ FOUNDATION_STATIC void main_process_system_events(GLFWwindow* window)
     }
 }
 
+/*! Main application update entry point.
+ *
+ *  @param window The main window.
+ *  @param update The update handler.
+ */
 extern void main_update(GLFWwindow* window, const app_update_handler_t& update)
 {
     PERFORMANCE_TRACKER("main_update");
@@ -213,6 +263,13 @@ extern void main_update(GLFWwindow* window, const app_update_handler_t& update)
         update(window);
 }
 
+/*! Main application render loop.
+ *
+ *  @param window The main window.
+ *  @param render The render handler.
+ *  @param begin The begin render handler.
+ *  @param end The end render handler.
+ */
 extern void main_render(GLFWwindow* window, const app_render_handler_t& render, const app_render_handler_t& begin, const app_render_handler_t& end)
 {
     PERFORMANCE_TRACKER("main_render");
@@ -264,6 +321,10 @@ extern void main_render(GLFWwindow* window, const app_render_handler_t& render, 
     }
 }
 
+/*! Main application loop.
+ *
+ *  @param window The main window. It can be null.
+ */
 extern void main_tick(GLFWwindow* window)
 {
     PERFORMANCE_TRACKER("main_tick");
@@ -276,6 +337,12 @@ extern void main_tick(GLFWwindow* window)
         main_render(window, app_render, nullptr, nullptr);
 }
 
+/*! Poll any windowing and dispatcher events that occurred since last tick.
+ *
+ *  @param window The main window. It can be null.
+ *
+ *  @return True if the application should continue running, false otherwise.
+ */
 extern bool main_poll(GLFWwindow* window)
 {
     PERFORMANCE_TRACKER("main_poll");
@@ -287,6 +354,12 @@ extern bool main_poll(GLFWwindow* window)
     return window == nullptr || !glfwWindowShouldClose(window);
 }
 
+/*! Main application entry point invoked by the foundation platform.
+ *
+ *  @param context The application context.
+ *
+ *  @return The application exit code.
+ */
 extern int main_run(void* context)
 {
     GLFWwindow* current_window = glfw_main_window();
@@ -323,6 +396,7 @@ extern int main_run(void* context)
     return 0;
 }
 
+/*! Main application shutdown entry point. */
 extern void main_finalize()
 {
     extern void app_shutdown();

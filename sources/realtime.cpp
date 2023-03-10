@@ -19,6 +19,7 @@
 #include <framework/imgui.h>
 #include <framework/table.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>

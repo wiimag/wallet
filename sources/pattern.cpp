@@ -22,6 +22,7 @@
 #include <framework/profiler.h>
 #include <framework/window.h>
 #include <framework/dispatcher.h>
+#include <framework/array.h>
 
 #include <algorithm>
 
@@ -1180,7 +1181,7 @@ FOUNDATION_STATIC int pattern_load_lcf_thread(payload_t* payload)
     array_deallocate(pattern->lcf);
     
     pattern->lcf = lcfarr;
-    pattern->lcf_symbols = array_sort_by(lcf_symbols, LC2(_2.matches - _1.matches));
+    pattern->lcf_symbols = array_sort(lcf_symbols, LC2(_2.matches - _1.matches));
     return 0;
 }
 
@@ -1814,9 +1815,9 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
                     act->polarity += p;
             }
 
-            std::sort(_activities, _activities + array_size(_activities), [](const pattern_activity_t& a, const pattern_activity_t& b)
+            array_sort(_activities, [](const pattern_activity_t& a, const pattern_activity_t& b)
             {
-                return a.date < b.date;
+                return a.date - b.date;
             });
         }, 6 * 60 * 60ULL);
     }
@@ -2099,11 +2100,12 @@ FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
             pattern_t* pattern = (pattern_t*)pattern_get(handle);
             string_const_t code = string_table_decode_const(pattern->code);
 
-            if (ImGui::MenuItem("EOD", nullptr, nullptr, true))
-                open_in_shell(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
-
             if (ImGui::MenuItem("Read News"))
                 news_open_window(STRING_ARGS(code));
+
+            #if BUILD_DEVELOPMENT
+            if (ImGui::MenuItem("EOD", nullptr, nullptr, true))
+                open_in_shell(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
 
             if (ImGui::MenuItem("Trends", nullptr, nullptr, true))
                 open_in_shell(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
@@ -2123,6 +2125,7 @@ FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
 
             if (ImGui::MenuItem("Real-time", nullptr, nullptr, true))
                 open_in_shell(eod_build_url("real-time", code.str, FORMAT_JSON).str);
+            #endif
 
             ImGui::EndMenu();
         }
@@ -2308,6 +2311,32 @@ pattern_handle_t pattern_open_window(const char* code, size_t code_length)
     pattern_handle_t handle = pattern_load(code, code_length);
     pattern_open_floating_window(handle);
     return handle;
+}
+
+bool pattern_menu_item(const char* symbol, size_t symbol_length)
+{
+    bool load_pattern_tab = false;
+    ImGui::AlignTextToFramePadding();
+    if (ImGui::Selectable("Load Pattern", false, ImGuiSelectableFlags_AllowItemOverlap))
+    {
+        load_pattern_tab = true;
+    }
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton(ICON_MD_OPEN_IN_NEW))
+    {
+        if (pattern_open_window(symbol, symbol_length))
+        {
+            load_pattern_tab = true;
+            ImGui::CloseCurrentPopup();
+        }
+    }
+    else if (load_pattern_tab)
+    {
+        pattern_open(symbol, symbol_length);
+    }
+
+    return load_pattern_tab;
 }
 
 //

@@ -12,13 +12,13 @@
 #include <framework/service.h>
 #include <framework/session.h>
 #include <framework/dispatcher.h>
+#include <framework/math.h>
 
 #include <foundation/hash.h>
 
 #include <imgui/fs_imgui.bin.h>
 #include <imgui/vs_imgui.bin.h>
 
-#include <bx/math.h>
 #include <bgfx/platform.h>
 #include <bgfx/embedded_shader.h>
 
@@ -590,7 +590,6 @@ FOUNDATION_STATIC void window_prepare(window_t* win)
     FOUNDATION_ASSERT(win);
 
     // Make the window context current
-    //glfwMakeContextCurrent(win->glfw_window);
     ImGui::SetCurrentContext(win->imgui_context);
     ImPlot::SetCurrentContext(win->implot_context);
     
@@ -886,7 +885,6 @@ FOUNDATION_STATIC void window_update()
         return;
 
     // Capture the current contexts
-    GLFWwindow* current_glfw_window = glfwGetCurrentContext();
     ImGuiContext* current_imgui_context = ImGui::GetCurrentContext();
     ImPlotContext* current_implot_context = ImPlot::GetCurrentContext();
 
@@ -907,7 +905,6 @@ FOUNDATION_STATIC void window_update()
     }
 
     // Restore the previous contexts
-    glfwMakeContextCurrent(current_glfw_window);
     ImPlot::SetCurrentContext(current_implot_context);
     ImGui::SetCurrentContext(current_imgui_context);
 }
@@ -1017,8 +1014,8 @@ FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t win
     {
         if (glfw_get_window_monitor_size(window_x, window_y, &initial_width, &initial_height))
         {
-            initial_width = math_round(initial_width * 0.8f);
-            initial_height = math_round(initial_height * 0.85f);
+            initial_width = math_round(initial_width * 0.8);
+            initial_height = math_round(initial_height * 0.85);
         }
     }
 
@@ -1080,7 +1077,7 @@ FOUNDATION_STATIC window_t* window_find_by_id(string_const_t window_id)
     for (unsigned i = 0, end = array_size(_window_module->windows); i != end; ++i)
     {
         window_t* w = _window_module->windows[i];
-        if (string_equal(STRING_ARGS(window_id), STRING_ARGS(w->id)))
+        if (w != nullptr && string_equal(STRING_ARGS(window_id), STRING_ARGS(w->id)))
             return w;
     }
 
@@ -1177,7 +1174,7 @@ window_handle_t window_open(
     const window_event_handler_t& close_callback,
     void* user_data /*= nullptr*/, window_flags_t flags /*= WindowFlags::None*/)
 {
-    string_const_t window_id = hash_to_string(context);
+    string_const_t window_id = string_from_uint_static(context, true, 0, 0);
     return window_open(window_id.str, title, title_length, render_callback, close_callback, user_data, flags | WindowFlags::Singleton);
 }
 

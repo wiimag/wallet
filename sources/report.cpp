@@ -30,11 +30,10 @@
 #include <framework/database.h>
 #include <framework/console.h>
 #include <framework/string.h>
- 
+#include <framework/array.h>
+
 #include <foundation/uuid.h>
 #include <foundation/path.h>
-
-#include <algorithm>
 
 #define E32(FN, P1, P2, P3) L2(FN(P1, P2, P3))
 
@@ -497,12 +496,9 @@ FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_h
     ImGui::Separator();
 
     ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Open Pattern"))
-        pattern_open_window(title->code, title->code_length);
-
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Load Pattern"))
-        pattern_open(title->code, title->code_length);
+    if (pattern_menu_item(title->code, title->code_length))
+    { 
+    }
 
     ImGui::Separator();
 
@@ -514,9 +510,11 @@ FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_h
     if (ImGui::MenuItem("Show Financials"))
         financials_open_window(title->code, title->code_length);
 
+    #if BUILD_DEVELOPMENT
     ImGui::MoveCursor(8.0f, 2.0f);
     if (ImGui::MenuItem("Browse Fundamentals"))
         open_in_shell(eod_build_url("fundamentals", title->code, FORMAT_JSON).str);
+    #endif
 
     ImGui::Separator();
 
@@ -1138,7 +1136,7 @@ FOUNDATION_STATIC const char* report_expression_column_format_name(column_format
 
 FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_handle, table_t* table)
 {
-    auto& ctitle = table_add_column(table, STRING_CONST("Title"),
+    table_add_column(table, STRING_CONST("Title"),
         report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
         .set_context_menu_callback(L3(report_column_title_context_menu(report_handle, _1, _2, _3)));
 
@@ -1176,18 +1174,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
     table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE)
         .set_selected_callback(report_title_pattern_open);
-
-#if 0
-    table_add_column(table, STRING_CONST("E. Actual " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Actual"),
-        report_column_earning_actual, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-
-    table_add_column(table, STRING_CONST("E. Estimate " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Estimate"),
-        report_column_earning_estimate, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-
-    table_add_column(table, STRING_CONST("E. Diff. " ICON_MD_TRENDING_NEUTRAL "||" ICON_MD_TRENDING_NEUTRAL " Earning Difference"),
-        report_column_earning_difference, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE);
-#endif
-
+        
     table_add_column(table, STRING_CONST("EPS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Trend"),
         report_column_earning_percent, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ZERO_USE_DASH);
 
@@ -1450,7 +1437,7 @@ FOUNDATION_STATIC void report_table_context_menu(report_handle_t report_handle, 
     }
     else
     {
-        ImGui::CloseCurrentPopup();
+        report_column_title_context_menu(report_handle, element, column, cell);
     }
 }
 
@@ -1609,6 +1596,8 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("Minimal amount (%.2lf) to sell titles if you want to increase your gain considerably.", report->wallet->total_sell_gain_if_kept);
 
+        ImGui::TableRowSeparator();
+
         ImGui::TableNextRow();
         report_render_summary_info(report, "Sell Count", report->wallet->total_title_sell_count, integer_fmt);
         report_render_summary_info(report, "Sell Total", report->wallet->sell_total_gain, currency_fmt, true);
@@ -1618,12 +1607,14 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
         ImGui::BeginGroup();
         report_render_summary_info(report, "Sell Greediness", report->wallet->total_sell_gain_if_kept_p * 100.0, pourcentage_fmt, true);
         report_render_summary_info(report, "", report->wallet->total_sell_gain_if_kept, currency_fmt, true);
+        report_render_summary_info(report, "Sells (Loses)", total_gain_with_sells - report->wallet->total_sell_gain_if_kept, currency_fmt, true);
         ImGui::EndGroup();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(" Loses or (Gains) if titles were kept longer before being sold");
-        report_render_summary_info(report, "Sell Profit (Loses) or Gain", total_gain_with_sells - report->wallet->total_sell_gain_if_kept, currency_fmt, true);
         ImGui::PopStyleColor(1);
     }
+
+    ImGui::TableRowSeparator();
 
     ImGui::TableNextRow();
     report_render_summary_info(report, "Investments", report->total_investment, currency_fmt);
@@ -2332,11 +2323,11 @@ void report_render(report_t* report)
 
 void report_sort_order()
 {
-    std::sort(_reports, _reports + array_size(_reports), [](const report_t& a, const report_t& b)
+    array_sort(_reports, [](const report_t& a, const report_t& b)
     {
         if (a.save_index == b.save_index)
-            return string_compare_less(string_table_decode(a.name), string_table_decode(b.name));
-        return a.save_index < b.save_index;
+            return strcmp(string_table_decode(a.name), string_table_decode(b.name));
+        return a.save_index - b.save_index;
     });
 }
 
@@ -2465,7 +2456,7 @@ report_t** report_sort_alphabetically()
     foreach(r, _reports)
         array_push(sorted_reports, r);
 
-    return array_sort_by(sorted_reports, [](const report_t* a, const report_t* b)
+    return array_sort(sorted_reports, [](const report_t* a, const report_t* b)
     {
         string_const_t ra = string_table_decode_const(a->name);
         string_const_t rb = string_table_decode_const(b->name);

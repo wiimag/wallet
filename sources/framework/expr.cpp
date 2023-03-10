@@ -15,6 +15,7 @@
 #include <framework/config.h>
 #include <framework/dispatcher.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/time.h>
 #include <foundation/random.h>

@@ -17,6 +17,7 @@
 #include <framework/dispatcher.h>
 #include <framework/string_table.h>
 #include <framework/profiler.h>
+#include <framework/array.h>
 
 #define HASH_NEWS static_hash_string("news", 4, 0xc804eb289c3e1658ULL)
 

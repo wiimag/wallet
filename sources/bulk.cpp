@@ -337,10 +337,10 @@ FOUNDATION_STATIC void bulk_table_context_menu(table_element_ptr_const_t element
 
     bulk_t* b = (bulk_t*)element;
 
-    if (ImGui::MenuItem("Load Pattern"))
+    string_const_t code = bulk_get_symbol_code(b);
+    if (pattern_menu_item(STRING_ARGS(code)))
     {
-        string_const_t code = bulk_get_symbol_code(b);
-        pattern_open(STRING_ARGS(code));
+
     }
 }
 
