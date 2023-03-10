@@ -14,8 +14,12 @@
 #include <foundation/process.h>
 
 #include <bx/math.h>
+#include <bx/file.h>
+
 #include <bgfx/platform.h>
 #include <bgfx/embedded_shader.h>
+
+#include <bimg/bimg.h>
 
 #include <imgui/fs_imgui.bin.h>
 #include <imgui/vs_imgui.bin.h>
@@ -130,8 +134,13 @@ struct BgfxCallbackHandler : bgfx::CallbackI
     }
 
     virtual void screenShot(const char* _filePath, uint32_t _width, uint32_t _height, uint32_t _pitch, const void* _data, uint32_t _size, bool _yflip) override
-    {
-        FOUNDATION_ASSERT_FAIL("TODO: screenShot");
+    {      
+        bx::FileWriter writer;
+        if (bx::open(&writer, _filePath))
+        {
+            bimg::imageWritePng(&writer, _width, _height, _pitch, _data, bimg::TextureFormat::BGRA8, _yflip);
+            bx::close(&writer);
+        }
     }
 
     virtual void captureBegin(uint32_t _width, uint32_t _height, uint32_t _pitch, bgfx::TextureFormat::Enum _format, bool _yflip) override

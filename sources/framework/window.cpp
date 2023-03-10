@@ -13,6 +13,7 @@
 #include <framework/session.h>
 #include <framework/dispatcher.h>
 #include <framework/math.h>
+#include <framework/string.h>
 
 #include <foundation/hash.h>
 
@@ -720,6 +721,31 @@ FOUNDATION_STATIC void window_bgfx_render_draw_lists(window_t* win, ImDrawData* 
     }
 }
 
+FOUNDATION_STATIC void window_capture_framebuffer_to_png(window_t* win)
+{
+    FOUNDATION_ASSERT(win);
+    FOUNDATION_ASSERT(win->glfw_window);
+
+    const int width = win->frame_width;
+    const int height = win->frame_height;
+
+    char name_buffer[BUILD_MAX_PATHLEN];
+    string_t name = path_normalize_name(STRING_BUFFER(name_buffer), STRING_ARGS(win->id));
+
+    // Append the current date
+    string_const_t today_string = string_from_date(time_now());
+    name = string_concat(STRING_BUFFER(name_buffer), STRING_ARGS(name), STRING_CONST("_"));
+    name = string_concat(STRING_BUFFER(name_buffer), STRING_ARGS(name), STRING_ARGS(today_string));
+
+    string_const_t window_imgui_save_path = session_get_user_file_path(
+        STRING_ARGS(name),
+        STRING_CONST("shots"),
+        STRING_CONST("png"), true);
+    bgfx::requestScreenShot(win->bgfx_imgui_frame_buffer_handle, window_imgui_save_path.str);
+
+    system_browse_to_file(STRING_ARGS(window_imgui_save_path));
+}
+
 FOUNDATION_STATIC void window_handle_global_shortcuts(window_t* win)
 {
     if (test(win->flags, WindowFlags::Dialog))
@@ -739,6 +765,11 @@ FOUNDATION_STATIC void window_handle_global_shortcuts(window_t* win)
     else if (ImGui::Shortcut(ImGuiMod_Shift | ImGuiMod_Ctrl | ImGuiKey_0))
     {
         win->scale = 1.0f;
+    }
+
+    if (ImGui::Shortcut(ImGuiKey_F11))
+    {
+        window_capture_framebuffer_to_png(win);
     }
 
     ImGui::GetIO().FontGlobalScale = win->scale;

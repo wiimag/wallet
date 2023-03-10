@@ -248,6 +248,22 @@ void execute_tool(const string_const_t& name, string_const_t* argv, size_t argc,
 
 void on_thread_exit(function<void()> func);
 
+/*! Open the the URL on the system. This will open the default browser on the system.
+ *
+ *  @param url URL to open
+ *  @param url_length Length of URL
+ */
+void system_browse_to_url(const char* url, size_t url_length);
+
+/*! @bried Open the the file on the system. This will open the default application for the file type.
+ * 
+ *  We produce a file:/// url
+ *
+ *  @param path Path to file
+ *  @param path_length Length of path
+ */
+void system_browse_to_file(const char* path, size_t path_length);
+
 /*! Returns the true if the application is running in daemon mode, meaning that it is either running as a service or as a background process.
  * 
  *  @remark Running tests is considered daemon mode, as it is a background process that does not require user interaction.
@@ -485,3 +501,5 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t
 {
     return hash_combine(hash_combine(h1, h2), hash_combine(h3, h4));
 }
+
+
