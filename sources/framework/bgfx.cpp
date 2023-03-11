@@ -384,10 +384,10 @@ void bgfx_initialize(GLFWwindow* window)
     bgfx::Init bgfxInit;
     bgfxInit.type = bgfx::RendererType::Count; // Automatically choose a renderer.
     
+    #if BUILD_ENABLE_MEMORY_TRACKER
+        bgfxInit.allocator = bgfx_system_allocator();
+    #endif
     #if BUILD_DEVELOPMENT
-        #if BUILD_ENABLE_MEMORY_TRACKER
-            bgfxInit.allocator = bgfx_system_allocator();
-        #endif
     bgfxInit.callback = bgfx_system_callback_handler();
     #endif
 

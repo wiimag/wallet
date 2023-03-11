@@ -42,6 +42,9 @@ BUILD_DEPLOY=0
 TESTS=0
 OPEN=0
 OPEN_WORKSPACE=0
+OPEN_CMAKE=0
+GENERATE=0
+GENERATED=0
 START=0
 PRINT=0
 PRINT_LARGEFILES=0
@@ -101,13 +104,20 @@ while [[ $# -gt 0 ]]; do
         shift
       fi
       ;;
+    g|generate)
+      GENERATE=1
+      shift # past argument
+      ;;  
     o|open)
       OPEN=1
       shift # past argument
 
-      # The release argument is the default, but remove it if it was specified
+      # Check if we open the workspace or the cmake generated solution
       if [ $# -ne 0 ] && ([ $1 == "workspace" ] || [ $1 == "w" ]); then
         OPEN_WORKSPACE=1
+        shift
+      elif [ $# -ne 0 ] && [ $1 == "cmake" ]; then
+        OPEN_CMAKE=1
         shift
       fi
       ;;
@@ -138,7 +148,7 @@ if [ $HELP -eq 1 ]; then
 
   echo "  Usage: $progname [${bold}b${normal}uild [debug|release|deploy]] "
   echo "             [${bold}t${normal}ests] " 
-  echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
+  echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace|cmake]] "
   echo "             [${bold}p${normal}rint [largefiles] "
   echo "             [${bold}d${normal}iff [main|release/1.0.0|...] "
   echo "             [${bold}s${normal}tart] [--option=<value>] ...additional arguments passed to last command"
@@ -168,6 +178,7 @@ if [ $HELP -eq 1 ]; then
   echo "    ./run print largefiles 50           Print top 50 largest files in the repo."
   echo "    ./run diff                          Diff the current branch with the main branch (default)"
   echo "    ./run diff release/1.0              Diff the current branch with the remote release 1.0 branch"
+  echo "    ./run generate open cmake           Generate and open the generated cmake solution"
   echo ""
   exit 0
 
@@ -184,6 +195,8 @@ if [ $VERBOSE -eq 1 ]; then
   echo "  BUILD_DEPLOY: $BUILD_DEPLOY"
   echo "OPEN: $OPEN"
   echo "  OPEN_WORKSPACE: $OPEN_WORKSPACE"
+  echo "  OPEN_CMAKE: $OPEN_CMAKE"
+  echo "GENERATE: $GENERATE"
   echo "PRINT: $PRINT"
   echo "  PRINT_LARGEFILES: $PRINT_LARGEFILES"
   echo "TESTS: $TESTS"
@@ -197,11 +210,61 @@ if [ $VERBOSE -eq 1 ]; then
 fi
 
 #
+# Generate the CMAKE solution
+#
+if [ $GENERATE -eq 1 ]; then
+
+    # Create the build directory if it doesn't exist and ignore any errors
+    mkdir -p projects/.build 2>/dev/null
+    
+    cd projects/.build
+
+    if [ $machine == "MinGw" ]; then
+        cmake -G "Visual Studio 17 2022" -A x64 ../.. $POSITIONAL_ARGS
+    elif [ ${machine} == "Mac" ]; then
+        cmake -G "Xcode" ../.. $POSITIONAL_ARGS
+    fi
+
+    retval=$?
+    if [ $retval -ne 0 ]; then
+        echo
+        echo "===GENERATE FAILED ($retval)==="
+        echo
+        exit $retval
+    fi
+
+    # Clear positional args since we don't want to pass them to the build command
+    if [ $START -eq 0 ]; then
+      POSITIONAL_ARGS=()
+    fi
+
+    # Keep track of it the solution was generated or not.
+    # We will use this to determine if we need to build the solution or not.
+    GENERATED=1
+    cd ../../
+
+    # Skip running the applicatin by default since we just generated the solution
+    RUN=0
+fi
+
+#
 # Build solution
 #
 if [ $BUILD -eq 1 ]; then
 
-  if [ $machine == "MinGw" ]; then
+  # Check if we combined the generate command with the build command
+  if [ $GENERATED -eq 1 ]; then
+    cd projects/.build
+    if [ $BUILD_DEBUG -eq 1 ]; then
+      cmake --build . --config Debug
+    elif  [ $BUILD_DEPLOY -eq 1 ]; then
+      cmake --build . --config Deploy
+    else
+      cmake --build . --config Release
+    fi
+
+    cd ../../
+  elif [ $machine == "MinGw" ]; then
     if [ $BUILD_DEBUG -eq 1 ]; then
       ./scripts/build_win_debug.bat $POSITIONAL_ARGS
     elif  [ $BUILD_DEPLOY -eq 1 ]; then
@@ -261,7 +324,14 @@ if [ $OPEN -eq 1 ]; then
 
     if [ $OPEN_WORKSPACE -eq 1 ]; then
 
-        if [ $machine == "MinGw" ]; then
+        if [ $GENERATED -eq 1 ]; then
+            # Open the generated cmake solution
+            if [ $machine == "MinGw" ]; then
+              start projects/.build/${SHORT_NAME}.sln
+          elif [ ${machine} == "Mac" ]; then
+              open projects/.build/${SHORT_NAME}.xcworkspace
+          fi
+        elif [ $machine == "MinGw" ]; then
             start projects/vs2022/${SHORT_NAME}.sln
         elif [ ${machine} == "Mac" ]; then
             open projects/xcode/${SHORT_NAME}.xcworkspace
@@ -271,6 +341,23 @@ if [ $OPEN -eq 1 ]; then
         if [ $retval -ne 0 ]; then
             echo
             echo "===OPEN WORKSPACE FAILED ($retval)==="
+            echo
+            exit $retval
+        fi
+
+        RUN=0
+    elif [ $OPEN_CMAKE -eq 1 ]; then
+
+        if [ $machine == "MinGw" ]; then
+            start projects/.build/${SHORT_NAME}.sln
+        elif [ ${machine} == "Mac" ]; then
+            open projects/.build/${SHORT_NAME}.xcworkspace
+        fi
+
+        retval=$?
+        if [ $retval -ne 0 ]; then
+            echo
+            echo "===OPEN CMAKE SOLUTION FAILED ($retval)==="
             echo
             exit $retval
         fi

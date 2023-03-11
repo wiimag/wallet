@@ -252,13 +252,14 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         return;
 
     // Do not index FUND stock and those with no ISIN
+    string_const_t isin = General["ISIN"].as_string();
+    if (string_is_null(isin))
+        isin = json["ETF_Data"]["ISIN"].as_string();
+
     string_const_t type = General["Type"].as_string();
     if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("FUND")))
         return;
 
-    string_const_t isin = General["ISIN"].as_string();
-    if (string_is_null(isin) && string_equal_nocase(STRING_ARGS(type), STRING_CONST("ETF")))
-        return;
 
     string_const_t name = General["Name"].as_string();
     string_const_t country = General["Country"].as_string();

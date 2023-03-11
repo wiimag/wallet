@@ -36,6 +36,9 @@ set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root directory path")
 # Add Debug, Release and Deploy configurations
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Deploy" CACHE STRING "Configs" FORCE)
 
+# Set the build info option to OFF by default and do not cache it.
+option(BUILD_INFO "Build info" OFF)
+
 # Set the output directory for the build executables and libraries directly in the root ./build directory without any configuration subdirectory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../../build)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../../artifacts)
@@ -69,25 +72,26 @@ add_compile_options(/Oy)
 # Use caret diagnostics format
 add_compile_options(/diagnostics:caret)
 
+# Disable type information for all configurations
+add_compile_options(/GR-)
+
 # Define the Debug configuration compiler flags such as _DEBUG;BUILD_DEBUG=1;BX_CONFIG_DEBUG=1
-set(CMAKE_FLAGS_DEBUG "-D_DEBUG -DBUILD_DEBUG=1 -DBX_CONFIG_DEBUG=1")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${CMAKE_FLAGS_DEBUG}")
+set(CMAKE_FLAGS_DEBUG "-D_DEBUG -DBUILD_DEBUG=1 -DBX_CONFIG_DEBUG=1 /ZI")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${}${CMAKE_FLAGS_DEBUG}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_FLAGS_DEBUG}")
 
 # Disable the security checks (/GS-) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "/GS-")
+set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GS-")
 
 # Favor speed over size (/Ox) for the Release configuration
 set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ox")
+set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ot")
 
 # Enable link-time code generation (/GL) for the Release configuration
 set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GL")
 
 # Generate debug info
 set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Zi")
-
-# Enable incremental linking (/INCREMENTAL) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /INCREMENTAL")
 
 # Enable function-level linking (/Gy) for the Release configuration
 set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Gy")
@@ -112,25 +116,51 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
 
 # The zDeploy config inhirit from the Release config
 # Define the zDeploy configuration compiler flags from the release config the following ones are added:
-set(CMAKE_FLAGS_DEPLOY "-DNDEBUG -DBX_CONFIG_DEBUG=0 -DBUILD_DEPLOY=1 -DBUILD_RELEASE=0 -DBUILD_DEVELOPMENT=0 "
-    "-DBUILD_ENABLE_LOG=1 -DBUILD_ENABLE_DEBUG_LOG=0 -DBUILD_ENABLE_ASSERT=0 -DBUILD_ENABLE_ERROR_CONTEXT=0 "
-    "-DBUILD_ENABLE_PROFILE=0 -DBUILD_ENABLE_MEMORY_CONTEXT=0 -DBUILD_ENABLE_MEMORY_TRACKER=0 -DBUILD_ENABLE_MEMORY_GUARD=0 "
-    "-DBUILD_ENABLE_MEMORY_STATISTICS=0 -DBUILD_ENABLE_STATIC_HASH_DEBUG=0")
+set(CMAKE_FLAGS_DEPLOY 
+    "-DNDEBUG \
+     -DBX_CONFIG_DEBUG=0 \
+     -DBUILD_DEPLOY=1 \
+     -DBUILD_RELEASE=0 \
+     -DBUILD_DEVELOPMENT=0 \
+     -DBUILD_ENABLE_LOG=1 \
+     -DBUILD_ENABLE_DEBUG_LOG=0 \
+     -DBUILD_ENABLE_ASSERT=0 \
+     -DBUILD_ENABLE_ERROR_CONTEXT=1 \
+     -DBUILD_ENABLE_PROFILE=0 \
+     -DBUILD_ENABLE_MEMORY_CONTEXT=1 \
+     -DBUILD_ENABLE_MEMORY_TRACKER=1 \
+     -DBUILD_ENABLE_MEMORY_GUARD=1 \
+     -DBUILD_ENABLE_MEMORY_STATISTICS=0 \
+     -DBUILD_ENABLE_STATIC_HASH_DEBUG=1")
 set(CMAKE_C_FLAGS_DEPLOY "$(CMAKE_C_FLAGS_DEPLOY) ${CMAKE_C_FLAGS_RELEASE} ${CMAKE_FLAGS_DEPLOY}")
 set(CMAKE_CXX_FLAGS_DEPLOY "$(CMAKE_CXX_FLAGS_DEPLOY) ${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_FLAGS_DEPLOY}")
 
 # Define the Release configuration compiler flags such as BUILD_RELEASE=1;BUILD_ENABLE_ASSERT=0;BX_CONFIG_DEBUG=0;NDEBUG;
-set(CMAKE_FLAGS_RELEASE "-DBUILD_RELEASE=1 -DBUILD_ENABLE_ASSERT=0 -DBX_CONFIG_DEBUG=0 -DNDEBUG")
+set(CMAKE_FLAGS_RELEASE " \
+    -DNDEBUG \
+    -DBX_CONFIG_DEBUG=0 \
+    -DBUILD_RELEASE=1 \
+    -DBUILD_ENABLE_ASSERT=0 \
+    -DBUILD_ENABLE_DEBUG_LOG=0 \
+    ")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
 
+if (BUILD_INFO)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE")
+endif()
+
+# Add /INCREMENTAL to debug linker flags
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /INCREMENTAL")
+
 # Enable /LTCG for the Release link configuration
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
-set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
 
 # Enable COMDAT Folding
-set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:ICF")
 set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:ICF")
+
+# Copy release linker flags to deploy
+set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_DEPLOY} ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 
 # Set linker to use the static runtime libraries
 foreach(flag_var
