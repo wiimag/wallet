@@ -47,3 +47,8 @@ add_library(foundation STATIC ${foundation_src} ${foundation_includes})
 target_include_directories(foundation PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../
 )
+
+# Set Xcode project properties
+set_target_properties(foundation
+                      PROPERTIES
+                      XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES)
