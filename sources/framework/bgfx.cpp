@@ -384,12 +384,8 @@ void bgfx_initialize(GLFWwindow* window)
     bgfx::Init bgfxInit;
     bgfxInit.type = bgfx::RendererType::Count; // Automatically choose a renderer.
     
-    #if BUILD_ENABLE_MEMORY_TRACKER
-        bgfxInit.allocator = bgfx_system_allocator();
-    #endif
-    #if BUILD_DEVELOPMENT
+    bgfxInit.allocator = bgfx_system_allocator();
     bgfxInit.callback = bgfx_system_callback_handler();
-    #endif
 
     #if FOUNDATION_PLATFORM_LINUX
         bgfxInit.platformData.ndt = glfwGetX11Display();
@@ -402,11 +398,7 @@ void bgfx_initialize(GLFWwindow* window)
     glfwGetFramebufferSize(window, &width, &height);
     bgfxInit.resolution.width = (uint32_t)width;
     bgfxInit.resolution.height = (uint32_t)height;
-    bgfxInit.resolution.reset = 
-    #if BUILD_DEVELOPMENT
-        main_is_running_tests() ? BGFX_RESET_NONE :
-    #endif
-        (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI);
+    bgfxInit.resolution.reset = main_is_running_tests() ? BGFX_RESET_NONE : (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI);
     
     log_infof(HASH_BGFX, STRING_CONST("Initializing BGFX (%d)..."), (int)bgfxInit.type);
     if (!bgfx::init(bgfxInit))
