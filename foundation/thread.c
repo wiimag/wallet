@@ -298,7 +298,7 @@ void thread_close_all_windows(thread_t* thread)
 #if FOUNDATION_PLATFORM_WINDOWS
     // Get all windows for the specified thread.
     // If the thread is the main thread, get all windows for the current process.
-    DWORD thread_id = thread->osid;
+    DWORD thread_id = (DWORD)thread->osid;
     if (!thread_id)
         thread_id = GetCurrentThreadId();
     DWORD process_id = GetCurrentProcessId();
