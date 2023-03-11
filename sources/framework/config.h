@@ -159,11 +159,11 @@ config_handle_t config_set(config_handle_t v, const char* key, size_t key_length
 config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, string_const_t string_value);
 config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, const char* string_value, size_t string_length);
 
-template <size_t N> FOUNDATION_FORCEINLINE constexpr config_handle_t config_set(config_handle_t v, const char(&key)[N], bool value) { return config_set(v, key, sizeof(key)-1, value); }
-template <size_t N> FOUNDATION_FORCEINLINE constexpr config_handle_t config_set(config_handle_t v, const char(&key)[N], double number) { return config_set(v, key, sizeof(key)-1, number); }
-template <size_t N> FOUNDATION_FORCEINLINE constexpr config_handle_t config_set(config_handle_t v, const char(&key)[N], const void* data) { return config_set(v, key, sizeof(key)-1, data); }
-template <size_t N> FOUNDATION_FORCEINLINE constexpr config_handle_t config_set(config_handle_t v, const char(&key)[N], string_const_t string_value) { return config_set(v, key, sizeof(key)-1, string_value); }
-template <size_t N> FOUNDATION_FORCEINLINE constexpr config_handle_t config_set(config_handle_t v, const char(&key)[N], const char* string_value, size_t string_length) { 	return config_set(v, key, sizeof(key)-1, string_value, string_length); }
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], bool value) { return config_set(v, key, sizeof(key)-1, value); }
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], double number) { return config_set(v, key, sizeof(key)-1, number); }
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], const void* data) { return config_set(v, key, sizeof(key)-1, data); }
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], string_const_t string_value) { return config_set(v, key, sizeof(key)-1, string_value); }
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], const char* string_value, size_t string_length) { 	return config_set(v, key, sizeof(key)-1, string_value, string_length); }
 
 config_handle_t config_set(config_handle_t v, const config_tag_t& tag, bool value);
 config_handle_t config_set(config_handle_t v, const config_tag_t& tag, double number);

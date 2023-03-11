@@ -763,7 +763,7 @@ string_ends_with(const char* str, size_t length, const char* suffix, size_t suff
 int
 string_compare(const char* lhs, size_t lhs_length, const char* rhs, size_t rhs_length)
 {
-    return strncasecmp(lhs, rhs, min(lhs_length, rhs_length));
+    return strncasecmp(lhs, rhs, lhs_length < rhs_length ? lhs_length : rhs_length);
 }
 
 bool

@@ -120,14 +120,14 @@
 
  /*! Checks if an array is empty. */
 template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool array_empty(const T* arr)
+FOUNDATION_FORCEINLINE bool array_empty(const T* arr)
 {
     return array_size(arr) == 0;
 }
 
 /*! Returns the first element of an array. */
 template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T* array_first(T* arr)
+FOUNDATION_FORCEINLINE T* array_first(T* arr)
 {
     return array_size(arr) > 0 ? &arr[0] : nullptr;
 }
@@ -398,7 +398,7 @@ int array_binary_search(const T* array, const V& _key)
  *      FOUNDATION_ASSERT(array_binary_search_compare(numbers, 5, 6, [](int a, int b) { return a - b; }) == ~5);
  */
 template<typename T, typename V, typename Comparer>
-int array_binary_search_compare(const T array, const typename V& _key, Comparer compare)
+int array_binary_search_compare(const T array, const V& _key, Comparer compare)
 {
     uint32_t offset = 0;
     for (uint32_t ll = array_size(array); offset < ll;)

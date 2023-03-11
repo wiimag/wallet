@@ -97,7 +97,7 @@ thread_close_all_windows(thread_t* thread);
 \param thread Thread
 \return True if the thread was terminated */
 FOUNDATION_API bool
-thread_abort(thread_t* thread);
+thread_kill(thread_t* thread);
 
 /*! Query if thread has started execution
 \param thread Thread

@@ -72,13 +72,13 @@ struct vec
     int len{ 0 };
     int cap{ 0 };
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T* get(int index)
+    FOUNDATION_FORCEINLINE T* get(int index)
     {
         FOUNDATION_ASSERT(index < len);
         return &buf[index];
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const T* get(int index) const
+    FOUNDATION_FORCEINLINE const T* get(int index) const
     {
         FOUNDATION_ASSERT(index < len);
         return &buf[index];
@@ -235,20 +235,20 @@ struct expr_result_t
         void* ptr;
     };
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(expr_result_type_t type = EXPR_RESULT_NULL)
+    FOUNDATION_FORCEINLINE expr_result_t(expr_result_type_t type = EXPR_RESULT_NULL)
         : type(type)
         , list(nullptr)
     {
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(expr_result_type_t type, int symbol, size_t length)
+    FOUNDATION_FORCEINLINE expr_result_t(expr_result_type_t type, int symbol, size_t length)
         : type(type)
         , value(symbol)
         , index(length)
     {
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(double value)
+    FOUNDATION_FORCEINLINE expr_result_t(double value)
         : type(EXPR_RESULT_NUMBER)
         , value(value)
     {
@@ -260,42 +260,42 @@ struct expr_result_t
     {
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(const char* FOUNDATION_RESTRICT str)
+    FOUNDATION_FORCEINLINE expr_result_t(const char* FOUNDATION_RESTRICT str)
         : type(str ? EXPR_RESULT_SYMBOL : EXPR_RESULT_NULL)
         , index(string_length(str))
         , value(string_table_encode(str, index))
     {
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(string_const_t str)
+    FOUNDATION_FORCEINLINE expr_result_t(string_const_t str)
         : type(str.length ? EXPR_RESULT_SYMBOL : EXPR_RESULT_NULL)
         , index(str.length)
         , value(string_table_encode(str))
     {
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(const expr_result_t* list, size_t index = NO_INDEX)
+    FOUNDATION_FORCEINLINE expr_result_t(const expr_result_t* list, size_t index = NO_INDEX)
         : type(list ? EXPR_RESULT_ARRAY : EXPR_RESULT_NULL)
         , list(list)
         , index(index)
     {
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(std::nullptr_t)
+    FOUNDATION_FORCEINLINE expr_result_t(std::nullptr_t)
         : type(EXPR_RESULT_NULL)
         , ptr(nullptr)
         , index(0)
     {
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(void* ptr, size_t size = EXPR_POINTER_UNSAFE)
+    FOUNDATION_FORCEINLINE expr_result_t(void* ptr, size_t size = EXPR_POINTER_UNSAFE)
         : type(ptr ? EXPR_RESULT_POINTER : EXPR_RESULT_NULL)
         , ptr(ptr)
         , index(size)
     {
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t(void* arr, uint16_t element_size, uint32_t element_count, uint64_t content_flags = EXPR_POINTER_UNSAFE)
+    FOUNDATION_FORCEINLINE expr_result_t(void* arr, uint16_t element_size, uint32_t element_count, uint64_t content_flags = EXPR_POINTER_UNSAFE)
         : type(arr ? EXPR_RESULT_POINTER : EXPR_RESULT_NULL)
         , ptr(arr)
         , index((EXPR_POINTER_ARRAY | content_flags) |
@@ -441,7 +441,7 @@ struct expr_result_t
      *
      *  @return True if the value can be used as a set or to be enumerated using #begin and #end
      */
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool is_set() const
+    FOUNDATION_FORCEINLINE bool is_set() const
     {
         if (type == EXPR_RESULT_ARRAY && array_size(list) > 0)
             return true;
@@ -454,7 +454,7 @@ struct expr_result_t
      *
      *  @return True if the value is a pointer to a raw array
      */
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool is_raw_array() const
+    FOUNDATION_FORCEINLINE bool is_raw_array() const
     {
         if (type == EXPR_RESULT_POINTER && (index & EXPR_POINTER_ARRAY) == EXPR_POINTER_ARRAY)
             return true;
@@ -468,7 +468,7 @@ struct expr_result_t
      * 
      *  @return Value at the given index
      */
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t element_at(unsigned vindex) const
+    FOUNDATION_FORCEINLINE expr_result_t element_at(unsigned vindex) const
     {
         if (type == EXPR_RESULT_ARRAY)
         {
@@ -537,7 +537,7 @@ struct expr_result_t
     }
 
     /*! Returns true if the value is defined (i.e. not nil). */
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL operator bool() const
+    FOUNDATION_FORCEINLINE operator bool() const
     {
         if (type == EXPR_RESULT_NUMBER && math_real_is_zero(value))
             return false;
@@ -743,7 +743,7 @@ struct expr_result_t
     }
 
     /*! Returns a boolean result if the current value is not equal to the other value. */
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t operator!=(const expr_result_t& rhs) const
+    FOUNDATION_FORCEINLINE expr_result_t operator!=(const expr_result_t& rhs) const
     {
         return !operator==(rhs);
     }
@@ -836,27 +836,27 @@ struct expr_result_t
         unsigned index;
         const expr_result_t* set;
 
-        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator!=(const iterator& other) const
+        FOUNDATION_FORCEINLINE bool operator!=(const iterator& other) const
         {
             if (set != other.set)
                 return true;
             return (index != other.index);
         }
 
-        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator==(const iterator& other) const
+        FOUNDATION_FORCEINLINE bool operator==(const iterator& other) const
         {
             if (set != other.set)
                 return false;
             return (index == other.index);
         }
 
-        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL iterator& operator++()
+        FOUNDATION_FORCEINLINE iterator& operator++()
         {
             ++index;
             return *this;
         }
 
-        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL expr_result_t operator*() const
+        FOUNDATION_FORCEINLINE expr_result_t operator*() const
         {
             FOUNDATION_ASSERT(set && index != UINT_MAX);
             return set->element_at(index);
@@ -864,14 +864,14 @@ struct expr_result_t
     };
 
     /*! Returns an iterator to the first element of the array. */
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL iterator begin() const
+    FOUNDATION_FORCEINLINE iterator begin() const
     {
         FOUNDATION_ASSERT(is_set());
         return iterator{ 0, this };
     }
 
     /*! Returns an iterator to the end of the array. */
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL iterator end() const
+    FOUNDATION_FORCEINLINE iterator end() const
     {
         FOUNDATION_ASSERT(is_set());
         return iterator{ element_count(), this };

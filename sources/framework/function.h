@@ -98,7 +98,7 @@ struct function<R(Args...)>
     template <typename Functor>
     FOUNDATION_FORCEINLINE static R invoke_fn(const Functor* fn, Args&&... args)
     { 
-        return (*fn)(std::forward<Args>(args)...); 
+        return (R)(*fn)(std::forward<Args>(args)...); 
     }
 
     template <typename Functor>

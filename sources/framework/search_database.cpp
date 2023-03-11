@@ -155,7 +155,7 @@ FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, s
     FOUNDATION_ASSERT(word && word_length > 0);
 
     if (flags == SearchIndexingFlags::None)
-        return string_const_t(word, word_length);
+        return string_const(word, word_length);
 
     const bool trim_word = (flags & SearchIndexingFlags::TrimWord) != 0;
     const bool lower_case_word = (flags & SearchIndexingFlags::Lowercase) != 0;
@@ -192,7 +192,7 @@ FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, s
     return string_trim(string_to_const(word_lower), ' ');
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int search_database_index_key_compare(const search_index_key_t& s, const search_index_key_t& key)
+FOUNDATION_FORCEINLINE int search_database_index_key_compare(const search_index_key_t& s, const search_index_key_t& key)
 {
     if (s.type < key.type)
         return -1;
@@ -226,7 +226,7 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int search_database_index_key_compar
     return 0;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int search_database_index_compare(const search_index_t& s, const search_index_key_t& key)
+FOUNDATION_FORCEINLINE int search_database_index_compare(const search_index_t& s, const search_index_key_t& key)
 {
     return search_database_index_key_compare(s.key, key);
 }
@@ -315,7 +315,7 @@ FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search
     return insert_at;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_const_t search_database_clean_up_text(const char* text, size_t text_length)
+FOUNDATION_FORCEINLINE string_const_t search_database_clean_up_text(const char* text, size_t text_length)
 {
     return string_trim(string_trim(string_trim(string_const(text, text_length), '"'), '\''), ' ');
 }
@@ -384,7 +384,7 @@ FOUNDATION_STATIC bool search_database_index_word(
     return true;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL SearchIndexingFlags search_database_case_indexing_flag(search_database_t* db)
+FOUNDATION_FORCEINLINE SearchIndexingFlags search_database_case_indexing_flag(search_database_t* db)
 {
     return (db->options & SearchDatabaseFlags::CaseSensitive) != 0 ? SearchIndexingFlags::None : SearchIndexingFlags::Lowercase;
 }
@@ -716,7 +716,7 @@ bool search_database_is_document_valid(search_database_t* database, search_docum
     return (database->documents[document].type == SearchDocumentType::Default);
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL search_document_handle_t search_database_get_indexed_document(const search_index_t& idx, uint32_t element_at)
+FOUNDATION_FORCEINLINE search_document_handle_t search_database_get_indexed_document(const search_index_t& idx, uint32_t element_at)
 {
     FOUNDATION_ASSERT(idx.document_count > 0 && element_at < idx.document_count);
         
@@ -1160,7 +1160,7 @@ string_t* search_database_property_keywords(search_database_t* database)
         const search_index_t* index = database->indexes + i;
         if (index->key.type == SearchIndexType::Property || index->key.type == SearchIndexType::Number)
         {
-            string_const_t keyword = string_table_to_string_const(database->strings, index->key.crc);
+            string_const_t keyword = string_table_to_string_const(database->strings, (string_table_symbol_t)index->key.crc);
             if (keyword.length && !array_contains(keywords, keyword, LC2(string_equal(STRING_ARGS(_1), STRING_ARGS(_2)))))
                 array_push(keywords, string_clone(STRING_ARGS(keyword)));
         }

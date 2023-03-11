@@ -23,7 +23,9 @@
 #include <bgfx/platform.h>
 #include <bgfx/embedded_shader.h>
 
+#if FOUNDATION_PLATFORM_WINDOWS
 #include <GLFW/glfw3native.h>
+#endif
 
 #ifndef ENABLE_DIALOG_NO_WINDOW_DECORATION
     #define ENABLE_DIALOG_NO_WINDOW_DECORATION 0
@@ -62,10 +64,10 @@ struct window_t
     /*! BGFX resources */
     uint8_t                 bgfx_view{ 255 };
     bgfx::VertexLayout      bgfx_imgui_vertex_layout;
-    bgfx::TextureHandle     bgfx_imgui_font_texture{ BGFX_INVALID_HANDLE };
-    bgfx::ProgramHandle     bgfx_imgui_shader_handle{ BGFX_INVALID_HANDLE };
-    bgfx::UniformHandle     bgfx_imgui_attrib_location_tex{ BGFX_INVALID_HANDLE };
-    bgfx::FrameBufferHandle bgfx_imgui_frame_buffer_handle{ BGFX_INVALID_HANDLE };
+    bgfx::TextureHandle     bgfx_imgui_font_texture{ bgfx::kInvalidHandle };
+    bgfx::ProgramHandle     bgfx_imgui_shader_handle{ bgfx::kInvalidHandle };
+    bgfx::UniformHandle     bgfx_imgui_attrib_location_tex{ bgfx::kInvalidHandle };
+    bgfx::FrameBufferHandle bgfx_imgui_frame_buffer_handle{ bgfx::kInvalidHandle };
     
     /*! ImGui window context */
     ImGuiContext* imgui_context{ nullptr };

@@ -123,9 +123,14 @@ typedef function<search_result_t*(
     search_result_t* and_set,
     void* user_data)> search_query_eval_handler_t;
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator==(const search_result_t& a, const search_result_t& b)
+FOUNDATION_FORCEINLINE bool operator==(const search_result_t& a, const search_result_t& b)
 {
     return a.id == b.id;
+}
+
+FOUNDATION_FORCEINLINE bool operator==(const search_result_t& a, const hash_t& b)
+{
+    return a.id == b;
 }
 
 search_query_t* search_query_allocate(const char* text, size_t length);

@@ -26,35 +26,35 @@ struct kvp_t { uuid_t id; uint256_t data; };
 
 struct price_t { uint64_t id; double price; };
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hashint(const int& value)
+FOUNDATION_FORCEINLINE hash_t hashint(const int& value)
 {
     if (value == 0)
         return (hash_t)UINT64_MAX;
     return (hash_t)value;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash_uuid(const kvp_t& kvp)
+FOUNDATION_FORCEINLINE hash_t hash_uuid(const kvp_t& kvp)
 {
     return kvp.id.word[0] ^ kvp.id.word[1];
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const stock_t& value)
+FOUNDATION_FORCEINLINE hash_t hash(const stock_t& value)
 {
     return value.id;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const string_const_t& value)
+FOUNDATION_FORCEINLINE hash_t hash(const string_const_t& value)
 {
     return hash(STRING_ARGS(value));
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void print_stock(const stock_t* s)
+FOUNDATION_FORCEINLINE void print_stock(const stock_t* s)
 {
     INFO(s->id);
     INFO(s->current.adjusted_close);
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void print_stock_day_result(const day_result_t& ed)
+FOUNDATION_FORCEINLINE void print_stock_day_result(const day_result_t& ed)
 {
     INFO(ed.change);
 }

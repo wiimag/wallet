@@ -102,16 +102,16 @@ struct timeline_plot_day_t
 // # PRIVATE
 //
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator<(const timeline_stock_t& s, const hash_t& key) { return s.key < key; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator>(const timeline_stock_t& s, const hash_t& key) { return s.key > key; }
+FOUNDATION_FORCEINLINE bool operator<(const timeline_stock_t& s, const hash_t& key) { return s.key < key; }
+FOUNDATION_FORCEINLINE bool operator>(const timeline_stock_t& s, const hash_t& key) { return s.key > key; }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator<(const timeline_t& s, const time_t& date) { return s.date < date; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator>(const timeline_t& s, const time_t& date) { return s.date > date; }
+FOUNDATION_FORCEINLINE bool operator<(const timeline_t& s, const time_t& date) { return s.date < date; }
+FOUNDATION_FORCEINLINE bool operator>(const timeline_t& s, const time_t& date) { return s.date > date; }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator<(const timeline_transaction_t& s, const time_t& date) { return s.date < date; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator>(const timeline_transaction_t& s, const time_t& date) { return s.date > date; }
+FOUNDATION_FORCEINLINE bool operator<(const timeline_transaction_t& s, const time_t& date) { return s.date < date; }
+FOUNDATION_FORCEINLINE bool operator>(const timeline_transaction_t& s, const time_t& date) { return s.date > date; }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int timeline_transaction_same_day_count(timeline_transaction_t* transactions, hash_t code, time_t date)
+FOUNDATION_FORCEINLINE int timeline_transaction_same_day_count(timeline_transaction_t* transactions, hash_t code, time_t date)
 {
     int counter = 0;
     foreach(t, transactions)

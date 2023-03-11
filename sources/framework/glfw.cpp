@@ -5,6 +5,18 @@
 
 #include "glfw.h"
 
+#if FOUNDATION_PLATFORM_WINDOWS
+
+    #pragma comment( lib, "glfw3.lib" )
+
+    #include <GLFW/glfw3native.h>
+
+#elif FOUNDATION_PLATFORM_MACOS
+
+    #include <foundation/apple.h>
+
+#endif
+
 #include <framework/string.h>
 #include <framework/common.h>
 #include <framework/session.h>
@@ -17,18 +29,8 @@ void* _window_handle = nullptr;
 // GLFW data
 // TODO: Replace with new window_t*
 GLFWwindow* _glfw_main_window = nullptr;
-
 GLFWcursor* _glfw_default_cursor = nullptr;
 
-#if FOUNDATION_PLATFORM_WINDOWS
-
-    #pragma comment( lib, "glfw3.lib" )
-
-    #include <GLFW/glfw3native.h>
-
-#elif FOUNDATION_PLATFORM_MACOS
-
-#endif
 
 bool glfw_get_window_monitor_size(int window_x, int window_y, int* monitor_width, int* monitor_height)
 {
@@ -347,13 +349,14 @@ void glfw_set_window_main_icon(GLFWwindow* window)
     #endif
 }
 
+#if !FOUNDATION_PLATFORM_MACOS
 void* glfw_platform_window_handle(GLFWwindow* window)
 {
     void* window_handle = nullptr;
     #if FOUNDATION_PLATFORM_LINUX
         window_handle = (void*)(uintptr_t)glfwGetX11Window(window);
     #elif FOUNDATION_PLATFORM_MACOS
-        window_handle = glfwGetCocoaWindow(window);
+        // See glfw_osx.cpp
     #elif FOUNDATION_PLATFORM_WINDOWS
         window_handle = glfwGetWin32Window(window);
     #else
@@ -362,6 +365,7 @@ void* glfw_platform_window_handle(GLFWwindow* window)
 
     return window_handle;
 }
+#endif
 
 void glfw_shutdown()
 {
