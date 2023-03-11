@@ -40,7 +40,7 @@ FOUNDATION_STATIC void report_trigger_update(report_t* report)
     report->fully_resolved = 0;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL time_t report_order_get_date(const report_title_order_t* order)
+FOUNDATION_FORCEINLINE time_t report_order_get_date(const report_title_order_t* order)
 {
     string_const_t date_str = order->data["date"].as_string();
     return string_to_date(STRING_ARGS(date_str));

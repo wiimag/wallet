@@ -520,7 +520,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
                 return false;
 
             log_debugf(0, STRING_CONST("Writing query %.*s to %.*s"), STRING_FORMAT(query_copy), STRING_FORMAT(cache_file_path));
-            stream_write_string(cache_file_stream, json.buffer, strlen(json.buffer));
+            stream_write_string(cache_file_stream, json.buffer, string_length(json.buffer));
             stream_deallocate(cache_file_stream);
         }
 

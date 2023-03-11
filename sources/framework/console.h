@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <foundation/platform.h>
+
 /*! Clear the console logs. */
 void console_clear();
 

@@ -296,26 +296,26 @@ thread_start(thread_t* thread) {
 void thread_close_all_windows(thread_t* thread)
 {
 #if FOUNDATION_PLATFORM_WINDOWS
-    // Get all windows for the specified thread.
-    // If the thread is the main thread, get all windows for the current process.
-    DWORD thread_id = thread->osid;
-    if (!thread_id)
-        thread_id = GetCurrentThreadId();
-    DWORD process_id = GetCurrentProcessId();
-    HWND window = nullptr;
-    while ((window = FindWindowEx(nullptr, window, nullptr, nullptr)) != nullptr) {
-        DWORD window_thread_id = GetWindowThreadProcessId(window, nullptr);
-        if (window_thread_id == thread_id) {
-            // Post WM_CLOSE to the window
-            PostMessage(window, WM_CLOSE, 0, 0);
-        }
-    }
-    
+	// Get all windows for the specified thread.
+	// If the thread is the main thread, get all windows for the current process.
+	DWORD thread_id = thread->osid;
+	if (!thread_id)
+		thread_id = GetCurrentThreadId();
+	DWORD process_id = GetCurrentProcessId();
+	HWND window = nullptr;
+	while ((window = FindWindowEx(nullptr, window, nullptr, nullptr)) != nullptr) {
+		DWORD window_thread_id = GetWindowThreadProcessId(window, nullptr);
+		if (window_thread_id == thread_id) {
+			// Post WM_CLOSE to the window
+			PostMessage(window, WM_CLOSE, 0, 0);
+		}
+	}
+	
 #endif
 }
 
 bool
-thread_abort(thread_t* thread)
+thread_kill(thread_t* thread)
 {
 	FOUNDATION_ASSERT(thread);
 
@@ -329,7 +329,7 @@ thread_abort(thread_t* thread)
 	thread_signal(thread);
 	if (!thread_try_join(thread, 100, nullptr)) {
 		#if FOUNDATION_PLATFORM_WINDOWS
-            
+			
 			if (TerminateThread((HANDLE)thread->handle, -1)) {
 				CloseHandle((HANDLE)thread->handle);
 				atomic_store32(&thread->state, 5, memory_order_release);
@@ -356,33 +356,38 @@ thread_abort(thread_t* thread)
 bool
 thread_try_join(thread_t* thread, uint32_t wait_milliseconds, void** exit_code) 
 {
-    FOUNDATION_ASSERT(thread);
-    thread_signal(thread);
+	FOUNDATION_ASSERT(thread);
+	thread_signal(thread);
 #if FOUNDATION_PLATFORM_WINDOWS
-    if (!thread->handle)
+	if (!thread->handle)
 		return false;
 		
-    DWORD wait_result = WaitForSingleObject((HANDLE)thread->handle, wait_milliseconds);
-    if (wait_result != 0)
+	DWORD wait_result = WaitForSingleObject((HANDLE)thread->handle, wait_milliseconds);
+	if (wait_result != 0)
 		return false;
-    CloseHandle((HANDLE)thread->handle);
-    atomic_store32(&thread->state, 4, memory_order_release);
-    thread->handle = 0;
-    if (exit_code)
-        *exit_code = thread->result;
+	CloseHandle((HANDLE)thread->handle);
+	atomic_store32(&thread->state, 4, memory_order_release);
+	thread->handle = 0;
+	if (exit_code)
+		*exit_code = thread->result;
 	return true;
 
 #elif FOUNDATION_PLATFORM_POSIX
-    if (thread->handle) {
-        int join_result = pthread_tryjoin_np((pthread_t)thread->handle, &exit_code);
-        if (join_result != 0)
+	if (thread->handle) {
+		// Check if the thread can be joined
+		tick_t timeout = time_current() + wait_milliseconds;
+		while (thread_is_running(thread) && (time_current() < timeout))
+			thread_yield();
+
+		if (thread_is_running(thread))
 			return false;
-        pthread_cancel((pthread_t)thread->handle);
-        pthread_join((pthread_t)thread->handle, &exit_code);
-        atomic_store32(&thread->state, 4, memory_order_release);
-        thread->handle = 0;
+
+		pthread_cancel((pthread_t)thread->handle);
+		pthread_join((pthread_t)thread->handle, exit_code);
+		atomic_store32(&thread->state, 4, memory_order_release);
+		thread->handle = 0;
 		return true;
-    }
+	}
 #else
 #error Not implemented
 #endif

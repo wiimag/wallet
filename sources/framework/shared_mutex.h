@@ -123,14 +123,14 @@ struct shared_mutex_read_lock
     const bool locked;
     shared_mutex& _mutex;
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL shared_mutex_read_lock(shared_mutex& mutex)
+    FOUNDATION_FORCEINLINE shared_mutex_read_lock(shared_mutex& mutex)
         : _mutex(mutex)
         , locked(mutex.shared_lock())
     {
         FOUNDATION_ASSERT(locked);
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL ~shared_mutex_read_lock()
+    FOUNDATION_FORCEINLINE ~shared_mutex_read_lock()
     {
         if (!locked)
             return;
@@ -138,7 +138,7 @@ struct shared_mutex_read_lock
         FOUNDATION_ASSERT(unlock_success);
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL operator bool() const
+    FOUNDATION_FORCEINLINE operator bool() const
     {
         return locked;
     }
@@ -149,14 +149,14 @@ struct shared_mutex_write_lock
     const bool locked;
     shared_mutex& _mutex;
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL shared_mutex_write_lock(shared_mutex& mutex)
+    FOUNDATION_FORCEINLINE shared_mutex_write_lock(shared_mutex& mutex)
         : _mutex(mutex)
         , locked(mutex.exclusive_lock())
     {
         FOUNDATION_ASSERT(locked);
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL ~shared_mutex_write_lock()
+    FOUNDATION_FORCEINLINE ~shared_mutex_write_lock()
     {
         if (!locked)
             return;
@@ -165,7 +165,7 @@ struct shared_mutex_write_lock
         FOUNDATION_ASSERT(unlock_success);
     }
 
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL operator bool() const
+    FOUNDATION_FORCEINLINE operator bool() const
     {
         return locked;
     }

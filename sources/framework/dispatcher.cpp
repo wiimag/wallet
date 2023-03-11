@@ -436,7 +436,7 @@ bool dispatcher_thread_stop(dispatcher_thread_handle_t thread_handle, double tim
             log_warnf(0, WARNING_DEADLOCK, STRING_CONST("Thread %.*s did not stop in time (%.3lg), aborting..."),
                 STRING_FORMAT(dt->thread->name), time_elapsed(timeout));
 
-            thread_aborted = thread_abort(dt->thread);
+            thread_aborted = thread_kill(dt->thread);
         }
 
         if (objectmap_release(_dispatcher_threads, thread_handle, dispatch_execute_thread_completed))

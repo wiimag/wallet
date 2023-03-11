@@ -177,17 +177,17 @@ struct database
             return m != nullptr && value != nullptr;
         }
 
-        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T* operator->()
+        FOUNDATION_FORCEINLINE T* operator->()
         {
             return value;
         }
 
-        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const T* operator->() const
+        FOUNDATION_FORCEINLINE const T* operator->() const
         {
             return value;
         }
 
-        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL operator const T* () const
+        FOUNDATION_FORCEINLINE operator const T* () const
         {
             return value;
         }
@@ -487,13 +487,13 @@ struct database
             return db.elements[index];
         }
 
-        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T* operator->()
+        FOUNDATION_FORCEINLINE T* operator->()
         {
             FOUNDATION_ASSERT(index < array_size(db.elements));
             return &db.elements[index];
         }
 
-        FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const T* operator->() const
+        FOUNDATION_FORCEINLINE const T* operator->() const
         {
             FOUNDATION_ASSERT(index < array_size(db.elements));
             return &db.elements[index];

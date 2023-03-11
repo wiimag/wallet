@@ -121,7 +121,7 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
             _console_max_context_name_length = max(_console_max_context_name_length, context_name.length);
             string_t formatted_msg = string_allocate_format(STRING_CONST("%.*s %-*.*s : %.*s"), 
                 (int)hash_code_start - 1, msg,
-                _console_max_context_name_length, STRING_FORMAT(context_name),
+                (int)_console_max_context_name_length, STRING_FORMAT(context_name),
                 (int)(length - hash_code_end - 1), msg + hash_code_end + 2);
 
             m.msg_symbol = console_string_encode(formatted_msg.str, formatted_msg.length);

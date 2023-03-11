@@ -21,7 +21,7 @@
 #define HASH_FINANCIALS static_hash_string("financials", 10, 0x3b2f926a5f4bff66ULL)
 
 template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL ImPlotPoint financial_field_plot(int idx, void* user_data, size_t field_offset)
+FOUNDATION_FORCEINLINE ImPlotPoint financial_field_plot(int idx, void* user_data, size_t field_offset)
 {
     const auto* r = ((T*)user_data) + idx;
     const double x = (double)r->date;
@@ -67,7 +67,7 @@ typedef enum class FinancialBalance : uint64_t
     netReceivables = 1 << 28,
     longTermDebt = 1 << 29,
     inventory = 1 << 30,
-    accountsPayable = 1 << 31,
+    accountsPayable = 1ULL << 31ULL,
     totalPermanentEquity = 1ULL << 32ULL,
     noncontrollingInterestInConsolidatedEntity = 1ULL << 33ULL,
     temporaryEquityRedeemableNoncontrollingInterests = 1ULL << 34ULL,

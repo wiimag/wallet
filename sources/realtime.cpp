@@ -153,7 +153,7 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
             if (realtime_stock_add_record(&stock, r))
             {
                 log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime values %.*s (%lld) > %lf (%" PRIsize " kb)"),
-                    STRING_FORMAT(code), (int64_t)r.timestamp, r.price, stream_size(_realtime_module->stream) / 1024ULL);
+                    STRING_FORMAT(code), (long long)r.timestamp, r.price, stream_size(_realtime_module->stream) / (size_t)1024);
                         
                 stream_write(_realtime_module->stream, &r.timestamp, sizeof(r.timestamp));
                 stream_write(_realtime_module->stream, stock.code, sizeof(stock.code));
@@ -307,7 +307,7 @@ FOUNDATION_STATIC void realtime_stream_stock_entries()
 
         if (time_elapsed_days(r.timestamp, time_now()) > 31)
         {
-            log_debugf(HASH_REALTIME, STRING_CONST("Ignoring realtime stock record %s (%lld) as it is too old."), stock.code, r.timestamp);
+            log_debugf(HASH_REALTIME, STRING_CONST("Ignoring realtime stock record %s (%lld) as it is too old."), stock.code, (long long)r.timestamp);
             continue;
         }
 

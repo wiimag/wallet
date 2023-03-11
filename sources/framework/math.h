@@ -237,7 +237,7 @@ typedef struct mat4_t {
  *  @param default_value The default value to return if the given value is NAN.
  *  @return The given value if it is not NAN, otherwise returns the default value.
  */
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifnan(const double n, const double default_value)
+FOUNDATION_FORCEINLINE double math_ifnan(const double n, const double default_value)
 {
     if (math_real_is_finite(n))
         return n;
@@ -249,7 +249,7 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifnan(const double n, co
  *  @param default_value The default value to return if the given value is zero.
  *  @return The given value if it is not zero, otherwise returns the default value.
  */
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifzero(const double n, const double default_value)
+FOUNDATION_FORCEINLINE double math_ifzero(const double n, const double default_value)
 {
     if (math_real_is_zero(n) || !math_real_is_finite(n))
         return default_value;
@@ -261,7 +261,7 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifzero(const double n, c
  *  @param default_value The default value to return if the given value is negative.
  *  @return The given value if it is not negative, otherwise returns the default value.
  */
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifneg(const double n, const double default_value)
+FOUNDATION_FORCEINLINE double math_ifneg(const double n, const double default_value)
 {
     if (n <= 0 || !math_real_is_finite(n))
         return default_value;
@@ -274,7 +274,7 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL double math_ifneg(const double n, co
  *  @param stride Stride between values.
  *  @return The average of the given values.
 */
-FOUNDATION_CONSTCALL double math_average(const double* pn, size_t count, size_t stride = sizeof(double));
+double math_average(const double* pn, size_t count, size_t stride = sizeof(double));
 
 /*! @brief Returns the median and average of the given values.
  *  @param values Pointer to the first value.
@@ -282,7 +282,7 @@ FOUNDATION_CONSTCALL double math_average(const double* pn, size_t count, size_t 
  *  @param average The average of the given values.
  *  @return The median of the given values.
 */
-FOUNDATION_CONSTCALL double math_median_average(double* values, double& median, double& average);
+double math_median_average(double* values, double& median, double& average);
 
 // ## Scalar helpers
 

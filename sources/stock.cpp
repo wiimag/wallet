@@ -674,10 +674,9 @@ double stock_exchange_rate(const char* from, size_t from_length, const char* to,
     {
         if (at == 0)
         {
-            eod_fetch("real-time", exchange_code, FORMAT_JSON_CACHE, [&rate](const auto& json)
+            eod_fetch("real-time", exchange_code, FORMAT_JSON_CACHE, [&rate](const json_object_t& json)
             {
-                const json_object_t& jc = json["close"];
-                rate = jc.as_number(rate);
+                rate = json["close"].as_number(rate);
             }, 60 * 60ULL);
         }
         else
