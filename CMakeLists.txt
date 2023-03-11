@@ -139,7 +139,7 @@ if(MSVC)
     # Enable COMDAT Folding
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:ICF")
 
-elif(XCODE)
+elseif(XCODE)
 
     # Set Weak References in Manual Retain Release mode
     set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
