@@ -462,7 +462,7 @@ TEST_SUITE("Search")
             const search_document_handle_t doc_handle = docs[doc_index];
             if (search_database_is_document_valid(db, doc_handle))
             {
-                if (!search_database_remove_document(db, doc_handle))
+                if (search_database_remove_document(db, doc_handle))
                     docs[doc_index] = SEARCH_DOCUMENT_INVALID_ID;
             }
         }

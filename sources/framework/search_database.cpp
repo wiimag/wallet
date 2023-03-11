@@ -1269,6 +1269,7 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
                 {
                     array_erase_ordered_safe(index.docs_list, j);
                     --index.document_count;
+                    FOUNDATION_ASSERT(index.document_count == array_size(index.docs_list));
 
                     if (index.document_count <= ARRAY_COUNT(index.docs))
                     {
@@ -1288,7 +1289,6 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
 
         if (index.document_count == 0)
         {
-            
             const char* value = (int32_t)index.key.hash > 0 ? string_table_to_string(db->strings, (uint32_t)index.key.hash) : nullptr;
             log_debugf(0, STRING_CONST("Deleting index %u (%d) -> %s:%s(%.lf)"), 
                 i, index.key.type, 
@@ -1296,6 +1296,8 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
                 value ? value : "NA", index.key.number);
             array_erase_ordered_safe(db->indexes, i);
             --i;
+            --end;
+            FOUNDATION_ASSERT(array_size(db->indexes) == end);
         }
     }
 
