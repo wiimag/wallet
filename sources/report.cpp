@@ -19,6 +19,7 @@
 #include "news.h"
 #include "financials.h"
 
+#include <framework/glfw.h>
 #include <framework/imgui.h>
 #include <framework/session.h>
 #include <framework/table.h>
@@ -2105,6 +2106,8 @@ bool report_is_loading(report_t* report)
 
 bool report_refresh(report_t* report)
 {
+    WAIT_CURSOR;
+
     const size_t title_count = array_size(report->titles);
     for (size_t i = 0; i < title_count; ++i)
     {

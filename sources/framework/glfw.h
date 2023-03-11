@@ -141,3 +141,49 @@ bool glfw_get_window_monitor_size(GLFWwindow* window, int* monitor_width, int* m
  *  @return True if the monitor size was found, false otherwise.
  */
 bool glfw_get_window_monitor_size(int window_x, int window_y, int* monitor_width, int* monitor_height);
+
+/*! Show the waiting/loading cursor.
+ * 
+ *  @todo Only works for Windows as of now
+ *  
+ *  @param window The window to show the cursor for.
+ */
+void glfw_show_wait_cursor(GLFWwindow* window);
+
+/*! Show the normal cursor.
+ *  
+ *  @param window The window to show the cursor for.
+ */
+void glfw_show_normal_cursor(GLFWwindow* window);
+
+/*! Structure used to scope and display a wait cursor. 
+ * 
+ *  @remark Prefer to use the macro #GLFW_WAIT_CURSOR
+ */
+struct GLFWWaitCursorScope
+{
+    GLFWwindow* window;
+    GLFWWaitCursorScope(GLFWwindow* _window)
+        : window(_window)
+    {
+        glfw_show_wait_cursor(window);
+    }
+
+    GLFWWaitCursorScope()
+        : GLFWWaitCursorScope(glfw_main_window())
+    {
+    }
+
+    ~GLFWWaitCursorScope()
+    {
+        glfw_show_normal_cursor(window);
+    }
+};
+
+/*! @def GLFW_WAIT_CURSOR(window)
+ *  @brief Scope a wait cursor.
+ *  @param window The window to show the cursor for.
+ *  @remark Prefer to use this macro instead of #GLFWWaitCursorScope directly.
+ */
+#define WAIT_CURSOR GLFWWaitCursorScope FOUNDATION_PREPROCESSOR_JOIN(_wait_cursor_scope_, __COUNTER__)
+#define GLFW_WAIT_CURSOR(window) GLFWWaitCursorScope FOUNDATION_PREPROCESSOR_JOIN(_wait_cursor_scope_, __COUNTER__)(window);

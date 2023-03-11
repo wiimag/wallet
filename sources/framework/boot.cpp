@@ -71,6 +71,8 @@ extern int main_initialize()
     extern int app_initialize(GLFWwindow * window);
     extern void app_configure(foundation_config_t & config, application_t & application);
 
+    WAIT_CURSOR;
+
     // Use default values for foundation config
     application_t application;
     foundation_config_t config;
@@ -126,7 +128,7 @@ extern int main_initialize()
             log_error(0, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Fail to create main window context."));
             return ERROR_SYSTEM_CALL_FAIL;
         }
-        
+
         bgfx_initialize(window);
         imgui_initiaize(window);
 

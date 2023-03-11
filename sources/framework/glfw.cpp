@@ -18,6 +18,8 @@ void* _window_handle = nullptr;
 // TODO: Replace with new window_t*
 GLFWwindow* _glfw_main_window = nullptr;
 
+GLFWcursor* _glfw_default_cursor = nullptr;
+
 #if FOUNDATION_PLATFORM_WINDOWS
 
     #pragma comment( lib, "glfw3.lib" )
@@ -363,6 +365,9 @@ void* glfw_platform_window_handle(GLFWwindow* window)
 
 void glfw_shutdown()
 {
+    if (_glfw_default_cursor)
+        glfwDestroyCursor(_glfw_default_cursor);
+
     glfwDestroyWindow(_glfw_main_window);
     glfwTerminate();
 
@@ -371,7 +376,7 @@ void glfw_shutdown()
 
 GLFWwindow* glfw_main_window(const char* window_title /*= nullptr*/)
 {
-    if (window_title == nullptr && _glfw_main_window)
+    if (window_title == nullptr)
         return _glfw_main_window;
 
     FOUNDATION_ASSERT(_glfw_main_window == nullptr);
@@ -408,3 +413,29 @@ GLFWwindow* glfw_main_window(const char* window_title /*= nullptr*/)
 
     return window;
 }
+
+
+void glfw_show_wait_cursor(GLFWwindow* window)
+{
+    #if FOUNDATION_PLATFORM_WINDOWS
+        HCURSOR cursor = LoadCursor(NULL, IDC_WAIT);
+        SetClassLongPtr(window ? (HWND)glfw_platform_window_handle(window) : NULL, GCLP_HCURSOR, (LONG_PTR)cursor);
+    #else
+        FOUNDATION_UNUSED(window);
+    #endif
+}
+
+void glfw_show_normal_cursor(GLFWwindow* window)
+{
+    if (_glfw_default_cursor == nullptr)
+        _glfw_default_cursor = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+
+    #if FOUNDATION_PLATFORM_WINDOWS
+        HCURSOR cursor = LoadCursor(NULL, IDC_ARROW);
+        SetClassLongPtr(window ? (HWND)glfw_platform_window_handle(window) : NULL, GCLP_HCURSOR, (LONG_PTR)cursor);
+    #else
+        if (window)
+            glfwSetCursor(window, _glfw_default_cursor)
+    #endif
+}
+
