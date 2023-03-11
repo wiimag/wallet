@@ -66,6 +66,12 @@ add_compile_options(/fp:fast)
 # Do not throw exceptions for floating point errors
 add_compile_options(/fp:except-)
 
+# Enable multi-processor compilation
+add_compile_options(/MP)
+
+# Enable enhanced instruction set
+add_compile_options(/arch:AVX2)
+
 # Omit frame pointers
 add_compile_options(/Oy)
 
@@ -84,8 +90,7 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_FLAGS_DEBUG}")
 set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GS-")
 
 # Favor speed over size (/Ox) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ox")
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ot")
+set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ox /Ot")
 
 # Enable link-time code generation (/GL) for the Release configuration
 set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GL")
@@ -104,9 +109,6 @@ set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Oi")
 
 # Enable string pooling (/GF) for the Release configuration
 set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GF")
-
-# Enable enhanced instruction set (/arch:AVX2) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /arch:AVX2")
 
 # Enable multi-processor compilation (/MP) for the Release configuration
 set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /MP")
@@ -193,9 +195,6 @@ add_definitions(-D__STDC_FORMAT_MACROS)
 # Set the compiler to be /permissive-
 add_definitions(-D_PERFECT_FORWARDING=1)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
-
-# Add multithreaded compilation /MP
-add_compile_options(/MP)
 
 # Execute batch script to generate the version.h file for each supported platform
 if(WIN32)

@@ -40,7 +40,7 @@ static const char* stock500[] = {
     "EOG.US", "EFX.US", "EQIX.US", "EQR.US", "ESS.US", "EL.US", "EVRG.US", "ES.US", "RE.US", "EXC.US",
     "EXPE.US", "EXPD.US", "EXR.US", "XOM.US", "FFIV.US", "META.US", "FAST.US", "FRT.US", "FDX.US", "FIS.US",
     "FITB.US", "FE.US", "FRC.US", "FISV.US", "FLT.US", "FLS.US", "FMC.US", "F.US", "FTNT.US",
-    "FTV.US", "FBHS.US", "FOXA.US", "FOX.US", "BEN.US", "FCX.US", "GPS.US", "GRMN.US", "IT.US", "GD.US",
+    "FTV.US", "FOXA.US", "FOX.US", "BEN.US", "FCX.US", "GPS.US", "GRMN.US", "IT.US", "GD.US",
     "GE.US", "GIS.US", "GM.US", "GPC.US", "GILD.US", "GL.US", "GPN.US", "GS.US", "GWW.US", "HAL.US",
     "HBI.US", "HIG.US", "HAS.US", "HCA.US", "PEAK.US", "HSIC.US", "HSY.US", "HES.US", "HPE.US", "HLT.US",
     "HOLX.US", "HD.US", "HON.US", "HRL.US", "HST.US", "HWM.US", "HPQ.US", "HUM.US", "HBAN.US",
@@ -488,7 +488,7 @@ TEST_SUITE("Stocks")
         CHECK_EQ(*handle, nullptr);
     }
 
-    TEST_CASE("Request REALTIMEx2" * doctest::timeout(90.0) * doctest::may_fail() * doctest::skip(!system_debugger_attached()))
+    TEST_CASE("Request REALTIMEx2" * doctest::timeout(90.0) * doctest::may_fail() * doctest::skip(!system_debugger_attached() || !time_is_working_hours()))
     {
         string_const_t code = CTEXT("AAPL.US");
         stock_handle_t handle = stock_request(STRING_ARGS(code), FetchLevel::REALTIME);

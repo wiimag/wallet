@@ -118,7 +118,9 @@ extern int main_initialize()
     GLFWwindow* window = nullptr;
     if (main_is_graphical_mode())
     {
-        GLFWwindow* window = glfw_main_window(app_title());
+        // This should create the main window not visible, 
+        // then we show it after the initialization is done.
+        window = glfw_main_window(app_title());
         if (!window)
         {
             log_error(0, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Fail to create main window context."));
@@ -127,6 +129,14 @@ extern int main_initialize()
         
         bgfx_initialize(window);
         imgui_initiaize(window);
+
+        if (main_is_interactive_mode())
+        {
+            // Show and focus the window once the main initialization is over.
+            // We do this in order to prevent showing a stalling frame for too long (i.e. while loading assets).
+            glfwShowWindow(window);
+            glfwFocusWindow(window);
+        }
     }
 
     return app_initialize(window);

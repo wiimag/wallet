@@ -536,6 +536,20 @@ bool time_is_weekend()
     return (tm_now.tm_wday == 0) || (tm_now.tm_wday == 6);
 }
 
+bool time_is_working_hours()
+{
+    if (time_is_weekend())
+        return false;
+
+    tm tm_now;
+    const time_t now = time_now();
+    if (!time_to_local(now, &tm_now))
+        return false;
+
+    const int hour = tm_now.tm_hour;
+    return (hour >= 10) && (hour < 16);
+}
+
 string_t path_normalize_name(char* buff, size_t capacity, const char* _path, size_t path_length, const char replacement_char /*= '_'*/)
 {
     string_t path = string_copy(buff, capacity, _path, path_length);

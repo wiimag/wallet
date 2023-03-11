@@ -146,9 +146,11 @@ bool time_date_equal(time_t da, time_t db);
 bool time_to_local(time_t t, tm* out_tm);
 time_t time_make(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int millisecond = 0);
 
-/*! @brief Checks if the current time in a weekend day.
- */
+/*! @brief Checks if the current time in a weekend day. */
 bool time_is_weekend();
+
+/*! @brief Checks if the current time is a working hour. */
+bool time_is_working_hours();
 
 FOUNDATION_FORCEINLINE constexpr time_t const time_one_hour()
 {

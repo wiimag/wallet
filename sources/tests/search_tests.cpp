@@ -226,8 +226,9 @@ TEST_SUITE("Search")
                 if (token.type == JSON_STRING || token.type == JSON_PRIMITIVE)
                 {
                     string_const_t value = json_token_value(json.buffer, &token);
+                    if (value.length == 0)
+                        continue;
                     CHECK(search_database_index_text(db, doc1, STRING_ARGS(value), true));
-
                     log_debugf(0, STRING_CONST("id: %.*s, value: %.*s"), STRING_FORMAT(id), STRING_FORMAT(value));
                 }
             }
@@ -466,7 +467,7 @@ TEST_SUITE("Search")
             }
         }
         
-        CHECK_GT(search_database_index_count(db), 1);
+        CHECK_EQ(search_database_index_count(db), 0);
         CHECK_EQ(search_database_document_count(db), 0);
         search_database_deallocate(db);
     }

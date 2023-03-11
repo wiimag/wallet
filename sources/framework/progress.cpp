@@ -20,7 +20,7 @@ void progress_initialize()
 {
     #if FOUNDATION_PLATFORM_WINDOWS
 
-        if (_window_handle == nullptr)
+        if (_window_handle == nullptr || !::IsWindowVisible((HWND)_window_handle))
             return;
     
         CoCreateInstance(

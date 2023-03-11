@@ -9,6 +9,7 @@
 
 #include "test_utils.h"
 
+#include <framework/glfw.h>
 #include <framework/imgui.h>
 #include <framework/service.h>
 #include <framework/dispatcher.h>
@@ -185,6 +186,8 @@ void TEST_RENDER_FRAME(const function<void()>& render_callback, const function<v
         const function<void()>* p_render_callback = &render_callback;
         const function<void()>* p_test_event_callback = test_event_callback.valid() ? &test_event_callback : nullptr;
 
+        glfwShowWindow(test_window);
+
         main_update(test_window, nullptr);
 
         main_render(test_window, [p_render_callback, p_test_event_callback](GLFWwindow* window, int frame_width, int frame_height)
@@ -204,6 +207,8 @@ void TEST_RENDER_FRAME(const function<void()>& render_callback, const function<v
             ctx->TestEngineHookItems = false;
             ImGui::PopClipRect();
         }, nullptr, nullptr);
+
+        glfwHideWindow(test_window);
     }
     else
     {

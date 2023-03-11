@@ -177,6 +177,7 @@ GLFWwindow* glfw_create_window_geometry(const char* window_title)
 
     glfwWindowHint(GLFW_FOCUSED, GLFW_TRUE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_FOCUS_ON_SHOW, GLFW_FALSE);
 
     GLFWmonitor* monitor = glfw_find_window_monitor(window_x, window_y);
     if (monitor == glfwGetPrimaryMonitor())
@@ -207,7 +208,7 @@ GLFWwindow* glfw_create_window_geometry(const char* window_title)
         glfw_set_window_center(window);
     }
 
-    glfwShowWindow(window);
+    //glfwShowWindow(window);
 
     return window;
 }
