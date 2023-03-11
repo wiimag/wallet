@@ -60,58 +60,89 @@ if(MSVC AND MSVC_VERSION GREATER_EQUAL 1914)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
-# Use fast floating point math
-add_compile_options(/fp:fast)
-
-# Do not throw exceptions for floating point errors
-add_compile_options(/fp:except-)
-
-# Enable multi-processor compilation
-add_compile_options(/MP)
-
-# Enable enhanced instruction set
-add_compile_options(/arch:AVX2)
-
-# Omit frame pointers
-add_compile_options(/Oy)
-
-# Use caret diagnostics format
-add_compile_options(/diagnostics:caret)
-
-# Disable type information for all configurations
-add_compile_options(/GR-)
-
 # Define the Debug configuration compiler flags such as _DEBUG;BUILD_DEBUG=1;BX_CONFIG_DEBUG=1
-set(CMAKE_FLAGS_DEBUG "-D_DEBUG -DBUILD_DEBUG=1 -DBX_CONFIG_DEBUG=1 /ZI")
+set(CMAKE_FLAGS_DEBUG "-D_DEBUG -DBUILD_DEBUG=1 -DBX_CONFIG_DEBUG=1")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${}${CMAKE_FLAGS_DEBUG}")
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_FLAGS_DEBUG}")
 
-# Disable the security checks (/GS-) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GS-")
+# Set compiler specific flags
+if(MSVC)
+    # Set the compiler to be /permissive-
+    add_definitions(-D_PERFECT_FORWARDING=1)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
 
-# Favor speed over size (/Ox) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ox /Ot")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /ZI")
 
-# Enable link-time code generation (/GL) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GL")
+    # Disable the security checks (/GS-) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GS-")
 
-# Generate debug info
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Zi")
+    # Favor speed over size (/Ox) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ox /Ot")
 
-# Enable function-level linking (/Gy) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Gy")
+    # Enable link-time code generation (/GL) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GL")
 
-# Enable inlining (/Ob2) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ob2")
+    # Enable function-level linking (/Gy) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Gy")
 
-# Enable intrinsic functions (/Oi) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Oi")
+    # Enable inlining (/Ob2) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ob2")
 
-# Enable string pooling (/GF) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GF")
+    # Enable intrinsic functions (/Oi) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Oi")
 
-# Enable multi-processor compilation (/MP) for the Release configuration
-set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /MP")
+    # Enable string pooling (/GF) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GF")
+
+    # Enable multi-processor compilation (/MP) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /MP")
+
+    # Generate debug info
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Zi")
+
+    # Use fast floating point math
+    add_compile_options(/fp:fast)
+
+    # Do not throw exceptions for floating point errors
+    add_compile_options(/fp:except-)
+
+    # Enable multi-processor compilation
+    add_compile_options(/MP)
+
+    # Enable enhanced instruction set
+    add_compile_options(/arch:AVX2)
+
+    # Omit frame pointers
+    add_compile_options(/Oy)
+
+    # Use caret diagnostics format
+    add_compile_options(/diagnostics:caret)
+
+    # Disable type information for all configurations
+    add_compile_options(/GR-)
+
+    # Set linker to use the static runtime libraries
+    foreach(flag_var
+    CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEPLOY
+    CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEPLOY)
+        if(${flag_var} MATCHES "/MD")
+            string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
+        endif() 
+    endforeach()
+
+    # Add /INCREMENTAL to debug linker flags
+    set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /INCREMENTAL")
+
+    # Enable /LTCG for the Release link configuration
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
+
+    # Enable COMDAT Folding
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:ICF")
+
+elif(APPLE)
+
+
+endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
@@ -152,26 +183,8 @@ if (BUILD_INFO)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE")
 endif()
 
-# Add /INCREMENTAL to debug linker flags
-set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /INCREMENTAL")
-
-# Enable /LTCG for the Release link configuration
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /LTCG")
-
-# Enable COMDAT Folding
-set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:ICF")
-
 # Copy release linker flags to deploy
 set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_DEPLOY} ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-
-# Set linker to use the static runtime libraries
-foreach(flag_var
-        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEPLOY
-        CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEPLOY)
-    if(${flag_var} MATCHES "/MD")
-        string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
-    endif() 
-endforeach()
 
 # Add the following definitions to all configurations
 add_definitions(
@@ -192,10 +205,6 @@ add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
 # Add __STDC_FORMAT_MACROS
 add_definitions(-D__STDC_FORMAT_MACROS)
 
-# Set the compiler to be /permissive-
-add_definitions(-D_PERFECT_FORWARDING=1)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
-
 # Execute batch script to generate the version.h file for each supported platform
 if(WIN32)
     execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_git_build_info.bat ${CMAKE_CURRENT_SOURCE_DIR})
@@ -211,19 +220,19 @@ message(STATUS "GIT_VERSION_FILE: ${GIT_VERSION_FILE}")
 add_subdirectory(${ROOT_DIR}/foundation)
 
 # Load library project under imgui/
-add_subdirectory(${ROOT_DIR}/imgui)
+#add_subdirectory(${ROOT_DIR}/imgui)
 
 # Load library project under external/bx/
-add_subdirectory(${ROOT_DIR}/external/bx)
+#add_subdirectory(${ROOT_DIR}/external/bx)
 
 # Load library project under external/astc-encoder/
-add_subdirectory(${ROOT_DIR}/external/astc-encoder)
+#add_subdirectory(${ROOT_DIR}/external/astc-encoder)
 
 # Load library project under external/bimg/
-add_subdirectory(${ROOT_DIR}/external/bimg)
+#add_subdirectory(${ROOT_DIR}/external/bimg)
 
 # Load library project under external/bgfx/
-add_subdirectory(${ROOT_DIR}/external/bgfx)
+#add_subdirectory(${ROOT_DIR}/external/bgfx)
 
 # Load main exectuable project under sources/
-add_subdirectory(${ROOT_DIR}/sources)
+#add_subdirectory(${ROOT_DIR}/sources)

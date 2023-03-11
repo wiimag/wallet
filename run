@@ -329,7 +329,7 @@ if [ $OPEN -eq 1 ]; then
             if [ $machine == "MinGw" ]; then
               start projects/.build/${SHORT_NAME}.sln
           elif [ ${machine} == "Mac" ]; then
-              open projects/.build/${SHORT_NAME}.xcworkspace
+              open projects/.build/${SHORT_NAME}.xcodeproj
           fi
         elif [ $machine == "MinGw" ]; then
             start projects/vs2022/${SHORT_NAME}.sln

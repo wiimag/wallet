@@ -118,8 +118,8 @@ include_directories(${ROOT_DIR}/external/libcurl/include)
 
 # Link with libcurl shared framework on OSX
 if (APPLE)
-    find_package(CURL CONFIG REQUIRED)
-    target_link_libraries(${AppId} PRIVATE CURL::libcurl)
+    #find_package(CURL CONFIG REQUIRED)
+    #target_link_libraries(${AppId} PRIVATE CURL::libcurl)
 else()
     # Link with libcurl_a_debug.lib on Windows and in debug mode
     link_directories(${ROOT_DIR}/external/libcurl/lib)
