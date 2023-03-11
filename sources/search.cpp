@@ -555,7 +555,7 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
             {
                 search_result_entry_t entry;
                 entry.db = db;
-                entry.doc = r->id;
+                entry.doc = (search_document_handle_t)r->id;
                 array_push_memcpy(sw->results, &entry);
             }
 
@@ -574,7 +574,7 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
     }
     catch (SearchQueryException err)
     {
-        string_format(STRING_BUFFER(sw->error), STRING_CONST("(%u) %s at %.*s"), err.error, err.msg, STRING_FORMAT(err.token));
+        string_format(STRING_BUFFER(sw->error), STRING_CONST("(%u) %s at %.*s"), (unsigned)err.error, err.msg, STRING_FORMAT(err.token));
     }
     
     sw->query_tick = time_diff(sw->query_tick, time_current());

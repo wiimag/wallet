@@ -55,18 +55,18 @@ struct {
     { CTEXT("ARE"), CTEXT("United Arab Emirates") },
     { CTEXT("ZAF"), CTEXT("South Africa") },
 
-    { CTEXT("ABW"), CTEXT("Aruba") }, { CTEXT("AFG"), CTEXT("Afghanistan") }, { CTEXT("AGO"), CTEXT("Angola") }, { CTEXT("AIA"), CTEXT("Anguilla") }, { CTEXT("ALA"), CTEXT("Åland Islands") },
+    { CTEXT("ABW"), CTEXT("Aruba") }, { CTEXT("AFG"), CTEXT("Afghanistan") }, { CTEXT("AGO"), CTEXT("Angola") }, { CTEXT("AIA"), CTEXT("Anguilla") },
     { CTEXT("ALB"), CTEXT("Albania") }, { CTEXT("AND"), CTEXT("Andorra") }, { CTEXT("ARM"), CTEXT("Armenia") },
     { CTEXT("ASM"), CTEXT("American Samoa") }, { CTEXT("ATA"), CTEXT("Antarctica") }, { CTEXT("ATF"), CTEXT("French Southern Territories") }, { CTEXT("ATG"), CTEXT("Antiguaand Barbuda") },
     { CTEXT("AUT"), CTEXT("Austria") }, { CTEXT("AZE"), CTEXT("Azerbaijan") }, { CTEXT("BDI"), CTEXT("Burundi") }, { CTEXT("BEL"), CTEXT("Belgium") },
     { CTEXT("BEN"), CTEXT("Benin") }, { CTEXT("BES"), CTEXT("Bonaire, Sint Eustatiusand Saba") }, { CTEXT("BFA"), CTEXT("Burkina Faso") }, { CTEXT("BGD"), CTEXT("Bangladesh") }, { CTEXT("BGR"), CTEXT("Bulgaria") },
-    { CTEXT("BHR"), CTEXT("Bahrain") }, { CTEXT("BHS"), CTEXT("Bahamas") }, { CTEXT("BIH"), CTEXT("Bosniaand Herzegovina") }, { CTEXT("BLM"), CTEXT("Saint Barthélemy") }, { CTEXT("BLR"), CTEXT("Belarus") },
+    { CTEXT("BHR"), CTEXT("Bahrain") }, { CTEXT("BHS"), CTEXT("Bahamas") }, { CTEXT("BIH"), CTEXT("Bosniaand Herzegovina") }, { CTEXT("BLM"), CTEXT("Saint Barthelemy") }, { CTEXT("BLR"), CTEXT("Belarus") },
     { CTEXT("BLZ"), CTEXT("Belize") }, { CTEXT("BMU"), CTEXT("Bermuda") }, { CTEXT("BOL"), CTEXT("Bolivia(Plurinational State of)") }, { CTEXT("BRB"), CTEXT("Barbados") },
     { CTEXT("BRN"), CTEXT("Brunei Darussalam") }, { CTEXT("BTN"), CTEXT("Bhutan") }, { CTEXT("BVT"), CTEXT("Bouvet Island") }, { CTEXT("BWA"), CTEXT("Botswana") }, { CTEXT("CAF"), CTEXT("Central African Republic") },
     { CTEXT("CCK"), CTEXT("Cocos(Keeling) Islands") }, { CTEXT("CHL"), CTEXT("Chile") }, 
-    { CTEXT("CIV"), CTEXT("Côte d'Ivoire") }, { CTEXT("CMR"), CTEXT("Cameroon") }, { CTEXT("COD"), CTEXT("Congo, Democratic Republic of the") }, { CTEXT("COG"), CTEXT("Congo") }, { CTEXT("COK"), CTEXT("Cook Islands") },
+    { CTEXT("CIV"), CTEXT("Cote d'Ivoire") }, { CTEXT("CMR"), CTEXT("Cameroon") }, { CTEXT("COD"), CTEXT("Congo, Democratic Republic of the") }, { CTEXT("COG"), CTEXT("Congo") }, { CTEXT("COK"), CTEXT("Cook Islands") },
     { CTEXT("COL"), CTEXT("Colombia") }, { CTEXT("COM"), CTEXT("Comoros") }, { CTEXT("CPV"), CTEXT("Cabo Verde") },
-    { CTEXT("CRI"), CTEXT("Costa Rica") }, { CTEXT("CUB"), CTEXT("Cuba") }, { CTEXT("CUW"), CTEXT("Curaçao") }, { CTEXT("CXR"), CTEXT("Christmas Island") }, { CTEXT("CYM"), CTEXT("Cayman Islands") },
+    { CTEXT("CRI"), CTEXT("Costa Rica") }, { CTEXT("CUB"), CTEXT("Cuba") }, { CTEXT("CXR"), CTEXT("Christmas Island") }, { CTEXT("CYM"), CTEXT("Cayman Islands") },
     { CTEXT("CYP"), CTEXT("Cyprus") }, { CTEXT("CZE"), CTEXT("Czechia") }, { CTEXT("DJI"), CTEXT("Djibouti") }, { CTEXT("DMA"), CTEXT("Dominica") }, { CTEXT("DNK"), CTEXT("Denmark") },
     { CTEXT("DOM"), CTEXT("Dominican Republic") }, { CTEXT("DZA"), CTEXT("Algeria") }, { CTEXT("ECU"), CTEXT("Ecuador") }, { CTEXT("EGY"), CTEXT("Egypt") }, { CTEXT("ERI"), CTEXT("Eritrea") },
     { CTEXT("ESH"), CTEXT("Western Sahara") }, { CTEXT("ESP"), CTEXT("Spain") }, { CTEXT("EST"), CTEXT("Estonia") }, { CTEXT("ETH"), CTEXT("Ethiopia") }, { CTEXT("FIN"), CTEXT("Finland") },
@@ -90,7 +90,7 @@ struct {
     { CTEXT("NLD"), CTEXT("Netherlands") },    { CTEXT("NOR"), CTEXT("Norway") },    { CTEXT("NPL"), CTEXT("Nepal") },    { CTEXT("NRU"), CTEXT("Nauru") },    { CTEXT("NZL"), CTEXT("New Zealand") },
     { CTEXT("OMN"), CTEXT("Oman") },    { CTEXT("PAK"), CTEXT("Pakistan") },    { CTEXT("PAN"), CTEXT("Panama") },    { CTEXT("PCN"), CTEXT("Pitcairn") },    { CTEXT("PER"), CTEXT("Peru") },    { CTEXT("PHL"), CTEXT("Philippines") },
     { CTEXT("PLW"), CTEXT("Palau") },    { CTEXT("PNG"), CTEXT("Papua New Guinea") },    { CTEXT("POL"), CTEXT("Poland") },    { CTEXT("PRI"), CTEXT("Puerto Rico") },    { CTEXT("PRK"), CTEXT("Korea(Democratic People's Republic of)") },    { CTEXT("PRT"), CTEXT("Portugal") },
-    { CTEXT("PRY"), CTEXT("Paraguay") },    { CTEXT("PSE"), CTEXT("Palestine, State of") },    { CTEXT("PYF"), CTEXT("French Polynesia") },    { CTEXT("QAT"), CTEXT("Qatar") },    { CTEXT("REU"), CTEXT("Réunion") },
+    { CTEXT("PRY"), CTEXT("Paraguay") },    { CTEXT("PSE"), CTEXT("Palestine, State of") },    { CTEXT("PYF"), CTEXT("French Polynesia") },    { CTEXT("QAT"), CTEXT("Qatar") },    { CTEXT("REU"), CTEXT("Reunion") },
     { CTEXT("ROU"), CTEXT("Romania") },    { CTEXT("RWA"), CTEXT("Rwanda") },    { CTEXT("SDN"), CTEXT("Sudan") },    { CTEXT("SEN"), CTEXT("Senegal") },    { CTEXT("SGP"), CTEXT("Singapore") },
     { CTEXT("SGS"), CTEXT("South Georgiaand the South Sandwich Islands") },    { CTEXT("SHN"), CTEXT("Saint Helena, Ascensionand Tristan da Cunha") },    { CTEXT("SJM"), CTEXT("Svalbardand Jan Mayen") },    { CTEXT("SLB"), CTEXT("Solomon Islands") },
     { CTEXT("SLE"), CTEXT("Sierra Leone") },    { CTEXT("SLV"), CTEXT("El Salvador") },    { CTEXT("SMR"), CTEXT("San Marino") },    { CTEXT("SOM"), CTEXT("Somalia") },    { CTEXT("SPM"), CTEXT("Saint Pierreand Miquelon") },
@@ -98,7 +98,7 @@ struct {
     { CTEXT("SVN"), CTEXT("Slovenia") },    { CTEXT("SWE"), CTEXT("Sweden") },    { CTEXT("SWZ"), CTEXT("Eswatini") },    { CTEXT("SXM"), CTEXT("Sint Maarten(Dutch part)") },    { CTEXT("SYC"), CTEXT("Seychelles") },
     { CTEXT("SYR"), CTEXT("Syrian Arab Republic") },    { CTEXT("TCA"), CTEXT("Turksand Caicos Islands") },    { CTEXT("TCD"), CTEXT("Chad") },    { CTEXT("TGO"), CTEXT("Togo") },    { CTEXT("THA"), CTEXT("Thailand") },
     { CTEXT("TJK"), CTEXT("Tajikistan") },    { CTEXT("TKL"), CTEXT("Tokelau") },    { CTEXT("TKM"), CTEXT("Turkmenistan") },    { CTEXT("TLS"), CTEXT("Timor - Leste") },    { CTEXT("TON"), CTEXT("Tonga") },
-    { CTEXT("TTO"), CTEXT("Trinidad and Tobago") },    { CTEXT("TUN"), CTEXT("Tunisia") },    { CTEXT("TUR"), CTEXT("Türkiye") },    { CTEXT("TUV"), CTEXT("Tuvalu") },    { CTEXT("TZA"), CTEXT("Tanzania, United Republic of") },
+    { CTEXT("TTO"), CTEXT("Trinidad and Tobago") },    { CTEXT("TUN"), CTEXT("Tunisia") },    { CTEXT("TUR"), CTEXT("Turkiye") },    { CTEXT("TUV"), CTEXT("Tuvalu") },    { CTEXT("TZA"), CTEXT("Tanzania, United Republic of") },
     { CTEXT("UGA"), CTEXT("Uganda") },    { CTEXT("UKR"), CTEXT("Ukraine") },    { CTEXT("UMI"), CTEXT("United States Minor Outlying Islands") },    { CTEXT("URY"), CTEXT("Uruguay") },    { CTEXT("UZB"), CTEXT("Uzbekistan") },
     { CTEXT("VAT"), CTEXT("Holy See") },    { CTEXT("VCT"), CTEXT("Saint Vincentand the Grenadines") },    { CTEXT("VEN"), CTEXT("Venezuela(Bolivarian Republic of)") },    { CTEXT("VGB"), CTEXT("Virgin Islands(British)") },
     { CTEXT("VIR"), CTEXT("Virgin Islands(U.S.)") },    { CTEXT("VNM"), CTEXT("Viet Nam") },    { CTEXT("VUT"), CTEXT("Vanuatu") },    { CTEXT("WLF"), CTEXT("Wallisand Futuna") },
@@ -479,7 +479,7 @@ FOUNDATION_STATIC void indicators_render_graphs()
            if (!db.select(mkey, indicators_render_plot_macro_graph))
            {
                const hash_t added_hash = db.put(indicators_query_macro_indicator(c.code, m.name));
-               log_infof(HASH_INDICATORS, STRING_CONST("[%" PRIhash "] Added macro indicator `% .*s` for country `%.*s`"), 
+               log_infof(HASH_INDICATORS, STRING_CONST("[%" PRIhash "] Added macro indicator `%.*s` for country `%.*s`"), 
                    added_hash, STRING_FORMAT(m.name), STRING_FORMAT(c.code));
 
                 dispatch(L0(ImPlot::SetNextAxesToFit()));

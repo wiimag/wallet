@@ -128,6 +128,11 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator==(const search_result_
     return a.id == b.id;
 }
 
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator==(const search_result_t& a, const hash_t& b)
+{
+    return a.id == b;
+}
+
 search_query_t* search_query_allocate(const char* text, size_t length);
 
 void search_query_deallocate(search_query_t*& query);

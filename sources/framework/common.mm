@@ -5,9 +5,10 @@
 
 #include "common.h"
 
+#include <framework/string.h>
+
 #include <foundation/foundation.h>
 #include <foundation/apple.h>
-#include <foundation/string.h>
 
 extern void* _window_handle;
 

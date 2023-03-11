@@ -5,4 +5,6 @@
 
 #pragma once
 
+#include <foundation/platform.h>
+
 void financials_open_window(const char* symbol, size_t symbol_length);

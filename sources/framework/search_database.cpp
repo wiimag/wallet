@@ -155,7 +155,7 @@ FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, s
     FOUNDATION_ASSERT(word && word_length > 0);
 
     if (flags == SearchIndexingFlags::None)
-        return string_const_t(word, word_length);
+        return string_const(word, word_length);
 
     const bool trim_word = (flags & SearchIndexingFlags::TrimWord) != 0;
     const bool lower_case_word = (flags & SearchIndexingFlags::Lowercase) != 0;
@@ -1160,7 +1160,7 @@ string_t* search_database_property_keywords(search_database_t* database)
         const search_index_t* index = database->indexes + i;
         if (index->key.type == SearchIndexType::Property || index->key.type == SearchIndexType::Number)
         {
-            string_const_t keyword = string_table_to_string_const(database->strings, index->key.crc);
+            string_const_t keyword = string_table_to_string_const(database->strings, (string_table_symbol_t)index->key.crc);
             if (keyword.length && !array_contains(keywords, keyword, LC2(string_equal(STRING_ARGS(_1), STRING_ARGS(_2)))))
                 array_push(keywords, string_clone(STRING_ARGS(keyword)));
         }

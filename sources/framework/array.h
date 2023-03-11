@@ -398,7 +398,7 @@ int array_binary_search(const T* array, const V& _key)
  *      FOUNDATION_ASSERT(array_binary_search_compare(numbers, 5, 6, [](int a, int b) { return a - b; }) == ~5);
  */
 template<typename T, typename V, typename Comparer>
-int array_binary_search_compare(const T array, const typename V& _key, Comparer compare)
+int array_binary_search_compare(const T array, const V& _key, Comparer compare)
 {
     uint32_t offset = 0;
     for (uint32_t ll = array_size(array); offset < ll;)

@@ -244,7 +244,7 @@ struct json_object_t
 
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const json_object_t operator[](const char* field_name) const
     {
-        return get(field_name, 0U);
+        return get(field_name, string_length(field_name));
     }
 
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const json_object_t operator[](string_const_t field_name) const

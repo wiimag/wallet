@@ -48,8 +48,8 @@ struct string_table_t
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL uint32_t* h32() const { return (uint32_t*)(this + 1); }
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const uint16_t& h16(size_t index) const { return h16()[index]; }
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const uint32_t& h32(size_t index) const { return h32()[index]; }
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const uint16_t& h16(size_t index, uint16_t v) const { return h16()[index] = v; }
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const uint32_t& h32(size_t index, uint32_t v) const { return h32()[index] = v; }
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void h16(size_t index, uint16_t v) const { h16()[index] = v; }
+    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void h32(size_t index, uint32_t v) const { h32()[index] = v; }
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL size_t hsize() const { return uses_16_bit_hash_slots ? sizeof(uint16_t) : sizeof(uint32_t); }
 
     /// <summary>

@@ -67,7 +67,7 @@ typedef enum class FinancialBalance : uint64_t
     netReceivables = 1 << 28,
     longTermDebt = 1 << 29,
     inventory = 1 << 30,
-    accountsPayable = 1 << 31,
+    accountsPayable = 1ULL << 31ULL,
     totalPermanentEquity = 1ULL << 32ULL,
     noncontrollingInterestInConsolidatedEntity = 1ULL << 33ULL,
     temporaryEquityRedeemableNoncontrollingInterests = 1ULL << 34ULL,
