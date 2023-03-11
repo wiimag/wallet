@@ -35,7 +35,7 @@ typedef enum class SearchDatabaseFlags : uint32_t {
 } search_database_flags_t;
 DEFINE_ENUM_FLAGS(SearchDatabaseFlags);
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator==(const search_result_t& result, const search_document_handle_t& id)
+FOUNDATION_FORCEINLINE bool operator==(const search_result_t& result, const search_document_handle_t& id)
 {
     return result.id == id;
 }

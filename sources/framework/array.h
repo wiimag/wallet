@@ -120,14 +120,14 @@
 
  /*! Checks if an array is empty. */
 template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool array_empty(const T* arr)
+FOUNDATION_FORCEINLINE bool array_empty(const T* arr)
 {
     return array_size(arr) == 0;
 }
 
 /*! Returns the first element of an array. */
 template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T* array_first(T* arr)
+FOUNDATION_FORCEINLINE T* array_first(T* arr)
 {
     return array_size(arr) > 0 ? &arr[0] : nullptr;
 }

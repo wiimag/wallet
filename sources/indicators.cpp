@@ -183,7 +183,7 @@ struct macro_indicator_t {
     indicator_record_t* records{ nullptr };
 };
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const macro_indicator_t& ind)
+FOUNDATION_FORCEINLINE hash_t hash(const macro_indicator_t& ind)
 {
     return hash_combine(string_hash(STRING_ARGS(ind.code)), string_hash(STRING_ARGS(ind.country)));
 }

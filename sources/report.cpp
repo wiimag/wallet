@@ -83,7 +83,7 @@ static report_t* _reports = nullptr;
 static bool* _last_show_ui_ptr = nullptr;
 static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL hash_t hash(const report_expression_cache_value_t& value)
+FOUNDATION_FORCEINLINE hash_t hash(const report_expression_cache_value_t& value)
 {
     return value.key;
 }

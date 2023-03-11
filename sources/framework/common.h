@@ -441,45 +441,45 @@ template<typename T> using alias = T;
     ptr = nullptr;          \
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr int32_t to_int(size_t v)
+FOUNDATION_FORCEINLINE int32_t to_int(size_t v)
 {
     FOUNDATION_ASSERT_MSGFORMAT(v <= INT_MAX, "%" PRIsize " > %d", v, INT_MAX);
     return (int32_t)v;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t to_uint(int32_t v)
+FOUNDATION_FORCEINLINE uint32_t to_uint(int32_t v)
 {
     FOUNDATION_ASSERT_MSGFORMAT(v >= 0, "%d<0", v);
     return (uint32_t)v;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr size_t to_size(int64_t v)
+FOUNDATION_FORCEINLINE size_t to_size(int64_t v)
 {
     FOUNDATION_ASSERT_MSGFORMAT(v >= 0, "%lld<0", v);
     return (size_t)v;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t to_uint(size_t v)
+FOUNDATION_FORCEINLINE uint32_t to_uint(size_t v)
 {
     FOUNDATION_ASSERT(v <= UINT_MAX);
     return (uint32_t)v;
 }
 
 template<typename T = void> 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T* to_ptr(uint32_t v)
+FOUNDATION_FORCEINLINE constexpr T* to_ptr(uint32_t v)
 {
     return (T*)(uintptr_t)(v);
 }
 
 template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr T to_opaque(void* ptr)
+FOUNDATION_FORCEINLINE T to_opaque(void* ptr)
 {
     const auto v = (intptr_t)(ptr);
     FOUNDATION_ASSERT(std::numeric_limits<T>::min() <= v && v <= std::numeric_limits<T>::max());
     return (T)v;
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t rgb_to_abgr(const uint32_t v, const uint8_t alpha = 0xFF)
+FOUNDATION_FORCEINLINE uint32_t rgb_to_abgr(const uint32_t v, const uint8_t alpha = 0xFF)
 {
     const uint8_t r = (v & 0x00FF0000) >> 16;
     const uint8_t g = (v & 0x0000FF00) >> 8;
@@ -487,17 +487,17 @@ FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr uint32_t rgb_to_abgr(const
     return (alpha << 24) | (b << 16) | (g << 8) | (r);
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t h1, hash_t h2)
+FOUNDATION_FORCEINLINE hash_t hash_combine(hash_t h1, hash_t h2)
 {
     return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t h1, hash_t h2, hash_t h3)
+FOUNDATION_FORCEINLINE hash_t hash_combine(hash_t h1, hash_t h2, hash_t h3)
 {
     return hash_combine(hash_combine(h1, h2), h3);
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL constexpr hash_t hash_combine(hash_t h1, hash_t h2, hash_t h3, hash_t h4)
+FOUNDATION_FORCEINLINE hash_t hash_combine(hash_t h1, hash_t h2, hash_t h3, hash_t h4)
 {
     return hash_combine(hash_combine(h1, h2), hash_combine(h3, h4));
 }

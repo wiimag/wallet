@@ -145,7 +145,7 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
 
     //! @brief Checks if the stock is either already resolved or is in the process of being resolved.
     //! @param required_level The level of resolution required.
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool is_resolving(fetch_level_t required_level, double timeout = 5.0) const
+    FOUNDATION_FORCEINLINE bool is_resolving(fetch_level_t required_level, double timeout = 5.0) const
     {
         if (has_resolve(required_level))
             return true;
@@ -159,14 +159,14 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     //! @brief Checks if the stock is resolved.
     //! @param required_level The level of resolution required.
     //! @return True if the stock is resolved, false otherwise.
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool has_resolve(fetch_level_t required_level) const
+    FOUNDATION_FORCEINLINE bool has_resolve(fetch_level_t required_level) const
     {
         return (this->resolved_level & required_level) == required_level;
     }
 
     //! @brief Mark the stock as currently resolving/fetching some data.
     //! @param fetched_level The level of resolution that is being fetched.
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void mark_fetched(fetch_level_t fetched_level)
+    FOUNDATION_FORCEINLINE void mark_fetched(fetch_level_t fetched_level)
     {
         this->fetch_level |= (fetched_level & ~this->resolved_level);
         this->last_update_time = time_current();
@@ -174,7 +174,7 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
 
     //! @brief Mark the stock as resolved for a given level.
     //! @param resolved_level The level of resolution that has being resolved.
-    FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL void mark_resolved(fetch_level_t resolved_level)
+    FOUNDATION_FORCEINLINE void mark_resolved(fetch_level_t resolved_level)
     {
         this->resolved_level |= resolved_level;
         this->fetch_level &= ~this->resolved_level;

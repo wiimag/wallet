@@ -21,7 +21,7 @@
 #define HASH_FINANCIALS static_hash_string("financials", 10, 0x3b2f926a5f4bff66ULL)
 
 template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL ImPlotPoint financial_field_plot(int idx, void* user_data, size_t field_offset)
+FOUNDATION_FORCEINLINE ImPlotPoint financial_field_plot(int idx, void* user_data, size_t field_offset)
 {
     const auto* r = ((T*)user_data) + idx;
     const double x = (double)r->date;

@@ -637,7 +637,7 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
     ImGui::PopStyleColor(2);
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool table_column_is_number_value_trimmed(const column_t& column, const cell_t& cell)
+FOUNDATION_FORCEINLINE bool table_column_is_number_value_trimmed(const column_t& column, const cell_t& cell)
 {
     if (!math_real_is_finite(cell.number))
         return false;
