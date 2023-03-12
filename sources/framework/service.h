@@ -18,16 +18,16 @@ typedef void (*service_shutdown_handler_t)(void);
 
 typedef function<void()> service_invoke_handler_t;
 
-#define SERVICE_PRIORITY_CRITICAL   (-10)
-#define SERVICE_PRIORITY_SYSTEM      (-2)
-#define SERVICE_PRIORITY_REALTIME    (-1)
-#define SERVICE_PRIORITY_BASE         (0)
-#define SERVICE_PRIORITY_HIGH         (1)
-#define SERVICE_PRIORITY_MODULE       (2)
-#define SERVICE_PRIORITY_LOW          (3)
-#define SERVICE_PRIORITY_TESTS       (10)
-#define SERVICE_PRIORITY_UI_HEADLESS (19)
-#define SERVICE_PRIORITY_UI          (20)
+#define SERVICE_PRIORITY_CRITICAL   (-100)
+#define SERVICE_PRIORITY_SYSTEM      (-20)
+#define SERVICE_PRIORITY_REALTIME    (-10)
+#define SERVICE_PRIORITY_BASE          (0)
+#define SERVICE_PRIORITY_HIGH         (10)
+#define SERVICE_PRIORITY_MODULE       (20)
+#define SERVICE_PRIORITY_LOW          (30)
+#define SERVICE_PRIORITY_TESTS       (100)
+#define SERVICE_PRIORITY_UI_HEADLESS (190)
+#define SERVICE_PRIORITY_UI          (200)
 
 /*! Register a service to be initialized and shutdown at the appropriate time.
  *

@@ -69,6 +69,24 @@ include_directories(${ROOT_DIR}/external/)
 # Add _LIB only for static library
 add_compile_definitions(_LIB)
 
+if (MVSC)
+
+    # Disable CPP exceptions
+    add_compile_options(/EHsc)
+
+    # Disable RTTI
+    add_compile_options(/GR-)
+
+elseif (APPLE)
+
+    # Disable CPP exceptions
+    add_compile_options(-fno-exceptions)
+
+    # Disable RTTI
+    add_compile_options(-fno-rtti)
+
+endif()
+
 # Use compiler flags from parent project
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 

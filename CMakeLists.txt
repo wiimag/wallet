@@ -75,7 +75,9 @@ endif()
 add_compile_options(-DUNICODE -D_UNICODE)
 
 # Add standard warnings definitions
+add_compile_options(-D__STDC_LIMIT_MACROS)
 add_compile_options(-D__STDC_FORMAT_MACROS)
+add_compile_options(-D__STDC_CONSTANT_MACROS)
 add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
 add_compile_options(-D_CRT_NONSTDC_NO_DEPRECATE)
 
@@ -142,8 +144,8 @@ add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_STATIC_HASH_DEBUG=1>")
 # Set compiler specific flags
 if(MSVC)
 
-     # Enable multi-processor compilation
-     add_compile_options(/MP)
+    # Enable multi-processor compilation
+    add_compile_options(/MP)
 
     # Add ignore warning 4244 with MSVC
     # warning C4244: 'argument': conversion from 'type1' to 'type2', possible loss of data
@@ -218,6 +220,10 @@ if(MSVC)
     # Enable COMDAT Folding
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:ICF")
 
+    if (BUILD_INFO)
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE")
+    endif()
+
 elseif(XCODE)
 
     # Use fast floating point math
@@ -227,7 +233,25 @@ elseif(XCODE)
     add_compile_options(-Wno-switch -Wshadow -Wfatal-errors)
 
     # Omit frame pointers because they are not needed for debugging
-    add_compile_options(-fomit-frame-pointer)
+    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-fomit-frame-pointer>")
+
+    # Enable dead code stripping
+    add_compile_options(-ffunction-sections -fdata-sections)
+
+    # Enable GCC tuning model for Clang
+    add_compile_options(-mtune=native)
+
+    # Add debug info
+    add_compile_options("$<$<CONFIG:DEPLOY>:-g0>")
+    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-O3>")
+    add_compile_options("$<$<CONFIG:DEPLOY>:-Os>")
+    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-fvisibility=hidden>")
+    add_compile_options("$<$<CONFIG:DEPLOY>:-fvisibility-inlines-hidden>")
+
+    # Add options to get stack traces on crashes
+    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-gline-tables-only>")
+    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-fomit-frame-pointer>")
+    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-foptimize-sibling-calls>")
 
     # Set tautological-constant-compare and unguarded-availability-new warnings 
     # to be ignored because they are not relevant for us
@@ -243,10 +267,6 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
 # The Deploy config inhirit from the Release config
 set(CMAKE_C_FLAGS_DEPLOY "${CMAKE_C_FLAGS_DEPLOY} ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEPLOY "${CMAKE_CXX_FLAGS_DEPLOY} ${CMAKE_CXX_FLAGS_RELEASE}")
-
-if (BUILD_INFO)
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE")
-endif()
 
 # Copy release linker flags to deploy
 set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_DEPLOY} ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")

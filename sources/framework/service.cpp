@@ -105,11 +105,12 @@ void service_initialize()
             continue;
         }
         
+        log_debugf(s.key, STRING_CONST("Service %s initialization"), s.name);
+
         {
             PERFORMANCE_TRACKER_FORMAT("Service::%s", s.name);
             s.initialize();
         }
-        log_debugf(s.key, STRING_CONST("Service %s initialized"), s.name);
     }
 
     _services_initialize = true;

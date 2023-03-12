@@ -53,12 +53,24 @@ add_compile_definitions(BGFX_CONFIG_USE_TINYSTL=0)
 
 if (WIN32)
 
+    # Disable CPP exceptions
+    add_compile_options(/EHsc)
+
+    # Disable RTTI
+    add_compile_options(/GR-)
+
     # Enable directx backend renderers
     add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D11=1)
     add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D12=1)
 
 elseif (APPLE)
 
+    # Disable CPP exceptions
+    add_compile_options(-fno-exceptions)
+
+    # Disable RTTI
+   add_compile_options(-fno-rtti)
+ 
     # Force METAL renderer with BGFX_CONFIG_RENDERER_METAL=1
     add_compile_definitions(BGFX_CONFIG_RENDERER_METAL=1)
 

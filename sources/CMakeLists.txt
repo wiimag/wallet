@@ -240,6 +240,13 @@ if (MSVC)
 
 elseif(APPLE)
 
+    # Set ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+    set_source_files_properties(${RESOURCES_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+
+    # Set app icon
+    set_source_files_properties(${ROOT_DIR}/resources/App.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
+
+
     # Create Wallet.app bundle
     add_executable(${AppId} MACOSX_BUNDLE
         ${FRAMEWORK_SOURCES}
@@ -251,6 +258,7 @@ elseif(APPLE)
         ${RESOURCES_SOURCES}
         ${SHADERS_SOURCES}
         ${TEST_SOURCES}
+        ${ROOT_DIR}/resources/App.icns
     )
 
     # Convert AppId string to CamelCase
@@ -262,10 +270,16 @@ elseif(APPLE)
         MACOSX_BUNDLE TRUE
         MACOSX_RPATH TRUE
         MACOSX_FRAMEWORK_IDENTIFIER "com.wiimag.${AppId}"
+        MACOSX_BUNDLE_INFO_PLIST ${ROOT_DIR}/resources/osx-info.plist
         XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@loader_path/Libraries"
         RESOURCE "${RESOURCES_FILES}"
         XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME TRUE
         XCODE_ATTRIBUTE_EXECUTABLE_NAME "${AppId}"
+        XCODE_ATTRIBUTE_PRODUCT_NAME "${AppIdCamelCase}"
+        XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.wiimag.${AppId}"
+        XCODE_ATTRIBUTE_PRODUCT_CATEGORY "public.app-category.finance"
+        XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_APPICON_NAME "App"
+        XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME "LaunchImage"
     )
 
     # Create Wallet.app under build folder

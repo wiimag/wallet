@@ -218,6 +218,14 @@ FOUNDATION_ATTRIBUTE(noreturn) exception_sigaction(int sig, siginfo_t* info, voi
 
 	log_warnf(0, WARNING_SUSPICIOUS, STRING_CONST("Caught signal: %d"), sig);
 
+	// Log signal info data
+	if (info) {
+		log_warnf(0, WARNING_SUSPICIOUS, STRING_CONST("Signal info: si_signo: %d, si_code: %d, si_errno: %d"),
+		          info->si_signo, info->si_code, info->si_errno);
+		log_warnf(0, WARNING_SUSPICIOUS, STRING_CONST("Signal info: si_addr: %p, si_pid: %d, si_uid: %d"),
+		          info->si_addr, info->si_pid, info->si_uid);
+	}
+
 	char file_name_buffer[BUILD_MAX_PATHLEN];
 	const char* name = get_thread_dump_name();
 	string_t dump_file = (string_t){file_name_buffer, sizeof(file_name_buffer)};
@@ -225,6 +233,9 @@ FOUNDATION_ATTRIBUTE(noreturn) exception_sigaction(int sig, siginfo_t* info, voi
 	exception_handler_fn handler = get_thread_exception_handler();
 	if (handler)
 		handler(dump_file.str, dump_file.length);
+
+	// Log dump file name
+	log_warnf(0, WARNING_SUSPICIOUS, STRING_CONST("Minidump written to: %.*s"), STRING_FORMAT(dump_file));
 
 	error_context_clear();
 
