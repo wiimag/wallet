@@ -35,6 +35,9 @@ include_directories(
     ${CMAKE_CURRENT_SOURCE_DIR}/../
 )
 
+# Add _LIB only for static library
+add_compile_definitions(_LIB)
+
 # Use compiler flags from parent project
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
@@ -46,6 +49,10 @@ add_library(foundation STATIC ${foundation_src} ${foundation_includes})
 
 target_include_directories(foundation PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../
+)
+
+target_compile_definitions(foundation PUBLIC
+    -DFOUNDATION_SIZE_REAL=8
 )
 
 # Set Xcode project properties

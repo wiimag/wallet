@@ -39,10 +39,17 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Deploy" CACHE STRING "Configs" FORC
 # Set the build info option to OFF by default and do not cache it.
 option(BUILD_INFO "Build info" OFF)
 
+# Execute batch script to generate the version.h file for each supported platform
+if(WIN32)
+    execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_git_build_info.bat ${CMAKE_CURRENT_SOURCE_DIR})
+else()
+    execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_git_build_info.sh ${CMAKE_CURRENT_SOURCE_DIR})
+endif()
+
 # Set the output directory for the build executables and libraries directly in the root ./build directory without any configuration subdirectory
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../../build)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../../artifacts)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/../../artifacts)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/artifacts/lib)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/artifacts/lib)
 
 # Set /std:c++20 for all configurations
 set(CMAKE_CXX_STANDARD 20)
@@ -60,45 +67,80 @@ if(MSVC AND MSVC_VERSION GREATER_EQUAL 1914)
     add_compile_options(/Zc:__cplusplus)
 endif()
 
-# Define the Debug configuration compiler flags such as _DEBUG;BUILD_DEBUG=1;BX_CONFIG_DEBUG=1
-set(CMAKE_FLAGS_DEBUG "-D_DEBUG -DBUILD_DEBUG=1 -DBX_CONFIG_DEBUG=1")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} ${}${CMAKE_FLAGS_DEBUG}")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} ${CMAKE_FLAGS_DEBUG}")
+# Use the UNICODE character set
+add_compile_options(-DUNICODE -D_UNICODE)
+
+# Add standard warnings definitions
+add_compile_options(-D__STDC_FORMAT_MACROS)
+add_compile_options(-D_CRT_SECURE_NO_WARNINGS)
+add_compile_options(-D_CRT_NONSTDC_NO_DEPRECATE)
+
+# Add _DEBUG compile option for Debug configuration
+add_compile_options("$<$<CONFIG:DEBUG>:-D_DEBUG>")
+
+#
+# Set common BUILD flags
+#
+
+# Add BUILD_DEBUG compile option for Debug configuration
+add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_DEBUG=1>")
+#add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_DEBUG=0>")
+
+add_compile_options("$<$<CONFIG:RELEASE>:-DBUILD_RELEASE=1>")
+#add_compile_options("$<$<CONFIG:DEBUG,DEPLOY>:-DBUILD_RELEASE=0>")
+
+# Set BUILD_DEVELOPMENT
+#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_DEVELOPMENT=1>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEVELOPMENT=0>")
+
+# Define DEPLOY distribution flags
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEPLOY=1>")
+
+# Set BUILD_ENABLE_LOG
+add_compile_options("$<$<CONFIG:DEBUG,RELEASE,DEPLOY>:-DBUILD_ENABLE_LOG=1>")
+
+# Set BUILD_ENABLE_DEBUG_LOG
+#add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_ENABLE_DEBUG_LOG=1>")
+add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_ENABLE_DEBUG_LOG=0>")
+
+# Set BUILD_ENABLE_ASSERT
+#add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_ENABLE_ASSERT=1>")
+add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_ENABLE_ASSERT=0>")
+
+# Set BUILD_ENABLE_ERROR_CONTEXT
+#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_ERROR_CONTEXT=1>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_ERROR_CONTEXT=1>")
+
+# Set BUILD_ENABLE_PROFILE
+#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_PROFILE=1>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_PROFILE=0>")
+
+# Set BUILD_ENABLE_MEMORY_CONTEXT
+#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_MEMORY_CONTEXT=1>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_CONTEXT=1>")
+
+# Set BUILD_ENABLE_MEMORY_TRACKER
+#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_MEMORY_TRACKER=1>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_TRACKER=1>")
+
+# Set BUILD_ENABLE_MEMORY_GUARD
+#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_MEMORY_GUARD=1>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_GUARD=1>")
+
+# Set BUILD_ENABLE_MEMORY_STATISTICS
+#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_MEMORY_STATISTICS=1>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_STATISTICS=0>")
+
+# Set BUILD_ENABLE_STATIC_HASH_DEBUG
+#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_STATIC_HASH_DEBUG=1>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_STATIC_HASH_DEBUG=1>")
 
 # Set compiler specific flags
 if(MSVC)
-    # Set the compiler to be /permissive-
-    add_definitions(-D_PERFECT_FORWARDING=1)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
 
-    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /ZI")
-
-    # Disable the security checks (/GS-) for the Release configuration
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GS-")
-
-    # Favor speed over size (/Ox) for the Release configuration
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ox /Ot")
-
-    # Enable link-time code generation (/GL) for the Release configuration
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GL")
-
-    # Enable function-level linking (/Gy) for the Release configuration
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Gy")
-
-    # Enable inlining (/Ob2) for the Release configuration
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ob2")
-
-    # Enable intrinsic functions (/Oi) for the Release configuration
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Oi")
-
-    # Enable string pooling (/GF) for the Release configuration
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GF")
-
-    # Enable multi-processor compilation (/MP) for the Release configuration
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /MP")
-
-    # Generate debug info
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Zi")
+    # Add ignore warning 4244 with MSVC
+    # warning C4244: 'argument': conversion from 'type1' to 'type2', possible loss of data
+    add_compile_options(/wd4244)
 
     # Use fast floating point math
     add_compile_options(/fp:fast)
@@ -121,10 +163,43 @@ if(MSVC)
     # Disable type information for all configurations
     add_compile_options(/GR-)
 
+    # Set the compiler to be /permissive-
+    add_definitions(-D_PERFECT_FORWARDING=1)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
+
+    # Generate debug info
+    add_compile_options("$<$<CONFIG:DEBUG>:/ZI>")
+    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:/Zi>")
+
+    # Disable the security checks (/GS-) for the Release configuration
+    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>: /GS->")
+
+    # Favor speed over size (/Ox) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ox /Ot")
+
+    # Enable link-time code generation (/GL) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GL")
+
+    # Enable function-level linking (/Gy) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Gy")
+
+    # Enable inlining (/Ob2) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ob2")
+
+    # Enable intrinsic functions (/Oi) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Oi")
+
+    # Enable string pooling (/GF) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GF")
+
+    # Enable multi-processor compilation (/MP) for the Release configuration
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /MP")
+
     # Set linker to use the static runtime libraries
     foreach(flag_var
-    CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEPLOY
-    CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEPLOY)
+        CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEPLOY
+        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEPLOY
+    )
         if(${flag_var} MATCHES "/MD")
             string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
         endif() 
@@ -141,48 +216,30 @@ if(MSVC)
 
 elseif(XCODE)
 
-    # Set Weak References in Manual Retain Release mode
-    set(CMAKE_XCODE_ATTRIBUTE_CLANG_CXX_LIBRARY "libc++")
-    set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK "YES")
-    set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_ARC "YES")
-    set(CMAKE_XCODE_ATTRIBUTE_CLANG_ENABLE_MODULES "YES")
+    # Use fast floating point math
+    add_compile_options(-ffast-math)
+
+    # Set preferred warning flags
+    add_compile_options(-Wno-switch -Wshadow -Wfatal-errors)
+
+    # Omit frame pointers because they are not needed for debugging
+    add_compile_options(-fomit-frame-pointer)
+
+    # Set tautological-constant-compare and unguarded-availability-new warnings 
+    # to be ignored because they are not relevant for us
+    if(XCODE_VERSION VERSION_GREATER_EQUAL 10.2)
+        add_compile_options(-Wno-tautological-constant-compare -Wno-unguarded-availability-new)
+    endif()
 
 endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
 
-# The zDeploy config inhirit from the Release config
-# Define the zDeploy configuration compiler flags from the release config the following ones are added:
-set(CMAKE_FLAGS_DEPLOY 
-    "-DNDEBUG \
-     -DBX_CONFIG_DEBUG=0 \
-     -DBUILD_DEPLOY=1 \
-     -DBUILD_RELEASE=0 \
-     -DBUILD_DEVELOPMENT=0 \
-     -DBUILD_ENABLE_LOG=1 \
-     -DBUILD_ENABLE_DEBUG_LOG=0 \
-     -DBUILD_ENABLE_ASSERT=0 \
-     -DBUILD_ENABLE_ERROR_CONTEXT=1 \
-     -DBUILD_ENABLE_PROFILE=0 \
-     -DBUILD_ENABLE_MEMORY_CONTEXT=1 \
-     -DBUILD_ENABLE_MEMORY_TRACKER=1 \
-     -DBUILD_ENABLE_MEMORY_GUARD=1 \
-     -DBUILD_ENABLE_MEMORY_STATISTICS=0 \
-     -DBUILD_ENABLE_STATIC_HASH_DEBUG=1")
-set(CMAKE_C_FLAGS_DEPLOY "$(CMAKE_C_FLAGS_DEPLOY) ${CMAKE_C_FLAGS_RELEASE} ${CMAKE_FLAGS_DEPLOY}")
-set(CMAKE_CXX_FLAGS_DEPLOY "$(CMAKE_CXX_FLAGS_DEPLOY) ${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_FLAGS_DEPLOY}")
+# The Deploy config inhirit from the Release config
+set(CMAKE_C_FLAGS_DEPLOY "${CMAKE_C_FLAGS_DEPLOY} ${CMAKE_C_FLAGS_RELEASE}")
+set(CMAKE_CXX_FLAGS_DEPLOY "${CMAKE_CXX_FLAGS_DEPLOY} ${CMAKE_CXX_FLAGS_RELEASE}")
 
-# Define the Release configuration compiler flags such as BUILD_RELEASE=1;BUILD_ENABLE_ASSERT=0;BX_CONFIG_DEBUG=0;NDEBUG;
-set(CMAKE_FLAGS_RELEASE " \
-    -DNDEBUG \
-    -DBX_CONFIG_DEBUG=0 \
-    -DBUILD_RELEASE=1 \
-    -DBUILD_ENABLE_ASSERT=0 \
-    -DBUILD_ENABLE_DEBUG_LOG=0 \
-    ")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
 
 if (BUILD_INFO)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE")
@@ -190,32 +247,6 @@ endif()
 
 # Copy release linker flags to deploy
 set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_DEPLOY} ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-
-# Add the following definitions to all configurations
-add_definitions(
-    -DCURL_STATICLIB 
-    -DFOUNDATION_SIZE_REAL=8 
-    -DIMGUI_ENABLE_TEST_ENGINE 
-    -DIMGUI_DISABLE_OBSOLETE_FUNCTIONS=1 
-    -DIMPLOT_DISABLE_OBSOLETE_FUNCTIONS=1 
-    -DBGFX_CONFIG_USE_TINYSTL=0)
-
-# Use the UNICODE character set
-add_definitions(-DUNICODE -D_UNICODE)
-
-# Add _CRT_SECURE_NO_WARNINGS
-add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-add_definitions(-D_CRT_NONSTDC_NO_DEPRECATE)
-
-# Add __STDC_FORMAT_MACROS
-add_definitions(-D__STDC_FORMAT_MACROS)
-
-# Execute batch script to generate the version.h file for each supported platform
-if(WIN32)
-    execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_git_build_info.bat ${CMAKE_CURRENT_SOURCE_DIR})
-else()
-    execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_git_build_info.sh ${CMAKE_CURRENT_SOURCE_DIR})
-endif()
 
 # Print the artifacts/version.git.h file
 file(READ ${CMAKE_CURRENT_SOURCE_DIR}/artifacts/version.git.h GIT_VERSION_FILE)
@@ -225,19 +256,19 @@ message(STATUS "GIT_VERSION_FILE: ${GIT_VERSION_FILE}")
 add_subdirectory(${ROOT_DIR}/foundation)
 
 # Load library project under imgui/
-#add_subdirectory(${ROOT_DIR}/imgui)
+add_subdirectory(${ROOT_DIR}/imgui)
 
 # Load library project under external/bx/
-#add_subdirectory(${ROOT_DIR}/external/bx)
+add_subdirectory(${ROOT_DIR}/external/bx)
 
 # Load library project under external/astc-encoder/
-#add_subdirectory(${ROOT_DIR}/external/astc-encoder)
+add_subdirectory(${ROOT_DIR}/external/astc-encoder)
 
 # Load library project under external/bimg/
-#add_subdirectory(${ROOT_DIR}/external/bimg)
+add_subdirectory(${ROOT_DIR}/external/bimg)
 
 # Load library project under external/bgfx/
-#add_subdirectory(${ROOT_DIR}/external/bgfx)
+add_subdirectory(${ROOT_DIR}/external/bgfx)
 
 # Load main exectuable project under sources/
-#add_subdirectory(${ROOT_DIR}/sources)
+add_subdirectory(${ROOT_DIR}/sources)

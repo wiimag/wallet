@@ -25,25 +25,14 @@ file(GLOB_RECURSE imgui_natvis
 )
 source_group("natvis" FILES ${imgui_natvis})
 
-# Project include directories
-include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/../
-)
+# Add _LIB only for static library
+add_compile_definitions(_LIB)
 
 # Use compiler flags from parent project
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
 # Use compiler flags from parent project
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
-
-# Use linker flags from parent project
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-
-# Use linker flags from parent project
-set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
-
-# Use linker flags from parent project
-set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
 
 # Add the define IMGUI_DISABLE_DEFAULT_ALLOCATORS=1
 add_definitions(-DIMGUI_DISABLE_DEFAULT_ALLOCATORS=1)
@@ -60,3 +49,7 @@ add_dependencies(imgui foundation)
 target_include_directories(imgui PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/../
 )
+
+target_compile_definitions(imgui PUBLIC IMGUI_ENABLE_TEST_ENGINE=1)
+target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1)
+target_compile_definitions(imgui PUBLIC IMPLOT_DISABLE_OBSOLETE_FUNCTIONS=1)

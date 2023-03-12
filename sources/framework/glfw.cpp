@@ -439,7 +439,7 @@ void glfw_show_normal_cursor(GLFWwindow* window)
         SetClassLongPtr(window ? (HWND)glfw_platform_window_handle(window) : NULL, GCLP_HCURSOR, (LONG_PTR)cursor);
     #else
         if (window)
-            glfwSetCursor(window, _glfw_default_cursor)
+            glfwSetCursor(window, _glfw_default_cursor);
     #endif
 }
 

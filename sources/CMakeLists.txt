@@ -13,6 +13,18 @@ set(AppId "${ProjectId}")
 # Define project
 project(${AppId})
 
+#
+# Shared functions
+#
+
+# Define a function to make the first letter of a string uppercase
+function(ucfirst str out)
+    string(SUBSTRING ${str} 0 1 first)
+    string(TOUPPER ${first} first)
+    string(SUBSTRING ${str} 1 -1 rest)
+    set(${out} "${first}${rest}" PARENT_SCOPE)
+endfunction()
+
 set(FrameworkDir "${CMAKE_CURRENT_SOURCE_DIR}/framework")
 
 # Load framework source files
@@ -89,74 +101,126 @@ file(GLOB RESOURCES_SOURCES
 )
 source_group("resources" FILES ${RESOURCES_SOURCES})
 
+# Load distribution files
+file(GLOB RESOURCES_FILES
+    "${ROOT_DIR}/resources/*.ico"
+    "${ROOT_DIR}/resources/*.png"
+    "${ROOT_DIR}/resources/*.ttf"
+    "${ROOT_DIR}/resources/*.plist"
+)
+source_group("distrib" FILES ${RESOURCES_FILES})
+
+#
 # Load app shader files
+#
 file(GLOB_RECURSE SHADERS_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.*"
 )
 source_group("shaders" FILES ${SHADERS_SOURCES})
 
+#
 # Load test source files
+#
 file(GLOB TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.h"
 )
 source_group("tests" FILES ${TEST_SOURCES})
 
-# Use linker flags from parent project
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+#
+# Compiler flags
+#
 
 # Add GLFW include directories
 include_directories(${ROOT_DIR}/external/glfw/include)
 
-# Link with glfw3.libon Windows
-if (WIN32)
-    link_directories(${ROOT_DIR}/external/glfw/lib-vc2022-64)
-endif()
-
 # Add libcurl include directories
 include_directories(${ROOT_DIR}/external/libcurl/include)
 
-# Link with libcurl shared framework on OSX
-if (APPLE)
-    #find_package(CURL CONFIG REQUIRED)
-    #target_link_libraries(${AppId} PRIVATE CURL::libcurl)
-else()
-    # Link with libcurl_a_debug.lib on Windows and in debug mode
-    link_directories(${ROOT_DIR}/external/libcurl/lib)
+#
+# Linker flags
+#
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
+
+#
+# Link with GLFW
+#
+if (WIN32)
+    
+    # On Windows we use a #pragma comment(lib, "glfw3.lib") in the source code
+    link_directories(${ROOT_DIR}/external/glfw/lib-vc2022-64)
+
+elseif(APPLE)
+
+    # Link with libglfw3.a
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${ROOT_DIR}/external/glfw/lib-osx-universal -lglfw3")
+
 endif()
 
-# Add ignore warning 4244 with MSVC
-add_compile_options(/wd4244)
+#
+# Link with libcurl library
+#
+
+# Define CURL_STATICLIB to use libcurl static library
+add_compile_definitions(CURL_STATICLIB)
 
 if (MSVC)
+
+    # On Windows we use a #pragma comment(lib, "libcurl_a*.lib") in the source code
+    link_directories(${ROOT_DIR}/external/libcurl/lib)
+
+elseif(APPLE)
+
+    # Link with libcurl system library
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lcurl")
+
+endif()
+
+if (MSVC)
+
     # Generate map files
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /MAP")
 
     # Generate PDB files
     set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /DEBUG")
-    #set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /DEBUG")
 
     # Ignore specific default libraries msvcrt.lib;libcmt.lib in debug for MSVC
     set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} /NODEFAULTLIB:msvcrt.lib /NODEFAULTLIB:libcmt.lib")
+
+elseif(XCODE)
+
+    # Link with core libraries
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework CoreFoundation -framework CoreServices")
+
+    # Link with carbon library
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework Carbon")
+
+    # Link with Cocoa library
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework Cocoa")
+
+    # Link with IOKit library
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -framework IOKit")
+
+    # Link with Metal library
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -weak_framework Metal -weak_framework MetalKit -framework QuartzCore")
+
 endif()
-
-# Create executable
-add_executable(${AppId} WIN32
-    ${FRAMEWORK_SOURCES}
-    ${EXTERNAL_SOURCES}
-    ${STB_SOURCES}
-    ${DOCTEST_SOURCES}
-    ${APP_SOURCES}
-    ${RESOURCES_SOURCES}
-    ${SHADERS_SOURCES}
-    ${TEST_SOURCES}
-)
-
-# Add dependencies to other libs
-target_link_libraries(${AppId} foundation bx bimg bgfx imgui)
 
 # Write the executable file to the build folder directly without any configuration sub folder
 if (MSVC)
+    # Create executable
+    add_executable(${AppId} WIN32
+        ${FRAMEWORK_SOURCES}
+        ${EXTERNAL_SOURCES}
+        ${STB_SOURCES}
+        ${DOCTEST_SOURCES}
+        ${APP_SOURCES}
+        ${RESOURCES_SOURCES}
+        ${SHADERS_SOURCES}
+        ${TEST_SOURCES}
+    )
+
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${ROOT_DIR}/build/.)
@@ -173,5 +237,45 @@ if (MSVC)
     set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY_DEBUG ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY_RELEASE ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY_DEPLOY ${ROOT_DIR}/build/.)
+
+elseif(APPLE)
+
+    # Create Wallet.app bundle
+    add_executable(${AppId} MACOSX_BUNDLE
+        ${FRAMEWORK_SOURCES}
+        ${EXTERNAL_SOURCES}
+        ${STB_SOURCES}
+        ${DOCTEST_SOURCES}
+        ${APP_SOURCES}
+        ${RESOURCES_FILES}
+        ${RESOURCES_SOURCES}
+        ${SHADERS_SOURCES}
+        ${TEST_SOURCES}
+    )
+
+    # Convert AppId string to CamelCase
+    ucfirst(${AppId} AppIdCamelCase)
+
+    # Set the bundle name to Wallet.app
+    set_target_properties(${AppId} PROPERTIES
+        OUTPUT_NAME "${AppIdCamelCase}"
+        MACOSX_BUNDLE TRUE
+        MACOSX_RPATH TRUE
+        MACOSX_FRAMEWORK_IDENTIFIER "com.wiimag.${AppId}"
+        XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@loader_path/Libraries"
+        RESOURCE "${RESOURCES_FILES}"
+        XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME TRUE
+        XCODE_ATTRIBUTE_EXECUTABLE_NAME "${AppId}"
+    )
+
+    # Create Wallet.app under build folder
+    set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROOT_DIR}/build/.)
+    set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${ROOT_DIR}/build/.)
+    set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${ROOT_DIR}/build/.)
+    set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEPLOY ${ROOT_DIR}/build/.)
+
 endif()
+
+# Add dependencies to other libs
+target_link_libraries(${AppId} foundation bx bimg bgfx imgui)
 

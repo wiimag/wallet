@@ -46,6 +46,22 @@ include_directories(${ROOT_DIR}/external/khronos/)
 # Add directx headers to the include path
 include_directories(${ROOT_DIR}/external/directx-headers/include/directx)
 
+# Add _LIB only for static library
+add_compile_definitions(_LIB)
+
+# Disable vulkan with BGFX_CONFIG_RENDERER_VULKAN=0
+add_compile_definitions(BGFX_CONFIG_RENDERER_VULKAN=0)
+
+# Do not use TINYSTL with BGFX_CONFIG_USE_TINYSTL=0
+add_compile_definitions(DBGFX_CONFIG_USE_TINYSTL=0)
+
+# Force METAL renderer with BGFX_CONFIG_RENDERER_METAL=1
+if (APPLE)
+
+    add_compile_definitions(BGFX_CONFIG_RENDERER_METAL=1)
+
+endif()
+
 # Use compiler and linker flags from parent project
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -58,4 +74,4 @@ target_include_directories(bgfx PUBLIC
 )
 
 # Depends on bx library
-target_link_libraries(bgfx bx bimg)
+target_link_libraries(bgfx PUBLIC bx bimg)

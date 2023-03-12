@@ -66,6 +66,9 @@ source_group("ini" FILES ${BX_INI_SOURCES})
 # Add the compatibility headers to the include path
 include_directories(${ROOT_DIR}/external/)
 
+# Add _LIB only for static library
+add_compile_definitions(_LIB)
+
 # Use compiler flags from parent project
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 
@@ -78,4 +81,9 @@ add_library(bx STATIC ${BX_INCLUDES} ${BX_SOURCES} ${BX_COMPAT_SOURCES} ${BX_INI
 target_include_directories(bx PUBLIC
     ${BX_DIR}/include
     ${BX_COMPAT_DIR}
+)
+
+target_compile_definitions(bx PUBLIC
+    "$<$<CONFIG:DEBUG>:BX_CONFIG_DEBUG=1>"
+    "$<$<CONFIG:RELEASE,DEPLOY>:BX_CONFIG_DEBUG=0>"
 )

@@ -641,7 +641,7 @@ struct SearchQueryFixture
         search_database_index_property(db, joe, STRING_CONST("name"), STRING_CONST("Jonathan"));
         search_database_index_property(db, bob, STRING_CONST("name"), STRING_CONST("Robert"));
         search_database_index_property(db, will, STRING_CONST("name"), STRING_CONST("William"));
-        search_database_index_property(db, mel, STRING_CONST("name"), STRING_CONST("Mélanie"));
+        search_database_index_property(db, mel, STRING_CONST("name"), STRING_CONST("Melanie"));
         search_database_index_property(db, mag, STRING_CONST("name"), STRING_CONST("Magaly"));
         search_database_index_property(db, yolland, STRING_CONST("name"), STRING_CONST("Yolland"));
     }
@@ -792,7 +792,7 @@ TEST_SUITE("SearchQuery")
             search_result_t* and_set,
             void* user_data)
             {
-                log_infof(0, STRING_CONST("Evaluating %28s -> Name: %-8.*s -> Value: %-10.*s -> AndSet: 0x%x (%u) -> Data: 0x%x"),
+                log_infof(0, STRING_CONST("Evaluating %28s -> Name: %-8.*s -> Value: %-10.*s -> AndSet: 0x%p (%u) -> Data: 0x%p"),
                     search_query_eval_flags_to_string(flags), STRING_FORMAT(name), STRING_FORMAT(value),
                     and_set, array_size(and_set), user_data);
                 return nullptr;
@@ -1020,7 +1020,7 @@ TEST_SUITE("SearchQuery")
     TEST_CASE_FIXTURE(SearchQueryFixture, "Query 18" * doctest::timeout(30))
     {
         string_const_t query_string = CTEXT(R"(
-            name=MÉlanie cadotte age>=39
+            name=Melanie cadotte age>=39
         )");
 
         const search_result_t* results = evaluate_query_sync(query_string);
