@@ -46,6 +46,10 @@ else()
     execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_git_build_info.sh ${CMAKE_CURRENT_SOURCE_DIR})
 endif()
 
+# Print the artifacts/version.git.h file
+file(READ ${CMAKE_CURRENT_SOURCE_DIR}/artifacts/version.git.h GIT_VERSION_FILE)
+message(STATUS "GIT_VERSION_FILE: ${GIT_VERSION_FILE}")
+
 # Set the output directory for the build executables and libraries directly in the root ./build directory without any configuration subdirectory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build)
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/artifacts/lib)
@@ -138,6 +142,9 @@ add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_STATIC_HASH_DEBUG=1>")
 # Set compiler specific flags
 if(MSVC)
 
+     # Enable multi-processor compilation
+     add_compile_options(/MP)
+
     # Add ignore warning 4244 with MSVC
     # warning C4244: 'argument': conversion from 'type1' to 'type2', possible loss of data
     add_compile_options(/wd4244)
@@ -147,9 +154,6 @@ if(MSVC)
 
     # Do not throw exceptions for floating point errors
     add_compile_options(/fp:except-)
-
-    # Enable multi-processor compilation
-    add_compile_options(/MP)
 
     # Enable enhanced instruction set
     add_compile_options(/arch:AVX2)
@@ -163,16 +167,16 @@ if(MSVC)
     # Disable type information for all configurations
     add_compile_options(/GR-)
 
-    # Set the compiler to be /permissive-
-    add_definitions(-D_PERFECT_FORWARDING=1)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
-
     # Generate debug info
     add_compile_options("$<$<CONFIG:DEBUG>:/ZI>")
     add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:/Zi>")
 
+    # Set the compiler to be /permissive-
+    add_definitions(-D_PERFECT_FORWARDING=1)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
+
     # Disable the security checks (/GS-) for the Release configuration
-    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>: /GS->")
+    #set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GS->")
 
     # Favor speed over size (/Ox) for the Release configuration
     set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ox /Ot")
@@ -240,17 +244,12 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
 set(CMAKE_C_FLAGS_DEPLOY "${CMAKE_C_FLAGS_DEPLOY} ${CMAKE_C_FLAGS_RELEASE}")
 set(CMAKE_CXX_FLAGS_DEPLOY "${CMAKE_CXX_FLAGS_DEPLOY} ${CMAKE_CXX_FLAGS_RELEASE}")
 
-
 if (BUILD_INFO)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE")
 endif()
 
 # Copy release linker flags to deploy
 set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_DEPLOY} ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
-
-# Print the artifacts/version.git.h file
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/artifacts/version.git.h GIT_VERSION_FILE)
-message(STATUS "GIT_VERSION_FILE: ${GIT_VERSION_FILE}")
 
 # Load library project under foundation/
 add_subdirectory(${ROOT_DIR}/foundation)

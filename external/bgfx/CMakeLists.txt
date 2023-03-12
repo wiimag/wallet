@@ -37,7 +37,6 @@ source_group("include" FILES ${BGFX_INCLUDES})
 source_group("src" FILES ${BGFX_SOURCES})
 
 # Add the compatibility headers to the include path
-include_directories(${BGFX_DIR}/include)
 include_directories(${ROOT_DIR}/external/)
 
 # Add khronos headers to the include path
@@ -46,18 +45,21 @@ include_directories(${ROOT_DIR}/external/khronos/)
 # Add directx headers to the include path
 include_directories(${ROOT_DIR}/external/directx-headers/include/directx)
 
-# Add _LIB only for static library
-add_compile_definitions(_LIB)
-
-# Disable vulkan with BGFX_CONFIG_RENDERER_VULKAN=0
+# Disable vulkan backend renderer
 add_compile_definitions(BGFX_CONFIG_RENDERER_VULKAN=0)
 
-# Do not use TINYSTL with BGFX_CONFIG_USE_TINYSTL=0
-add_compile_definitions(DBGFX_CONFIG_USE_TINYSTL=0)
+# Do not use TINYSTL
+add_compile_definitions(BGFX_CONFIG_USE_TINYSTL=0)
 
-# Force METAL renderer with BGFX_CONFIG_RENDERER_METAL=1
-if (APPLE)
+if (WIN32)
 
+    # Enable directx backend renderers
+    add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D11=1)
+    add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D12=1)
+
+elseif (APPLE)
+
+    # Force METAL renderer with BGFX_CONFIG_RENDERER_METAL=1
     add_compile_definitions(BGFX_CONFIG_RENDERER_METAL=1)
 
 endif()
