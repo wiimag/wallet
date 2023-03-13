@@ -33,22 +33,25 @@ project(${ProjectId})
 # Cache the root directory path
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root directory path")
 
+# Cache the shared module path
+# Then each nested CMakeLists.txt can include the shared.cmake file using the following command:
+#   include(${SHARED_MODULE_PATH})
+set(SHARED_MODULE_PATH ${CMAKE_SOURCE_DIR}/config/shared.cmake CACHE PATH "Shared module path")
+
+# Include the shared module
+include(${SHARED_MODULE_PATH})
+
+# Cache the shared options path
+set(SHARED_OPTIONS_PATH ${CMAKE_SOURCE_DIR}/config/options.cmake CACHE PATH "Shared options path")
+
+# Include the shared options module
+include(${SHARED_OPTIONS_PATH})
+
 # Add Debug, Release and Deploy configurations
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Deploy" CACHE STRING "Configs" FORCE)
 
-# Set the build info option to OFF by default and do not cache it.
-option(BUILD_INFO "Build info" OFF)
-
-# Execute batch script to generate the version.h file for each supported platform
-if(WIN32)
-    execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_git_build_info.bat ${CMAKE_CURRENT_SOURCE_DIR})
-else()
-    execute_process(COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_git_build_info.sh ${CMAKE_CURRENT_SOURCE_DIR})
-endif()
-
-# Print the artifacts/version.git.h file
-file(READ ${CMAKE_CURRENT_SOURCE_DIR}/artifacts/version.git.h GIT_VERSION_FILE)
-message(STATUS "GIT_VERSION_FILE: ${GIT_VERSION_FILE}")
+# Generate the version header file
+generate_version_git_header(${ROOT_DIR})
 
 # Set the output directory for the build executables and libraries directly in the root ./build directory without any configuration subdirectory
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build)
@@ -178,7 +181,7 @@ if(MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
 
     # Disable the security checks (/GS-) for the Release configuration
-    #set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GS->")
+    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GS-")
 
     # Favor speed over size (/Ox) for the Release configuration
     set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ox /Ot")
@@ -204,8 +207,7 @@ if(MSVC)
     # Set linker to use the static runtime libraries
     foreach(flag_var
         CMAKE_C_FLAGS CMAKE_C_FLAGS_DEBUG CMAKE_C_FLAGS_RELEASE CMAKE_C_FLAGS_DEPLOY
-        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEPLOY
-    )
+        CMAKE_CXX_FLAGS CMAKE_CXX_FLAGS_DEBUG CMAKE_CXX_FLAGS_RELEASE CMAKE_CXX_FLAGS_DEPLOY)
         if(${flag_var} MATCHES "/MD")
             string(REGEX REPLACE "/MD" "/MT" ${flag_var} "${${flag_var}}")
         endif() 
@@ -243,8 +245,8 @@ elseif(XCODE)
 
     # Add debug info
     add_compile_options("$<$<CONFIG:DEPLOY>:-g0>")
-    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-O3>")
     add_compile_options("$<$<CONFIG:DEPLOY>:-Os>")
+    add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-O3>")
     add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-fvisibility=hidden>")
     add_compile_options("$<$<CONFIG:DEPLOY>:-fvisibility-inlines-hidden>")
 
@@ -274,20 +276,23 @@ set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_DEPLOY} ${CMAKE_EXE_
 # Load library project under foundation/
 add_subdirectory(${ROOT_DIR}/foundation)
 
-# Load library project under imgui/
-add_subdirectory(${ROOT_DIR}/imgui)
-
-# Load library project under external/bx/
-add_subdirectory(${ROOT_DIR}/external/bx)
-
-# Load library project under external/astc-encoder/
+# Load atsc-encoder library used by bimg mainly
 add_subdirectory(${ROOT_DIR}/external/astc-encoder)
 
-# Load library project under external/bimg/
+# Load BX library
+add_subdirectory(${ROOT_DIR}/external/bx)
+
+# Load BIMG
 add_subdirectory(${ROOT_DIR}/external/bimg)
 
-# Load library project under external/bgfx/
+# Load BGFX library
 add_subdirectory(${ROOT_DIR}/external/bgfx)
+
+# Load IMGUI library
+add_subdirectory(${ROOT_DIR}/imgui)
+
+# Load main framework library
+add_subdirectory(${ROOT_DIR}/sources/framework)
 
 # Load main exectuable project under sources/
 add_subdirectory(${ROOT_DIR}/sources)

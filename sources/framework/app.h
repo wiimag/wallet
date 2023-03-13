@@ -26,7 +26,46 @@ typedef enum class AppMenuFlags
 DEFINE_ENUM_FLAGS(AppMenuFlags);
 
 /*! Returns the application title. */
-const char* app_title();
+extern const char* app_title();
+
+/*! Handles exception at the application level.
+ * 
+ *  @param dump_file The path to the dump file.
+ *  @param length    The length of the dump file.
+ */
+extern void app_exception_handler(const char* dump_file, size_t length);
+
+/*! Configure the application features and framework core services. 
+ * 
+ *  @param config      The configuration to be modified.
+ *  @param application The application to be configured.
+ */
+extern void app_configure(foundation_config_t& config, application_t& application);
+
+/*! Initialize the application features and framework core services. 
+ * 
+ *  @param window The main window used to render the application (can be null)
+ * 
+ *  @return 0 if initialization was successful, otherwise an error code.
+ */
+extern int app_initialize(GLFWwindow* window);
+
+/*! Shutdown the application features and framework core services. */
+extern void app_shutdown();
+
+/*! Called each tick to update the application state (i.e. prior to rendering). 
+ * 
+ *  @param window The main window used to render the application (can be null)
+ */
+extern void app_update(GLFWwindow* window);
+
+/*! Called each tick to render the application state. 
+ * 
+ *  @param window       The main window used to render the application (can be null)
+ *  @param frame_width  The width of the frame to be rendered.
+ *  @param frame_height The height of the frame to be rendered.
+ */
+extern void app_render(GLFWwindow* window, int frame_width, int frame_height);
 
 /*! Creates and open a dialog window.
  *
@@ -40,12 +79,31 @@ const char* app_title();
  */
 void app_open_dialog(
     const char* title, 
-    app_dialog_handler_t&& handler, 
-    uint32_t width = 0, uint32_t height = 0, bool can_resize = true, 
-    void* user_data = nullptr, app_dialog_close_handler_t&& close_handler = nullptr);
+    const app_dialog_handler_t& handler, 
+    uint32_t width, uint32_t height, bool can_resize, 
+    void* user_data, const app_dialog_close_handler_t& close_handler);
 
-/*! Entry point to render application dialogs as IMGUI floating windows. */
-void app_dialogs_render();
+/*! Open a new dialog using a simplified interface.
+ *
+ *  @param title         The title of the dialog. The title string gets copied into managed memory.
+ *  @param width         The width of the dialog.
+ *  @param height        The height of the dialog.
+ *  @param can_resize    Whether the dialog can be resized by the user.
+ *  @param handler       The handler to be called when the dialog is opened.
+ */
+template<typename VoidHandler>
+FOUNDATION_FORCEINLINE void app_open_dialog(
+    const char* title,
+    uint32_t width, uint32_t height, bool can_resize, 
+    VoidHandler&& handler)
+{
+    app_open_dialog(title, [=](void* user_data)->bool
+    {
+        FOUNDATION_ASSERT(user_data == nullptr);
+        handler();
+        return true;
+    }, width, height, can_resize, nullptr, nullptr);
+}
 
 /*! Entry point to render application menus as IMGUI menus. */
 void app_menu_begin(GLFWwindow* window);

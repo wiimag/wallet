@@ -3,8 +3,13 @@
  * License: https://equals-forty-two.com/LICENSE
  * 
  * This module contains application framework specific code. 
- * 
- * The APIs are defined in the app.h header file.
+ * It is expected that the project sources also includes an app.cpp and defines the following functions:
+ *  extern const char* app_title()
+ *  extern void app_exception_handler(const char* dump_file, size_t length)
+ *  extern void app_initialize()
+ *  extern void app_shutdown()
+ *  extern void app_update()
+ *  extern void app_render()
  */
 
 #include "app.h"
@@ -33,8 +38,8 @@ struct app_dialog_t
     bool can_resize{ true };
     bool window_opened_once{ false };
     uint32_t width{ 480 }, height{ 400 };
-    app_dialog_handler_t handler;
-    app_dialog_close_handler_t close_handler;
+    app_dialog_handler_t handler{};
+    app_dialog_close_handler_t close_handler{};
     void* user_data{ nullptr };
 };
 
@@ -258,36 +263,7 @@ FOUNDATION_STATIC ImGuiKeyChord app_string_to_shortcut_key_coord(const char* str
     return key;
 }
 
-//
-// # PUPLIC API
-//
-
-void app_open_dialog(const char* title, app_dialog_handler_t&& handler, uint32_t width, uint32_t height, bool can_resize, void* user_data, app_dialog_close_handler_t&& close_handler)
-{
-    FOUNDATION_ASSERT(handler);
-
-    for (unsigned i = 0, end = array_size(_dialogs); i < end; ++i)
-    {
-        app_dialog_t& dlg = _dialogs[i];
-        if (string_equal(title, string_length(title), dlg.title, string_length(dlg.title)))
-        {
-            log_warnf(0, WARNING_UI, STRING_CONST("Dialog %s is already opened"), dlg.title);
-            return;
-        }
-    }
-
-    app_dialog_t dlg{};
-    dlg.can_resize = can_resize;
-    if (width) dlg.width = width;
-    if (height) dlg.height = height;
-    dlg.handler = std::move(handler);
-    dlg.close_handler = std::move(close_handler);
-    dlg.user_data = user_data;
-    string_copy(STRING_BUFFER(dlg.title), title, string_length(title));
-    array_push_memcpy(_dialogs, &dlg);
-}
-
-void app_dialogs_render()
+FOUNDATION_STATIC void app_dialogs_render()
 {
     for (unsigned i = 0, end = array_size(_dialogs); i < end; ++i)
     {
@@ -319,6 +295,35 @@ void app_dialogs_render()
         }
         ImGui::End();
     }
+}
+
+//
+// # PUPLIC API
+//
+
+void app_open_dialog(const char* title, const app_dialog_handler_t& handler, uint32_t width, uint32_t height, bool can_resize, void* user_data, const app_dialog_close_handler_t& close_handler)
+{
+    FOUNDATION_ASSERT(handler);
+
+    for (unsigned i = 0, end = array_size(_dialogs); i < end; ++i)
+    {
+        app_dialog_t& dlg = _dialogs[i];
+        if (string_equal(title, string_length(title), dlg.title, string_length(dlg.title)))
+        {
+            log_warnf(0, WARNING_UI, STRING_CONST("Dialog %s is already opened"), dlg.title);
+            return;
+        }
+    }
+
+    app_dialog_t dlg{};
+    dlg.can_resize = can_resize;
+    if (width) dlg.width = width;
+    if (height) dlg.height = height;
+    dlg.handler = handler;
+    dlg.close_handler = close_handler;
+    dlg.user_data = user_data;
+    string_copy(STRING_BUFFER(dlg.title), title, string_length(title));
+    array_push_memcpy(_dialogs, &dlg);
 }
 
 void app_register_menu(
@@ -544,6 +549,8 @@ void app_menu_help(GLFWwindow* window)
 FOUNDATION_STATIC void app_framework_initialize()
 {
     //system_add_menu_item("test");
+
+    service_register_window(HASH_APP, app_dialogs_render);
 }
 
 FOUNDATION_STATIC void app_framework_shutdown()

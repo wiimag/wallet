@@ -7,79 +7,13 @@
 
 cmake_minimum_required (VERSION 3.0)
 
+include(${SHARED_MODULE_PATH})
+
 # Set project name
 set(AppId "${ProjectId}")
 
 # Define project
 project(${AppId})
-
-#
-# Shared functions
-#
-
-# Define a function to make the first letter of a string uppercase
-function(ucfirst str out)
-    string(SUBSTRING ${str} 0 1 first)
-    string(TOUPPER ${first} first)
-    string(SUBSTRING ${str} 1 -1 rest)
-    set(${out} "${first}${rest}" PARENT_SCOPE)
-endfunction()
-
-set(FrameworkDir "${CMAKE_CURRENT_SOURCE_DIR}/framework")
-
-# Load framework source files
-file(GLOB FRAMEWORK_SOURCES
-    "${FrameworkDir}/*.cpp"
-    "${FrameworkDir}/*.h"
-    "${FrameworkDir}/*.hpp"
-    "${FrameworkDir}/*.inl"
-)
-
-# Add *.mm files for OSX
-if (APPLE)
-    file(GLOB FRAMEWORK_SOURCES_OSX
-        ${FrameworkDir}/*.mm
-    )
-    list(APPEND FRAMEWORK_SOURCES ${FRAMEWORK_SOURCES_OSX})
-endif()
-
-
-# Define framework source group
-source_group("framework" FILES ${FRAMEWORK_SOURCES})
-
-# Add framework include directories
-include_directories(${ROOT_DIR}/external/)
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-
-# Load some external source files (only at the root of the external folder)
-file(GLOB EXTERNAL_SOURCES
-    "${ROOT_DIR}/external/*.c"
-    "${ROOT_DIR}/external/*.h"
-    "${ROOT_DIR}/external/*.cpp"
-    "${ROOT_DIR}/external/*.hpp"
-    "${ROOT_DIR}/external/*.inl"
-)
-
-# Define external source group
-source_group("external" FILES ${EXTERNAL_SOURCES})
-
-# Load stb source files
-file(GLOB STB_SOURCES
-    "${ROOT_DIR}/external/stb/*.c"
-    "${ROOT_DIR}/external/stb/*.h"
-)
-
-# Define stb source group
-source_group("external\\stb" FILES ${STB_SOURCES})
-
-# Load doctest source files
-file(GLOB DOCTEST_SOURCES
-    "${ROOT_DIR}/external/doctest/*.cpp"
-    "${ROOT_DIR}/external/doctest/*.h"
-)
-
-# Define doctest source group
-source_group("external\\doctest" FILES ${DOCTEST_SOURCES})
 
 # Load app source files
 file(GLOB APP_SOURCES
@@ -108,7 +42,7 @@ file(GLOB RESOURCES_FILES
     "${ROOT_DIR}/resources/*.ttf"
     "${ROOT_DIR}/resources/*.plist"
 )
-source_group("distrib" FILES ${RESOURCES_FILES})
+source_group("bundle" FILES ${RESOURCES_FILES})
 
 #
 # Load app shader files
@@ -128,54 +62,10 @@ file(GLOB TEST_SOURCES
 source_group("tests" FILES ${TEST_SOURCES})
 
 #
-# Compiler flags
-#
-
-# Add GLFW include directories
-include_directories(${ROOT_DIR}/external/glfw/include)
-
-# Add libcurl include directories
-include_directories(${ROOT_DIR}/external/libcurl/include)
-
-#
 # Linker flags
 #
 
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
-
-#
-# Link with GLFW
-#
-if (WIN32)
-    
-    # On Windows we use a #pragma comment(lib, "glfw3.lib") in the source code
-    link_directories(${ROOT_DIR}/external/glfw/lib-vc2022-64)
-
-elseif(APPLE)
-
-    # Link with libglfw3.a
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${ROOT_DIR}/external/glfw/lib-osx-universal -lglfw3")
-
-endif()
-
-#
-# Link with libcurl library
-#
-
-# Define CURL_STATICLIB to use libcurl static library
-add_compile_definitions(CURL_STATICLIB)
-
-if (MSVC)
-
-    # On Windows we use a #pragma comment(lib, "libcurl_a*.lib") in the source code
-    link_directories(${ROOT_DIR}/external/libcurl/lib)
-
-elseif(APPLE)
-
-    # Link with libcurl system library
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -lcurl")
-
-endif()
 
 if (MSVC)
 
@@ -211,10 +101,6 @@ endif()
 if (MSVC)
     # Create executable
     add_executable(${AppId} WIN32
-        ${FRAMEWORK_SOURCES}
-        ${EXTERNAL_SOURCES}
-        ${STB_SOURCES}
-        ${DOCTEST_SOURCES}
         ${APP_SOURCES}
         ${RESOURCES_SOURCES}
         ${SHADERS_SOURCES}
@@ -249,10 +135,6 @@ elseif(APPLE)
 
     # Create Wallet.app bundle
     add_executable(${AppId} MACOSX_BUNDLE
-        ${FRAMEWORK_SOURCES}
-        ${EXTERNAL_SOURCES}
-        ${STB_SOURCES}
-        ${DOCTEST_SOURCES}
         ${APP_SOURCES}
         ${RESOURCES_FILES}
         ${RESOURCES_SOURCES}
@@ -291,5 +173,5 @@ elseif(APPLE)
 endif()
 
 # Add dependencies to other libs
-target_link_libraries(${AppId} foundation bx bimg bgfx imgui)
+target_link_libraries(${AppId} framework)
 

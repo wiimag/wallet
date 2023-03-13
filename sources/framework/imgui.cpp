@@ -46,9 +46,10 @@ namespace ImGui
 
     bool TextURL(const char* name, const char* name_end, const char* URL, size_t URL_length, uint8_t SameLineBefore_ /*= 0*/, uint8_t SameLineAfter_ /*= 0*/)
     {
+        const int name_length = name_end ? to_int(name_end - name) : to_int(string_length(name));
         if (1 == SameLineBefore_) { ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x); }
         ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
-        ImGui::TextUnformatted(name, name_end);
+        ImGui::TextWrapped("%.*s", name_length, name);
         ImGui::PopStyleColor();
         bool clicked = false;
         if (ImGui::IsItemHovered())
@@ -59,7 +60,7 @@ namespace ImGui
                 clicked = true;
             }
             ImGui::AddUnderLine(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
-            ImGui::SetTooltip(/*ICON_FA_LINK*/ "  %.*s", (int)URL_length, URL);
+            ImGui::SetTooltip(ICON_MD_OPEN_IN_NEW " %.*s", (int)URL_length, URL);
         }
         else
         {

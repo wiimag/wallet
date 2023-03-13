@@ -198,7 +198,6 @@ extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
         app_tabs();
         app_main_menu_end(window);
 
-        app_dialogs_render();
         service_foreach_window();
 
     } ImGui::End();
