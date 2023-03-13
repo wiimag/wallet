@@ -97,6 +97,16 @@ while [[ $# -gt 0 ]]; do
         shift
       fi
 
+      # Check if project/.build is present, if not, then we need to generate the project
+      if [ ! -d "project/.build" ]; then
+        GENERATE=1
+      fi
+
+      # Also check if the project/.build/CMakeCache.txt is present, if not, then we need to generate the project
+      if [ ! -f "project/.build/CMakeCache.txt" ]; then
+        GENERATE=1
+      fi
+
       ;;
     p|print)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
@@ -291,6 +301,14 @@ if [ $BUILD -ge 1 ]; then
     cmake --build . --parallel 7 --config Release ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
   fi
 
+  retval=$?
+  if [ $retval -ne 0 ]; then
+    echo
+    echo "===BUILD FAILED ($retval)==="
+    echo
+    exit $retval
+  fi
+
   if [ $machine == "MinGw" ]; then
     # Print absolute path of the log file using the Windows C:\\ format
     LOG_WIN_PATH=$(cygpath -w $(pwd))\\cmake-build.log
@@ -299,14 +317,6 @@ if [ $BUILD -ge 1 ]; then
     LOG_WIN_PATH=${LOG_WIN_PATH//\\/\/}
 
     echo "Build log: file://$LOG_WIN_PATH"
-  fi
-
-  retval=$?
-  if [ $retval -ne 0 ]; then
-    echo
-    echo "===BUILD FAILED ($retval)==="
-    echo
-    exit $retval
   fi
 
   cd ../../
