@@ -71,7 +71,7 @@ FOUNDATION_STATIC void about_render_dialog()
     ImGui::TextURL(STRING_RANGE(fv_version_string), STRING_CONST("https://github.com/mjansson/foundation_lib"));
 
     // Print BGFX version
-    string_const_t bgfx_version_string = string_format_static(STRING_CONST("BGFX 1.%d.%d (%s)"), BGFX_API_VERSION, BGFX_REV_NUMBER, BGFX_REV_SHA1);
+    string_const_t bgfx_version_string = string_format_static(STRING_CONST("BGFX 1.%d.%d"), BGFX_API_VERSION, BGFX_REV_NUMBER);
     ImGui::TextURL(STRING_RANGE(bgfx_version_string), STRING_CONST("https://github.com/bkaradzic/bgfx"));
 
     // Print IMGUI version

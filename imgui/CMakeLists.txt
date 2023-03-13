@@ -19,12 +19,6 @@ file(GLOB_RECURSE imgui_includes
 )
 source_group("includes" FILES ${imgui_includes})
 
-# Add .natvis file to the project (include all sub directories)
-file(GLOB_RECURSE imgui_natvis
-    "*.natvis"
-)
-source_group("natvis" FILES ${imgui_natvis})
-
 # Add _LIB only for static library
 add_compile_definitions(_LIB)
 

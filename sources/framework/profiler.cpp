@@ -289,23 +289,28 @@ void profiler_menu_timer()
         static unsigned index = 0;
         static double elapsed_times[16] = { 0.0 };
         elapsed_times[index++ % ARRAY_COUNT(elapsed_times)] = time_ticks_to_milliseconds(elapsed_ticks);
-        const double smooth_elapsed_time = math_average(elapsed_times, ARRAY_COUNT(elapsed_times));
+        const double smooth_elapsed_time = math_average_parallel(elapsed_times, ARRAY_COUNT(elapsed_times));
         const double tick_elapsed_time = main_tick_elapsed_time_ms();
-        const auto& mem_stats = memory_statistics();
 
-        char frame_time[32];
-        if (tick_elapsed_time < smooth_elapsed_time - 1)
+        if (tick_elapsed_time > 4)
         {
-            string_format(STRING_BUFFER(frame_time), STRING_CONST("%.0lf/%.0lf ms (%.4lg mb)"),
-                tick_elapsed_time, smooth_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
-        }
-        else
-        {
-            string_format(STRING_BUFFER(frame_time), STRING_CONST("%.0lf ms (%.4lg mb)"),
-                tick_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
+            const auto& mem_stats = memory_statistics();
+
+            char frame_time[32];
+            if (tick_elapsed_time < smooth_elapsed_time - 1)
+            {
+                string_format(STRING_BUFFER(frame_time), STRING_CONST("%.0lf/%.0lf ms (%.4lg mb)"),
+                    tick_elapsed_time, smooth_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
+            }
+            else
+            {
+                string_format(STRING_BUFFER(frame_time), STRING_CONST("%.0lf ms (%.4lg mb)"),
+                    tick_elapsed_time, mem_stats.allocated_current / 1024.0 / 1024.0);
+            }
+
+            ImGui::MenuItem(frame_time, nullptr, nullptr, false);
         }
 
-        ImGui::MenuItem(frame_time, nullptr, nullptr, false);
         last_frame_tick = time_current();
     }
     #endif

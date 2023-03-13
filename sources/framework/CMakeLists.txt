@@ -37,10 +37,15 @@ file(GLOB EXTERNAL_SOURCES
     "${ROOT_DIR}/external/*.c"
     "${ROOT_DIR}/external/*.h"
     "${ROOT_DIR}/external/*.cpp"
-    "${ROOT_DIR}/external/*.hpp"
     "${ROOT_DIR}/external/*.inl"
 )
 source_group("external" FILES ${EXTERNAL_SOURCES})
+
+# Load all natvis source files
+file(GLOB_RECURSE NATVIS_SOURCES
+    "${ROOT_DIR}/*.natvis"
+)
+source_group("natvis" FILES ${NATVIS_SOURCES})
 
 # Load stb source files
 file(GLOB STB_SOURCES
@@ -66,21 +71,42 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 # Use compiler flags from parent project
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
+# Add sources include directories
+include_directories(${ROOT_DIR}/sources)
+
 # Create the bx library
-add_library(framework STATIC ${FRAMEWORK_SOURCES} ${EXTERNAL_SOURCES} ${STB_SOURCES} ${DOCTEST_SOURCES})
+add_library(framework STATIC ${FRAMEWORK_SOURCES} ${EXTERNAL_SOURCES} ${STB_SOURCES} ${DOCTEST_SOURCES} ${NATVIS_SOURCES})
 
 # Add dependencies to other libs
 target_link_libraries(framework PUBLIC foundation bx bgfx imgui)
 
-target_include_directories(framework PUBLIC ${FRAMEWORK_DIR}/..)
 target_include_directories(framework PUBLIC ${ROOT_DIR}/external)
+
+#
+# Set framework and dependencies options
+#
+
+if (WIN32)
+  
+    # Enable openmp support
+    target_compile_definitions(framework PUBLIC _OPENMP)
+
+    # Enable /Qpar support
+    target_compile_options(framework PUBLIC /Qpar)
+    target_compile_options(framework PUBLIC /Qpar-report:1)
+
+elseif(APPLE)
+
+    # Enable openmp support
+    target_compile_definitions(framework PUBLIC _OPENMP)
+
+endif()
 
 #
 # Link with GLFW
 #
 
 target_include_directories(framework PUBLIC ${ROOT_DIR}/external/glfw/include)
-
 
 if (WIN32)
     
@@ -115,5 +141,3 @@ elseif(APPLE)
     target_link_libraries(framework PUBLIC curl)
 
 endif()
-
-

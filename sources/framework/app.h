@@ -13,6 +13,7 @@ typedef function<void(void*)> app_event_handler_t;
 typedef function<bool(void*)> app_dialog_handler_t;
 typedef function<void(void*)> app_dialog_close_handler_t;
 
+/*! Set of flags used to customize the registration of a new menu item. */
 typedef enum class AppMenuFlags
 {
     None = 0,
@@ -24,6 +25,12 @@ typedef enum class AppMenuFlags
     Shortcut = 1 << 1,
 } app_menu_flags_t;
 DEFINE_ENUM_FLAGS(AppMenuFlags);
+
+#if defined(FRAMEWORK_APP_IMPLEMENTATION)
+
+#include <framework/app.impl.inl>
+
+#else
 
 /*! Returns the application title. */
 extern const char* app_title();
@@ -67,6 +74,8 @@ extern void app_update(GLFWwindow* window);
  */
 extern void app_render(GLFWwindow* window, int frame_width, int frame_height);
 
+#endif
+
 /*! Creates and open a dialog window.
  *
  *  @param title         The title of the dialog. The title string gets copied into managed memory.
@@ -84,6 +93,8 @@ void app_open_dialog(
     void* user_data, const app_dialog_close_handler_t& close_handler);
 
 /*! Open a new dialog using a simplified interface.
+ * 
+ *  @template VoidHandler The simplified handler signature.
  *
  *  @param title         The title of the dialog. The title string gets copied into managed memory.
  *  @param width         The width of the dialog.
@@ -131,6 +142,6 @@ void app_register_menu(
 
 /*! Render common help menu items. 
  *
- * @param window The window to render the menu items for.
- * */
+ *  @param window The window to render the menu items for.
+ */
 void app_menu_help(GLFWwindow* window);

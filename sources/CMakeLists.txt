@@ -30,8 +30,6 @@ file(GLOB RESOURCES_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/*.hint"
     "${ROOT_DIR}/resources/*.ico"
     "${ROOT_DIR}/resources/*.manifest"
-    "${ROOT_DIR}/resources/*.plist"
-    "${ROOT_DIR}/projects/vs2022/*.natvis"
 )
 source_group("resources" FILES ${RESOURCES_SOURCES})
 
@@ -60,6 +58,9 @@ file(GLOB TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.h"
 )
 source_group("tests" FILES ${TEST_SOURCES})
+
+# Set the current directory as the include directory to find framework headers using #include <framework/header.h>
+include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
 
 #
 # Linker flags
@@ -156,7 +157,7 @@ elseif(APPLE)
         XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@loader_path/Libraries"
         RESOURCE "${RESOURCES_FILES}"
         XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME TRUE
-        XCODE_ATTRIBUTE_EXECUTABLE_NAME "${AppId}"
+        XCODE_ATTRIBUTE_EXECUTABLE_NAME "${AppIdCamelCase}"
         XCODE_ATTRIBUTE_PRODUCT_NAME "${AppIdCamelCase}"
         XCODE_ATTRIBUTE_PRODUCT_BUNDLE_IDENTIFIER "com.wiimag.${AppId}"
         XCODE_ATTRIBUTE_PRODUCT_CATEGORY "public.app-category.finance"
@@ -174,4 +175,3 @@ endif()
 
 # Add dependencies to other libs
 target_link_libraries(${AppId} framework)
-

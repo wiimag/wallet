@@ -49,6 +49,22 @@ typedef enum class ImGuiCalcTextFlags : int {
 } imgui_calc_text_flags_t;
 DEFINE_ENUM_FLAGS(ImGuiCalcTextFlags);
 
+#if IMGUI_ENABLE_TEST_ENGINE
+
+struct ImGuiTestItem
+{
+    ImGuiID id;
+    ImRect bb;
+    string_t label;
+    ImGuiItemStatusFlags flags;
+};
+
+ImGuiID ImGuiTestEngine_GetID(ImGuiContext* ctx, const char* label);
+
+ImGuiTestItem* ImGuiTestEngine_FindItemByLabel(ImGuiContext* ctx, const char* label);
+
+#endif
+
 /*! @brief Returns true if the given key is pressed.
  *
  *  @param key The key to check.
@@ -202,7 +218,7 @@ ImRect imgui_get_available_rect();
  *
  *  @return True if the font was loaded.
  */
-bool imgui_load_main_font(float xscale = 1.0f);
+ImFont* imgui_load_main_font(float xscale = 1.0f);
 
 /*! Load the Google Material Design font in the current IMGUI context.
  *
@@ -210,7 +226,7 @@ bool imgui_load_main_font(float xscale = 1.0f);
  *
  *  @return True if the font was loaded.
  */
-bool imgui_load_material_design_font(float xscale = 1.0f);
+ImFont* imgui_load_material_design_font(float xscale = 1.0f);
 
 /*! Prepare the next IMGUI frame.
  *

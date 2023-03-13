@@ -263,10 +263,25 @@ void system_browse_to_url(const char* url, size_t url_length);
  *
  *  @param path Path to file
  *  @param path_length Length of path
+ *  @param dir True if the path is a directory
  */
-void system_browse_to_file(const char* path, size_t path_length);
+void system_browse_to_file(const char* path, size_t path_length, bool dir = false);
+
+/*! @brief Returns the name of the platform the application is running on.
+ * 
+ *  @return Name of the platform the application is running on.
+ */
+const char* system_platform_name(platform_t platform);
 
 void system_add_menu_item(const char* name);
+
+/*! @brief Returns the path to the application data folder.
+ * 
+ *  @remark This is the folder where the application can store data that is not user specific.
+ * 
+ *  @return Path to the application data folder.
+ */
+string_const_t system_app_data_local_path();
 
 /*! Returns the true if the application is running in daemon mode, meaning that it is either running as a service or as a background process.
  * 

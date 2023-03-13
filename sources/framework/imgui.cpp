@@ -12,6 +12,7 @@
 #include <framework/session.h>
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
+#include <framework/array.h>
 
 #include <foundation/memory.h>
 
@@ -34,6 +35,122 @@ static double _time = 0.0;
 static float _global_font_scaling = 0.0f;
 static GLFWcursor* _mouse_cursors[ImGuiMouseCursor_COUNT] = { nullptr };
 
+#if IMGUI_ENABLE_TEST_ENGINE
+
+ImGuiTestItem* _test_items = nullptr;
+
+/// <summary>
+/// Called by IMGUI to register an item that was drawn.
+/// </summary>
+/// <param name="ctx">IMGUI context</param>
+/// <param name="bb">Bounding box of the item being drawn</param>
+/// <param name="id">Unique ID of the item being drawn</param>
+extern void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id)
+{
+    ImGuiTestItem ti;
+    ti.id = id;
+    ti.bb = bb;
+    ti.label = {};
+    ti.flags = 0;
+    array_push_memcpy(_test_items, &ti);
+}
+
+/// <summary>
+/// Invoked by IMGUI to register additional information about an item being rendered.
+/// </summary>
+/// <param name="ctx">IMGUI context</param>
+/// <param name="id">Unique item ID</param>
+/// <param name="label">Diaply label of the item</param>
+/// <param name="flags">Item status flags</param>
+extern void ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id,
+    const char* label, ImGuiItemStatusFlags flags)
+{
+    foreach(ti, _test_items)
+    {
+        if (ti->id == id)
+        {
+            string_deallocate(ti->label.str);
+            ti->label = string_clone(label, string_length(label));
+            ti->flags = flags;
+            return;
+        }
+    }
+
+    FOUNDATION_ASSERT_FAIL("Cannot find item");
+}
+
+/// <summary>
+/// Called IMGUI to log additional information about an item. Mostly used for debugging.
+/// </summary>
+/// <remark>Not currently used</remark>
+/// <param name="ctx">IMGUI context</param>
+/// <param name="fmt">Printf format string</param>
+/// <param name="...">Printf arguments</param>
+extern void ImGuiTestEngineHook_Log(ImGuiContext* ctx, const char* fmt, ...)
+{
+    va_list list;
+    va_start(list, fmt);
+    string_t msg = string_allocate_vformat(fmt, string_length(fmt), list);
+    log_info(HASH_IMGUI, STRING_ARGS(msg));
+    string_deallocate(msg.str);
+    va_end(list);
+}
+
+extern const char* ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiID id)
+{
+    foreach(ti, _test_items)
+    {
+        if (ti->id == id)
+            return ti->label.str;
+    }
+    return nullptr;
+}
+
+ImGuiID ImGuiTestEngine_GetID(ImGuiContext* ctx, const char* label)
+{
+    FOUNDATION_ASSERT(ctx && ctx->Initialized);
+
+    ImGuiWindow* window = ctx->CurrentWindow ? ctx->CurrentWindow : ctx->Windows[0];
+    FOUNDATION_ASSERT(window);
+
+    return window->GetID(label);
+}
+
+ImGuiTestItem* ImGuiTestEngine_FindItemByLabel(ImGuiContext* ctx, const char* label)
+{
+    FOUNDATION_ASSERT(ctx && ctx->Initialized);
+
+    const size_t label_length = string_length(label);
+    foreach(ti, _test_items)
+    {
+        if (string_equal(STRING_ARGS(ti->label), label, label_length))
+            return ti;
+    }
+
+    return nullptr;
+}
+
+#else
+
+extern void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id)
+{
+}
+
+extern void ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id, const char* label, ImGuiItemStatusFlags flags)
+{
+}
+
+extern void ImGuiTestEngineHook_Log(ImGuiContext* ctx, const char* fmt, ...)
+{
+}
+
+extern const char* ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiID id)
+{
+    return nullptr;
+}
+
+#endif
+
 namespace ImGui
 {
     inline void AddUnderLine(ImColor col_)
@@ -54,19 +171,26 @@ namespace ImGui
         bool clicked = false;
         if (ImGui::IsItemHovered())
         {
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
             if (ImGui::IsMouseClicked(0))
             {
-                open_in_shell(URL);
+                if (URL_length > 0)
+                    open_in_shell(URL);
                 clicked = true;
             }
             ImGui::AddUnderLine(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
-            ImGui::SetTooltip(ICON_MD_OPEN_IN_NEW " %.*s", (int)URL_length, URL);
+
+            if (URL_length > 0)
+                ImGui::SetTooltip(ICON_MD_OPEN_IN_NEW " %.*s", (int)URL_length, URL);
         }
         else
         {
             AddUnderLine(ImGui::GetStyle().Colors[ImGuiCol_Button]);
         }
-        if (1 == SameLineAfter_) { ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x); }
+        if (1 == SameLineAfter_) 
+        { 
+            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x); 
+        }
 
         return clicked;
     }
@@ -366,7 +490,7 @@ FOUNDATION_STATIC void imgui_add_thin_space_glyph(ImFont* font, float size_pixel
     }
 }
 
-FOUNDATION_STATIC bool imgui_load_font(unsigned int font_res_id, const char* res_type, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL)
+FOUNDATION_STATIC ImFont* imgui_load_font(unsigned int font_res_id, const char* res_type, float size_pixels, const ImFontConfig* font_cfg = NULL, const ImWchar* glyph_ranges = NULL)
 {
     ImGuiIO& io = ImGui::GetIO();
     #if FOUNDATION_PLATFORM_WINDOWS
@@ -378,7 +502,7 @@ FOUNDATION_STATIC bool imgui_load_font(unsigned int font_res_id, const char* res
             if (hMemory == 0)
             {
                 FOUNDATION_ASSERT_FAIL("Failed to load font resource");
-                return false;
+                return nullptr;
             }
             
             DWORD dwSize = SizeofResource(hModule, hResource);
@@ -400,7 +524,7 @@ FOUNDATION_STATIC bool imgui_load_font(unsigned int font_res_id, const char* res
             if (font)
             {
                 imgui_add_thin_space_glyph(font, size_pixels);
-                return true;
+                return font;
             }
         }
     #elif FOUNDATION_PLATFORM_MACOS
@@ -425,14 +549,14 @@ FOUNDATION_STATIC bool imgui_load_font(unsigned int font_res_id, const char* res
         if (font)
         {
             imgui_add_thin_space_glyph(font, size_pixels);
-            return true;
+            return font;
         }
     #endif
 
-    return false;
+    return nullptr;
 }
 
-bool imgui_load_main_font(float xscale /*= 1.0f*/)
+ImFont* imgui_load_main_font(float xscale /*= 1.0f*/)
 {
     #if FOUNDATION_PLATFORM_WINDOWS
         return imgui_load_font(IDR_MAIN_FONT, MAKEINTRESOURCEA(8), 16.0f * xscale);
@@ -444,7 +568,7 @@ bool imgui_load_main_font(float xscale /*= 1.0f*/)
     #endif
 }
 
-bool imgui_load_material_design_font(float xscale /*= 1.0f*/)
+ImFont* imgui_load_material_design_font(float xscale /*= 1.0f*/)
 {
     static const ImWchar icons_ranges[] = { ICON_MIN_MD, ICON_MAX_16_MD, 0 };
     ImFontConfig icons_config; icons_config.MergeMode = true; icons_config.PixelSnapH = true; icons_config.GlyphOffset.y += 4.0f;

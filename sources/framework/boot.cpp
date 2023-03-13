@@ -3,6 +3,7 @@
  * License: https://infineis.com/LICENSE
  */
 
+#include <framework/app.h>
 #include <framework/glfw.h>
 #include <framework/bgfx.h>
 #include <framework/imgui.h>
@@ -67,10 +68,6 @@ FOUNDATION_STATIC void main_handle_debug_break()
  */
 extern int main_initialize()
 {
-    extern const char* app_title();
-    extern int app_initialize(GLFWwindow * window);
-    extern void app_configure(foundation_config_t & config, application_t & application);
-
     WAIT_CURSOR;
 
     // Use default values for foundation config
@@ -83,6 +80,9 @@ extern int main_initialize()
         memory_set_tracker(memory_tracker_local());
     #endif
     
+    #if BUILD_ENABLE_STATIC_HASH_DEBUG
+        config.hash_store_size = 256;
+    #endif
     app_configure(config, application);
 
     int init_result = foundation_initialize(memory_system_malloc(), application, config);
@@ -131,17 +131,17 @@ extern int main_initialize()
 
         bgfx_initialize(window);
         imgui_initiaize(window);
-
-        if (main_is_interactive_mode())
-        {
-            // Show and focus the window once the main initialization is over.
-            // We do this in order to prevent showing a stalling frame for too long (i.e. while loading assets).
-            glfwShowWindow(window);
-            glfwFocusWindow(window);
-        }
     }
 
-    return app_initialize(window);
+    bool app_initialized = app_initialize(window);
+    if (main_is_interactive_mode() && window)
+    {
+        // Show and focus the window once the main initialization is over.
+        // We do this in order to prevent showing a stalling frame for too long (i.e. while loading assets).
+        glfwShowWindow(window);
+        glfwFocusWindow(window);
+    }
+    return app_initialized;
 }
 
 /*! Checks if the application is running in batch mode. 
@@ -340,8 +340,6 @@ extern void main_render(GLFWwindow* window, const app_render_handler_t& render, 
 extern void main_tick(GLFWwindow* window)
 {
     PERFORMANCE_TRACKER("main_tick");
-    extern void app_update(GLFWwindow* window);
-    extern void app_render(GLFWwindow* window, int display_w, int display_h);
 
     main_update(window, app_update);
 
@@ -410,9 +408,7 @@ extern int main_run(void* context)
 
 /*! Main application shutdown entry point. */
 extern void main_finalize()
-{
-    extern void app_shutdown();
-    
+{    
     GLFWwindow* main_window = glfw_main_window();
     if (main_window && main_is_interactive_mode())
         glfw_save_window_geometry(main_window);

@@ -418,6 +418,23 @@ dispatcher_thread_handle_t dispatch_thread(
     return thread_handle;
 }
 
+bool dispatcher_thread_is_running(dispatcher_thread_handle_t thread_handle)
+{
+    dispatcher_thread_t* dt = (dispatcher_thread_t*)objectmap_acquire(_dispatcher_threads, thread_handle);
+    if (!dt)
+        return false;
+
+    if (dt->completed)
+    {
+        objectmap_release(_dispatcher_threads, thread_handle, dispatch_execute_thread_completed);
+        return false;
+    }
+
+    bool running = thread_is_running(dt->thread);
+    objectmap_release(_dispatcher_threads, thread_handle, dispatch_execute_thread_completed);
+    return running;
+}
+
 bool dispatcher_thread_stop(dispatcher_thread_handle_t thread_handle, double timeout_seconds /*= 30.0*/)
 {
     bool thread_aborted = false;

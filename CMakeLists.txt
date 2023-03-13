@@ -23,13 +23,6 @@
 
 cmake_minimum_required (VERSION 3.0)
 
-# Get the project name from the current directory name
-get_filename_component(ProjectId ${CMAKE_CURRENT_SOURCE_DIR} NAME)
-string(REPLACE " " "_" ProjectId ${ProjectId})
-
-# Set the project name
-project(${ProjectId})
-
 # Cache the root directory path
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root directory path")
 
@@ -37,8 +30,6 @@ set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root directory path")
 # Then each nested CMakeLists.txt can include the shared.cmake file using the following command:
 #   include(${SHARED_MODULE_PATH})
 set(SHARED_MODULE_PATH ${CMAKE_SOURCE_DIR}/config/shared.cmake CACHE PATH "Shared module path")
-
-# Include the shared module
 include(${SHARED_MODULE_PATH})
 
 # Cache the shared options path
@@ -46,6 +37,20 @@ set(SHARED_OPTIONS_PATH ${CMAKE_SOURCE_DIR}/config/options.cmake CACHE PATH "Sha
 
 # Include the shared options module
 include(${SHARED_OPTIONS_PATH})
+
+# Get the project name from the current directory name
+get_filename_component(ProjectId ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+string(REPLACE " " "_" ProjectId ${ProjectId})
+
+# Make sure ${ProjectId} can be accessed for all nested projects
+set(ProjectId ${ProjectId} CACHE INTERNAL "Set project `${ProjectId}` variable" FORCE)
+
+# Make sure ${ProjectIdCamelCase} can be accessed for all nested projects
+ucfirst(${ProjectId} ProjectIdCamelCase)
+set(ProjectIdCamelCase ${ProjectIdCamelCase} CACHE INTERNAL "Set project `${ProjectId}` camel case variable" FORCE)
+
+# Set the project name
+project(${ProjectId})
 
 # Add Debug, Release and Deploy configurations
 set(CMAKE_CONFIGURATION_TYPES "Debug;Release;Deploy" CACHE STRING "Configs" FORCE)
@@ -296,3 +301,6 @@ add_subdirectory(${ROOT_DIR}/sources/framework)
 
 # Load main exectuable project under sources/
 add_subdirectory(${ROOT_DIR}/sources)
+
+# Load installer solution
+add_subdirectory(${ROOT_DIR}/installer)

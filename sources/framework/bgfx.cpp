@@ -170,7 +170,8 @@ FOUNDATION_STATIC bool bgfx_create_fonts_texture(GLFWwindow* window)
 
     xscale *= session_get_float("font_scaling", 1.0f);
 
-    if (imgui_load_main_font(xscale))
+    ImFont* main_font = imgui_load_main_font(xscale);
+    if (main_font)
     {
         // Merge in icons from Google Material Design
         imgui_load_material_design_font(xscale);

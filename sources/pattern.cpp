@@ -542,7 +542,7 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
             pattern_render_stats_line(
                 pattern_format_number(STRING_CONST("P/E (%.3g)"), s->pe, 0.0),
                 pattern_format_percentage(s->current.change / s->pe * 100.0),
-                pattern_format_percentage(math_average(&pattern->marks[7].change_p, 5, sizeof(pattern_mark_t)) * 100.0));
+                pattern_format_percentage(math_average_parallel(&pattern->marks[7].change_p, 5, sizeof(pattern_mark_t)) * 100.0));
         }
 
         double flex_low_p = pattern->flex_low.fetch();

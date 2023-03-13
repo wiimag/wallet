@@ -476,3 +476,11 @@ FOUNDATION_FORCEINLINE dispatcher_thread_handle_t dispatch_fire(function<void(vo
  *  @return True if the thread was stopped successfully, false if the thread was aborted.
  */
 bool dispatcher_thread_stop(dispatcher_thread_handle_t thread_id, double timeout_seconds = 30.0);
+
+/*! Checks if the dispatcher thread is still running. 
+ * 
+ *  @param thread_id Handle to the thread to check
+ * 
+ *  @return True if the thread is still running, false otherwise.
+ */
+bool dispatcher_thread_is_running(dispatcher_thread_handle_t thread_handle);

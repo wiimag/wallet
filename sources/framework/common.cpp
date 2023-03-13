@@ -13,6 +13,7 @@
 #include <foundation/stream.h>
 #include <foundation/path.h>
 #include <foundation/environment.h>
+#include <foundation/memory.h>
 
 #include <stack> 
 
@@ -585,14 +586,55 @@ void system_browse_to_url(const char* url, size_t url_length)
     #endif
 }
 
-void system_browse_to_file(const char* path, size_t path_length)
+void system_browse_to_file(const char* path, size_t path_length, bool dir /*= false*/)
 {
     const size_t capacity = path_length + 8 + 1;
     string_t url = string_allocate(0, capacity);
     url = string_copy(url.str, capacity, "file:///", 8);
 
-    string_const_t path_dir = path_directory_name(path, path_length);
+    string_const_t path_dir = dir ? string_const(path, path_length) : path_directory_name(path, path_length);
     url = string_concat(url.str, capacity, STRING_ARGS(url), STRING_ARGS(path_dir));
     system_browse_to_url(STRING_ARGS(url));
     string_deallocate(url);
+}
+
+string_const_t system_app_data_local_path()
+{
+    static thread_local char _app_data_local_path_buffer[BUILD_MAX_PATHLEN] = {0};
+    static thread_local string_t _app_data_local_path{};
+    if (string_is_null(_app_data_local_path))
+    {
+        #if FOUNDATION_PLATFORM_WINDOWS
+            
+            // Get the AppData/Local path
+            wchar_t wpath[BUILD_MAX_PATHLEN];
+            SHGetFolderPathW(0, CSIDL_LOCAL_APPDATA, 0, 0, wpath);
+            _app_data_local_path = string_convert_utf16(_app_data_local_path_buffer, BUILD_MAX_PATHLEN, (const uint16_t*)wpath, wstring_length(wpath));
+
+        #elif FOUNDATION_PLATFORM_APPLE
+            #error Not implemented
+        #else
+            #error Not implemented
+        #endif
+    }
+
+    return string_to_const(_app_data_local_path);
+}
+
+const char* system_platform_name(platform_t platform)
+{
+    switch (platform)
+    {
+        case PLATFORM_WINDOWS: return "Windows";
+        case PLATFORM_LINUX: return "Linux";
+        case PLATFORM_MACOS: return "MacOS";
+        case PLATFORM_ANDROID: return "Android";
+        case PLATFORM_IOS: return "iOS";
+        case PLATFORM_RASPBERRYPI: return "Raspberry Pi";
+        case PLATFORM_BSD: return "BSD";
+        case PLATFORM_TIZEN: return "Tizen";
+
+        default: 
+            return "Unknown";
+    }
 }

@@ -22,6 +22,19 @@ double math_average(const double* pn, size_t count, size_t stride /*= sizeof(dou
     return total / count;
 }
 
+double math_average_parallel(const double* pn, size_t count, size_t stride /*= sizeof(double)*/)
+{
+    double total = 0;
+    #pragma omp parallel for reduction(+:total)
+    for (size_t i = 0; i < count; ++i)
+    {
+        total += math_ifnan(*pn, 0.0);
+        pn = (double*)(((uint8_t*)pn) + stride);
+    }
+
+    return total / count;
+}
+
 double math_median_average(double* values, double& median, double& average)
 {
     size_t count = array_size(values);
