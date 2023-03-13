@@ -37,8 +37,8 @@ file(GLOB FRAMEWORK_SOURCES
 
 # Add *.mm files for OSX
 if (APPLE)
-    file(GLOB_RECURSE FRAMEWORK_SOURCES_OSX
-        ${BGFX_DIR}/src/*.mm
+    file(GLOB FRAMEWORK_SOURCES_OSX
+        ${FrameworkDir}/*.mm
     )
     list(APPEND FRAMEWORK_SOURCES ${FRAMEWORK_SOURCES_OSX})
 endif()

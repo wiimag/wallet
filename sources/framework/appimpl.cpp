@@ -17,6 +17,7 @@
 #include <framework/console.h>
 #include <framework/profiler.h>
 #include <framework/array.h>
+#include <framework/common.h>
 
 #include <foundation/memory.h>
 #include <foundation/version.h>
@@ -542,6 +543,7 @@ void app_menu_help(GLFWwindow* window)
 
 FOUNDATION_STATIC void app_framework_initialize()
 {
+    //system_add_menu_item("test");
 }
 
 FOUNDATION_STATIC void app_framework_shutdown()

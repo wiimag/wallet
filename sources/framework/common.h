@@ -266,6 +266,8 @@ void system_browse_to_url(const char* url, size_t url_length);
  */
 void system_browse_to_file(const char* path, size_t path_length);
 
+void system_add_menu_item(const char* name);
+
 /*! Returns the true if the application is running in daemon mode, meaning that it is either running as a service or as a background process.
  * 
  *  @remark Running tests is considered daemon mode, as it is a background process that does not require user interaction.
