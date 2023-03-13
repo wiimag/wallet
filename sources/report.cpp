@@ -5,7 +5,6 @@
 
 #include "report.h"
 
-#include "app.h"
 #include "stock.h"
 #include "title.h"
 #include "settings.h"
@@ -19,6 +18,7 @@
 #include "news.h"
 #include "financials.h"
 
+#include <framework/app.h>
 #include <framework/glfw.h>
 #include <framework/imgui.h>
 #include <framework/session.h>

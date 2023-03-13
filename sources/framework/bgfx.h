@@ -17,6 +17,7 @@
 #endif
 
 #include <bgfx/bgfx.h>
+#include <external/bgfx/src/version.h>
 #include <bx/allocator.h>
 
 struct ImDrawData;

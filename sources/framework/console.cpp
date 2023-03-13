@@ -5,6 +5,7 @@
 
 #include "console.h"
 
+#include <framework/app.h>
 #include <framework/expr.h>
 #include <framework/common.h>
 #include <framework/session.h>
@@ -18,8 +19,6 @@
 #include <foundation/log.h>
 #include <foundation/error.h>
 #include <foundation/hashstrings.h>
-
-#include <algorithm>
 
 #define HASH_CONSOLE static_hash_string("console", 7, 0xf4408b2738af51e7ULL)
 
@@ -436,19 +435,19 @@ FOUNDATION_STATIC void console_render_window()
 
 FOUNDATION_STATIC void console_menu()
 {
-    if (shortcut_executed(ImGuiKey_F10))
-        _console_window_opened = true;
-
-    if (ImGui::BeginMenuBar())
-    {
-        if (ImGui::BeginMenu("Windows"))
-        {
-            ImGui::MenuItem(ICON_MD_LOGO_DEV " Console", "F10", &_console_window_opened);
-            ImGui::EndMenu();
-        }
-
-        ImGui::EndMenuBar();
-    }
+//     if (shortcut_executed(ImGuiKey_F10))
+//         _console_window_opened = true;
+// 
+//     if (ImGui::BeginMenuBar())
+//     {
+//         if (ImGui::BeginMenu("Windows"))
+//         {
+//             ImGui::MenuItem(ICON_MD_LOGO_DEV " Console", "F10", &_console_window_opened);
+//             ImGui::EndMenu();
+//         }
+// 
+//         ImGui::EndMenuBar();
+//     }
 
     if (_console_window_opened)
         console_render_window();
@@ -501,6 +500,12 @@ FOUNDATION_STATIC void console_initialize()
         log_set_handler(logger);
         _console_window_opened = environment_command_line_arg("console") || session_get_bool("show_console", _console_window_opened);
         service_register_menu(HASH_CONSOLE, console_menu);
+
+        app_register_menu(HASH_CONSOLE, 
+            STRING_CONST("Windows/" ICON_MD_LOGO_DEV " Console"), STRING_CONST("F10"), AppMenuFlags::Append, [](void*)
+            {
+                _console_window_opened = !_console_window_opened;
+            });
     }
 
     string_const_t joined_expressions = session_get_string("console_expressions", "");

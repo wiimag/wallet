@@ -69,6 +69,19 @@ void string_lines_finalize(lines_t& lines);
  */
 string_t* string_split(string_const_t str, string_const_t sep);
 
+/*! Split a string in multiple lines and return the lines.
+ *
+ * @param str The string to split.
+ * @param str_length The length of the string to split.
+ * @param sep The separator.
+ * @param sep_length The length of the separator.
+ * @return The lines.
+ */
+FOUNDATION_FORCEINLINE string_t* string_split(const char* str, size_t str_length, const char* sep, size_t sep_length)
+{
+    return string_split(string_const(str, str_length), string_const(sep, sep_length));
+}
+
 /*! Checks if a string is contained in another string by ignoring the case.
  *
  * @param lhs The string to search.
