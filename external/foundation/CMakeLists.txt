@@ -36,7 +36,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 # Project library
 add_library(foundation STATIC ${foundation_src} ${foundation_includes})
 
-# Add the project under the solution dir /libs
+# Add the project under the solution filter dir /libs
 set_target_properties(foundation PROPERTIES FOLDER "libs")
 
 # Project include directories

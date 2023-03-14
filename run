@@ -134,6 +134,13 @@ while [[ $# -gt 0 ]]; do
         OPEN_WORKSPACE=1
         shift
       fi
+
+      # Check if project/.build is present, if not, then we need to generate the project
+      # Also check if the project/.build/CMakeCache.txt is present, if not, then we need to generate the project
+      if [ ! -d "project/.build" ] || [ ! -f "project/.build/CMakeCache.txt" ]; then
+        GENERATE=1
+      fi
+
       ;;
     t|tests)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))

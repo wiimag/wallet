@@ -70,11 +70,6 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # /Zc:__cplusplus is required to make __cplusplus accurate
 # /Zc:__cplusplus is available starting with Visual Studio 2017 version 15.7
-# (according to https://learn.microsoft.com/en-us/cpp/build/reference/zc-cplusplus)
-# That version is equivalent to _MSC_VER==1914
-# (according to https://learn.microsoft.com/en-us/cpp/preprocessor/predefined-macros?view=vs-2019)
-# CMake's ${MSVC_VERSION} is equivalent to _MSC_VER
-# (according to https://cmake.org/cmake/help/latest/variable/MSVC_VERSION.html#variable:MSVC_VERSION)
 if(MSVC AND MSVC_VERSION GREATER_EQUAL 1914)
     add_compile_options(/Zc:__cplusplus)
 endif()
@@ -93,60 +88,22 @@ add_compile_options(-D_CRT_NONSTDC_NO_DEPRECATE)
 add_compile_options("$<$<CONFIG:DEBUG>:-D_DEBUG>")
 
 #
-# Set common BUILD flags
+# Set common BUILD_* flags
 #
 
-# Add BUILD_DEBUG compile option for Debug configuration
 add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_DEBUG=1>")
-#add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_DEBUG=0>")
-
 add_compile_options("$<$<CONFIG:RELEASE>:-DBUILD_RELEASE=1>")
-#add_compile_options("$<$<CONFIG:DEBUG,DEPLOY>:-DBUILD_RELEASE=0>")
-
-# Set BUILD_DEVELOPMENT
-#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_DEVELOPMENT=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEVELOPMENT=0>")
-
-# Define DEPLOY distribution flags
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEPLOY=1>")
-
-# Set BUILD_ENABLE_LOG
 add_compile_options("$<$<CONFIG:DEBUG,RELEASE,DEPLOY>:-DBUILD_ENABLE_LOG=1>")
-
-# Set BUILD_ENABLE_DEBUG_LOG
-#add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_ENABLE_DEBUG_LOG=1>")
 add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_ENABLE_DEBUG_LOG=0>")
-
-# Set BUILD_ENABLE_ASSERT
-#add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_ENABLE_ASSERT=1>")
 add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_ENABLE_ASSERT=0>")
-
-# Set BUILD_ENABLE_ERROR_CONTEXT
-#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_ERROR_CONTEXT=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_ERROR_CONTEXT=1>")
-
-# Set BUILD_ENABLE_PROFILE
-#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_PROFILE=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_PROFILE=0>")
-
-# Set BUILD_ENABLE_MEMORY_CONTEXT
-#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_MEMORY_CONTEXT=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_CONTEXT=1>")
-
-# Set BUILD_ENABLE_MEMORY_TRACKER
-#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_MEMORY_TRACKER=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_TRACKER=1>")
-
-# Set BUILD_ENABLE_MEMORY_GUARD
-#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_MEMORY_GUARD=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_GUARD=1>")
-
-# Set BUILD_ENABLE_MEMORY_STATISTICS
-#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_MEMORY_STATISTICS=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_STATISTICS=0>")
-
-# Set BUILD_ENABLE_STATIC_HASH_DEBUG
-#add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_ENABLE_STATIC_HASH_DEBUG=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_STATIC_HASH_DEBUG=1>")
 
 # Set compiler specific flags
@@ -304,5 +261,6 @@ add_subdirectory(${ROOT_DIR}/sources)
 
 if (MSVC)
     # Load installer solution
+    # TODO: Only works on Windows as of now
     add_subdirectory(${ROOT_DIR}/tools/installer)
 endif()
