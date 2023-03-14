@@ -356,10 +356,13 @@ if [ $OPEN -ge 1 ]; then
 
   if [ $OPEN_WORKSPACE -eq 1 ]; then
 
+    # Get the root folder name
+    ROOT_FOLDER_NAME=$(basename $(git rev-parse --show-toplevel))
+
     if [ $machine == "MinGw" ]; then
-      start projects/.build/${SHORT_NAME}.sln
+      start projects/.build/${ROOT_FOLDER_NAME}.sln
     elif [ ${machine} == "Mac" ]; then
-      open projects/.build/${SHORT_NAME}.xcworkspace
+      open projects/.build/${ROOT_FOLDER_NAME}.xcworkspace
     fi
 
     retval=$?
