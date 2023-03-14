@@ -62,6 +62,22 @@ FOUNDATION_STATIC void main_handle_debug_break()
     }
 }
 
+/*! This function checks if the framework can handle startup command line arguments */
+FOUNDATION_STATIC int main_process_command_line(foundation_config_t& config, application_t& application)
+{
+    LOG_PREFIX(false);
+
+    if (environment_command_line_arg("version"))
+    {
+        string_const_t version_string = string_from_version_static(application.version);
+        fprintf(stdout, "%.*s\n", STRING_FORMAT(version_string));
+        
+        return 0;
+    }
+
+    return 0;
+}
+
 /*! Function invoked by foundation_lib to initialize the application.
  *
  *  @return 0 if successful, otherwise an error code.
@@ -96,6 +112,14 @@ extern int main_initialize()
     #if BUILD_DEVELOPMENT
     _run_tests = environment_command_line_arg("run-tests");
     #endif
+
+    int command_line_result = main_process_command_line(config, application);
+    if (command_line_result != 0 || _process_should_exit)
+    {
+        if (_process_should_exit)
+            process_exit(command_line_result);
+        return command_line_result;
+    }
 
     if (environment_command_line_arg("debug") || environment_command_line_arg("verbose"))
         log_set_suppress(0, ERRORLEVEL_NONE);
@@ -133,7 +157,7 @@ extern int main_initialize()
         imgui_initiaize(window);
     }
 
-    bool app_initialized = app_initialize(window);
+    init_result = app_initialize(window);
     if (main_is_interactive_mode() && window)
     {
         // Show and focus the window once the main initialization is over.
@@ -141,7 +165,8 @@ extern int main_initialize()
         glfwShowWindow(window);
         glfwFocusWindow(window);
     }
-    return app_initialized;
+
+    return init_result;
 }
 
 /*! Checks if the application is running in batch mode. 
