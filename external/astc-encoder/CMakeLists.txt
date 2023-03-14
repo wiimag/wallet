@@ -40,6 +40,7 @@ set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
 # Create the bx library
 add_library(astc-encoder STATIC ${ASTC_SOURCES})
 
-target_include_directories(astc-encoder PUBLIC
-    ${ASTC_DIR}/include
-)
+# Set project properties
+set_target_properties(astc-encoder PROPERTIES FOLDER "libs/bgfx")
+
+target_include_directories(astc-encoder PUBLIC ${ASTC_DIR}/include)

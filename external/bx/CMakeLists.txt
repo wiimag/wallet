@@ -96,6 +96,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 # Create the bx library
 add_library(bx STATIC ${BX_INCLUDES} ${BX_SOURCES} ${BX_COMPAT_SOURCES} ${BX_INI_SOURCES})
 
+# Set project properties
+set_target_properties(bx PROPERTIES FOLDER "libs/bgfx")
+
 target_include_directories(bx PUBLIC
     ${BX_DIR}/include
     ${BX_COMPAT_DIR}

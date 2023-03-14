@@ -235,6 +235,8 @@ set(CMAKE_CXX_FLAGS_DEPLOY "${CMAKE_CXX_FLAGS_DEPLOY} ${CMAKE_CXX_FLAGS_RELEASE}
 # Copy release linker flags to deploy
 set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_DEPLOY} ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
 # Load library project under foundation/
 add_subdirectory(${ROOT_DIR}/external/foundation)
 

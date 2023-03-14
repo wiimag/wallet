@@ -83,9 +83,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 # Create the bgfx library
 add_library(bgfx STATIC ${BGFX_INCLUDES} ${BGFX_SOURCES})
 
-target_include_directories(bgfx PUBLIC
-    ${BGFX_DIR}/include
-)
+# Set project properties
+set_target_properties(bgfx PROPERTIES FOLDER "libs/bgfx")
 
-# Depends on bx library
+# Set project dependencies
 target_link_libraries(bgfx PUBLIC bx bimg)
+target_include_directories(bgfx PUBLIC ${BGFX_DIR}/include)

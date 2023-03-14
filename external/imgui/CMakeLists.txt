@@ -30,6 +30,9 @@ add_library(imgui STATIC ${imgui_src} ${imgui_includes} ${imgui_natvis})
 # Depends on foundation lib project
 add_dependencies(imgui foundation)
 
+# Add the project under the solution filter dir /libs
+set_target_properties(imgui PROPERTIES FOLDER "libs")
+
 target_include_directories(imgui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../)
 
 target_compile_definitions(imgui PUBLIC IMGUI_ENABLE_TEST_ENGINE=1)

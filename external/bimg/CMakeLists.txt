@@ -38,9 +38,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 # Create the bx library
 add_library(bimg STATIC ${BIMG_SOURCES})
 
-target_include_directories(bimg PUBLIC
-    ${BIMG_DIR}/include
-)
+# Add the project under the solution filter dir /libs/bgfx
+set_target_properties(bimg PROPERTIES FOLDER "libs/bgfx")
 
 # Depends on bx library
 target_link_libraries(bimg bx astc-encoder)
+target_include_directories(bimg PUBLIC ${BIMG_DIR}/include)

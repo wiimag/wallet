@@ -129,6 +129,9 @@ else()
 
 endif()
 
+# Set project properties
+set_target_properties(installer PROPERTIES FOLDER "tools")
+
 target_set_framework_output_dirs(installer ${ROOT_DIR})
 
 # Add dependencies to other libs
