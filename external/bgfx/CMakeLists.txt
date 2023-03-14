@@ -16,11 +16,9 @@ file(GLOB_RECURSE BGFX_INCLUDES
     ${BGFX_DIR}/src/*.h
     ${BGFX_DIR}/src/*.inl
 )
-source_group("include" FILES ${BGFX_INCLUDES})
 
 # Get bgfx library source files
 file(GLOB_RECURSE BGFX_SOURCES ${BGFX_DIR}/src/*.cpp)
-source_group("src" FILES ${BGFX_SOURCES})
 
 # Add *.mm files for OSX
 if (APPLE)
@@ -28,8 +26,9 @@ if (APPLE)
     list(APPEND BGFX_SOURCES ${BGFX_SOURCES_OSX})
 endif()
 
-# Add the compatibility headers to the include path
-#include_directories(${ROOT_DIR}/external/)
+# Set source files groups
+source_group("src" FILES ${BGFX_SOURCES})
+source_group("include" FILES ${BGFX_INCLUDES})
 
 # Add khronos headers to the include path
 include_directories(${ROOT_DIR}/external/khronos/)
@@ -37,19 +36,21 @@ include_directories(${ROOT_DIR}/external/khronos/)
 # Add directx headers to the include path
 include_directories(${ROOT_DIR}/external/directx-headers/include/directx)
 
-# Disable vulkan backend renderer
-add_compile_definitions(BGFX_CONFIG_RENDERER_VULKAN=0)
+# Use compiler and linker flags from parent project
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Do not use TINYSTL
 add_compile_definitions(BGFX_CONFIG_USE_TINYSTL=0)
 
+# Disable vulkan backend renderer for all platforms
+add_compile_definitions(BGFX_CONFIG_RENDERER_VULKAN=0)
+
 if (WIN32)
 
-    # Disable CPP exceptions
-    add_compile_options(/EHsc)
-
-    # Disable RTTI
+    # Disable CPP exceptions and RTTI
     add_compile_options(/GR-)
+    add_compile_options(/EHsc)
 
     # Enable directx backend renderers
     add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D11=1)
@@ -57,20 +58,14 @@ if (WIN32)
 
 elseif (APPLE)
 
-    # Disable CPP exceptions
+    # Disable CPP exceptions and RTTI
+    add_compile_options(-fno-rtti)
     add_compile_options(-fno-exceptions)
 
-    # Disable RTTI
-   add_compile_options(-fno-rtti)
- 
     # Force METAL renderer with BGFX_CONFIG_RENDERER_METAL=1
     add_compile_definitions(BGFX_CONFIG_RENDERER_METAL=1)
 
 endif()
-
-# Use compiler and linker flags from parent project
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Create the bgfx library
 add_library(bgfx STATIC ${BGFX_INCLUDES} ${BGFX_SOURCES})

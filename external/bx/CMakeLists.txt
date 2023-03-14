@@ -11,19 +11,13 @@ project(bx)
 set(BX_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 # bx library
-file(GLOB_RECURSE BX_SOURCES
-    ${BX_DIR}/src/*.cpp
-)
+file(GLOB_RECURSE BX_SOURCES ${BX_DIR}/src/*.cpp)
 
 file(GLOB_RECURSE BX_INCLUDES
-    ${BX_DIR}/include/bx/*.h
     ${BX_DIR}/src/*.h
     ${BX_DIR}/src/*.inl
+    ${BX_DIR}/include/bx/*.h
 )
-
-# Create groups for the source files
-source_group("bx" FILES ${BX_INCLUDES})
-source_group("src" FILES ${BX_SOURCES})
 
 # Include compatibility headers per platform and set include path
 if (WIN32)
@@ -34,7 +28,7 @@ elseif (APPLE)
 
     # Same for iOS
     if (IOS)
-        set(BX_COMPAT_DIR ${BX_DIR}/include/compat/ios)    
+        set(BX_COMPAT_DIR ${BX_DIR}/include/compat/ios)
     else()
         set(BX_COMPAT_DIR ${BX_DIR}/include/compat/osx)
     endif()
@@ -45,25 +39,31 @@ elseif (UNIX)
 
 endif()
 
-file(GLOB_RECURSE BX_COMPAT_SOURCES
-    ${BX_COMPAT_DIR}/*.h
-)
+file(GLOB_RECURSE BX_COMPAT_SOURCES ${BX_COMPAT_DIR}/*.h)
+
+# Add include files under external/ini
+file(GLOB BX_INI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ini/*.h)
+
+# Create groups for the source files
+source_group("bx" FILES ${BX_INCLUDES})
+source_group("src" FILES ${BX_SOURCES})
+source_group("ini" FILES ${BX_INI_SOURCES})
+source_group("compat" FILES ${BX_COMPAT_SOURCES})
+
+# Add _LIB only for static library
+add_compile_definitions(_LIB)
 
 # Add the compatibility headers to the include path
 include_directories(${BX_COMPAT_DIR})
 
-# Create a group for the compatibility headers
-source_group("compat" FILES ${BX_COMPAT_SOURCES})
-
-# Add include files under external/ini
-file(GLOB BX_INI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ini/*.h)
-source_group("ini" FILES ${BX_INI_SOURCES})
-
 # Add the compatibility headers to the include path
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/)
 
-# Add _LIB only for static library
-add_compile_definitions(_LIB)
+# Use compiler flags from parent project
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+
+# Use compiler flags from parent project
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 if (MVSC)
 
@@ -82,12 +82,6 @@ elseif (APPLE)
     add_compile_options(-fno-rtti)
 
 endif()
-
-# Use compiler flags from parent project
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-
-# Use compiler flags from parent project
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Create the bx library
 add_library(bx STATIC ${BX_INCLUDES} ${BX_SOURCES} ${BX_COMPAT_SOURCES} ${BX_INI_SOURCES})

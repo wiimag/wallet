@@ -23,6 +23,13 @@
 
 cmake_minimum_required (VERSION 3.0)
 
+if(APPLE)
+
+    # Choose macOS minimum deployment target to 11.5
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.5" CACHE STRING "Minimum OS X deployment version")
+
+endif()
+
 # Cache the root directory path
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root directory path")
 
@@ -190,9 +197,6 @@ if(MSVC)
 
 elseif(XCODE)
 
-    # Choose macOS minimum deployment target to 11.5
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.5" CACHE STRING "Minimum OS X deployment version")
-    
     # Use fast floating point math
     add_compile_options(-ffast-math)
 
