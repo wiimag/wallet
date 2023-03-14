@@ -5,8 +5,8 @@
 
 #pragma once
 
-#include "config.h"
-#include "function.h"
+#include <framework/config.h>
+#include <framework/function.h>
 
 #include <foundation/hash.h>
 #include <foundation/atomic.h>
