@@ -279,7 +279,7 @@ set(CMAKE_CXX_FLAGS_DEPLOY "${CMAKE_CXX_FLAGS_DEPLOY} ${CMAKE_CXX_FLAGS_RELEASE}
 set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_DEPLOY} ${CMAKE_EXE_LINKER_FLAGS_RELEASE}")
 
 # Load library project under foundation/
-add_subdirectory(${ROOT_DIR}/foundation)
+add_subdirectory(${ROOT_DIR}/external/foundation)
 
 # Load atsc-encoder library used by bimg mainly
 add_subdirectory(${ROOT_DIR}/external/astc-encoder)
@@ -294,7 +294,7 @@ add_subdirectory(${ROOT_DIR}/external/bimg)
 add_subdirectory(${ROOT_DIR}/external/bgfx)
 
 # Load IMGUI library
-add_subdirectory(${ROOT_DIR}/imgui)
+add_subdirectory(${ROOT_DIR}/external/imgui)
 
 # Load main framework library
 add_subdirectory(${ROOT_DIR}/sources/framework)
@@ -302,5 +302,7 @@ add_subdirectory(${ROOT_DIR}/sources/framework)
 # Load main exectuable project under sources/
 add_subdirectory(${ROOT_DIR}/sources)
 
-# Load installer solution
-add_subdirectory(${ROOT_DIR}/installer)
+if (MSVC)
+    # Load installer solution
+    add_subdirectory(${ROOT_DIR}/tools/installer)
+endif()

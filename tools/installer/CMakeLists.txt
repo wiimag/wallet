@@ -14,8 +14,8 @@ project(installer)
 
 # Load app source files
 file(GLOB INSTALLER_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
 )
 source_group("installer" FILES ${INSTALLER_SOURCES})
 
@@ -24,19 +24,6 @@ file(GLOB RESOURCES_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/*.rc"
 )
 source_group("resources" FILES ${RESOURCES_SOURCES})
-
-# Move version.h and resource.h from INSTALLER_SOURCES to RESOURCES_SOURCES
-list(FIND INSTALLER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/version.h" INDEX)
-if(NOT INDEX EQUAL -1)
-    list(REMOVE_AT INSTALLER_SOURCES ${INDEX})
-    list(APPEND RESOURCES_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/version.h")
-endif()
-
-list(FIND INSTALLER_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/resource.h" INDEX)
-if(NOT INDEX EQUAL -1)
-    list(REMOVE_AT INSTALLER_SOURCES ${INDEX})
-    list(APPEND RESOURCES_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/resource.h")
-endif()
 
 # Load distribution files
 file(GLOB RESOURCES_FILES
