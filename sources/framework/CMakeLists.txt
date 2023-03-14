@@ -41,11 +41,13 @@ file(GLOB EXTERNAL_SOURCES
 )
 source_group("external" FILES ${EXTERNAL_SOURCES})
 
-# Load all natvis source files
-file(GLOB_RECURSE NATVIS_SOURCES
+# Load all dev resources files 
+file(GLOB_RECURSE DEVS_RESOURCE_FILES 
+    "${ROOT_DIR}/*.hint"
     "${ROOT_DIR}/*.natvis"
+    "${ROOT_DIR}/*.editorconfig"
 )
-source_group("natvis" FILES ${NATVIS_SOURCES})
+source_group("resources" FILES ${DEVS_RESOURCE_FILES})
 
 # Load stb source files
 file(GLOB STB_SOURCES
@@ -75,7 +77,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 include_directories(${ROOT_DIR}/sources)
 
 # Create the bx library
-add_library(framework STATIC ${FRAMEWORK_SOURCES} ${EXTERNAL_SOURCES} ${STB_SOURCES} ${DOCTEST_SOURCES} ${NATVIS_SOURCES})
+add_library(framework STATIC ${FRAMEWORK_SOURCES} ${EXTERNAL_SOURCES} ${STB_SOURCES} ${DOCTEST_SOURCES} ${DEVS_RESOURCE_FILES})
 
 # Add dependencies to other libs
 target_link_libraries(framework PUBLIC foundation bx bgfx imgui)
