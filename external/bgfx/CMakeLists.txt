@@ -16,28 +16,20 @@ file(GLOB_RECURSE BGFX_INCLUDES
     ${BGFX_DIR}/src/*.h
     ${BGFX_DIR}/src/*.inl
 )
+source_group("include" FILES ${BGFX_INCLUDES})
 
 # Get bgfx library source files
-file(GLOB_RECURSE BGFX_SOURCES
-    ${BGFX_DIR}/src/*.cpp
-)
+file(GLOB_RECURSE BGFX_SOURCES ${BGFX_DIR}/src/*.cpp)
+source_group("src" FILES ${BGFX_SOURCES})
 
 # Add *.mm files for OSX
 if (APPLE)
-    file(GLOB_RECURSE BGFX_SOURCES_OSX
-        ${BGFX_DIR}/src/*.mm
-    )
+    file(GLOB_RECURSE BGFX_SOURCES_OSX ${BGFX_DIR}/src/*.mm)
     list(APPEND BGFX_SOURCES ${BGFX_SOURCES_OSX})
 endif()
 
-# Create group for the include files
-source_group("include" FILES ${BGFX_INCLUDES})
-
-# Create group for the source files
-source_group("src" FILES ${BGFX_SOURCES})
-
 # Add the compatibility headers to the include path
-include_directories(${ROOT_DIR}/external/)
+#include_directories(${ROOT_DIR}/external/)
 
 # Add khronos headers to the include path
 include_directories(${ROOT_DIR}/external/khronos/)

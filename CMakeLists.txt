@@ -190,6 +190,9 @@ if(MSVC)
 
 elseif(XCODE)
 
+    # Choose macOS minimum deployment target to 11.5
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "11.5" CACHE STRING "Minimum OS X deployment version")
+    
     # Use fast floating point math
     add_compile_options(-ffast-math)
 
@@ -237,20 +240,18 @@ set(CMAKE_EXE_LINKER_FLAGS_DEPLOY "${CMAKE_EXE_LINKER_FLAGS_DEPLOY} ${CMAKE_EXE_
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-# Load library project under foundation/
-add_subdirectory(${ROOT_DIR}/external/foundation)
-
-# Load atsc-encoder library used by bimg mainly
-add_subdirectory(${ROOT_DIR}/external/astc-encoder)
-
 # Load BX library
 add_subdirectory(${ROOT_DIR}/external/bx)
 
 # Load BIMG
+add_subdirectory(${ROOT_DIR}/external/astc-encoder)
 add_subdirectory(${ROOT_DIR}/external/bimg)
 
 # Load BGFX library
 add_subdirectory(${ROOT_DIR}/external/bgfx)
+
+# Load library project under foundation/
+add_subdirectory(${ROOT_DIR}/external/foundation)
 
 # Load IMGUI library
 add_subdirectory(${ROOT_DIR}/external/imgui)

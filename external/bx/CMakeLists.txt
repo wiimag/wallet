@@ -56,15 +56,11 @@ include_directories(${BX_COMPAT_DIR})
 source_group("compat" FILES ${BX_COMPAT_SOURCES})
 
 # Add include files under external/ini
-file(GLOB BX_INI_SOURCES
-    ${ROOT_DIR}/external/ini/*.h
-)
-
-# Add source group
+file(GLOB BX_INI_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/ini/*.h)
 source_group("ini" FILES ${BX_INI_SOURCES})
 
 # Add the compatibility headers to the include path
-include_directories(${ROOT_DIR}/external/)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/)
 
 # Add _LIB only for static library
 add_compile_definitions(_LIB)
@@ -109,5 +105,9 @@ target_compile_definitions(bx PUBLIC
     "$<$<CONFIG:RELEASE,DEPLOY>:BX_CONFIG_DEBUG=0>"
 )
 
-# Ignore -Wno-shadow for all dependencies
-target_compile_options(bx PUBLIC -Wno-shadow)
+if (APPLE)
+
+    # Ignore -Wno-shadow for all dependencies
+    target_compile_options(bx PUBLIC -Wno-shadow)
+
+endif()
