@@ -273,7 +273,7 @@ void system_browse_to_file(const char* path, size_t path_length, bool dir = fals
  */
 const char* system_platform_name(platform_t platform);
 
-void system_add_menu_item(const char* name);
+//void system_add_menu_item(const char* name);
 
 /*! @brief Returns the path to the application data folder.
  * 

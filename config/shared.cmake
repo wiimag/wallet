@@ -30,6 +30,12 @@ endfunction()
 #   generate_version_git_header(${CMAKE_CURRENT_SOURCE_DIR})
 #
 function(generate_version_git_header root_dir)
+    
+    # Create the root artifacts directory if it doesn't exist
+    if(NOT EXISTS ${root_dir}/artifacts)
+        file(MAKE_DIRECTORY ${root_dir}/artifacts)
+    endif()
+
     # Execute batch script to generate the version.h file for each supported platform
     if(WIN32)
         execute_process(COMMAND ${root_dir}/scripts/generate_git_build_info.bat ${root_dir})

@@ -108,3 +108,6 @@ target_compile_definitions(bx PUBLIC
     "$<$<CONFIG:DEBUG>:BX_CONFIG_DEBUG=1>"
     "$<$<CONFIG:RELEASE,DEPLOY>:BX_CONFIG_DEBUG=0>"
 )
+
+# Ignore -Wno-shadow for all dependencies
+target_compile_options(bx PUBLIC -Wno-shadow)

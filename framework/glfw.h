@@ -9,7 +9,6 @@
 
 #if FOUNDATION_PLATFORM_WINDOWS
 
-    //#include <resource.h>
     #include <foundation/windows.h>
     
     #define GLFW_EXPOSE_NATIVE_WIN32

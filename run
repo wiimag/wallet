@@ -366,7 +366,7 @@ if [ $OPEN -ge 1 ]; then
     if [ $machine == "MinGw" ]; then
       start projects/.build/${SHORT_NAME}.sln
     elif [ ${machine} == "Mac" ]; then
-      open projects/.build/${SHORT_NAME}.xcworkspace
+      open projects/.build/${SHORT_NAME}.xcodeproj
     fi
 
     retval=$?

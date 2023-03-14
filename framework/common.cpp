@@ -13,7 +13,6 @@
 #include <foundation/stream.h>
 #include <foundation/path.h>
 #include <foundation/environment.h>
-#include <foundation/memory.h>
 
 #include <stack> 
 
@@ -612,7 +611,15 @@ string_const_t system_app_data_local_path()
             _app_data_local_path = string_convert_utf16(_app_data_local_path_buffer, BUILD_MAX_PATHLEN, (const uint16_t*)wpath, wstring_length(wpath));
 
         #elif FOUNDATION_PLATFORM_APPLE
-            #error Not implemented
+            
+            // Get the HOME/Applications path
+            const char* home = getenv("HOME");
+            _app_data_local_path = string_copy(STRING_BUFFER(_app_data_local_path_buffer), home, string_length(home));
+            _app_data_local_path = string_concat(STRING_BUFFER(_app_data_local_path_buffer), STRING_ARGS(_app_data_local_path), STRING_CONST("/Applications"));
+
+            // Clean the path
+            _app_data_local_path = path_clean(STRING_ARGS(_app_data_local_path), BUILD_MAX_PATHLEN);
+
         #else
             #error Not implemented
         #endif

@@ -66,6 +66,7 @@ bool open_file_dialog(const char* dialog_title,
     return true;
 }
 
+#if 0
 void system_add_menu_item(const char* name)
 {
     NSWindow* app_window = (NSWindow*)_window_handle;
@@ -113,3 +114,4 @@ void system_add_menu_item(const char* name)
     }
 
 }
+#endif
