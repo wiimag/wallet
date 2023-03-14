@@ -42,9 +42,6 @@ if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Os")
 endif()
 
-# Set the current directory as the include directory to find framework headers using #include <framework/header.h>
-include_directories("${ROOT_DIR}/sources")
-
 set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS}")
 
 if (MSVC)

@@ -74,6 +74,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Add sources include directories
+# FIXME: This is needed for now to access resources files (i.e. #include <resource.h>)
 include_directories(${ROOT_DIR}/sources)
 
 # Create the bx library
@@ -82,6 +83,7 @@ add_library(framework STATIC ${FRAMEWORK_SOURCES} ${EXTERNAL_SOURCES} ${STB_SOUR
 # Add dependencies to other libs
 target_link_libraries(framework PUBLIC foundation bx bgfx imgui)
 
+target_include_directories(framework PUBLIC ${ROOT_DIR})
 target_include_directories(framework PUBLIC ${ROOT_DIR}/external)
 
 #

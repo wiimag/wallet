@@ -59,8 +59,8 @@ file(GLOB TEST_SOURCES
 )
 source_group("tests" FILES ${TEST_SOURCES})
 
-# Set the current directory as the include directory to find framework headers using #include <framework/header.h>
-include_directories("${CMAKE_CURRENT_SOURCE_DIR}")
+# Include self directory for tests sources to access headers as if it was in the same directory
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 #
 # Linker flags

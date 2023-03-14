@@ -7,6 +7,8 @@
 
 #if FOUNDATION_PLATFORM_WINDOWS
 
+    #include <resource.h>
+
     #pragma comment( lib, "glfw3.lib" )
 
     #include <GLFW/glfw3native.h>

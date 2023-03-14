@@ -256,7 +256,7 @@ add_subdirectory(${ROOT_DIR}/external/bgfx)
 add_subdirectory(${ROOT_DIR}/external/imgui)
 
 # Load main framework library
-add_subdirectory(${ROOT_DIR}/sources/framework)
+add_subdirectory(${ROOT_DIR}/framework)
 
 # Load main exectuable project under sources/
 add_subdirectory(${ROOT_DIR}/sources)
