@@ -10,24 +10,82 @@
 APP_NAME=Wallet
 SHORT_NAME=$(basename $(git rev-parse --show-toplevel))
 
+SOLUTION_DIR=projects/.build
+
 bold=$(tput bold)
 normal=$(tput sgr0)
 progname=$(basename $0)
 unameOut="$(uname -s)"
+green='\033[0;32m'
+dark_gray='\033[1;30m'
+light_gray='\033[0;37m'
+red='\033[0;31m'
+yellow='\033[1;33m'
+blue='\033[0;34m'
+purple='\033[0;35m'
+cyan='\033[0;36m'
+white='\033[1;37m'
+nc='\033[0m' # No Color
+italic=$(tput sitm)
+underline=$(tput smul)
+reset=$(tput sgr0)
 
 # Determine running platform
 case "${unameOut}" in
     Linux*)     machine=Linux;;
     Darwin*)    machine=Mac;;
     CYGWIN*)    machine=Cygwin;;
-    MINGW*)     machine=MinGw;;
+    MINGW*)     machine=MinGw;;   # i.e. running from git bash
     *)          machine="UNKNOWN:${unameOut}"
 esac
-#echo ${machine}
+
+# Determine if we are running on a mac
+if [ $machine = "Mac" ]; then
+  PLATFORM_MAC=1
+else
+  PLATFORM_MAC=0
+fi
+
+# Determine if we are running on a linux
+if [ $machine = "Linux" ]; then
+  PLATFORM_LINUX=1
+else
+  PLATFORM_LINUX=0
+fi
+
+# Determine if we are running on a windows
+if [ $machine = "Cygwin" ] || [ $machine = "MinGw" ]; then
+  PLATFORM_WINDOWS=1
+else
+  PLATFORM_WINDOWS=0
+fi
 
 is_number() { 
   [ "$1" ] && [ -z "${1//[0-9]}" ] ;
 }
+
+function convert_path_to_platform() {
+  if [ $PLATFORM_WINDOWS -eq 1 ]; then
+    win_path=$(cygpath -w "$1")
+    # Replace all \ with / in the path
+    echo "${win_path//\\/\/}"
+  else
+    echo "$1"
+  fi
+}
+
+function convert_path_to_file_link() {
+  local_path=$(convert_path_to_platform $1)
+  if [ $machine = "MinGw" ]; then
+    echo "file:///${local_path//\\/\/}"
+  else
+    echo "$1"
+  fi
+}
+
+
+# Precompute some paths
+FULL_SOLUTION_DIR=$(convert_path_to_platform $(pwd)/$SOLUTION_DIR)
 
 #
 # Parse common command line arguments
@@ -52,6 +110,18 @@ VERBOSE=0
 DIFF=0
 
 COMMAND_COUNTER=0
+
+# Check if project/.build is present, if not, then we need to generate the project
+# Also check if the project/.build/CMakeCache.txt is present, if not, then we need to generate the project
+if [ ! -d "$SOLUTION_DIR" ] || [ ! -f "$SOLUTION_DIR/CMakeCache.txt" ]; then
+  BUILD=1
+  GENERATE=1
+
+  # If there is not arguments to ./run, then lets force start to be the default command
+  if [ $COMMAND_COUNTER -eq 0 ]; then
+    START=1
+  fi
+fi
 
 while [[ $# -gt 0 ]]; do
   #echo "\$1:\"$1\" \$2:\"$2\""
@@ -97,16 +167,6 @@ while [[ $# -gt 0 ]]; do
         shift
       fi
 
-      # Check if project/.build is present, if not, then we need to generate the project
-      if [ ! -d "project/.build" ]; then
-        GENERATE=1
-      fi
-
-      # Also check if the project/.build/CMakeCache.txt is present, if not, then we need to generate the project
-      if [ ! -f "project/.build/CMakeCache.txt" ]; then
-        GENERATE=1
-      fi
-
       ;;
     p|print)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
@@ -131,14 +191,11 @@ while [[ $# -gt 0 ]]; do
 
       # Check if we open the workspace or the cmake generated solution
       if [ $# -ne 0 ] && ([ $1 == "workspace" ] || [ $1 == "w" ]); then
+        
+        # Always generate the project if we are opening the workspace
+        GENERATE=1
         OPEN_WORKSPACE=1
         shift
-      fi
-
-      # Check if project/.build is present, if not, then we need to generate the project
-      # Also check if the project/.build/CMakeCache.txt is present, if not, then we need to generate the project
-      if [ ! -d "project/.build" ] || [ ! -f "project/.build/CMakeCache.txt" ]; then
-        GENERATE=1
       fi
 
       ;;
@@ -156,6 +213,7 @@ while [[ $# -gt 0 ]]; do
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
       START=$COMMAND_COUNTER
       RUN=1
+
       shift # past argument
       ;;
     *)
@@ -171,14 +229,16 @@ done
 if [ $HELP -ge 1 ]; then
 
   echo "  Usage: $progname [${bold}b${normal}uild [debug|release|deploy]] "
+  echo "             [${bold}g${normal}enerate] "
   echo "             [${bold}t${normal}ests] " 
-  echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace|cmake]] "
+  echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
   echo "             [${bold}p${normal}rint [largefiles] "
   echo "             [${bold}d${normal}iff [main|release/1.0.0|...] "
   echo "             [${bold}s${normal}tart] [--option=<value>] ...additional arguments passed to last command"
   echo ""
   echo "  Commands:"
   echo "    ${bold}b${normal}uild [debug|release]  Build the solution in debug or release (release if used by default)"
+  echo "    ${bold}g${normal}enerate               Generate the solution (i.e. using CMake)"
   echo "    ${bold}t${normal}ests                  Run application tests (i.e. using --run-tests)"
   echo "    ${bold}o${normal}pen [workspace]       Open the application solution workspace (i.e. Visual Studio or Xcode IDE)"
   echo "    ${bold}p${normal}rint [largefiles|...] Print various solution information or stats"
@@ -237,10 +297,13 @@ fi
 #
 if [ $GENERATE -ge 1 ]; then
 
+  echo 
+  echo -e "${green}Generating solution...${normal}"
+  echo
+
   # Create the build directory if it doesn't exist and ignore any errors
-  mkdir -p projects/.build 2>/dev/null
-  
-  cd projects/.build
+  mkdir -p $SOLUTION_DIR 2>/dev/null
+  cd $SOLUTION_DIR
 
   CMAKE_ARGS=()
   if [ $GENERATE -eq $COMMAND_COUNTER ]; then
@@ -263,7 +326,7 @@ if [ $GENERATE -ge 1 ]; then
   retval=$?
   if [ $retval -ne 0 ]; then
     echo
-    echo "===GENERATE FAILED ($retval)==="
+    echo -e "${red}===GENERATE FAILED ($retval)===${normal}"
     echo
     exit $retval
   fi
@@ -272,6 +335,10 @@ if [ $GENERATE -ge 1 ]; then
   # We will use this to determine if we need to build the solution or not.
   GENERATED=1
   cd ../../
+
+  # Print the path of the generated solution
+  echo
+  echo -e "${dark_gray}Solution generated at: ${normal}$(convert_path_to_file_link $FULL_SOLUTION_DIR)"
 
   # Skip running the applicatin by default since we just generated the solution
   RUN=0
@@ -282,7 +349,12 @@ fi
 #
 if [ $BUILD -ge 1 ]; then
 
-  cd projects/.build
+  # Print building message in green
+  echo 
+  echo -e "${green}Building solution...${normal}"
+  echo
+
+  cd $SOLUTION_DIR
 
   CMAKE_ARGS=()
 
@@ -311,21 +383,15 @@ if [ $BUILD -ge 1 ]; then
   retval=$?
   if [ $retval -ne 0 ]; then
     echo
-    echo "===BUILD FAILED ($retval)==="
+    echo -e "${red}===BUILD FAILED ($retval)===${normal}"
     echo
     exit $retval
   fi
 
-  if [ $machine == "MinGw" ]; then
-    # Print absolute path of the log file using the Windows C:\\ format
-    LOG_WIN_PATH=$(cygpath -w $(pwd))\\cmake-build.log
-
-    # Replace all \ with / in the path
-    LOG_WIN_PATH=${LOG_WIN_PATH//\\/\/}
-
-    echo "Build log: file://$LOG_WIN_PATH"
-  fi
-
+  BUILD_LOG_PATH=$(convert_path_to_platform $FULL_SOLUTION_DIR/cmake-build.log)
+  echo
+  echo -e "${dark_gray}Build log: ${normal}$(convert_path_to_file_link $BUILD_LOG_PATH)"
+  
   cd ../../
   RUN=0
 fi
@@ -348,7 +414,7 @@ if [ $DIFF -ge 1 ]; then
   retval=$?
   if [ $retval -ne 0 ]; then
     echo
-    echo "===DIFF FAILED ($retval)==="
+    echo -e "${red}===DIFF FAILED ($retval)===${normal}"
     echo
     exit $retval
   fi
@@ -361,18 +427,22 @@ fi
 #
 if [ $OPEN -ge 1 ]; then
 
+  echo 
+  echo -e "${green}Opening IDE...${normal}"
+  echo
+
   if [ $OPEN_WORKSPACE -eq 1 ]; then
 
     if [ $machine == "MinGw" ]; then
-      start projects/.build/${SHORT_NAME}.sln
+      start $SOLUTION_DIR/${SHORT_NAME}.sln
     elif [ ${machine} == "Mac" ]; then
-      open projects/.build/${SHORT_NAME}.xcodeproj
+      open $SOLUTION_DIR/${SHORT_NAME}.xcodeproj
     fi
 
     retval=$?
     if [ $retval -ne 0 ]; then
       echo
-      echo "===OPEN WORKSPACE FAILED ($retval)==="
+      echo -e "${red}===OPEN WORKSPACE FAILED ($retval)===${normal}"
       echo
       exit $retval
     fi
@@ -400,7 +470,7 @@ if [ $PRINT -ge 1 ]; then
     retval=$?
     if [ $retval -ne 0 ]; then
       echo
-      echo "=== PRINT FAILED ($retval)==="
+      echo -e "${red}===PRINT LARGEFILES FAILED ($retval)===${normal}"
       echo
       exit $retval
     fi
@@ -413,6 +483,10 @@ fi
 # Run tests
 #
 if [ $TESTS -ge 1 ]; then
+
+  echo 
+  echo -e "${green}Running tests...${normal}"
+  echo
 
   ADDITIONAL_ARGS=()
   if [ $TESTS -eq $COMMAND_COUNTER ]; then
@@ -428,16 +502,17 @@ if [ $TESTS -ge 1 ]; then
   retval=$?
   if [ $retval -ne 0 ]; then
     echo
-    echo "===TESTS FAILED ($retval)==="
+    echo -e "${red}===TESTS FAILED ($retval)===${normal}"
     echo
     cat artifacts/tests.log
     exit $retval
   fi
 
+  # Print building message in green
+  echo 
+  echo -e "${green}===TESTS SUCCESSED===${normal}"
   echo
-  echo "===TESTS SUCCESSED==="
-  echo
-
+  
   # Print test results
   cat artifacts/tests.log
 
@@ -452,6 +527,10 @@ fi
 # Finally run the application if requested.
 if [ $RUN -eq 1 ]; then
 
+  echo 
+  echo -e "${green}${italic}Running ${APP_NAME}...${normal}"
+  echo
+
   if [ ${machine} == "MinGw" ]; then
     ./build/${SHORT_NAME}.exe ${POSITIONAL_ARGS[@]}
   elif [ ${machine} == "Mac" ]; then
@@ -461,10 +540,11 @@ if [ $RUN -eq 1 ]; then
   retval=$?
   if [ $retval -ne 0 ]; then
     echo
-    echo "===RUN FAILED ($retval)==="
+    echo "${red}===RUN FAILED ($retval)===${normal}"
     echo
     exit $retval
   fi
 fi
 
+echo
 exit $?

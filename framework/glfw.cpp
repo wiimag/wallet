@@ -417,6 +417,21 @@ GLFWwindow* glfw_main_window(const char* window_title /*= nullptr*/)
     if (_window_handle == 0)
         _window_handle = glfw_platform_window_handle(window);
 
+    #if BUILD_DEPLOY
+    // As soon as the request to close the window is initiate we hide it in order to 
+    // give the impression that the application is already close, but in fact, the shutdown sequence
+    // is still running.
+    // FIXME: This is a hack, we should speed up the shutdown sequence in most cases
+    glfwSetWindowCloseCallback(window, [](GLFWwindow* window)
+    {
+        if (glfwWindowShouldClose(window))
+        {
+            log_infof(0, STRING_CONST("Closing application..."));
+            glfwHideWindow(window);
+        }
+    });
+    #endif
+
     return window;
 }
 
@@ -445,3 +460,13 @@ void glfw_show_normal_cursor(GLFWwindow* window)
     #endif
 }
 
+void glfw_request_close_window(GLFWwindow* window)
+{
+    FOUNDATION_ASSERT(window);
+
+    glfwSetWindowShouldClose(window, GLFW_TRUE);
+    #if BUILD_DEPLOY
+    if (glfwGetError(nullptr) == GLFW_NO_ERROR)
+        glfwHideWindow(window);
+    #endif
+}

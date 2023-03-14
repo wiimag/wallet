@@ -1124,9 +1124,7 @@ void window_close(window_handle_t window_handle)
     FOUNDATION_ASSERT(window);
     
     if (window->glfw_window)
-    {
-        glfwSetWindowShouldClose(window->glfw_window, GLFW_TRUE);
-    }
+        glfw_request_close_window(window->glfw_window);
 }
 
 bool window_focus(window_handle_t window_handle)

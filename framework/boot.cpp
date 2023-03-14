@@ -71,7 +71,7 @@ FOUNDATION_STATIC int main_process_command_line(foundation_config_t& config, app
     {
         string_const_t version_string = string_from_version_static(application.version);
         fprintf(stdout, "%.*s\n", STRING_FORMAT(version_string));
-        
+        process_exit(0);        
         return 0;
     }
 
@@ -434,6 +434,8 @@ extern int main_run(void* context)
 /*! Main application shutdown entry point. */
 extern void main_finalize()
 {    
+    WAIT_CURSOR;
+
     GLFWwindow* main_window = glfw_main_window();
     if (main_window && main_is_interactive_mode())
         glfw_save_window_geometry(main_window);

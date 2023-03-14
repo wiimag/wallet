@@ -186,3 +186,12 @@ struct GLFWWaitCursorScope
  */
 #define WAIT_CURSOR GLFWWaitCursorScope FOUNDATION_PREPROCESSOR_JOIN(_wait_cursor_scope_, __COUNTER__)
 #define GLFW_WAIT_CURSOR(window) GLFWWaitCursorScope FOUNDATION_PREPROCESSOR_JOIN(_wait_cursor_scope_, __COUNTER__)(window);
+
+/*! @brief Request the window to close.
+ * 
+ *  We hide the window until it gets closed.
+ *  The window will be closed at the end of the current frame.
+ * 
+ *  @param window The window to request to close.
+ */
+void glfw_request_close_window(GLFWwindow* window);

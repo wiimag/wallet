@@ -47,7 +47,7 @@ FOUNDATION_STATIC void app_main_menu_begin(GLFWwindow* window)
 
         ImGui::Separator();
         if (ImGui::MenuItem(ICON_MD_EXIT_TO_APP " Exit", "Alt+F4"))
-            glfwSetWindowShouldClose(window, 1);
+            glfw_request_close_window(window);
             
         ImGui::EndMenu();
     }

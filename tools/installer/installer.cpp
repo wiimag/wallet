@@ -282,7 +282,7 @@ FOUNDATION_STATIC void installer_render()
 
     // Draw a button to start the installation
     if (ImGui::Button("Exit", ImVec2(200, 50)))
-        glfwSetWindowShouldClose(glfw_main_window(), 1);
+        glfw_request_close_window(glfw_main_window());
 
     ImGui::BeginDisabled(!agree || array_size(_installer->manifest_versions) == 0);
     // Draw a button to exit the installer
