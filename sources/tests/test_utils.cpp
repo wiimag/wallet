@@ -9,6 +9,7 @@
 
 #include "test_utils.h"
 
+#include <framework/glfw.h>
 #include <framework/imgui.h>
 #include <framework/service.h>
 #include <framework/dispatcher.h>
@@ -18,106 +19,7 @@
 
 #include <doctest/doctest.h>
 
-struct ImGuiTestItem
-{
-    ImGuiID id;
-    ImRect bb;
-    string_t label;
-    ImGuiItemStatusFlags flags;
-};
-
-ImGuiTestItem* _test_items = nullptr;
-
-/// <summary>
-/// Called by IMGUI to register an item that was drawn.
-/// </summary>
-/// <param name="ctx">IMGUI context</param>
-/// <param name="bb">Bounding box of the item being drawn</param>
-/// <param name="id">Unique ID of the item being drawn</param>
-extern void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id)
-{
-    ImGuiTestItem ti;
-    ti.id = id;
-    ti.bb = bb;
-    ti.label = {};
-    ti.flags = 0;
-    array_push_memcpy(_test_items, &ti);
-}
-
-/// <summary>
-/// Invoked by IMGUI to register additional information about an item being rendered.
-/// </summary>
-/// <param name="ctx">IMGUI context</param>
-/// <param name="id">Unique item ID</param>
-/// <param name="label">Diaply label of the item</param>
-/// <param name="flags">Item status flags</param>
-extern void ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id,
-                                         const char* label, ImGuiItemStatusFlags flags)
-{
-    foreach(ti, _test_items)
-    {
-        if (ti->id == id)
-        {
-            string_deallocate(ti->label.str);
-            ti->label = string_clone(label, string_length(label));
-            ti->flags = flags;
-            return;
-        }
-    }
-
-    FOUNDATION_ASSERT_FAIL("Cannot find item");
-}
-
-/// <summary>
-/// Called IMGUI to log additional information about an item. Mostly used for debugging.
-/// </summary>
-/// <remark>Not currently used</remark>
-/// <param name="ctx">IMGUI context</param>
-/// <param name="fmt">Printf format string</param>
-/// <param name="...">Printf arguments</param>
-extern void ImGuiTestEngineHook_Log(ImGuiContext* ctx, const char* fmt, ...)
-{
-    va_list list;
-    va_start(list, fmt);  
-    string_t msg = string_allocate_vformat(fmt, string_length(fmt), list);
-    log_info(HASH_TEST, STRING_ARGS(msg));
-    string_deallocate(msg.str);
-    va_end(list);
-}
-
-extern const char* ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiID id)
-{
-    foreach(ti, _test_items)
-    {
-        if (ti->id == id)
-            return ti->label.str;
-    }
-    return nullptr;
-}
-
-FOUNDATION_FORCEINLINE ImGuiID ImGuiTestEngine_GetID(ImGuiContext* ctx, const char* label)
-{
-    FOUNDATION_ASSERT(ctx && ctx->Initialized);
-
-    ImGuiWindow* window = ctx->CurrentWindow ? ctx->CurrentWindow : ctx->Windows[0];
-    FOUNDATION_ASSERT(window);
-
-    return window->GetID(label);
-}
-
-FOUNDATION_FORCEINLINE ImGuiTestItem* ImGuiTestEngine_FindItemByLabel(ImGuiContext* ctx, const char* label)
-{
-    FOUNDATION_ASSERT(ctx && ctx->Initialized);
-
-    const size_t label_length = string_length(label);
-    foreach(ti, _test_items)
-    {
-        if (string_equal(STRING_ARGS(ti->label), label, label_length))
-            return ti;
-    }
-
-    return nullptr;
-}
+extern ImGuiTestItem* _test_items;
 
 void CLICK_UI(const char* label)
 {
@@ -185,6 +87,8 @@ void TEST_RENDER_FRAME(const function<void()>& render_callback, const function<v
         const function<void()>* p_render_callback = &render_callback;
         const function<void()>* p_test_event_callback = test_event_callback.valid() ? &test_event_callback : nullptr;
 
+        glfwShowWindow(test_window);
+
         main_update(test_window, nullptr);
 
         main_render(test_window, [p_render_callback, p_test_event_callback](GLFWwindow* window, int frame_width, int frame_height)
@@ -204,6 +108,8 @@ void TEST_RENDER_FRAME(const function<void()>& render_callback, const function<v
             ctx->TestEngineHookItems = false;
             ImGui::PopClipRect();
         }, nullptr, nullptr);
+
+        glfwHideWindow(test_window);
     }
     else
     {
@@ -224,26 +130,5 @@ FOUNDATION_STATIC void test_utils_shutdown()
 }
 
 DEFINE_SERVICE(TEST, test_utils_initialize, test_utils_shutdown, SERVICE_PRIORITY_TESTS-1);
-
-#else
-
-#include <framework/imgui.h>
-
-extern void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id)
-{
-}
-
-extern void ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id, const char* label, ImGuiItemStatusFlags flags)
-{
-}
-
-extern void ImGuiTestEngineHook_Log(ImGuiContext* ctx, const char* fmt, ...)
-{
-}
-
-extern const char* ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiID id)
-{
-    return nullptr;
-}
 
 #endif

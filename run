@@ -8,7 +8,7 @@
 #
 
 APP_NAME=Wallet
-SHORT_NAME=wallet
+SHORT_NAME=$(basename $(git rev-parse --show-toplevel))
 
 bold=$(tput bold)
 normal=$(tput sgr0)
@@ -42,12 +42,16 @@ BUILD_DEPLOY=0
 TESTS=0
 OPEN=0
 OPEN_WORKSPACE=0
+GENERATE=0
+GENERATED=0
 START=0
 PRINT=0
 PRINT_LARGEFILES=0
 HELP=0
 VERBOSE=0
 DIFF=0
+
+COMMAND_COUNTER=0
 
 while [[ $# -gt 0 ]]; do
   #echo "\$1:\"$1\" \$2:\"$2\""
@@ -72,7 +76,9 @@ while [[ $# -gt 0 ]]; do
       shift # past value
       ;;
     b|build)
-      BUILD=1
+      # Update the command counter
+      COMMAND_COUNTER=$((COMMAND_COUNTER+1))
+      BUILD=$COMMAND_COUNTER
       shift # past argument
 
       # The release argument is the default, but remove it if it was specified
@@ -90,9 +96,21 @@ while [[ $# -gt 0 ]]; do
         BUILD_DEPLOY=1
         shift
       fi
+
+      # Check if project/.build is present, if not, then we need to generate the project
+      if [ ! -d "project/.build" ]; then
+        GENERATE=1
+      fi
+
+      # Also check if the project/.build/CMakeCache.txt is present, if not, then we need to generate the project
+      if [ ! -f "project/.build/CMakeCache.txt" ]; then
+        GENERATE=1
+      fi
+
       ;;
     p|print)
-      PRINT=1
+      COMMAND_COUNTER=$((COMMAND_COUNTER+1))
+      PRINT=$COMMAND_COUNTER
       shift # past argument
 
       # The release argument is the default, but remove it if it was specified
@@ -101,27 +119,43 @@ while [[ $# -gt 0 ]]; do
         shift
       fi
       ;;
+    g|generate)
+      COMMAND_COUNTER=$((COMMAND_COUNTER+1))
+      GENERATE=$COMMAND_COUNTER
+      shift # past argument
+      ;;  
     o|open)
-      OPEN=1
+      COMMAND_COUNTER=$((COMMAND_COUNTER+1))
+      OPEN=$COMMAND_COUNTER
       shift # past argument
 
-      # The release argument is the default, but remove it if it was specified
+      # Check if we open the workspace or the cmake generated solution
       if [ $# -ne 0 ] && ([ $1 == "workspace" ] || [ $1 == "w" ]); then
         OPEN_WORKSPACE=1
         shift
       fi
+
+      # Check if project/.build is present, if not, then we need to generate the project
+      # Also check if the project/.build/CMakeCache.txt is present, if not, then we need to generate the project
+      if [ ! -d "project/.build" ] || [ ! -f "project/.build/CMakeCache.txt" ]; then
+        GENERATE=1
+      fi
+
       ;;
     t|tests)
-      TESTS=1
+      COMMAND_COUNTER=$((COMMAND_COUNTER+1))
+      TESTS=$COMMAND_COUNTER
       shift # past argument
       ;;
     d|diff)
-      DIFF=1
+      COMMAND_COUNTER=$((COMMAND_COUNTER+1))
+      DIFF=$COMMAND_COUNTER
       shift # past argument
       ;;
     s|start)
+      COMMAND_COUNTER=$((COMMAND_COUNTER+1))
+      START=$COMMAND_COUNTER
       RUN=1
-      START=1
       shift # past argument
       ;;
     *)
@@ -134,11 +168,11 @@ done
 #
 # Check if help was requested
 #
-if [ $HELP -eq 1 ]; then
+if [ $HELP -ge 1 ]; then
 
   echo "  Usage: $progname [${bold}b${normal}uild [debug|release|deploy]] "
   echo "             [${bold}t${normal}ests] " 
-  echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
+  echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace|cmake]] "
   echo "             [${bold}p${normal}rint [largefiles] "
   echo "             [${bold}d${normal}iff [main|release/1.0.0|...] "
   echo "             [${bold}s${normal}tart] [--option=<value>] ...additional arguments passed to last command"
@@ -168,12 +202,13 @@ if [ $HELP -eq 1 ]; then
   echo "    ./run print largefiles 50           Print top 50 largest files in the repo."
   echo "    ./run diff                          Diff the current branch with the main branch (default)"
   echo "    ./run diff release/1.0              Diff the current branch with the remote release 1.0 branch"
+  echo "    ./run generate open cmake           Generate and open the generated cmake solution"
   echo ""
   exit 0
 
 fi
 
-if [ $VERBOSE -eq 1 ]; then
+if [ $VERBOSE -ge 1 ]; then
 
   # Print all set variables
   echo "APP_NAME: $APP_NAME"
@@ -184,6 +219,7 @@ if [ $VERBOSE -eq 1 ]; then
   echo "  BUILD_DEPLOY: $BUILD_DEPLOY"
   echo "OPEN: $OPEN"
   echo "  OPEN_WORKSPACE: $OPEN_WORKSPACE"
+  echo "GENERATE: $GENERATE"
   echo "PRINT: $PRINT"
   echo "  PRINT_LARGEFILES: $PRINT_LARGEFILES"
   echo "TESTS: $TESTS"
@@ -197,167 +233,238 @@ if [ $VERBOSE -eq 1 ]; then
 fi
 
 #
-# Build solution
+# Generate the CMAKE solution
 #
-if [ $BUILD -eq 1 ]; then
+if [ $GENERATE -ge 1 ]; then
+
+  # Create the build directory if it doesn't exist and ignore any errors
+  mkdir -p projects/.build 2>/dev/null
+  
+  cd projects/.build
+
+  CMAKE_ARGS=()
+  if [ $GENERATE -eq $COMMAND_COUNTER ]; then
+    CMAKE_ARGS=(${POSITIONAL_ARGS[@]})
+  fi
+
+  # If verbose is enabled add -DBUILD_INFO=ON to the cmake command
+  if [ $VERBOSE -ge 1 ]; then
+    CMAKE_ARGS+=("-DBUILD_INFO=ON")
+  else
+    CMAKE_ARGS+=("-DBUILD_INFO=OFF")
+  fi
 
   if [ $machine == "MinGw" ]; then
-    if [ $BUILD_DEBUG -eq 1 ]; then
-      ./scripts/build_win_debug.bat $POSITIONAL_ARGS
-    elif  [ $BUILD_DEPLOY -eq 1 ]; then
-      ./scripts/build_win_deploy.bat $POSITIONAL_ARGS
-    else
-      ./scripts/build_win_release.bat $POSITIONAL_ARGS
-    fi
+    cmake -G "Visual Studio 17 2022" -A x64 ../.. ${CMAKE_ARGS[@]}
   elif [ ${machine} == "Mac" ]; then
-    if [ $BUILD_DEBUG -eq 1 ]; then
-      ./scripts/build_osx_debug.sh $POSITIONAL_ARGS
-    else
-      ./scripts/build_osx_release.sh $POSITIONAL_ARGS
-    fi
+    cmake -G "Xcode" ../.. ${CMAKE_ARGS[@]}
   fi
 
   retval=$?
   if [ $retval -ne 0 ]; then
-      echo
-      echo "===BUILD FAILED ($retval)==="
-      echo
-      exit $retval
+    echo
+    echo "===GENERATE FAILED ($retval)==="
+    echo
+    exit $retval
   fi
 
+  # Keep track of it the solution was generated or not.
+  # We will use this to determine if we need to build the solution or not.
+  GENERATED=1
+  cd ../../
+
+  # Skip running the applicatin by default since we just generated the solution
+  RUN=0
+fi
+
+#
+# Build solution
+#
+if [ $BUILD -ge 1 ]; then
+
+  cd projects/.build
+
+  CMAKE_ARGS=()
+
+  if [ $machine == "MinGw" ]; then
+    # Append /verbosity and /filelogger to output build results to ../../artifacts/cmake-build.log
+    if [ $VERBOSE -eq 1 ]; then
+      CMAKE_ARGS+=("/verbosity:detailed")
+    fi
+    CMAKE_ARGS+=("-fileLogger")
+    CMAKE_ARGS+=("-fileLoggerParameters:logfile=cmake-build.log;verbosity=Normal")
+  fi
+
+  ADDITIONAL_ARGS=()
+  if [ $BUILD -eq $COMMAND_COUNTER ]; then
+    ADDITIONAL_ARGS=(${POSITIONAL_ARGS[@]})
+  fi
+
+  if [ $BUILD_DEBUG -eq 1 ]; then
+    cmake --build . --parallel 7 --config Debug ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
+  elif  [ $BUILD_DEPLOY -eq 1 ]; then
+    cmake --build . --parallel 7 --config Deploy ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
+  else
+    cmake --build . --parallel 7 --config Release ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
+  fi
+
+  retval=$?
+  if [ $retval -ne 0 ]; then
+    echo
+    echo "===BUILD FAILED ($retval)==="
+    echo
+    exit $retval
+  fi
+
+  if [ $machine == "MinGw" ]; then
+    # Print absolute path of the log file using the Windows C:\\ format
+    LOG_WIN_PATH=$(cygpath -w $(pwd))\\cmake-build.log
+
+    # Replace all \ with / in the path
+    LOG_WIN_PATH=${LOG_WIN_PATH//\\/\/}
+
+    echo "Build log: file://$LOG_WIN_PATH"
+  fi
+
+  cd ../../
   RUN=0
 fi
 
 #
 # GIT DIFF
 #
-if [ $DIFF -eq 1 ]; then
+if [ $DIFF -ge 1 ]; then
 
-    # Check if we have a remote branch to diff against and make sure the argument doesn't start with -- or -
-    if [ ${#POSITIONAL_ARGS[@]} -eq 0 ] || [[ ${POSITIONAL_ARGS[0]} == --* ]] || [[ ${POSITIONAL_ARGS[0]} == -* ]]; then
-        # Insert main at position 0 and push other arguments
-        POSITIONAL_ARGS=("${POSITIONAL_ARGS[@]:0:0}" "main" "${POSITIONAL_ARGS[@]:0}")
-    fi
-    
-    # Diff the current branch with the specified remote branch
-    git difftool -d "origin/${POSITIONAL_ARGS[0]}" ${POSITIONAL_ARGS[@]:1}
+  # Check if we have a remote branch to diff against and make sure the argument doesn't start with -- or -
+  if [ ${#POSITIONAL_ARGS[@]} -eq 0 ] || [[ ${POSITIONAL_ARGS[0]} == --* ]] || [[ ${POSITIONAL_ARGS[0]} == -* ]]; then
+    # Insert main at position 0 and push other arguments
+    POSITIONAL_ARGS=("${POSITIONAL_ARGS[@]:0:0}" "main" "${POSITIONAL_ARGS[@]:0}")
+  fi
+  
+  # Diff the current branch with the specified remote branch
+  git difftool -d "origin/${POSITIONAL_ARGS[0]}" ${POSITIONAL_ARGS[@]:1}
 
-    # Check return value
-    retval=$?
-    if [ $retval -ne 0 ]; then
-        echo
-        echo "===DIFF FAILED ($retval)==="
-        echo
-        exit $retval
-    fi
+  # Check return value
+  retval=$?
+  if [ $retval -ne 0 ]; then
+    echo
+    echo "===DIFF FAILED ($retval)==="
+    echo
+    exit $retval
+  fi
 
-    RUN=0
+  RUN=0
 fi
 
 #
 # Open IDE
 #
-if [ $OPEN -eq 1 ]; then
+if [ $OPEN -ge 1 ]; then
 
-    if [ $OPEN_WORKSPACE -eq 1 ]; then
+  if [ $OPEN_WORKSPACE -eq 1 ]; then
 
-        if [ $machine == "MinGw" ]; then
-            start projects/vs2022/${SHORT_NAME}.sln
-        elif [ ${machine} == "Mac" ]; then
-            open projects/xcode/${SHORT_NAME}.xcworkspace
-        fi
-
-        retval=$?
-        if [ $retval -ne 0 ]; then
-            echo
-            echo "===OPEN WORKSPACE FAILED ($retval)==="
-            echo
-            exit $retval
-        fi
-
-        RUN=0
+    if [ $machine == "MinGw" ]; then
+      start projects/.build/${SHORT_NAME}.sln
+    elif [ ${machine} == "Mac" ]; then
+      open projects/.build/${SHORT_NAME}.xcodeproj
     fi
+
+    retval=$?
+    if [ $retval -ne 0 ]; then
+      echo
+      echo "===OPEN WORKSPACE FAILED ($retval)==="
+      echo
+      exit $retval
+    fi
+
+    RUN=0
+  fi
 fi
 
 #
 # Print various solution information
 #
-if [ $PRINT -eq 1 ]; then
+if [ $PRINT -ge 1 ]; then
 
-    if [ $PRINT_LARGEFILES -eq 1 ]; then
+  if [ $PRINT_LARGEFILES -eq 1 ]; then
 
-        TOP_COUNT=20
-        if is_number ${POSITIONAL_ARGS[0]}; then
-          TOP_COUNT=${POSITIONAL_ARGS[0]}
-        fi
-
-        while read -r largefile; do
-          echo $largefile | awk '{printf "%s %s ", $1, $3 ; system("git rev-list --all --objects | grep " $1 " | cut -d \" \" -f 2-")}'
-        done <<< "$(git rev-list --all --objects | awk '{print $1}' | git cat-file --batch-check | sort -k3nr | head -n $TOP_COUNT)"
-
-        retval=$?
-        if [ $retval -ne 0 ]; then
-            echo
-            echo "=== PRINT FAILED ($retval)==="
-            echo
-            exit $retval
-        fi
-
-        RUN=0
+    TOP_COUNT=20
+    if is_number ${POSITIONAL_ARGS[0]}; then
+      TOP_COUNT=${POSITIONAL_ARGS[0]}
     fi
+
+    while read -r largefile; do
+      echo $largefile | awk '{printf "%s %s ", $1, $3 ; system("git rev-list --all --objects | grep " $1 " | cut -d \" \" -f 2-")}'
+    done <<< "$(git rev-list --all --objects | awk '{print $1}' | git cat-file --batch-check | sort -k3nr | head -n $TOP_COUNT)"
+
+    retval=$?
+    if [ $retval -ne 0 ]; then
+      echo
+      echo "=== PRINT FAILED ($retval)==="
+      echo
+      exit $retval
+    fi
+
+    RUN=0
+  fi
 fi
 
 #
 # Run tests
 #
-if [ $TESTS -eq 1 ]; then
+if [ $TESTS -ge 1 ]; then
 
-    if [ ${machine} == "MinGw" ]; then
-        ./build/${SHORT_NAME}.exe --run-tests $POSITIONAL_ARGS
-    elif [ ${machine} == "Mac" ]; then
-        ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} --run-tests $POSITIONAL_ARGS
-    fi
+  ADDITIONAL_ARGS=()
+  if [ $TESTS -eq $COMMAND_COUNTER ]; then
+    ADDITIONAL_ARGS=(${POSITIONAL_ARGS[@]})
+  fi
 
-    retval=$?
-    if [ $retval -ne 0 ]; then
-        echo
-        echo "===TESTS FAILED ($retval)==="
-        echo
-        cat artifacts/tests.log
-        exit $retval
-    fi
+  if [ ${machine} == "MinGw" ]; then
+    ./build/${SHORT_NAME}.exe --run-tests ${ADDITIONAL_ARGS[@]}
+  elif [ ${machine} == "Mac" ]; then
+    ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} --run-tests ${ADDITIONAL_ARGS[@]}
+  fi
 
+  retval=$?
+  if [ $retval -ne 0 ]; then
     echo
-    echo "===TESTS SUCCESSED==="
+    echo "===TESTS FAILED ($retval)==="
     echo
-
-    # Print test results
     cat artifacts/tests.log
+    exit $retval
+  fi
 
-    RUN=0
+  echo
+  echo "===TESTS SUCCESSED==="
+  echo
+
+  # Print test results
+  cat artifacts/tests.log
+
+  RUN=0
 fi
 
 # Check if we have an explicit command to run/start the application
-if [ $START -eq 1 ]; then
-    RUN=1
+if [ $START -ge 1 ]; then
+  RUN=1
 fi
 
 # Finally run the application if requested.
 if [ $RUN -eq 1 ]; then
 
-    if [ ${machine} == "MinGw" ]; then
-        ./build/${SHORT_NAME}.exe ${POSITIONAL_ARGS[@]}
-    elif [ ${machine} == "Mac" ]; then
-        ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} ${POSITIONAL_ARGS[@]}
-    fi
+  if [ ${machine} == "MinGw" ]; then
+    ./build/${SHORT_NAME}.exe ${POSITIONAL_ARGS[@]}
+  elif [ ${machine} == "Mac" ]; then
+    ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} ${POSITIONAL_ARGS[@]}
+  fi
 
-    retval=$?
-    if [ $retval -ne 0 ]; then
-        echo
-        echo "===RUN FAILED ($retval)==="
-        echo
-        exit $retval
-    fi
+  retval=$?
+  if [ $retval -ne 0 ]; then
+    echo
+    echo "===RUN FAILED ($retval)==="
+    echo
+    exit $retval
+  fi
 fi
 
 exit $?

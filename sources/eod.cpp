@@ -48,6 +48,8 @@ static const ImColor gray = ImColor::HSV(155 / 360.0f, 0.05f, 0.85f); // hsv(155
 
 FOUNDATION_STATIC const char* eod_ensure_key_loaded()
 {
+    FOUNDATION_ASSERT_MSG(EOD, "EOD module not initialized, maybe there is a module that has a higher priority than EOD?");
+
     if (EOD->KEY[0] != '\0')
         return EOD->KEY;
 
@@ -448,4 +450,4 @@ FOUNDATION_STATIC void eod_shutdown()
     MEM_DELETE(EOD);
 }
 
-DEFINE_SERVICE(EOD, eod_initialize, eod_shutdown, SERVICE_PRIORITY_HIGH);
+DEFINE_SERVICE(EOD, eod_initialize, eod_shutdown, SERVICE_PRIORITY_BASE);

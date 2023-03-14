@@ -5,9 +5,9 @@
 
 #include "news.h"
 
-#include "app.h"
 #include "eod.h"
 
+#include <framework/app.h>
 #include <framework/imgui.h>
 #include <framework/string.h>
 #include <framework/common.h>

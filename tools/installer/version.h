@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Wiimag Inc. All rights reserved.
+ * Copyright 2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
@@ -31,15 +31,15 @@
 #endif
 #pragma warning(default: 4067)
 
-#define VERSION_MAJOR                   0
-#define VERSION_MINOR                   9
-#define VERSION_PATCH                   20
+#define VERSION_MAJOR                   1
+#define VERSION_MINOR                   0
+#define VERSION_PATCH                   0
 #define VERSION_BUILD               GIT_REVCOUNT
 
 #define PRODUCT_VERSION STRINGIZE(VERSION_MAJOR.VERSION_MINOR.VERSION_PATCH)
-#define PRODUCT_NAME "Wallet"
+#define PRODUCT_NAME "Wallet Setup Installer"
 #define PRODUCT_COMPANY "Wiimag Inc."
-#define PRODUCT_DESCRIPTION "Wallet - Finance 300K"
-#define PRODUCT_CODE_NAME "Wallet"
-#define PRODUCT_COPYRIGHT "Copyright (C) 2022-2023 - equals-forty-two.com - All rights reserved"
-#define PRODUCT_WINDOWS_FILENAME "wallet.exe"
+#define PRODUCT_DESCRIPTION "Install the Wallet Application and keep it up-to-date."
+#define PRODUCT_CODE_NAME "wallet_setup"
+#define PRODUCT_COPYRIGHT "Copyright (C) 2023 - equals-forty-two.com - All rights reserved"
+#define PRODUCT_WINDOWS_FILENAME "wallet_setup.exe"

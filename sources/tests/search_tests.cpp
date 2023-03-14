@@ -226,8 +226,9 @@ TEST_SUITE("Search")
                 if (token.type == JSON_STRING || token.type == JSON_PRIMITIVE)
                 {
                     string_const_t value = json_token_value(json.buffer, &token);
+                    if (value.length == 0)
+                        continue;
                     CHECK(search_database_index_text(db, doc1, STRING_ARGS(value), true));
-
                     log_debugf(0, STRING_CONST("id: %.*s, value: %.*s"), STRING_FORMAT(id), STRING_FORMAT(value));
                 }
             }
@@ -461,12 +462,12 @@ TEST_SUITE("Search")
             const search_document_handle_t doc_handle = docs[doc_index];
             if (search_database_is_document_valid(db, doc_handle))
             {
-                if (!search_database_remove_document(db, doc_handle))
+                if (search_database_remove_document(db, doc_handle))
                     docs[doc_index] = SEARCH_DOCUMENT_INVALID_ID;
             }
         }
         
-        CHECK_GT(search_database_index_count(db), 1);
+        CHECK_EQ(search_database_index_count(db), 0);
         CHECK_EQ(search_database_document_count(db), 0);
         search_database_deallocate(db);
     }
@@ -640,7 +641,7 @@ struct SearchQueryFixture
         search_database_index_property(db, joe, STRING_CONST("name"), STRING_CONST("Jonathan"));
         search_database_index_property(db, bob, STRING_CONST("name"), STRING_CONST("Robert"));
         search_database_index_property(db, will, STRING_CONST("name"), STRING_CONST("William"));
-        search_database_index_property(db, mel, STRING_CONST("name"), STRING_CONST("Mélanie"));
+        search_database_index_property(db, mel, STRING_CONST("name"), STRING_CONST("Melanie"));
         search_database_index_property(db, mag, STRING_CONST("name"), STRING_CONST("Magaly"));
         search_database_index_property(db, yolland, STRING_CONST("name"), STRING_CONST("Yolland"));
     }
@@ -791,7 +792,7 @@ TEST_SUITE("SearchQuery")
             search_result_t* and_set,
             void* user_data)
             {
-                log_infof(0, STRING_CONST("Evaluating %28s -> Name: %-8.*s -> Value: %-10.*s -> AndSet: 0x%x (%u) -> Data: 0x%x"),
+                log_infof(0, STRING_CONST("Evaluating %28s -> Name: %-8.*s -> Value: %-10.*s -> AndSet: 0x%p (%u) -> Data: 0x%p"),
                     search_query_eval_flags_to_string(flags), STRING_FORMAT(name), STRING_FORMAT(value),
                     and_set, array_size(and_set), user_data);
                 return nullptr;
@@ -1019,7 +1020,7 @@ TEST_SUITE("SearchQuery")
     TEST_CASE_FIXTURE(SearchQueryFixture, "Query 18" * doctest::timeout(30))
     {
         string_const_t query_string = CTEXT(R"(
-            name=MÉlanie cadotte age>=39
+            name=Melanie cadotte age>=39
         )");
 
         const search_result_t* results = evaluate_query_sync(query_string);

@@ -6,23 +6,24 @@
 
 # Text files
 
-*.md   text
-*.bsdoc text
+*.md     text
+*.bsdoc  text
 *.config text
-*.txt   text
-*.vsc   text
-*.fsc   text
-*.h   text diff
-*.c   text diff
-*.cpp   text diff
-*.mm   text diff
-*.java  text diff=java
-*.xml   text diff=xml
-*.json text eol=lf
+*.txt    text
+*.vsc    text
+*.fsc    text
+*.h      text diff
+*.c      text diff
+*.cpp    text diff
+*.rc     text diff
+*.mm     text diff
+*.java   text diff=java
+*.xml    text diff=xml
+*.json   text eol=lf
 
 # Make sure generated files uses LF
-**/generated/*.h text eol=lf
 *.sc    text eol=lf
+**/generated/*.h text eol=lf
 
 # Shell scripts require LF
 run     text diff eol=lf
@@ -32,11 +33,10 @@ run     text diff eol=lf
 *.bat   text eol=crlf
 
 # Windows text files
-*.csproj text eol=crlf
+*.csproj  text eol=crlf
 *.filters text eol=crlf
-*.sln text eol=crlf
+*.sln     text eol=crlf
 *.vcxproj text eol=crlf
-*.rc text eol=crlf
 
 # MacOS text files
 *.pbxproj text eol=lf
@@ -87,6 +87,10 @@ run     text diff eol=lf
 
 tools/**/*.exe !filter !diff !merge -text 
 tools/**/*.dll !filter !diff !merge -text
+external/glfw/**/*.a !filter !diff !merge -text
+external/glfw/**/*.lib !filter !diff !merge -text
+external/libcurl/**/*.exe !filter !diff !merge -text
+external/libcurl/**/*.lib !filter !diff !merge -text
 
 # DCM
 *.dcm filter=lfs diff=lfs merge=lfs -text

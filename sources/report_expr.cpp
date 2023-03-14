@@ -5,11 +5,11 @@
 
 #include "report.h"
 
-#include "app.h"
 #include "eod.h"
 #include "stock.h"
 #include "title.h"
 
+#include <framework/app.h>
 #include <framework/expr.h>
 #include <framework/service.h>
 #include <framework/table.h>
