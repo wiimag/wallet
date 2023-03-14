@@ -30,11 +30,10 @@ endif()
 source_group("src" FILES ${BGFX_SOURCES})
 source_group("include" FILES ${BGFX_INCLUDES})
 
-# Add khronos headers to the include path
-include_directories(${ROOT_DIR}/external/khronos/)
-
-# Add directx headers to the include path
-include_directories(${ROOT_DIR}/external/directx-headers/include/directx)
+# Add bgfx 3rdparty include dirs
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/khronos/)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/directx-headers/include/directx)
 
 # Use compiler and linker flags from parent project
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
