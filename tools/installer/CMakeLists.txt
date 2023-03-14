@@ -80,9 +80,12 @@ if (MSVC)
         ${RESOURCES_SOURCES}
     )
 
+    # Get the three first leter from ProjectId
+    string(SUBSTRING ${ProjectId} 0 3 ProjectIdShort)
+
     # Set the executable name to wallet_setup.exe
     set_target_properties(installer PROPERTIES
-        OUTPUT_NAME "${ProjectId}_setup"
+        OUTPUT_NAME "setup"
     )
 
 elseif(APPLE)
