@@ -117,8 +117,8 @@ bool dispatcher_unregister_event_listener(
 
 ```cpp
 /*
- * Copyright 2023 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2023 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  * 
  * DESCRIPTION OF THE MODULE, i.e. Render pad to test rendering code.
  */

@@ -152,3 +152,6 @@ bool window_focus(window_handle_t window_handle);
  *  @param window_handle The handle of the window to be closed.
  */
 void window_close(window_handle_t window_handle);
+
+/*! Handle the main Windows/ menu items. */
+void window_menu();

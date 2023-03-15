@@ -9,7 +9,7 @@
 
 #include "test_utils.h"
 
-#include <stock.h>
+//#include <stock.h>
 
 #include <framework/common.h>
 #include <framework/database.h>
@@ -38,26 +38,26 @@ FOUNDATION_FORCEINLINE hash_t hash_uuid(const kvp_t& kvp)
     return kvp.id.word[0] ^ kvp.id.word[1];
 }
 
-FOUNDATION_FORCEINLINE hash_t hash(const stock_t& value)
-{
-    return value.id;
-}
+//FOUNDATION_FORCEINLINE hash_t hash(const stock_t& value)
+//{
+//    return value.id;
+//}
 
 FOUNDATION_FORCEINLINE hash_t hash(const string_const_t& value)
 {
     return hash(STRING_ARGS(value));
 }
 
-FOUNDATION_FORCEINLINE void print_stock(const stock_t* s)
-{
-    INFO(s->id);
-    INFO(s->current.adjusted_close);
-}
+//FOUNDATION_FORCEINLINE void print_stock(const stock_t* s)
+//{
+//    INFO(s->id);
+//    INFO(s->current.adjusted_close);
+//}
 
-FOUNDATION_FORCEINLINE void print_stock_day_result(const day_result_t& ed)
-{
-    INFO(ed.change);
-}
+//FOUNDATION_FORCEINLINE void print_stock_day_result(const day_result_t& ed)
+//{
+//    INFO(ed.change);
+//}
 
 TEST_SUITE("Database")
 {
@@ -239,53 +239,53 @@ TEST_SUITE("Database")
         REQUIRE_EQ(db.size(), 5);
     }
 
-    TEST_CASE("Put")
-    {
-        database<stock_t> db;
-
-        auto u = stock_t{ hash(STRING_CONST("U.US")) };
-        auto p = stock_t{ hash(STRING_CONST("PFE.US")) };
-        auto s = stock_t{ hash(STRING_CONST("SSE.V")) };
-        s.current.adjusted_close = 0.025;
-
-        CHECK_EQ(db.insert(u), u.id);
-        CHECK_EQ(db.insert(p), p.id);
-        CHECK_EQ(db.insert(s), s.id);
-        REQUIRE_EQ(db.size(), 3);
-
-        for (const auto& e : db)
-        {
-            CHECK_NE(e.id, 0);
-            INFO(e.current.adjusted_close);
-        }
-
-        CHECK(math_real_is_nan(db[u.id]->current.adjusted_close));
-        CHECK_EQ(db[s.id]->current.adjusted_close, 0.025);
-        CHECK_EQ(db[u.id]->fetch_level, FetchLevel::NONE);
-
-        {
-            auto t = db[u.id];
-            t->name = string_table_encode(STRING_CONST("Unity"));
-            t->exchange = string_table_encode(STRING_CONST("US"));
-        }
-
-        print_stock(db[p.id]);
-        // The exclude lock should be disposed only when returning from the function call.
-
-        print_stock_day_result(db[p.id]->current);
-        print_stock_day_result(db.lock(p.id)->current);
-
-        db[s.id]->country = string_table_encode(STRING_CONST("Canada"));
-        db[s.id]->exchange = string_table_encode(STRING_CONST("Venture"));
-
-        db.put(stock_t{ hash(STRING_CONST("U.US")), 0, FetchLevel::REALTIME });
-        REQUIRE_EQ(db.size(), 3);
-        CHECK_EQ(db[u.id]->fetch_level, FetchLevel::REALTIME);
-
-        db.put(stock_t{ hash(STRING_CONST("AMZN.US")), 1, FetchLevel::TECHNICAL_EMA });
-        REQUIRE_EQ(db.size(), 4);
-        CHECK_EQ(db[hash(STRING_CONST("AMZN.US"))]->fetch_level, FetchLevel::TECHNICAL_EMA);
-    }
+//     TEST_CASE("Put")
+//     {
+//         database<stock_t> db;
+// 
+//         auto u = stock_t{ hash(STRING_CONST("U.US")) };
+//         auto p = stock_t{ hash(STRING_CONST("PFE.US")) };
+//         auto s = stock_t{ hash(STRING_CONST("SSE.V")) };
+//         s.current.adjusted_close = 0.025;
+// 
+//         CHECK_EQ(db.insert(u), u.id);
+//         CHECK_EQ(db.insert(p), p.id);
+//         CHECK_EQ(db.insert(s), s.id);
+//         REQUIRE_EQ(db.size(), 3);
+// 
+//         for (const auto& e : db)
+//         {
+//             CHECK_NE(e.id, 0);
+//             INFO(e.current.adjusted_close);
+//         }
+// 
+//         CHECK(math_real_is_nan(db[u.id]->current.adjusted_close));
+//         CHECK_EQ(db[s.id]->current.adjusted_close, 0.025);
+//         CHECK_EQ(db[u.id]->fetch_level, FetchLevel::NONE);
+// 
+//         {
+//             auto t = db[u.id];
+//             t->name = string_table_encode(STRING_CONST("Unity"));
+//             t->exchange = string_table_encode(STRING_CONST("US"));
+//         }
+// 
+//         print_stock(db[p.id]);
+//         // The exclude lock should be disposed only when returning from the function call.
+// 
+//         print_stock_day_result(db[p.id]->current);
+//         print_stock_day_result(db.lock(p.id)->current);
+// 
+//         db[s.id]->country = string_table_encode(STRING_CONST("Canada"));
+//         db[s.id]->exchange = string_table_encode(STRING_CONST("Venture"));
+// 
+//         db.put(stock_t{ hash(STRING_CONST("U.US")), 0, FetchLevel::REALTIME });
+//         REQUIRE_EQ(db.size(), 3);
+//         CHECK_EQ(db[u.id]->fetch_level, FetchLevel::REALTIME);
+// 
+//         db.put(stock_t{ hash(STRING_CONST("AMZN.US")), 1, FetchLevel::TECHNICAL_EMA });
+//         REQUIRE_EQ(db.size(), 4);
+//         CHECK_EQ(db[hash(STRING_CONST("AMZN.US"))]->fetch_level, FetchLevel::TECHNICAL_EMA);
+//     }
 
     TEST_CASE("Remove")
     {

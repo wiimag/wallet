@@ -8,6 +8,8 @@
 #include <framework/imgui.h>
 #include <framework/array.h>
 #include <framework/common.h>
+#include <framework/session.h>
+#include <framework/service.h>
 
 struct tabbar_t 
 {
@@ -19,6 +21,7 @@ struct tabbar_t
     function<void()> tools_callback{ nullptr };
 };
 
+static int _tab_current = -1;
 static tabbar_t* _tabbars = nullptr;
 
 FOUNDATION_STATIC void tab_capture_cursor(tabbar_t* tb)
@@ -56,9 +59,12 @@ void tab_draw(
         else if ((tab_flags & (ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoReorder)) == (ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoReorder))
         {
             // Make a exception to render the tab bar end of row controls for the last tabs if any.
-            ImGui::SameLine();
-            tb->tools_callback();
-            tb->tools_callback = nullptr;
+            if (tb->tools_callback)
+            {
+                ImGui::SameLine();
+                tb->tools_callback();
+                tb->tools_callback = nullptr;
+            }
         }
 
         if (tab_index == current_tab)
@@ -67,7 +73,11 @@ void tab_draw(
             ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 
             if (render_tab_callback != nullptr)
-                render_tab_callback();
+            {   
+                if (ImGui::BeginChild(label))
+                    render_tab_callback();
+                ImGui::EndChild();
+            }
             else
                 ImGui::TextUnformatted(label);
 
@@ -152,7 +162,26 @@ void tabs_end()
     array_pop(_tabbars);
 }
 
+void tabs_draw_all()
+{
+    static ImGuiTabBarFlags tabs_init_flags = ImGuiTabBarFlags_Reorderable;
+
+    if (_tab_current == -1)
+        _tab_current = session_get_integer("current_tab", _tab_current);
+    
+    if (tabs_begin("Tabs", _tab_current, tabs_init_flags, nullptr))
+    {
+        service_foreach_tabs();
+
+        tabs_end();
+    }
+
+    if ((tabs_init_flags & ImGuiTabBarFlags_AutoSelectNewTabs) == 0)
+        tabs_init_flags |= ImGuiTabBarFlags_AutoSelectNewTabs;
+}
+
 void tabs_shutdown()
 {
+    session_set_integer("current_tab", _tab_current);
     array_deallocate(_tabbars);
 }

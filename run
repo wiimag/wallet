@@ -8,29 +8,12 @@
 #
 
 APP_NAME=Wallet
-SHORT_NAME=$(basename $(git rev-parse --show-toplevel))
-
+SHORT_NAME=$(basename $(pwd))
 SOLUTION_DIR=projects/.build
-
-bold=$(tput bold)
-normal=$(tput sgr0)
-progname=$(basename $0)
-unameOut="$(uname -s)"
-green='\033[0;32m'
-dark_gray='\033[1;30m'
-light_gray='\033[0;37m'
-red='\033[0;31m'
-yellow='\033[1;33m'
-blue='\033[0;34m'
-purple='\033[0;35m'
-cyan='\033[0;36m'
-white='\033[1;37m'
-nc='\033[0m' # No Color
-italic=$(tput sitm)
-underline=$(tput smul)
-reset=$(tput sgr0)
+PROGRAM_NAME=$(basename $0)
 
 # Determine running platform
+unameOut="$(uname -s)"
 case "${unameOut}" in
     Linux*)     machine=Linux;;
     Darwin*)    machine=Mac;;
@@ -83,7 +66,6 @@ function convert_path_to_file_link() {
   fi
 }
 
-
 # Precompute some paths
 FULL_SOLUTION_DIR=$(convert_path_to_platform $(pwd)/$SOLUTION_DIR)
 
@@ -108,6 +90,7 @@ PRINT_LARGEFILES=0
 HELP=0
 VERBOSE=0
 DIFF=0
+NO_COLOR=0
 
 COMMAND_COUNTER=0
 
@@ -133,6 +116,10 @@ while [[ $# -gt 0 ]]; do
     --verbose)
       VERBOSE=1
       POSITIONAL_ARGS+=("$1") # save positional arg
+      shift # past argument
+      ;;
+    --no-color)
+      NO_COLOR=1
       shift # past argument
       ;;
     -n|--name)
@@ -223,12 +210,47 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
+# Define a set of colors if NO_COLOR is not set
+if [ $NO_COLOR -eq 0 ]; then
+  bold=$(tput bold)
+  normal=$(tput sgr0)
+  green='\033[0;32m'
+  dark_gray='\033[1;30m'
+  light_gray='\033[0;37m'
+  red='\033[0;31m'
+  yellow='\033[1;33m'
+  blue='\033[0;34m'
+  purple='\033[0;35m'
+  cyan='\033[0;36m'
+  white='\033[1;37m'
+  nc='\033[0m' # No Color
+  italic=$(tput sitm)
+  underline=$(tput smul)
+  reset=$(tput sgr0)
+else
+  bold=""
+  normal=""
+  green=''
+  dark_gray=''
+  light_gray=''
+  red=''
+  yellow=''
+  blue=''
+  purple=''
+  cyan=''
+  white=''
+  nc='' # No Color
+  italic=''
+  underline=''
+  reset=''
+fi
+
 #
 # Check if help was requested
 #
 if [ $HELP -ge 1 ]; then
 
-  echo "  Usage: $progname [${bold}b${normal}uild [debug|release|deploy]] "
+  echo "  Usage: $PROGRAM_NAME [${bold}b${normal}uild [debug|release|deploy]] "
   echo "             [${bold}g${normal}enerate] "
   echo "             [${bold}t${normal}ests] " 
   echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
@@ -254,6 +276,12 @@ if [ $HELP -ge 1 ]; then
   echo "   -n, --name <name>     Specify the solution name (used to open the workspace are launch the exe on Windows)"
   echo "   -a, --app-name <name> Specify the App name to launch application on MacOS"
   echo "   --verbose             Increase the verbosity of the bash script"
+  echo "   --no-color            Disable color output"
+  echo ""
+  echo "  Tests arguments:"
+  echo "   --success=<true|false> Print test success as well as failures"
+  echo "   --test-suite=<name>    Run only tests for the suite with the specified name"
+  echo "   --test-case=<name>     Run only the test case with the specified name"
   echo ""
   echo "  Examples:"
   echo "    ./run build                         Build the solution"
@@ -528,7 +556,7 @@ fi
 if [ $RUN -eq 1 ]; then
 
   echo 
-  echo -e "${green}${italic}Running ${APP_NAME}...${normal}"
+  echo -e "${green}${italic}Running ${APP_NAME} with arguments: ${POSITIONAL_ARGS[@]}${normal}"
   echo
 
   if [ ${machine} == "MinGw" ]; then

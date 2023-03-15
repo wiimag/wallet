@@ -7,7 +7,7 @@
 
 #if BUILD_DEVELOPMENT
 
-#include "test_utils.h"
+#include <framework/tests/test_utils.h>
 
 #include <stock.h>
 #include <events.h>

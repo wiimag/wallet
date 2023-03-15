@@ -26,16 +26,14 @@ source_group("app" FILES ${APP_SOURCES})
 
 # Load app resource files
 file(GLOB RESOURCES_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.rc"
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.hint"
     "${ROOT_DIR}/resources/*.ico"
     "${ROOT_DIR}/resources/*.manifest"
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.rc"
 )
 source_group("resources" FILES ${RESOURCES_SOURCES})
 
 # Load distribution files
 file(GLOB RESOURCES_FILES
-    "${ROOT_DIR}/resources/*.ico"
     "${ROOT_DIR}/resources/*.png"
     "${ROOT_DIR}/resources/*.ttf"
     "${ROOT_DIR}/resources/*.plist"
@@ -133,8 +131,7 @@ elseif(APPLE)
     # Set app icon
     set_source_files_properties(${ROOT_DIR}/resources/App.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
 
-
-    # Create Wallet.app bundle
+    # Create application MacOS bundle
     add_executable(${AppId} MACOSX_BUNDLE
         ${APP_SOURCES}
         ${RESOURCES_FILES}
@@ -147,7 +144,7 @@ elseif(APPLE)
     # Convert AppId string to CamelCase
     ucfirst(${AppId} AppIdCamelCase)
 
-    # Set the bundle name to Wallet.app
+    # Set the bundle name and other properties
     set_target_properties(${AppId} PROPERTIES
         OUTPUT_NAME "${AppIdCamelCase}"
         MACOSX_BUNDLE TRUE
@@ -165,7 +162,7 @@ elseif(APPLE)
         XCODE_ATTRIBUTE_ASSETCATALOG_COMPILER_LAUNCHIMAGE_NAME "LaunchImage"
     )
 
-    # Create Wallet.app under build folder
+    # Create the application bundle under the build/ folder
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${ROOT_DIR}/build/.)

@@ -32,6 +32,15 @@ endif()
 # Add framework include directories
 include_directories(${ROOT_DIR}/external)
 
+#
+# Load test source files
+#
+file(GLOB TEST_SOURCES
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.h"
+)
+source_group("tests" FILES ${TEST_SOURCES})
+
 # Load some external source files (only at the root of the external folder)
 file(GLOB EXTERNAL_SOURCES
     "${ROOT_DIR}/external/*.c"
@@ -46,6 +55,7 @@ file(GLOB_RECURSE DEVS_RESOURCE_FILES
     "${ROOT_DIR}/*.hint"
     "${ROOT_DIR}/*.natvis"
     "${ROOT_DIR}/*.editorconfig"
+    "${ROOT_DIR}/artifacts/version.git.h"
 )
 source_group("resources" FILES ${DEVS_RESOURCE_FILES})
 
@@ -78,7 +88,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 include_directories(${ROOT_DIR}/sources)
 
 # Create the bx library
-add_library(framework STATIC ${FRAMEWORK_SOURCES} ${EXTERNAL_SOURCES} ${STB_SOURCES} ${DOCTEST_SOURCES} ${DEVS_RESOURCE_FILES})
+add_library(framework STATIC ${FRAMEWORK_SOURCES} ${TEST_SOURCES} ${EXTERNAL_SOURCES} ${STB_SOURCES} ${DOCTEST_SOURCES} ${DEVS_RESOURCE_FILES})
 
 # Add dependencies to other libs
 target_link_libraries(framework PUBLIC foundation bx bgfx imgui)

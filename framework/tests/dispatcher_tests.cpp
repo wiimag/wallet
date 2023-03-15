@@ -7,9 +7,9 @@
 
 #if BUILD_DEVELOPMENT
 
-#include <framework/dispatcher.h>
+#include "test_utils.h"
 
-#include <tests/test_utils.h>
+#include <framework/dispatcher.h>
 
 #include <doctest/doctest.h>
 

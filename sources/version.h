@@ -16,6 +16,7 @@
  */
 #define STRINGIZE(A) STRINGIZE_NX(A)
 
+#if !defined(GIT_BRANCH) && !defined(GIT_COMMIT) && !defined(GIT_REVCOUNT) && !defined(GIT_SHORT_HASH)
 #pragma warning(disable: 4067)
 #ifdef __has_include
     #if __has_include("../artifacts/version.git.h")
@@ -30,11 +31,32 @@
     #include "../artifacts/version.git.h"
 #endif
 #pragma warning(default: 4067)
+#endif
+
+#if !defined(GIT_AVAILABLE)
+#define GIT_AVAILABLE 0
+#endif
+
+#if !defined(GIT_BRANCH)
+    #define GIT_BRANCH "-"
+#endif
+
+#if !defined(GIT_COMMIT)
+    #define GIT_COMMIT "-"
+#endif
+
+#if !defined(GIT_SHORT_HASH)
+    #define GIT_SHORT_HASH "-"
+#endif
+
+#if !defined(GIT_REVCOUNT)
+    #define GIT_REVCOUNT 0
+#endif
 
 #define VERSION_MAJOR                   0
 #define VERSION_MINOR                   9
 #define VERSION_PATCH                   20
-#define VERSION_BUILD               GIT_REVCOUNT
+#define VERSION_BUILD                   GIT_REVCOUNT
 
 #define PRODUCT_VERSION STRINGIZE(VERSION_MAJOR.VERSION_MINOR.VERSION_PATCH)
 #define PRODUCT_NAME "Wallet"

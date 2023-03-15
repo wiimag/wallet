@@ -110,7 +110,7 @@ add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_PROFILE=0>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_CONTEXT=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_TRACKER=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_GUARD=1>")
-add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_STATISTICS=0>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_STATISTICS=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_STATIC_HASH_DEBUG=1>")
 
 # Set compiler specific flags
@@ -162,6 +162,7 @@ if(MSVC)
     set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Gy")
 
     # Enable inlining (/Ob2) for the Release configuration
+    add_compile_options("$<$<CONFIG:DEBUG>:/Ob1>")
     set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /Ob2")
 
     # Enable intrinsic functions (/Oi) for the Release configuration
@@ -169,9 +170,6 @@ if(MSVC)
 
     # Enable string pooling (/GF) for the Release configuration
     set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /GF")
-
-    # Enable multi-processor compilation (/MP) for the Release configuration
-    set(CMAKE_FLAGS_RELEASE "${CMAKE_FLAGS_RELEASE} /MP")
 
     # Set linker to use the static runtime libraries
     foreach(flag_var
@@ -190,6 +188,7 @@ if(MSVC)
 
     # Enable COMDAT Folding
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:ICF")
+    set(CMAKE_EXE_LINKER_FLAGS_RELEASE "${CMAKE_EXE_LINKER_FLAGS_RELEASE} /OPT:REF")
 
     if (BUILD_INFO)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE")

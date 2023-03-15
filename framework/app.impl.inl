@@ -17,6 +17,7 @@
 #include <framework/service.h>
 #include <framework/progress.h>
 #include <framework/dispatcher.h>
+#include <framework/tabs.h>
 
 #include <foundation/foundation.h>
 
@@ -72,6 +73,8 @@ extern void app_shutdown()
     #if defined(FRAMEWORK_APP_EXTENDED_SHUTDOWN)
     extern void FRAMEWORK_APP_EXTENDED_SHUTDOWN();
     FRAMEWORK_APP_EXTENDED_SHUTDOWN();
+    #else
+    tabs_shutdown();
     #endif
 
     // Lets make sure all requests are finished 

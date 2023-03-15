@@ -37,7 +37,7 @@ typedef function<void()> service_invoke_handler_t;
  * @param ...           Optional priority of the service.
  */
 #define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, ...)   \
-    static Service __##NAME##_service(#NAME, HASH_##NAME, [](){ \
+    const Service __##NAME##_service(#NAME, HASH_##NAME, [](){ \
         memory_context_push(HASH_##NAME);                       \
         initialize_fn();                                        \
         memory_context_pop();                                   \
@@ -49,12 +49,12 @@ typedef function<void()> service_invoke_handler_t;
 class Service
 {
 public:
-    Service(const char* FOUNDATION_RESTRICT name, hash_t service_hash,
+    FOUNDATION_NOINLINE Service(const char* FOUNDATION_RESTRICT name, hash_t service_hash,
         service_initialize_handler_t initialize_handler,
         service_shutdown_handler_t shutdown_handler,
         int priority);
 
-    Service(const char* FOUNDATION_RESTRICT name, hash_t service_hash,
+    FOUNDATION_NOINLINE Service(const char* FOUNDATION_RESTRICT name, hash_t service_hash,
         service_initialize_handler_t initialize_handler,
         service_shutdown_handler_t shutdown_handler)
         : Service(name, service_hash, initialize_handler, shutdown_handler, SERVICE_PRIORITY_LOW)

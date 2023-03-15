@@ -5,7 +5,7 @@
 
 #include "about.h"
 
-#include "version.h"
+#include <version.h>
 
 #include <framework/app.h>
 #include <framework/bgfx.h>
@@ -91,11 +91,22 @@ FOUNDATION_STATIC void about_render_dialog()
 
 FOUNDATION_STATIC void about_menu_open_dialog(void* user_data)
 {
+    about_open_window();
+}
+
+// # PUBLIC API
+
+void about_open_window()
+{
     const char* title = string_format_static_const("About - %s##6", PRODUCT_NAME);
     app_open_dialog(title, UINT32_C(700), UINT32_C(900), false, about_render_dialog);
 }
 
-FOUNDATION_STATIC void about_initialize()
+//
+// # MODULE INITIALIZATION
+//
+
+void about_initialize()
 {
     app_register_menu(HASH_ABOUT, 
         STRING_CONST("Help/About"), 

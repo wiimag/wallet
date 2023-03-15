@@ -608,6 +608,35 @@ thread local storage to ensure maximum portability across supported platforms */
                                         ...)                                                                       \
 	_16
 
+/* \def FOUNDATION_LINKER_INCLUDE
+ *  
+ *  Include a function in the linker output. This is useful for forcing the linker to include a function in the output even
+ *  if it is not used by the application. This is useful for functions that are used by the application but are not called 
+ *  directly, for example, function invoked by static entry functions.
+ * 
+ *  \param func_name Name of the function to include
+ * 
+ *	\example
+ *		// static library header.h
+ *		FOUNDATION_EXTERN void FOUNDATION_LINKER_INCLUDE(module_implicit_initialize)(void);
+ * 
+ *		// static library source.c
+ *		void module_implicit_initialize()
+ *		{
+ *			// Initialize some static library stuff at startup (probably before main is called (i.e. in C++))
+ *		}
+ * 
+ *		// executable client.c
+ *		#include <header.h> // This will force the inclusion of the module implementing the function
+ */
+#if FOUNDATION_PLATFORM_WINDOWS
+#define FOUNDATION_LINKER_INCLUDE(func_name) \
+	__pragma(comment(linker, FOUNDATION_PREPROCESSOR_TOSTRING(FOUNDATION_PREPROCESSOR_JOIN(/include:,func_name)))) \
+	func_name
+#else
+#define FOUNDATION_LINKER_INCLUDE(func_name) func_name	
+#endif
+
 // Architecture details
 #if defined(__SSE2__) || FOUNDATION_ARCH_X86_64
 #undef FOUNDATION_ARCH_SSE2

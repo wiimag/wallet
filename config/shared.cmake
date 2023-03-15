@@ -37,7 +37,7 @@ function(generate_version_git_header root_dir)
     endif()
 
     # Execute batch script to generate the version.h file for each supported platform
-    if(WIN32)
+    if (MSVC)
         execute_process(COMMAND ${root_dir}/scripts/generate_git_build_info.bat ${root_dir})
     else()
         execute_process(COMMAND ${root_dir}/scripts/generate_git_build_info.sh ${root_dir})

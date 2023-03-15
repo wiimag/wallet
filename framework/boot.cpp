@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 Infineis Inc. All rights reserved.
- * License: https://infineis.com/LICENSE
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
+ * License: https://equals-forty-two.com/LICENSE
  */
 
 #include <framework/app.h>
@@ -12,6 +12,9 @@
 #include <framework/dispatcher.h>
 #include <framework/profiler.h>
 #include <framework/math.h>
+
+// Include modules that might not be used but need to be initialized implicitly
+#include <framework/about.h>
 
 #include <foundation/foundation.h>
 

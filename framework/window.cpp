@@ -1210,6 +1210,12 @@ window_handle_t window_open(
     return window_open(window_id.str, title, title_length, render_callback, close_callback, user_data, flags | WindowFlags::Singleton);
 }
 
+void window_menu()
+{
+    if (ImGui::BeginMenu("Windows"))
+        ImGui::EndMenu();
+}
+
 //
 // # SYSTEM
 //
