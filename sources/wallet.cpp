@@ -38,7 +38,8 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 {
     bool updated = false;
 
-    const float control_width = imgui_get_font_ui_scale(180.0f);
+    float last_item_size = 0;
+    const float control_padding = IM_SCALEF(10.0f);
 
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
@@ -46,7 +47,8 @@ bool wallet_draw(wallet_t* wallet, float available_space)
     {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("History");
-        ImGui::MoveCursor(available_space - imgui_get_font_ui_scale(140.0f), 0, true);
+        last_item_size = ImGui::GetItemRectSize().x;
+        ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(32.0f), 0, true);
         if (ImGui::Checkbox("##History", &wallet->track_history))
             updated |= true;
         if (ImGui::IsItemHovered())
@@ -59,8 +61,11 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Target %");
-        ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(26.0f), 0, true);
-        ImGui::SetNextItemWidth(imgui_get_font_ui_scale(96.0f));
+        last_item_size = ImGui::GetItemRectSize().x;
+
+        const float control_width = IM_SCALEF(60.0f);
+        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
+        ImGui::SetNextItemWidth(control_width);
         double p100 = wallet->main_target * 100.0;
         if (ImGui::InputDouble("##Target%", &p100, 0, 0, "%.3g %%", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
         {
@@ -75,12 +80,14 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Currency");
+        last_item_size = ImGui::GetItemRectSize().x;
 
         char currency[64];
         string_copy(STRING_BUFFER(currency), STRING_ARGS(wallet->preferred_currency));
 
-        ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(26.0f), 0, true);
-        ImGui::SetNextItemWidth(imgui_get_font_ui_scale(96.0f));
+        const float control_width = IM_SCALEF(60.0f);
+        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
+        ImGui::SetNextItemWidth(control_width);
         if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(currency), ImGuiInputTextFlags_AutoSelectAll))
         {
             char* old = wallet->preferred_currency.str;
@@ -96,7 +103,10 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted("Fund");
-        ImGui::MoveCursor(available_space - ImGui::GetCursorPos().x - control_width - imgui_get_font_ui_scale(60.0f), 0, true);
+        last_item_size = ImGui::GetItemRectSize().x;
+
+        const float control_width = IM_SCALEF(96.0f);
+        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
         ImGui::SetNextItemWidth(control_width);
         if (ImGui::InputDouble("##Fund", &wallet->funds, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
             updated |= true;
@@ -186,9 +196,10 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
     ImGui::TextUnformatted("Report");
     ImGui::SameLine(0, 16);
     ImGui::SetNextItemWidth(300.0f);
+    const size_t report_count = ::report_count();
     if (ImGui::BeginCombo("##Report", !selected_report ? "None" : string_table_decode(selected_report->name), ImGuiComboFlags_None))
     {
-        for (int i = 0; i < report_count(); ++i)
+        for (int i = 0; i < report_count; ++i)
         {
             report_t* report = report_get_at(i);
             if (report->wallet->track_history)
@@ -222,6 +233,14 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
         ImGui::SameLine(0, 100.0f);
         if (ImGui::Checkbox("Show Extra Charts", &wallet->show_extra_charts))
             ImPlot::SetNextAxesToFit();
+    }
+    else if (report_count == 0)
+    {
+        ImGui::SameLine();
+        if (ImGui::Button("Create New"))
+        {
+            SETTINGS.show_create_report_ui = true;
+        }
     }
     ImGui::EndGroup();
 }

@@ -194,6 +194,9 @@ if(MSVC)
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /VERBOSE")
     endif()
 
+    # Set /OPT:REF for static libraries as well
+    set(CMAKE_STATIC_LINKER_FLAGS_RELEASE "${CMAKE_STATIC_LINKER_FLAGS_RELEASE} /LTCG")
+
 elseif(XCODE)
 
     # Use fast floating point math

@@ -68,6 +68,7 @@ FOUNDATION_STATIC void session_backup(const char* _session_dir, size_t _session_
     backup_folder_name = string_concat(STRING_BUFFER(backup_folder_name_buffer), STRING_ARGS(backup_folder_name), STRING_ARGS(today_date_string));
     
     string_t backup_folder_path = string_copy(STRING_BUFFER(backup_info.backup_folder_path_buffer), STRING_ARGS(root_dir));
+    backup_folder_path = path_append(STRING_ARGS(backup_folder_path), sizeof(backup_info.backup_folder_path_buffer), STRING_CONST("backups"));
     backup_folder_path = path_concat(STRING_BUFFER(backup_info.backup_folder_path_buffer), STRING_ARGS(backup_folder_path), STRING_ARGS(backup_folder_name));
 
     if (fs_is_directory(STRING_ARGS(backup_folder_path)))

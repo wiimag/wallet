@@ -231,6 +231,13 @@ ImVec4 imgui_color_highlight(ImVec4 c, float intensity)
     return c;
 }
 
+ImU32 imgui_color_highlight(const ImU32& c, float intensity)
+{
+    ImVec4 col = ImGui::ColorConvertU32ToFloat4(c);
+    col = imgui_color_highlight(col, intensity);
+    return ImGui::ColorConvertFloat4ToU32(col);
+}
+
 ImColor imgui_color_text_for_background(const ImColor& bg)
 {
     if ((bg.Value.x * 0.299f + bg.Value.y * 0.587f + bg.Value.z * 0.114f) * 255.0f * bg.Value.w > 116.0f)
@@ -1052,4 +1059,16 @@ void ImGui::TableRowSeparator()
         ImGui::TableNextColumn();
         ImGui::Separator();
     }
+}
+
+void imgui_bullet_text_wrapped(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+
+    ImGui::Bullet();
+    ImGui::SameLine();
+    ImGui::TextWrapped(fmt, args);
+
+    va_end(args);
 }

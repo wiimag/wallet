@@ -1522,12 +1522,12 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
 
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4());
 
-    ImGui::TableSetupColumn(ICON_MD_WALLET " Wallet", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderWidth, 260.0f);
+    ImGui::TableSetupColumn(ICON_MD_WALLET " Wallet", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderWidth, IM_SCALEF(200.0f));
     ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoHeaderLabel, 0, 0, [](const char* name, void* payload)
     {
-        ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - 34.0f, 0);
+        ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - IM_SCALEF(18.0f), IM_SCALEF(-1));
         ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.6f, 0.4f, 0.4f, 0.5f));
-        if (ImGui::Selectable(ICON_MD_CLOSE))
+        if (ImGui::Selectable(ICON_MD_CLOSE, false, 0, { IM_SCALEF(18), IM_SCALEF(18)}))
         {
             report_t* r = (report_t*)payload;
             r->show_summary = false;
@@ -1669,7 +1669,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
     }
 
     ImGui::MoveCursor(2, 10);
-    if (ImGui::BeginChild("##Content", ImVec2(560.0f, 125.0f), false))
+    if (ImGui::BeginChild("##Content", ImVec2(IM_SCALEF(350.0f), IM_SCALEF(90.0f)), false))
     {
         if (ImGui::IsWindowAppearing())
             ImGui::SetKeyboardFocusHere();
@@ -1683,19 +1683,25 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
         if (input_length > 0)
             can_apply = true;
 
+        static float apply_button_width = 90;
+        static float cancel_button_width = 90;
+        static float button_between_space = 10;
+
         ImGui::MoveCursor(0, 10);
         ImGui::Dummy(ImVec2(1, 1));
-        ImGui::SameLine(ImGui::GetWindowWidth() - 226);
-        if (ImGui::Button("Cancel"))
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - cancel_button_width - apply_button_width - button_between_space);
+        if (ImGui::Button("Cancel", {90, 25}))
         {
             applied = false;
             *show_ui = false;
         }
+        cancel_button_width = ImGui::GetItemRectSize().x;
 
         ImGui::SameLine();
         ImGui::BeginDisabled(!can_apply);
-        if (ImGui::Button(apply_label.str))
+        if (ImGui::Button(apply_label.str, { 90, 25 }))
             applied = true;
+        apply_button_width = ImGui::GetItemRectSize().x;
         ImGui::EndDisabled();
 
         if (can_apply && applied)
@@ -2318,7 +2324,7 @@ void report_render(report_t* report)
     {
         report->table->search_filter = string_to_const(SETTINGS.search_filter);
         table_render(report->table, report->titles, (int)report->active_titles, sizeof(title_t*), 0.0f, 0.0f);
-    }, summary_frame, IMGUI_SPLITTER_HORIZONTAL, (space_left - 400.0f) / space_left);
+    }, summary_frame, IMGUI_SPLITTER_HORIZONTAL, 0, (space_left - IM_SCALEF(250.0f)) / space_left);
     
     report_render_dialogs(report);
     report_graph_render(report);

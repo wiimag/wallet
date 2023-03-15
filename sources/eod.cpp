@@ -6,6 +6,7 @@
 #include "eod.h"
 #include "version.h"
 
+#include <framework/app.h>
 #include <framework/glfw.h>
 #include <framework/imgui.h>
 #include <framework/common.h>
@@ -39,6 +40,8 @@ static struct EOD_MODULE {
     double API_LIMIT = 1.0;
 
     volatile tick_t UPDATE_TICK = 0;
+
+    bool PROMPT_EOD_API_KEY = false;
     
 } *EOD;
 
@@ -325,6 +328,44 @@ FOUNDATION_STATIC void eod_update_window_title()
     glfwSetWindowTitle(window, title);
 }
 
+FOUNDATION_STATIC void eod_refresh()
+{
+    EOD->UPDATE_TICK = 0;
+}
+
+FOUNDATION_STATIC void eod_show_login_dialog()
+{
+    EOD->PROMPT_EOD_API_KEY = true;
+    app_open_dialog("Enter EOD API KEY", [](void*)->bool
+    {     
+        // Explain that the EOD api needs to be set
+        ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com"));
+        ImGui::TextWrapped("EOD API Key is required to use this application.");
+        ImGui::NewLine();
+        ImGui::TextWrapped("You can get a free API key by registering at the link above. Please enter your API key below and press Continue");
+
+        ImGui::NewLine();
+        string_t eod_key = eod_get_key();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length,
+            ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_Password))
+        {
+            eod_save_key(eod_key);
+        }
+
+        static float continue_button_width = 100;
+        ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - continue_button_width, 0);
+        if (ImGui::Button("Continue", {100, imgui_get_font_ui_scale(30)}))
+        {
+            eod_refresh();
+            return false;
+        }
+        continue_button_width = ImGui::GetItemRectSize().x;
+
+        return true;
+    }, 400, imgui_get_font_ui_scale(250), false, nullptr, nullptr);
+}
+
 FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
 {
     const bool previous_connection_status = EOD->CONNECTED;
@@ -353,6 +394,10 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
     EOD->UPDATE_TICK = time_current();
 
     dispatch(eod_update_window_title);
+
+    // If we are still disconnected and no valid key is set, show the login dialog
+    if (!EOD->PROMPT_EOD_API_KEY && (!EOD->CONNECTED || string_equal(EOD->KEY, string_length(EOD->KEY), STRING_CONST("demo"))))
+        eod_show_login_dialog();
 }
 
 FOUNDATION_STATIC void eod_update()
@@ -364,11 +409,6 @@ FOUNDATION_STATIC void eod_update()
     }
 }
 
-FOUNDATION_STATIC void eod_refresh()
-{
-    EOD->UPDATE_TICK = 0;
-}
-
 FOUNDATION_STATIC void eod_main_menu_status()
 {
     GLFWwindow* window = glfw_main_window();
@@ -378,7 +418,7 @@ FOUNDATION_STATIC void eod_main_menu_status()
     const ImVec2 window_size = ImGui::GetWindowSize();
     const float space = ImGui::GetContentRegionAvail().x;
     const float content_width = ImGui::CalcTextSize(EOD->USAGE_LABEL).x + style.FramePadding.x * 2.0f;
-    const ImVec2 status_box_size(38.0f, 38.0f);
+    const ImVec2 status_box_size(IM_SCALEF(18.0f), IM_SCALEF(18.0f));
 
     ImGui::MoveCursor(space - content_width - status_box_size.x - style.FramePadding.x * 2.0f, 0);
     ImGui::BeginGroup();
@@ -417,7 +457,7 @@ FOUNDATION_STATIC void eod_main_menu_status()
     }
 
     const ImRect status_box(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
-    const ImVec2 status_box_center = status_box.GetCenter() + ImVec2(-4.0f, 4.0f);
+    const ImVec2 status_box_center = status_box.GetCenter() + ImVec2(IM_SCALEF(-2.0f), IM_SCALEF(2.0f));
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
     draw_list->AddCircleFilled(status_box_center, status_box_size.x / 2.0f, EOD->CONNECTED ? (eod_is_at_capacity() ? red : green) : gray);
 

@@ -17,6 +17,8 @@ struct tm;
 
 #define CTEXT(str) string_const_t{ STRING_CONST(str) }
 
+#define TEXT_UTF8(str) (const char*)(u8 ## str)
+
 // ## STRUCTURES
 
 struct lines_t

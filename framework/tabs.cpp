@@ -99,16 +99,21 @@ void tab_draw(
     tab_index++;
 }
 
-void tab_set_color(const ImVec4& c)
+void tab_set_color(ImU32 color)
 {
     tabbar_t* tb = array_last(_tabbars);
     FOUNDATION_ASSERT(tb);
 
-    ImGui::PushStyleColor(ImGuiCol_Tab, c);
-    ImGui::PushStyleColor(ImGuiCol_TabActive, imgui_color_highlight(c, 0.2f));
-    ImGui::PushStyleColor(ImGuiCol_TabHovered, imgui_color_highlight(c, 0.3f));
+    ImGui::PushStyleColor(ImGuiCol_Tab, color);
+    ImGui::PushStyleColor(ImGuiCol_TabActive, imgui_color_highlight(color, 0.2f));
+    ImGui::PushStyleColor(ImGuiCol_TabHovered, imgui_color_highlight(color, 0.3f));
 
     tb->push_color_tabs_counter += 3;
+}
+
+void tab_set_color(const ImVec4& c)
+{
+    return tab_set_color(ImGui::ColorConvertFloat4ToU32(c));
 }
 
 void tab_pop_color() 
@@ -173,6 +178,12 @@ void tabs_draw_all()
     {
         service_foreach_tabs();
 
+
+        tabbar_t* tb = array_last(_tabbars);
+        if (tb)
+        {
+            _tab_current = max(0, min(_tab_current, tb->tab_index-1));
+        }
         tabs_end();
     }
 

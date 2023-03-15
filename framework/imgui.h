@@ -99,6 +99,15 @@ void imgui_deallocate(void* ptr, void* user_data);
  */
 ImVec4 imgui_color_highlight(ImVec4 c, float intensity);
 
+/*! Makes a color more bright. 
+ * 
+ *  @param c The color to brighten.
+ *  @param intensity The intensity of the brightening.
+ * 
+ *  @return The brightened color.
+ */
+ ImU32 imgui_color_highlight(const ImU32& c, float intensity);
+
 /*! Returns a good color for text on the given background.
  *
  *  @param bg The background color.
@@ -200,6 +209,15 @@ void imgui_centered_aligned_label(const char* label, bool same_line = false);
  */
 float imgui_get_font_ui_scale(float value = 1.0f);
 
+/*! @def IM_SCALEF
+ * 
+ *  Returns the global UI scaling factor.
+ * 
+ *  @param value The value to scale.
+ *  @return The scaled value.
+ */
+#define IM_SCALEF(value) imgui_get_font_ui_scale((float)(value))
+
 /*! Sets the global UI scaling factor.
  *
  *  @param scale The scaling factor.
@@ -282,6 +300,13 @@ float imgui_calc_text_width(const char(&text)[N], imgui_calc_text_flags_t flags 
     return imgui_calc_text_width(text, N - 1, flags);
 }
 
+/*! Draw a bullet item with a wrapped text label.
+ *
+ *  @param fmt The format string.
+ *  @param ... The format arguments.
+ */
+void imgui_bullet_text_wrapped(const char* fmt, ...);
+
 namespace ImGui 
 {
     /*! Move the current cursor position.
@@ -342,4 +367,13 @@ namespace ImGui
 
     /*! Draw a table row with separators in its columns */
     void TableRowSeparator();
+
+    /*! Draw a element by wrapping the text in a bullet */
+    FOUNDATION_FORCEINLINE void BulletTextWrapped(const char* fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        imgui_bullet_text_wrapped(fmt, args);
+        va_end(args);
+    }
 }

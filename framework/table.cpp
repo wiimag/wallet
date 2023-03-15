@@ -978,7 +978,7 @@ const ImRect& table_current_cell_rect()
 
 float table_default_row_height()
 {
-    static const auto font_height = imgui_get_font_ui_scale(30.0f);
+    static const auto font_height = IM_SCALEF(18.0f);
     return font_height;
 }
 

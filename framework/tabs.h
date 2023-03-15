@@ -83,6 +83,15 @@ FOUNDATION_FORCEINLINE void tab_draw(
  */
 void tab_set_color(const ImVec4& c);
 
+/*! Set the color of the next tabs to be drawn. 
+ * 
+ *  This is useful to set the color of the tabs in the main menu bar.
+ *  The color is set between the pair #tabs_begin and #tabs_end.
+ * 
+ *  @param color The color to set.
+ */
+void tab_set_color(ImU32 color);
+
 /*! Pop the color set by #tab_set_color between the pair #tabs_begin and #tabs_end. */
 void tab_pop_color();
 
