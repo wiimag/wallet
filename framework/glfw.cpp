@@ -470,3 +470,24 @@ void glfw_request_close_window(GLFWwindow* window)
         glfwHideWindow(window);
     #endif
 }
+
+float glfw_get_window_scale(GLFWwindow* window)
+{
+    float scale = 1.0f;
+    #if FOUNDATION_PLATFORM_WINDOWS
+    if (window)
+    {
+        GLFWmonitor* monitor = glfw_find_window_monitor(window);
+        float scale_y = 1.0f;
+        glfwGetMonitorContentScale(monitor, &scale, &scale_y);
+    }
+    #else
+    FOUNDATION_UNUSED(window);
+    #endif
+    return scale;
+}
+
+float glfw_current_window_scale()
+{
+    return glfw_get_window_scale(_glfw_main_window);
+}

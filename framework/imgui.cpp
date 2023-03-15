@@ -456,7 +456,10 @@ void imgui_centered_aligned_label(const char* label, bool same_line /*= false*/)
 float imgui_get_font_ui_scale(float value /*= 1.0f*/)
 {
     if (math_float_is_zero(_global_font_scaling))
-        _global_font_scaling = session_get_float("font_scaling", 1.0f);
+    {
+        float window_scale = glfw_current_window_scale();
+        _global_font_scaling = session_get_float("font_scaling", 1.0f) * window_scale;
+    }
     return _global_font_scaling * value * ImGui::GetIO().FontGlobalScale;
 }
 

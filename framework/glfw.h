@@ -195,3 +195,7 @@ struct GLFWWaitCursorScope
  *  @param window The window to request to close.
  */
 void glfw_request_close_window(GLFWwindow* window);
+
+float glfw_get_window_scale(GLFWwindow* window);
+
+float glfw_current_window_scale();

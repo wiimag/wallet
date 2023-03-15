@@ -1690,7 +1690,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
         ImGui::MoveCursor(0, 10);
         ImGui::Dummy(ImVec2(1, 1));
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - cancel_button_width - apply_button_width - button_between_space);
-        if (ImGui::Button("Cancel", {90, 25}))
+        if (ImGui::Button("Cancel", { IM_SCALEF(90), IM_SCALEF(30) }))
         {
             applied = false;
             *show_ui = false;
@@ -1699,7 +1699,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
 
         ImGui::SameLine();
         ImGui::BeginDisabled(!can_apply);
-        if (ImGui::Button(apply_label.str, { 90, 25 }))
+        if (ImGui::Button(apply_label.str, { IM_SCALEF(90), IM_SCALEF(30) }))
             applied = true;
         apply_button_width = ImGui::GetItemRectSize().x;
         ImGui::EndDisabled();
