@@ -196,6 +196,16 @@ struct GLFWWaitCursorScope
  */
 void glfw_request_close_window(GLFWwindow* window);
 
+/*! Get the window scaling factor based on the monitor DPI it is on.
+ * 
+ *  @param window The window to get the scaling factor for.
+ * 
+ *  @return The window scaling factor.
+ */
 float glfw_get_window_scale(GLFWwindow* window);
 
+/*! Get the current (i.e. main) window scaling factor based on the monitor DPI it is on.
+ * 
+ *  @return The current window scaling factor. The value is usually between 1.0 and 2.0.
+ */
 float glfw_current_window_scale();
