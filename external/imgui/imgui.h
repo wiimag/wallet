@@ -382,10 +382,6 @@ namespace ImGui
     IMGUI_API void          SetWindowCollapsed(const char* name, bool collapsed, ImGuiCond cond = 0);   // set named window collapsed state
     IMGUI_API void          SetWindowFocus(const char* name);                                           // set named window to be focused / top-most. use NULL to remove focus.
 
-    // ###############################################################################
-    IMGUI_API void          SetNextWindowGeometryCallback(ImGuiSizeCallback custom_callback, void* custom_callback_data = NULL);
-    // ###############################################################################
-
     // Content region
     // - Retrieve available space from a given point. GetContentRegionAvail() is frequently useful.
     // - Those functions are bound to be redesigned (they are confusing, incomplete and the Min/Max return values are in local window coordinates which increases confusion)

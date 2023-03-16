@@ -1134,11 +1134,6 @@ struct ImGuiNextWindowData
     float                       BgAlphaVal;             // Override background alpha
     ImVec2                      MenuBarOffsetMinVal;    // (Always on) This is not exposed publicly, so we don't clear it and it doesn't have a corresponding flag (could we? for consistency?)
 
-    // ###############################################################################
-    ImGuiSizeCallback           GeometryChangeCallback;
-    void*                       GeometryChangeCallbackUserData;
-    // ###############################################################################
-
     ImGuiNextWindowData()       { memset(this, 0, sizeof(*this)); }
     inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
 };

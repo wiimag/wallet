@@ -8,7 +8,7 @@
 project(imgui VERSION 1.89.2)
 
 # Project source files (all *.c files)
-file(GLOB_RECURSE imgui_src "*.cpp")
+file(GLOB imgui_src "*.cpp")
 source_group("src" FILES ${imgui_src})
 
 # Project header files (all *.h files)

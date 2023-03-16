@@ -4172,19 +4172,6 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
         if (g.IO.MouseDown[0] && IsMousePosValid(&g.IO.MousePos))
         {
             ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-
-            // ###############################################################################
-            if (g.NextWindowData.GeometryChangeCallback != NULL)
-            {
-                ImGuiSizeCallbackData args;
-                args.UserData = g.NextWindowData.GeometryChangeCallbackUserData;
-                args.Pos = pos;
-                args.CurrentSize = moving_window->Size;
-                args.DesiredSize = moving_window->SizeFull;
-                g.NextWindowData.GeometryChangeCallback(&args);
-            }
-            // ###############################################################################
-
             SetWindowPos(moving_window, pos, ImGuiCond_Always);
             FocusWindow(g.MovingWindow);
         }
@@ -6446,24 +6433,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         const ImRect host_rect = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip) ? parent_window->ClipRect : viewport_rect;
         const ImRect outer_rect = window->Rect();
         const ImRect title_bar_rect = window->TitleBarRect();
-
-        // ###############################################################################
-        if (g.NextWindowData.GeometryChangeCallback != NULL &&
-            (outer_rect.Min.x != window->OuterRectClipped.Min.x ||
-             outer_rect.Min.y != window->OuterRectClipped.Min.y ||
-             outer_rect.Max.x != window->OuterRectClipped.Max.x ||
-             outer_rect.Max.y != window->OuterRectClipped.Max.y) && (window->OuterRectClipped.GetSize().x > 0))
-        {
-            ImGuiSizeCallbackData args;
-            args.UserData = g.NextWindowData.GeometryChangeCallbackUserData;
-            args.Pos = outer_rect.Min;
-            args.CurrentSize = window->OuterRectClipped.GetSize();
-            args.DesiredSize = outer_rect.GetSize();
-            g.NextWindowData.GeometryChangeCallback(&args);
-        }
-        // ###############################################################################
-
-
         window->OuterRectClipped = outer_rect;
         window->OuterRectClipped.ClipWith(host_rect);
 
@@ -7334,15 +7303,6 @@ void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond)
     g.NextWindowData.SizeVal = size;
     g.NextWindowData.SizeCond = cond ? cond : ImGuiCond_Always;
 }
-
-// ###############################################################################
-void ImGui::SetNextWindowGeometryCallback(ImGuiSizeCallback custom_callback, void* custom_callback_data /*= NULL*/)
-{
-    ImGuiContext& g = *GImGui;
-    g.NextWindowData.GeometryChangeCallback = custom_callback;
-    g.NextWindowData.GeometryChangeCallbackUserData = custom_callback_data;
-}
-// ###############################################################################
 
 void ImGui::SetNextWindowSizeConstraints(const ImVec2& size_min, const ImVec2& size_max, ImGuiSizeCallback custom_callback, void* custom_callback_user_data)
 {
