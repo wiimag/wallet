@@ -10,7 +10,7 @@ Manage your stock and finance
 - CMake 3.15 or later <https://cmake.org/download/>
 - Python 3.8 or later <https://www.python.org/downloads/>
 
-I also recommend using [Visual Studio Code]<https://code.visualstudio.com/download> as your IDE to edit CMakelists.txt files, bash scripts, etc.
+I also recommend using [Visual Studio Code](https://code.visualstudio.com/download) as an editor modify CMakelists.txt files, bash scripts, etc.
 
 ### Windows
 
@@ -41,7 +41,15 @@ I also recommend using [Visual Studio Code]<https://code.visualstudio.com/downlo
 
 You can find more documentation about the application framework under [docs](docs/README.md)
 
-## Run Command
+## Run Command (`./run --help`)
+
+### Generate Solution
+
+```bash
+./run generate
+```
+
+The solution will be generated in the `projects/.build` folder.
 
 ### Build Solution (In Release)
 
@@ -78,4 +86,12 @@ You can find more documentation about the application framework under [docs](doc
 ```
 ./run generate open workspace
 ```
+
+### Batch it all!
+
+```bash
+./run generate build deploy tests open workspace start --verbose --console
+```
+
+This will generate the solution, build it, run the tests, open the workspace, and start the application (or course if everything went well!).
 
