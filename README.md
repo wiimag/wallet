@@ -10,7 +10,7 @@ Manage your stock and finance
 - CMake 3.15 or later <https://cmake.org/download/>
 - Python 3.8 or later <https://www.python.org/downloads/>
 
-I also recommend using [Visual Studio Code](https://code.visualstudio.com/download) as an editor modify CMakelists.txt files, bash scripts, etc.
+I also recommend using [Visual Studio Code](https://code.visualstudio.com/download) as an editor to modify CMakelists.txt files, bash scripts, etc.
 
 ### Windows
 
