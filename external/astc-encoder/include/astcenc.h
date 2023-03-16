@@ -241,6 +241,9 @@ static const float ASTCENC_PRE_MEDIUM = 60.0f;
 /** @brief The thorough quality search preset. */
 static const float ASTCENC_PRE_THOROUGH = 98.0f;
 
+/** @brief The thorough quality search preset. */
+static const float ASTCENC_PRE_VERYTHOROUGH = 99.0f;
+
 /** @brief The exhaustive, highest quality, search preset. */
 static const float ASTCENC_PRE_EXHAUSTIVE = 100.0f;
 
@@ -440,11 +443,25 @@ struct astcenc_config
 	unsigned int tune_partition_count_limit;
 
 	/**
-	 * @brief The maximum number of partitions searched (-partitionindexlimit).
+	 * @brief The maximum number of partitions searched (-2partitionindexlimit).
 	 *
 	 * Valid values are between 1 and 1024.
 	 */
-	unsigned int tune_partition_index_limit;
+	unsigned int tune_2partition_index_limit;
+
+	/**
+	 * @brief The maximum number of partitions searched (-3partitionindexlimit).
+	 *
+	 * Valid values are between 1 and 1024.
+	 */
+	unsigned int tune_3partition_index_limit;
+
+	/**
+	 * @brief The maximum number of partitions searched (-4partitionindexlimit).
+	 *
+	 * Valid values are between 1 and 1024.
+	 */
+	unsigned int tune_4partition_index_limit;
 
 	/**
 	 * @brief The maximum centile for block modes searched (-blockmodelimit).
@@ -469,6 +486,27 @@ struct astcenc_config
 	unsigned int tune_candidate_limit;
 
 	/**
+	 * @brief The number of trial partitionings per search (-2partitioncandidatelimit).
+	 *
+	 * Valid values are between 1 and TUNE_MAX_PARTITIIONING_CANDIDATES.
+	 */
+	unsigned int tune_2partitioning_candidate_limit;
+
+	/**
+	 * @brief The number of trial partitionings per search (-3partitioncandidatelimit).
+	 *
+	 * Valid values are between 1 and TUNE_MAX_PARTITIIONING_CANDIDATES.
+	 */
+	unsigned int tune_3partitioning_candidate_limit;
+
+	/**
+	 * @brief The number of trial partitionings per search (-4partitioncandidatelimit).
+	 *
+	 * Valid values are between 1 and TUNE_MAX_PARTITIIONING_CANDIDATES.
+	 */
+	unsigned int tune_4partitioning_candidate_limit;
+
+	/**
 	 * @brief The dB threshold for stopping block search (-dblimit).
 	 *
 	 * This option is ineffective for HDR textures.
@@ -476,25 +514,15 @@ struct astcenc_config
 	float tune_db_limit;
 
 	/**
-	 * @brief The amount of overshoot needed to early-out mode 0 fast path.
+	 * @brief The amount of MSE overshoot needed to early-out trials.
 	 *
-	 * We have a fast-path for mode 0 (1 partition, 1 plane) which uses only essential block modes
-	 * as an initial search. This can short-cut compression for simple blocks, but to avoid
-	 * short-cutting too much we force this to overshoot the MSE threshold needed to hit the
-	 * block-local db_limit e.g. 1.0 = no overshoot, 2.0 = need half the error to trigger.
-	 */
-	float tune_mode0_mse_overshoot;
-
-	/**
-	 * @brief The amount of overshoot needed to early-out refinement.
+	 * The first early-out is for 1 partition, 1 plane trials, where we try a minimal encode using
+	 * the high probability block modes. This can short-cut compression for simple blocks.
 	 *
-	 * The codec will refine block candidates iteratively to improve the encoding, based on the
-	 * @c tune_refinement_limit count. Earlier implementations will use all refinement iterations,
-	 * even if the target threshold is reached. This tuning parameter allows an early out, but with
-	 * an overshoot MSE threshold. Setting this to 1.0 will early-out as soon as the target is hit,
-	 * but does reduce image quality vs the default behavior of over-refinement.
+	 * The second early-out is for refinement trials, where we can exit refinement once quality is
+	 * reached.
 	 */
-	float tune_refinement_mse_overshoot;
+	float tune_mse_overshoot;
 
 	/**
 	 * @brief The threshold for skipping 3.1/4.1 trials (-2partitionlimitfactor).
@@ -516,11 +544,6 @@ struct astcenc_config
 	 * This option is ineffective for normal maps.
 	 */
 	float tune_2_plane_early_out_limit_correlation;
-
-	/**
-	 * @brief The threshold below which (inclusive) we stop testing low/high/low+high cutoffs.
-	 */
-	unsigned int tune_low_weight_count_limit;
 
 #if defined(ASTCENC_DIAGNOSTICS)
 	/**
