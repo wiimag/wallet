@@ -8,8 +8,6 @@
 #include <framework/common.h>
 #include <framework/function.h>
 
-#undef IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_MATH_OPERATORS
 #include <imgui/imgui.h>
 #include <imgui/implot.h>
 #include <imgui/imgui_internal.h>

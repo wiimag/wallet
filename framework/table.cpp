@@ -803,9 +803,8 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
                 column.hovered_cell = cell_hash;
                 column.hovered_time = time_current();
             }
-            else if (column.tooltip && time_elapsed(column.hovered_time) > 1.0)
+            else if (column.tooltip && time_elapsed(column.hovered_time) > 1.0 && ImGui::BeginTooltip())
             {
-                ImGui::BeginTooltip();
                 column.tooltip(element, &column, &cell);
                 ImGui::EndTooltip();
             }

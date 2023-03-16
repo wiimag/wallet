@@ -286,7 +286,7 @@ void decompress_symbolic_block(
 	unpack_weights(bsd, scb, di, is_dual_plane, plane1_weights, plane2_weights);
 
 	// Now that we have endpoint colors and weights, we can unpack texel colors
-	int plane2_component = is_dual_plane ? scb.plane2_component : -1;
+	int plane2_component = scb.plane2_component;
 	vmask4 plane2_mask = vint4::lane_id() == vint4(plane2_component);
 
 	for (int i = 0; i < partition_count; i++)
@@ -299,7 +299,6 @@ void decompress_symbolic_block(
 
 		unpack_color_endpoints(decode_mode,
 		                       scb.color_formats[i],
-		                       scb.get_color_quant_mode(),
 		                       scb.color_values[i],
 		                       rgb_lns, a_lns,
 		                       ep0, ep1);
@@ -362,7 +361,6 @@ float compute_symbolic_block_difference_2plane(
 
 	unpack_color_endpoints(config.profile,
 	                       scb.color_formats[0],
-	                       scb.get_color_quant_mode(),
 	                       scb.color_values[0],
 	                       rgb_lns, a_lns,
 	                       ep0, ep1);
@@ -457,7 +455,6 @@ float compute_symbolic_block_difference_1plane(
 
 		unpack_color_endpoints(config.profile,
 		                       scb.color_formats[i],
-		                       scb.get_color_quant_mode(),
 		                       scb.color_values[i],
 		                       rgb_lns, a_lns,
 		                       ep0, ep1);
@@ -546,7 +543,6 @@ float compute_symbolic_block_difference_1plane_1partition(
 
 	unpack_color_endpoints(config.profile,
 	                       scb.color_formats[0],
-	                       scb.get_color_quant_mode(),
 	                       scb.color_values[0],
 	                       rgb_lns, a_lns,
 	                       ep0, ep1);

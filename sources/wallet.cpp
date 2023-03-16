@@ -283,9 +283,10 @@ FOUNDATION_STATIC cell_t wallet_history_column_date(table_element_ptr_t element,
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             h->show_edit_ui = true;
 
-        if ((field_width + 40.0f) < width)
+        const float button_width = IM_SCALEF(28.0f);
+        if ((field_width + button_width) < width)
         {
-            ImGui::MoveCursor(width - field_width - imgui_get_font_ui_scale(48.0f), 0, true);
+            ImGui::MoveCursor(width - field_width - button_width, 0, true);
             ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
             if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
                 h->show_edit_ui = true;
@@ -470,8 +471,8 @@ FOUNDATION_STATIC table_t* wallet_history_create_table(report_t* report)
 
 FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, history_t* h)
 {
-    ImGui::SetNextWindowSize(ImVec2(imgui_get_font_ui_scale(430), imgui_get_font_ui_scale(480)), ImGuiCond_Once);
-    string_const_t popup_id = string_format_static(STRING_CONST("Edit History (%.*s)###Editor_History_10"), STRING_FORMAT(string_from_date(h->date)));
+    ImGui::SetNextWindowSize(ImVec2(IM_SCALEF(235), IM_SCALEF(230)), ImGuiCond_Once);
+    string_const_t popup_id = string_format_static(STRING_CONST("Edit History (%.*s)###EH19"), STRING_FORMAT(string_from_date(h->date)));
     if (!report_render_dialog_begin(popup_id, &h->show_edit_ui, ImGuiWindowFlags_NoResize))
         return;
 
@@ -481,7 +482,7 @@ FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, histo
     ImGui::MoveCursor(10, 10);
     if (ImGui::BeginChild("##Content", ImVec2(0, 0)))
     {
-        const float control_width = imgui_get_font_ui_scale(210.0f);
+        const float control_width = IM_SCALEF(130.0f);
 
         bool updated = false;
         time_t now = time_now();
@@ -526,7 +527,7 @@ FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, histo
 
         if (h->source && (h - &h->source->history[0]) == 0)
         {
-            ImGui::SameLine(0, control_width - 120.0f);
+            ImGui::SameLine(0, control_width - IM_SCALEF(60.0f));
             if (ImGui::Button("Update"))
                 wallet_history_update_entry(report, h->source, *h);
 

@@ -407,7 +407,7 @@ FOUNDATION_STATIC bool logo_download_image(logo_t* logo, logo_image_t* image)
 
     // Load image as a texture
     FOUNDATION_ASSERT(!bgfx::isValid(image->texture));
-    const bgfx::TextureFormat::Enum texture_format = image->channels == 3 ? bgfx::TextureFormat::RGB8 : bgfx::TextureFormat::RGBA8;
+    const bgfx::TextureFormat::Enum texture_format = image->channels == 3 ? bgfx::TextureFormat::RGB8 : (image->channels == 1 ? bgfx::TextureFormat::A8 : bgfx::TextureFormat::RGBA8);
     image->texture = bgfx::createTexture2D(
         image->width, image->height, false, 1, texture_format, 0,
         bgfx::makeRef(image->data_texture, image->width * image->height * image->channels));
@@ -653,12 +653,14 @@ bool logo_render_icon(const char* symbol, size_t symbol_length, ImVec2& rendered
 
         if (banner_channels == 4)
             ImGui::PushStyleColor(ImGuiCol_PopupBg, (ImU32)imgui_color_text_for_background(banner_color));
-        ImGui::BeginTooltip();
-        if (bgfx::isValid(banner_texture))
-            ImGui::Image((ImTextureID)(intptr_t)banner_texture.idx, ImVec2(banner_width, banner_height));
-        else
-            ImGui::Image((ImTextureID)(intptr_t)texture.idx, ImVec2(width, height));
-        ImGui::EndTooltip();
+        if (ImGui::BeginTooltip())
+        {
+            if (bgfx::isValid(banner_texture))
+                ImGui::Image((ImTextureID)(intptr_t)banner_texture.idx, ImVec2(banner_width, banner_height));
+            else
+                ImGui::Image((ImTextureID)(intptr_t)texture.idx, ImVec2(width, height));
+            ImGui::EndTooltip();
+        }
         if (banner_channels == 4)
             ImGui::PopStyleColor();
 
@@ -741,9 +743,11 @@ bool logo_render_banner(const char* symbol, size_t symbol_length, ImVec2& render
     {
         if (channels == 4)
             ImGui::PushStyleColor(ImGuiCol_PopupBg, bg_logo_banner_color);
-        ImGui::BeginTooltip();
-        ImGui::Image((ImTextureID)(intptr_t)texture.idx, ImVec2(width, height));
-        ImGui::EndTooltip();
+        if (ImGui::BeginTooltip())
+        {
+            ImGui::Image((ImTextureID)(intptr_t)texture.idx, ImVec2(width, height));
+            ImGui::EndTooltip();
+        }
         if (channels == 4)
             ImGui::PopStyleColor();
     }
@@ -881,9 +885,14 @@ bool logo_render_banner(const char* symbol, size_t symbol_length, const ImRect& 
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             selected = true;
 
-        ImVec2 logo_size(imgui_get_font_ui_scale(32.0f), imgui_get_font_ui_scale(32.0f));
+        ImVec2 logo_size(IM_SCALEF(18.0f), IM_SCALEF(18.0f));
+
+        const float as = (rect.GetSize().y - IM_SCALEF(4.0f)) / logo_size.y;
+        logo_size.x *= as;
+        logo_size.y *= as;
+
         float space_left = rect.GetWidth() - code_width;
-        ImGui::MoveCursor(space_left - logo_size.x + imgui_get_font_ui_scale(4.0f), 0, true);
+        ImGui::MoveCursor(space_left - logo_size.x + IM_SCALEF(2.0f), 0, true);
         logo_render_icon(STRING_ARGS(code), logo_size, true, true);
         ImGui::Dummy(logo_size);
 

@@ -2234,9 +2234,8 @@ void expr_render_evaluators()
                         ImGui::SameLine();
                         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                         ImGui::InputDouble("##Frequency", &ev.frequency, 60.0, 0, "%.4g s.");
-                        if (ImGui::IsItemHovered())
+                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
                         {
-                            ImGui::BeginTooltip();
                             ImGui::TextUnformatted("Number of seconds to wait before re-evaluating these expressions.");
                             ImGui::EndTooltip();
                         }

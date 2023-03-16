@@ -24,8 +24,8 @@ void settings_draw()
 {
     ImGui::Columns(3, nullptr, false);
 
-    ImGui::SetColumnWidth(0, imgui_get_font_ui_scale(340.0f));
-    ImGui::SetColumnWidth(1, imgui_get_font_ui_scale(650.0f));
+    ImGui::SetColumnWidth(0, IM_SCALEF(210.0f));
+    ImGui::SetColumnWidth(1, IM_SCALEF(250.0f));
 
     {
         string_t eod_key = eod_get_key();
@@ -33,6 +33,7 @@ void settings_draw()
         ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com"));
 
         ImGui::NextColumn();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length, ImGuiInputTextFlags_Password))
             eod_save_key(eod_key);
         ImGui::NextColumn();
@@ -44,6 +45,7 @@ void settings_draw()
         ImGui::TextURL("Currency", nullptr, STRING_CONST("https://eodhistoricaldata.com/financial-apis/list-supported-forex-currencies/"));
 
         ImGui::NextColumn();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(SETTINGS.preferred_currency), ImGuiInputTextFlags_AutoSelectAll))
         {
         }
@@ -64,6 +66,7 @@ void settings_draw()
 
         ImGui::NextColumn();
         double good_dividends_ratio_100 = SETTINGS.good_dividends_ratio * 100;
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::InputDouble("##DividendsRatio", &good_dividends_ratio_100, 1.0, 0, "%.3g %%", ImGuiInputTextFlags_AutoSelectAll))
         {
             SETTINGS.good_dividends_ratio = good_dividends_ratio_100 / 100.0;
@@ -83,7 +86,7 @@ void settings_draw()
         }
 
         ImGui::NextColumn();
-        ImVec2 logo_banner_size = ImVec2(imgui_get_font_ui_scale(200.0f), imgui_get_font_ui_scale(40.0f));
+        ImVec2 logo_banner_size = ImVec2(IM_SCALEF(100.0f), IM_SCALEF(20.0f));
         if (SETTINGS.show_logo_banners)
         {
             logo_render_banner(STRING_CONST("KHC.US"), logo_banner_size, true, false);
@@ -110,6 +113,7 @@ void settings_draw()
         ImGui::TextUnformatted("Font scaling");
 
         ImGui::NextColumn();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::InputFloat("##FontScaling", &SETTINGS.font_scaling, 0.25, 0, "%.2lf", ImGuiInputTextFlags_AutoSelectAll))
         {
             imgui_set_font_ui_scale(SETTINGS.font_scaling);

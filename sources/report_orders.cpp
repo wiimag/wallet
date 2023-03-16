@@ -403,50 +403,50 @@ FOUNDATION_STATIC cell_t report_order_column_actions(table_element_ptr_t element
 
 FOUNDATION_STATIC table_t* report_create_title_details_table(const bool title_is_sold, const bool show_ask_price)
 {
-    table_t* table = table_allocate("Orders");
+    table_t* table = table_allocate("Orders##3");
     table->flags |= ImGuiTableFlags_SizingFixedFit;
 
     table_add_column(table, STRING_CONST("||Order Type"), report_order_column_type,
         COLUMN_FORMAT_TEXT, COLUMN_MIDDLE_ALIGN | COLUMN_HIDE_HEADER_TEXT | COLUMN_SORTABLE)
-        .set_width(imgui_get_font_ui_scale(40.0f))
+        .set_width(IM_SCALEF(20.0f))
         .set_tooltip_callback(report_order_type_tooltip);
 
     table_add_column(table, STRING_CONST(ICON_MD_TODAY " Date"), report_order_column_date,
         COLUMN_FORMAT_DATE, COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE | COLUMN_DEFAULT_SORT)
-        .set_width(imgui_get_font_ui_scale(210.0f));
+        .set_width(IM_SCALEF(110.0f));
 
     table_add_column(table, STRING_CONST("Quantity " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Order Quantity"), report_order_column_quantity,
         COLUMN_FORMAT_NUMBER, COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE)
-        .set_width(imgui_get_font_ui_scale(190.0f));
+        .set_width(IM_SCALEF(95.0f));
 
     table_add_column(table, STRING_CONST("Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Order Price"), 
         report_order_column_price, COLUMN_FORMAT_CURRENCY, COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE)
-        .set_width(imgui_get_font_ui_scale(240.0f));
+        .set_width(IM_SCALEF(120.0f));
 
     table_add_column(table, STRING_CONST("Close " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Close Price"),
         report_order_column_close_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
-        .set_width(imgui_get_font_ui_scale(140.0f));
+        .set_width(IM_SCALEF(80.0f));
 
     table_add_column(table, STRING_CONST("Split " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Split Price"),
         report_order_column_split_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
-        .set_width(imgui_get_font_ui_scale(130.0f));
+        .set_width(IM_SCALEF(80.0f));
 
     table_add_column(table, STRING_CONST("Rate " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"),
         report_order_column_exchange_rate, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
-        .set_width(imgui_get_font_ui_scale(130.0f));
+        .set_width(IM_SCALEF(80.0f));
 
     table_add_column(table, STRING_CONST("Adjusted " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Adjusted Price"),
         report_order_column_adjusted_price, COLUMN_FORMAT_CURRENCY, COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
-        .set_width(imgui_get_font_ui_scale(165.0f));
+        .set_width(IM_SCALEF(95.0f));
 
     table_add_column(table, STRING_CONST("Ask " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Ask Price"), report_order_column_ask_price,
         COLUMN_FORMAT_CURRENCY, (!show_ask_price ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_CUSTOM_DRAWING | COLUMN_LEFT_ALIGN | COLUMN_SORTABLE)
-        .set_width(imgui_get_font_ui_scale(240.0f));
+        .set_width(IM_SCALEF(130.0f));
 
     table_add_column(table, STRING_CONST("   Value " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"),
         report_order_column_total_value, COLUMN_FORMAT_CURRENCY, COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
         .set_tooltip_callback(report_order_total_value_adjusted_tooltip)
-        .set_width(imgui_get_font_ui_scale(180.0f));
+        .set_width(IM_SCALEF(100.0f));
 
     table_add_column(table, STRING_CONST("           Gain " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain"),
         report_order_column_total_gain, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_RIGHT_ALIGN | COLUMN_CUSTOM_DRAWING);
@@ -529,7 +529,7 @@ void report_render_title_details(report_t* report, title_t* title)
 
 void report_render_buy_lot_dialog(report_t* report, title_t* title)
 {
-    string_const_t title_buy_popup_id = string_format_static(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##10"), title->code_length, title->code);
+    string_const_t title_buy_popup_id = string_format_static(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##13"), title->code_length, title->code);
     if (!report_render_dialog_begin(title_buy_popup_id, &title->show_buy_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
         return;
 
@@ -549,11 +549,11 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         ImGui::SetDateToday(&tm_date);
     }
 
-    ImVec2 content_size = ImVec2(imgui_get_font_ui_scale(890.0f), imgui_get_font_ui_scale(175.0f));
-    ImGui::MoveCursor(imgui_get_font_ui_scale(2.0f), imgui_get_font_ui_scale(10.0f));
+    const ImVec2 content_size = ImVec2(IM_SCALEF(560.0f), IM_SCALEF(105.0f));
+    ImGui::MoveCursor(IM_SCALEF(2.0f), IM_SCALEF(10.0f));
     if (ImGui::BeginChild("##Content", content_size, false))
     {
-        const float control_width = (content_size.x - imgui_get_font_ui_scale(100.0f)) / 3;
+        const float control_width = (content_size.x - IM_SCALEF(40.0f)) / 3;
         ImGui::Columns(3);
 
         if (ImGui::IsWindowAppearing())
@@ -587,7 +587,7 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         ImGui::NextColumn();
 
         ImGui::Columns(3);
-        ImGui::MoveCursor(0, imgui_get_font_ui_scale(10.0f));
+        ImGui::MoveCursor(0, IM_SCALEF(10.0f));
 
         double orig_buy_value = quantity * price;
         double buy_value = orig_buy_value;
@@ -603,7 +603,7 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         ImGui::NextColumn();
         ImGui::NextColumn();
 
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(184.0f));
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(100.0f));
         if (ImGui::Button("Cancel"))
             title->show_buy_ui = false;
         ImGui::SameLine();
@@ -629,7 +629,7 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
 
 void report_render_sell_lot_dialog(report_t* report, title_t* title)
 {
-    string_const_t title_popup_id = string_format_static(STRING_CONST(ICON_MD_SELL " Sell %.*s##6"), title->code_length, title->code);
+    string_const_t title_popup_id = string_format_static(STRING_CONST(ICON_MD_SELL " Sell %.*s##7"), title->code_length, title->code);
     if (!report_render_dialog_begin(title_popup_id, &title->show_sell_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
         return;
 
@@ -650,9 +650,10 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
     }
 
     ImGui::MoveCursor(2, 10);
-    if (ImGui::BeginChild("##Content", ImVec2(imgui_get_font_ui_scale(860.0f), imgui_get_font_ui_scale(155.0f)), false))
+    const ImVec2 content_size = ImVec2(IM_SCALEF(560.0f), IM_SCALEF(105.0f));
+    if (ImGui::BeginChild("##Content", content_size, false))
     {
-        const float control_width = imgui_get_font_ui_scale(255.0f);
+        const float control_width = IM_SCALEF(165.0f);
         ImGui::Columns(3);
 
         if (ImGui::IsWindowAppearing())
@@ -685,7 +686,7 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
 
         ImGui::Text("Sell Value: %.2lf $", quantity * price);
 
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(188));
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(115));
 
         ImGui::MoveCursor(0, -5);
         if (ImGui::Button("Cancel"))
