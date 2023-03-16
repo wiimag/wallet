@@ -5,7 +5,7 @@
 # Build the C++ IMGUI library project
 #
 
-project(imgui VERSION 1.89.2)
+project(imgui VERSION 1.89.5)
 
 # Project source files (all *.c files)
 file(GLOB imgui_src "*.cpp")
@@ -39,3 +39,4 @@ target_compile_definitions(imgui PUBLIC IMGUI_ENABLE_TEST_ENGINE=1)
 target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_DEFAULT_ALLOCATORS=1)
 target_compile_definitions(imgui PUBLIC IMGUI_DISABLE_OBSOLETE_FUNCTIONS=1)
 target_compile_definitions(imgui PUBLIC IMPLOT_DISABLE_OBSOLETE_FUNCTIONS=1)
+target_compile_definitions(imgui PUBLIC IMGUI_DEFINE_MATH_OPERATORS=1)

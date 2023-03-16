@@ -205,12 +205,12 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
                 if (ImGui::IsItemHovered() && item_renderered_width > window_width)
                 {
                     ImGui::SetNextWindowSize({ window_width * 0.9f, 0 });
-                    ImGui::BeginTooltip();
+                    if (ImGui::BeginTooltip())
                     {
                         string_const_t tooltip_log_message = console_get_log_trimmed_text(log);
                         ImGui::TextWrapped("%.*s", STRING_FORMAT(tooltip_log_message));
+                        ImGui::EndTooltip();
                     }
-                    ImGui::EndTooltip();
                     
                 }
 
@@ -285,8 +285,10 @@ FOUNDATION_STATIC void console_clear_all()
 
 FOUNDATION_STATIC void console_render_toolbar()
 {
+    static float clear_button_width = IM_SCALEF(100.0f);
+    static const float button_frame_padding = IM_SCALEF(8.0f);
     ImGui::BeginGroup();
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(100.0f));
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - clear_button_width - button_frame_padding);
     if (ImGui::InputTextWithHint("##SearchLog", "Search logs...", STRING_BUFFER(_log_search_filter)))
     {
         _filtered_message_count = 0;
@@ -318,6 +320,7 @@ FOUNDATION_STATIC void console_render_toolbar()
     ImGui::SameLine();
     if (ImGui::Button("Clear"))
         console_clear_all();
+    clear_button_width = ImGui::GetItemRectSize().x;
     ImGui::EndGroup();
 }
 
@@ -361,7 +364,7 @@ FOUNDATION_STATIC void console_render_evaluator()
     
     bool evaluate = false;
     if (ImGui::InputTextMultiline(input_id, STRING_BUFFER(_console_expression_buffer),
-        ImVec2(imgui_get_font_ui_scale(-98.0f), -1), 
+        ImVec2(IM_SCALEF(-98.0f), -1), 
         ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine | ImGuiInputTextFlags_AllowTabInput |
         (focus_text_field ? ImGuiInputTextFlags_AutoSelectAll : ImGuiInputTextFlags_None)))
     {

@@ -45,7 +45,7 @@ ImGuiTestItem* _test_items = nullptr;
 /// <param name="ctx">IMGUI context</param>
 /// <param name="bb">Bounding box of the item being drawn</param>
 /// <param name="id">Unique ID of the item being drawn</param>
-extern void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id)
+extern void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb, const ImGuiLastItemData* item_data)
 {
     ImGuiTestItem ti;
     ti.id = id;
@@ -132,7 +132,7 @@ ImGuiTestItem* ImGuiTestEngine_FindItemByLabel(ImGuiContext* ctx, const char* la
 
 #else
 
-extern void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id)
+extern void ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb, const ImGuiLastItemData* item_data)
 {
 }
 
