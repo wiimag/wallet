@@ -850,7 +850,7 @@ FOUNDATION_STATIC bool financials_window_render(void* obj)
 
     if (array_empty(window->balances))
     {
-        ImGui::TextWrapped("No financial sheets to display");
+        ImGui::TextWrapped(tr("No financial sheets to display"));
         return true;
     }
 

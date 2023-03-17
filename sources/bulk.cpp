@@ -219,7 +219,7 @@ FOUNDATION_STATIC void bulk_column_today_cap_tooltip(table_element_ptr_const_t e
         }
     }
 
-    ImGui::Text("Average capitalization movement since 14 days\n%.*s", STRING_FORMAT(string_from_currency(b->today_cap.fetch(), "9 999 999 999 $")));
+    ImGui::TrText("Average capitalization movement since 14 days\n%.*s", STRING_FORMAT(string_from_currency(b->today_cap.fetch(), "9 999 999 999 $")));
 }
 
 FOUNDATION_STATIC cell_t bulk_column_today_cap(table_element_ptr_t element, const column_t* column)
@@ -567,15 +567,15 @@ FOUNDATION_STATIC void bulk_render()
     }
 
     ImGui::MoveCursor(0, -2, true);
-    if (ImGui::Checkbox("No capitalization", &_fetch_cap_zero))
+    if (ImGui::Checkbox(tr("No capitalization"), &_fetch_cap_zero))
         exchanges_updated = true;
 
     ImGui::MoveCursor(0, -2, true);
-    if (ImGui::Checkbox("No Volume", &_fetch_volume_zero))
+    if (ImGui::Checkbox(tr("No Volume"), &_fetch_volume_zero))
         exchanges_updated = true;
 
     ImGui::MoveCursor(0, -2, true);
-    if (ImGui::Checkbox("No Beta", &_fetch_negative_beta))
+    if (ImGui::Checkbox(tr("No Beta"), &_fetch_negative_beta))
         exchanges_updated = true;
 
     if (exchanges_updated)
@@ -585,7 +585,7 @@ FOUNDATION_STATIC void bulk_render()
     {
         int symbol_count = array_size(_symbols);
         ImGui::MoveCursor(0, -2, true);
-        ImGui::Text("       %d symbols", symbol_count);
+        ImGui::TrText("       %d symbols", symbol_count);
         ImGui::EndGroup();
 
         if (auto lock = scoped_mutex_t(_symbols_lock))
@@ -602,9 +602,9 @@ FOUNDATION_STATIC void bulk_open_window()
         L1(bulk_render()), nullptr, nullptr, WindowFlags::Maximized | WindowFlags::Singleton);
     window_set_menu_render_callback(window, [](window_handle_t window_handle)
     {
-        if (ImGui::BeginMenu("File"))
+        if (ImGui::BeginMenu(tr("File")))
         {
-            if (ImGui::MenuItem(ICON_MD_CLOSE " Close"))
+            if (ImGui::MenuItem(tr(ICON_MD_CLOSE " Close")))
                 window_close(window_handle);
 
             ImGui::EndMenu();
@@ -617,9 +617,9 @@ FOUNDATION_STATIC void bulk_menu()
     if (!ImGui::BeginMenuBar())
         return;
 
-    if (ImGui::BeginMenu("Symbols"))
+    if (ImGui::BeginMenu(tr("Symbols")))
     {
-        if (ImGui::MenuItem("Last Day"))
+        if (ImGui::MenuItem(tr("Last Day")))
             bulk_open_window();
 
         ImGui::EndMenu();

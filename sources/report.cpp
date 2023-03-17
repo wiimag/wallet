@@ -32,6 +32,7 @@
 #include <framework/console.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/localization.h>
 
 #include <foundation/uuid.h>
 #include <foundation/path.h>
@@ -483,15 +484,15 @@ FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_h
     const title_t* title = *(const title_t**)element;
 
     ImGui::MoveCursor(8.0f, 4.0f);
-    if (ImGui::MenuItem("Buy"))
+    if (ImGui::MenuItem(tr("Buy")))
         ((title_t*)title)->show_buy_ui = true;
 
     ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Sell"))
+    if (ImGui::MenuItem(tr("Sell")))
         ((title_t*)title)->show_sell_ui = true;
 
     ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Details"))
+    if (ImGui::MenuItem(tr("Details")))
         ((title_t*)title)->show_details_ui = true;
 
     ImGui::Separator();
@@ -504,23 +505,23 @@ FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_h
     ImGui::Separator();
 
     ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Read News"))
+    if (ImGui::MenuItem(tr("Read News")))
         news_open_window(title->code, title->code_length);
 
     ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Show Financials"))
+    if (ImGui::MenuItem(tr("Show Financials")))
         financials_open_window(title->code, title->code_length);
 
     #if BUILD_DEVELOPMENT
     ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Browse Fundamentals"))
+    if (ImGui::MenuItem(tr("Browse Fundamentals")))
         open_in_shell(eod_build_url("fundamentals", title->code, FORMAT_JSON).str);
     #endif
 
     ImGui::Separator();
 
     ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem("Remove"))
+    if (ImGui::MenuItem(tr("Remove")))
         report_title_remove(report_handle, title);
 
     ImGui::MoveCursor(0.0f, 2.0f);
@@ -884,7 +885,7 @@ FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t
         }
         string_const_t last_update = string_from_time_static(tick_updated, true);
         ImGui::AlignTextToFramePadding();
-        ImGui::Text(" Updated %.0lf %s(s) ago (%.*s) \n %.*s [%.*s] -> %.2lf $ (%.3lg %%) ", 
+        ImGui::Text(" Updated %.0lf %s(s) ago (%.*s) \n %.*s [%.*s] -> %.2lf $ (%.3lg %%) ",
             elapsed_time_updated, time_elapsed_unit, STRING_FORMAT(last_update),
             STRING_FORMAT(name), (int)title->code_length, title->code, 
             s->current.close, s->current.change_p);
@@ -906,7 +907,7 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
         
         if (s == nullptr || time_str.length == 0)
         {
-            return ImGui::Text(" %s (%s) \n Data not available \n",
+            return ImGui::TrText(" %s (%s) \n Data not available \n",
                 title->code, string_table_decode(title->stock->name));
         }
 
@@ -1054,13 +1055,13 @@ FOUNDATION_STATIC void report_title_gain_total_tooltip(table_element_ptr_const_t
         return;
 
     const double total_value = title_get_total_value(t);
-    ImGui::Text(" Total Investment %12s ", string_from_currency(title_get_total_investment(t)).str);
-    ImGui::Text(" Total Value      %12s ", string_from_currency(total_value).str);
+    ImGui::TrText(" Total Investment %12s ", string_from_currency(title_get_total_investment(t)).str);
+    ImGui::TrText(" Total Value      %12s ", string_from_currency(total_value).str);
 
     if (t->average_exchange_rate != 1.0 && t->average_quantity > 0)
     {
         const double exchange_diff = t->today_exchange_rate.fetch() - t->average_exchange_rate;
-        ImGui::Text(" Exchange Gain    %12s ", string_from_currency(exchange_diff * total_value).str);
+        ImGui::TrText(" Exchange Gain    %12s ", string_from_currency(exchange_diff * total_value).str);
     }
 }
 
@@ -1430,10 +1431,10 @@ FOUNDATION_STATIC void report_table_context_menu(report_handle_t report_handle, 
     if (element == nullptr)
     {
         report_t* report = report_get(report_handle);
-        if (ImGui::MenuItem(ICON_MD_ADD " Add title"))
+        if (ImGui::MenuItem(tr(ICON_MD_ADD " Add title")))
             report->show_add_title_ui = true;
 
-        if (ImGui::MenuItem(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns"))
+        if (ImGui::MenuItem(tr(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns")))
             report_open_expression_columns_dialog(report);
     }
     else
@@ -1522,7 +1523,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
 
     ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4());
 
-    ImGui::TableSetupColumn(ICON_MD_WALLET " Wallet", ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderWidth, IM_SCALEF(200.0f));
+    ImGui::TableSetupColumn(tr(ICON_MD_WALLET " Wallet"), ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderWidth, IM_SCALEF(200.0f));
     ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoHeaderLabel, 0, 0, [](const char* name, void* payload)
     {
         ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - IM_SCALEF(18.0f), IM_SCALEF(-1));
@@ -1690,7 +1691,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
         ImGui::MoveCursor(0, 10);
         ImGui::Dummy(ImVec2(1, 1));
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - cancel_button_width - apply_button_width - button_between_space);
-        if (ImGui::Button("Cancel", { IM_SCALEF(90), IM_SCALEF(30) }))
+        if (ImGui::Button(tr("Cancel"), { IM_SCALEF(90), IM_SCALEF(30) }))
         {
             applied = false;
             *show_ui = false;
@@ -1905,18 +1906,18 @@ FOUNDATION_STATIC void report_render_menus()
     if (!ImGui::BeginMenuBar())
         return;
         
-    if (ImGui::BeginMenu("File"))
+    if (ImGui::BeginMenu(tr("File")))
     {
-        if (ImGui::BeginMenu("Create"))
+        if (ImGui::BeginMenu(tr("Create")))
         {
-            if (ImGui::MenuItem("Report", "F2", &SETTINGS.show_create_report_ui))
+            if (ImGui::MenuItem(tr("Report"), "F2", &SETTINGS.show_create_report_ui))
                 SETTINGS.show_create_report_ui = true;
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Open"))
+        if (ImGui::BeginMenu(tr("Open")))
         {
-            if (ImGui::MenuItem("Report...", nullptr, nullptr))
+            if (ImGui::MenuItem(tr("Report..."), nullptr, nullptr))
                 log_warnf(HASH_REPORT, WARNING_UNSUPPORTED, STRING_CONST("TODO"));
 
             bool first_report_that_can_be_opened = true;
@@ -1952,7 +1953,7 @@ FOUNDATION_STATIC void report_render_tabs()
     static const ImVec4 TAB_COLOR_REPORT(0.4f, 0.2f, 0.7f, 1.0f);
 
     tab_set_color(TAB_COLOR_APP);
-    tab_draw(ICON_MD_WALLET " Wallet ", nullptr, ImGuiTabItemFlags_Leading, wallet_history_draw, nullptr);
+    tab_draw(tr(ICON_MD_WALLET " Wallet "), nullptr, ImGuiTabItemFlags_Leading, wallet_history_draw, nullptr);
 
     tab_set_color(TAB_COLOR_REPORT);
     size_t report_count = ::report_count();
@@ -2141,13 +2142,13 @@ void report_menu(report_t* report)
 
     if (ImGui::BeginPopupContextItem())
     {
-        if (report->dirty && ImGui::MenuItem("Save"))
+        if (report->dirty && ImGui::MenuItem(tr("Save")))
             report_save(report);
 
-        if (ImGui::MenuItem("Rename"))
+        if (ImGui::MenuItem(tr("Rename")))
             report->show_rename_ui = true;
 
-        if (ImGui::MenuItem("Delete"))
+        if (ImGui::MenuItem(tr("Delete")))
             report_delete(report);
 
         ImGui::EndPopup();
@@ -2155,35 +2156,35 @@ void report_menu(report_t* report)
 
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("Report"))
+        if (ImGui::BeginMenu(tr("Report")))
         {
-            if (ImGui::MenuItem(ICON_MD_ADD " Add Title"))
+            if (ImGui::MenuItem(tr(ICON_MD_ADD " Add Title")))
                 report->show_add_title_ui = true;
 
-            if (ImGui::MenuItem(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns"))
+            if (ImGui::MenuItem(tr(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns")))
                 report_open_expression_columns_dialog(report);
 
             ImGui::Separator();
 
-            if (ImGui::MenuItem(ICON_MD_SELL " Show Sold", nullptr, &report->show_sold_title))
+            if (ImGui::MenuItem(tr(ICON_MD_SELL " Show Sold"), nullptr, &report->show_sold_title))
                 report_filter_out_titles(report);
-            if (ImGui::MenuItem(ICON_MD_SUMMARIZE " Show Summary", "F4", &report->show_summary))
+            if (ImGui::MenuItem(tr(ICON_MD_SUMMARIZE " Show Summary"), "F4", &report->show_summary))
                 report_summary_update(report);
 
-            if (ImGui::MenuItem(ICON_MD_TIMELINE " Show Timeline"))
+            if (ImGui::MenuItem(tr(ICON_MD_TIMELINE " Show Timeline")))
                 timeline_render_graph(report);
 
-            ImGui::MenuItem(ICON_MD_AUTO_GRAPH " Show Transactions", nullptr, &report->show_order_graph);
+            ImGui::MenuItem(tr(ICON_MD_AUTO_GRAPH " Show Transactions"), nullptr, &report->show_order_graph);
                 
             ImGui::Separator();
 
             if (report->save)
             {
-                if (ImGui::MenuItem(ICON_MD_SAVE " Save", ICON_MD_KEYBOARD_COMMAND "+S"))
+                if (ImGui::MenuItem(tr(ICON_MD_SAVE " Save"), ICON_MD_KEYBOARD_COMMAND "+S"))
                     report_save(report);
             }
 
-            if (ImGui::MenuItem(ICON_MD_REFRESH " Refresh", "F5"))
+            if (ImGui::MenuItem(tr(ICON_MD_REFRESH " Refresh"), "F5"))
                 report_refresh(report);
 
             ImGui::EndMenu();

@@ -46,7 +46,7 @@ FOUNDATION_STATIC void about_render_dialog()
     ImGui::TextWrapped(PRODUCT_COPYRIGHT);
 
     ImGui::SetWindowFontScale(0.8f);
-    ImGui::TextWrapped("This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software.");
+    ImGui::TextWrapped(tr("This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software."));
     ImGui::SetWindowFontScale(1.0f);
 
     ImGui::Separator();
@@ -57,7 +57,7 @@ FOUNDATION_STATIC void about_render_dialog()
 
     ImGui::Separator();
 
-    ImGui::TextWrapped("This software uses the following third-party libraries:");
+    ImGui::TextWrapped(tr("This software uses the following third-party libraries:"));
 
     ImGui::SetWindowFontScale(0.9f);
 
@@ -98,8 +98,8 @@ FOUNDATION_STATIC void about_menu_open_dialog(void* user_data)
 
 void about_open_window()
 {
-    const char* title = string_format_static_const("About - %s##6", PRODUCT_NAME);
-    app_open_dialog(title, UINT32_C(700), UINT32_C(900), false, about_render_dialog);
+    const char* title = string_format_static_const("About - %s##7", PRODUCT_NAME);
+    app_open_dialog(title, UINT32_C(500), UINT32_C(700), false, about_render_dialog);
 }
 
 //

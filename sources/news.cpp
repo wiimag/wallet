@@ -154,7 +154,7 @@ FOUNDATION_STATIC bool news_window_render(void* obj)
 
     if (array_empty(news_window->news))
     {
-        ImGui::TextWrapped("No news feed");
+        ImGui::TextWrapped(tr("No news feed"));
         return true;
     }
 

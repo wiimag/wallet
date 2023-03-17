@@ -189,13 +189,13 @@ FOUNDATION_STATIC void installer_render_manifest_data()
 {
     if (string_is_null(_installer->manifest_app_name))
     {
-        ImGui::TextWrapped("Downloading installer manifest...");
+        ImGui::TextWrapped(tr("Downloading installer manifest..."));
         return;
     }
 
     if (array_size(_installer->manifest_versions) == 0)
     {
-        ImGui::TextWrapped("No versions available");
+        ImGui::TextWrapped(tr("No versions available"));
         return;
     }
 
@@ -208,13 +208,13 @@ FOUNDATION_STATIC void installer_render_manifest_data()
     ImGui::Spacing();
     ImGui::Spacing();
 
-    ImGui::TextUnformatted("Installation package:");
+    ImGui::TrTextUnformatted("Installation package:");
     ImGui::SameLine();
     if (ImGui::TextURL(STRING_RANGE(latest_version->download_url), STRING_ARGS(latest_version->download_url), 0))
     {
     }
 
-    ImGui::TextUnformatted("Installation directory:");
+    ImGui::TrTextUnformatted("Installation directory:");
     ImGui::SameLine();
     if (ImGui::TextURL(STRING_RANGE(_installer->app_data_local_install_path), nullptr, 0))
     {
@@ -264,7 +264,7 @@ FOUNDATION_STATIC void installer_render()
     static bool agree = BUILD_DEBUG ? true : false;
     ImGui::TextWrapped("By installing this software, you agree to the following privacy policy:");
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - 200.0f);
-    ImGui::Checkbox("I Agree", &agree);
+    ImGui::Checkbox(tr("I Agree"), &agree);
 
     ImGui::TextURL("https://equals-forty-two.com/privacy", nullptr, STRING_CONST("https://equals-forty-two.com/privacy"));
     ImGui::EndGroup();
@@ -281,13 +281,13 @@ FOUNDATION_STATIC void installer_render()
     ImGui::BeginGroup();
 
     // Draw a button to start the installation
-    if (ImGui::Button("Exit", ImVec2(200, 50)))
+    if (ImGui::Button(tr("Exit"), ImVec2(200, 50)))
         glfw_request_close_window(glfw_main_window());
 
     ImGui::BeginDisabled(!agree || array_size(_installer->manifest_versions) == 0);
     // Draw a button to exit the installer
     ImGui::SameLine(window_size.x - 260.0f);
-    if (ImGui::Button("Install", ImVec2(200, 50)))
+    if (ImGui::Button(tr("Install"), ImVec2(200, 50)))
     {
     }
     ImGui::EndDisabled();

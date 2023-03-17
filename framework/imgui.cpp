@@ -1064,14 +1064,19 @@ void ImGui::TableRowSeparator()
     }
 }
 
+void imgui_bullet_text_wrappedV(const char* fmt, va_list args)
+{
+    ImGui::Bullet();
+    ImGui::SameLine();
+    ImGui::TextWrappedV(fmt, args);
+}
+
 void imgui_bullet_text_wrapped(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
 
-    ImGui::Bullet();
-    ImGui::SameLine();
-    ImGui::TextWrapped(fmt, args);
+    imgui_bullet_text_wrappedV(fmt, args);
 
     va_end(args);
 }

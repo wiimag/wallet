@@ -653,7 +653,7 @@ FOUNDATION_STATIC void realtime_render_window_tootlbar()
 
     ImGui::SameLine();
     bool show_all = _realtime_module->time_lapse == 0;
-    if (ImGui::Checkbox("Show all records", &show_all))
+    if (ImGui::Checkbox(tr("Show all records"), &show_all))
     {
         _realtime_module->time_lapse = show_all ? 0 : max(1, session_get_integer("realtime_time_lapse_days", 24));
     }
@@ -711,9 +711,9 @@ FOUNDATION_STATIC void realtime_menu()
     if (!ImGui::BeginMenuBar())
         return;
     
-    if (ImGui::BeginMenu("Modules"))
+    if (ImGui::BeginMenu(tr("Modules")))
     {
-        ImGui::MenuItem(ICON_MD_RADIO_BUTTON_ON " Realtime", nullptr, &_realtime_module->show_window);
+        ImGui::MenuItem(tr(ICON_MD_RADIO_BUTTON_ON " Realtime"), nullptr, &_realtime_module->show_window);
         ImGui::EndMenu();
     }
 

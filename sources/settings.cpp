@@ -13,6 +13,7 @@
 #include <framework/common.h>
 #include <framework/session.h>
 #include <framework/string.h>
+#include <framework/localization.h>
 
 #define SESSION_KEY_SEARCH_TERMS "search_terms"
 #define SESSION_KEY_SEARCH_FILTER "search_filter"
@@ -24,13 +25,45 @@ void settings_draw()
 {
     ImGui::Columns(3, nullptr, false);
 
-    ImGui::SetColumnWidth(0, IM_SCALEF(210.0f));
+    ImGui::SetColumnWidth(0, IM_SCALEF(260.0f));
     ImGui::SetColumnWidth(1, IM_SCALEF(250.0f));
 
+    #if BUILD_ENABLE_LOCALIZATION
     {
+        // Select language
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(tr("Language"));
+
+        ImGui::NextColumn();
+        string_const_t current_language_name = localization_current_language_name();
+        if (ImGui::BeginCombo("##Language", current_language_name.str))
+        {
+            for (unsigned i = 0; i < localization_supported_language_count(); ++i)
+            {
+                string_const_t language_code = localization_language_code(i);
+                string_const_t language_name = localization_language_name(i);
+                bool is_selected = string_equal(STRING_ARGS(current_language_name), STRING_ARGS(language_code));
+                if (ImGui::Selectable(language_name.str, is_selected))
+                {
+                    localization_set_current_language(STRING_ARGS(language_code));
+                }
+                if (is_selected)
+                    ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::NextColumn();
+    }
+    #endif
+
+    {
+        #if BUILD_ENABLE_LOCALIZATION
+        ImGui::NextColumn();
+        #endif
         string_t eod_key = eod_get_key();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com"));
+        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com"));
 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
@@ -46,7 +79,7 @@ void settings_draw()
 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(SETTINGS.preferred_currency), ImGuiInputTextFlags_AutoSelectAll))
+        if (ImGui::InputTextWithHint("##Currency", tr("i.e. USD"), STRING_BUFFER(SETTINGS.preferred_currency), ImGuiInputTextFlags_AutoSelectAll))
         {
         }
 
@@ -54,7 +87,7 @@ void settings_draw()
         if (!string_equal(STRING_ARGS(string_const(SETTINGS.preferred_currency)), STRING_CONST("USD")))
         {
             ImGui::AlignTextToFramePadding();
-            ImGui::Text("i.e. USD%s is %.2lf $", SETTINGS.preferred_currency, 
+            ImGui::TrText("i.e. USD%s is %.2lf $", SETTINGS.preferred_currency,
                 stock_exchange_rate(STRING_CONST("USD"), STRING_ARGS(string_const(SETTINGS.preferred_currency))));
         }
     }
@@ -62,7 +95,7 @@ void settings_draw()
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextURL("Preferred Dividends %", nullptr, STRING_CONST("https://en.wikipedia.org/wiki/Dividend#:~:text=A%20dividend%20is%20a%20distribution,business%20(called%20retained%20earnings)."));
+        ImGui::TextURL(tr("Preferred Dividends %"), nullptr, STRING_CONST("https://en.wikipedia.org/wiki/Dividend#:~:text=A%20dividend%20is%20a%20distribution,business%20(called%20retained%20earnings)."));
 
         ImGui::NextColumn();
         double good_dividends_ratio_100 = SETTINGS.good_dividends_ratio * 100;
@@ -78,7 +111,7 @@ void settings_draw()
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Show logo banners");
+        ImGui::TextUnformatted(tr("Show logo banners"));
 
         ImGui::NextColumn();
         if (ImGui::Checkbox("##ShowLogoBanners", &SETTINGS.show_logo_banners))
@@ -110,7 +143,7 @@ void settings_draw()
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Font scaling");
+        ImGui::TextUnformatted(tr("Font scaling"));
 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
@@ -121,23 +154,23 @@ void settings_draw()
 
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Changing that settings requires restarting the application.");
+        ImGui::TextUnformatted(tr("Changing that settings requires restarting the application."));
     }
 
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Frame Throttling");
+        ImGui::TextUnformatted(tr("Frame Throttling"));
 
         ImGui::NextColumn();
         int frame_throttling = session_get_integer("frame_throttling", 16);
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::SliderInt("##frame_throttling", &frame_throttling, 0, 1000, "%d milliseconds", ImGuiSliderFlags_AlwaysClamp))
+        if (ImGui::SliderInt("##frame_throttling", &frame_throttling, 0, 1000, tr("%d milliseconds"), ImGuiSliderFlags_AlwaysClamp))
             session_set_integer("frame_throttling", frame_throttling);
 
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextWrapped("Time to wait before rendering another frame (ms).\nThe higher the number, less resources are used, therefore more battery time!");
+        ImGui::TextWrapped(tr("Time to wait before rendering another frame (ms).\nThe higher the number, less resources are used, therefore more battery time!"));
     }
 }
 

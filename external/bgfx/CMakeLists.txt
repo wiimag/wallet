@@ -44,6 +44,16 @@ add_compile_definitions(BGFX_CONFIG_USE_TINYSTL=0)
 
 # Disable vulkan backend renderer for all platforms
 add_compile_definitions(BGFX_CONFIG_RENDERER_VULKAN=0)
+add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGLES=0)
+add_compile_definitions(BGFX_CONFIG_RENDERER_AGC=0)
+add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGL=0)
+
+add_compile_definitions(BGFX_CONFIG_MAX_DRAW_CALLS=1024)
+add_compile_definitions(BGFX_CONFIG_MAX_INSTANCE_DATA_COUNT=4)
+add_compile_definitions(BGFX_CONFIG_MAX_OCCLUSION_QUERIES=32)
+add_compile_definitions(BGFX_CONFIG_MAX_VIEW_NAME=64)
+add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_DECLS=32)
+add_compile_definitions(BGFX_CONFIG_MAX_INDEX_BUFFERS=512)
 
 if (WIN32)
 

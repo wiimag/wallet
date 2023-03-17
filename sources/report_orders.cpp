@@ -125,36 +125,36 @@ FOUNDATION_STATIC void report_order_total_value_adjusted_tooltip(table_element_p
         order->adjusted_split_factor = stock_get_split_adjusted_factor(order->title->code, order->title->code_length, report_order_get_date(order));
 
     if (order->split_factor != 1.0)
-        ImGui::Text(" Split Factor: %.3lg", order->split_factor);
+        ImGui::TrText(" Split Factor: %.3lg", order->split_factor);
 
-    ImGui::Text(" %s Price: %.2lf $ (%d) ", buy_order ? "Bought" : "Sell", price, math_round(quantity));
+    ImGui::TrText(" %s Price: %.2lf $ (%d) ", buy_order ? "Bought" : "Sell", price, math_round(quantity));
     
     const int split_quantity = math_round(quantity / order->split_factor);
     if (order->split_factor != 1.0)
-        ImGui::Text(" Split Price: %.2lf $ (%d)", price * order->split_factor, split_quantity);
+        ImGui::TrText(" Split Price: %.2lf $ (%d)", price * order->split_factor, split_quantity);
 
     if (order->price_factor != order->split_factor)
     {
-        ImGui::Text(" Adjust Factor: %.3lg", order->price_factor);
-        ImGui::Text(" Adjusted Price: %.3lf $ ", price * order->price_factor);
+        ImGui::TrText(" Adjust Factor: %.3lg", order->price_factor);
+        ImGui::TrText(" Adjusted Price: %.3lf $ ", price * order->price_factor);
     }
 
     const double adjusted_price = price * order->adjusted_split_factor;
     if (buy_order && order->adjusted_split_factor != 1.0)
     {
-        ImGui::Text(" Split Adjusted Factor: %.3lg (%.3lg)", order->adjusted_split_factor, order->split_factor * order->price_factor);
-        ImGui::Text(" Split Adjusted Price: %.3lf $", adjusted_price);
+        ImGui::TrText(" Split Adjusted Factor: %.3lg (%.3lg)", order->adjusted_split_factor, order->split_factor * order->price_factor);
+        ImGui::TrText(" Split Adjusted Price: %.3lf $", adjusted_price);
     }
 
     ImGui::Spacing();
     ImGui::Separator();
     
     const double total_value = quantity * price;
-    ImGui::Text(" %s Value: %.2lf $ ", buy_order ? "Bought" : "Sell", total_value);
+    ImGui::TrText(" %s Value: %.2lf $ ", buy_order ? "Bought" : "Sell", total_value);
 
     const double adjusted_value = total_value * order->adjusted_split_factor;
     if (buy_order && order->adjusted_split_factor != 1.0)
-        ImGui::Text(" Adjusted Value (%d x %.2lf $): %.2lf $ ", split_quantity, adjusted_price, adjusted_value);
+        ImGui::TrText(" Adjusted Value (%d x %.2lf $): %.2lf $ ", split_quantity, adjusted_price, adjusted_value);
 
     const double current_price = order->title->stock->current.adjusted_close;
     if (!math_real_is_nan(current_price))
@@ -167,13 +167,13 @@ FOUNDATION_STATIC void report_order_total_value_adjusted_tooltip(table_element_p
         if (!buy_order)
             gain *= -1.0;
         if (gain < 0)
-            ImGui::Text(" Lost Value : %.2lf $ ", gain);
+            ImGui::TrText(" Lost Value : %.2lf $ ", gain);
         else
-            ImGui::Text(" Gain Value : %.2lf $ ", gain);
+            ImGui::TrText(" Gain Value : %.2lf $ ", gain);
         
         ImGui::Spacing();
 
-        ImGui::Text(" Worth Value (%d x %.2lf $): %.2lf $ ", split_quantity, current_price, worth_value);
+        ImGui::TrText(" Worth Value (%d x %.2lf $): %.2lf $ ", split_quantity, current_price, worth_value);
     }
 }
 
@@ -558,9 +558,9 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
 
         if (ImGui::IsWindowAppearing())
             ImGui::SetKeyboardFocusHere();
-        ImGui::Text("Quantity"); ImGui::NextColumn();
-        ImGui::Text("Date"); ImGui::NextColumn();
-        ImGui::Text("Price"); ImGui::NextColumn();
+        ImGui::TrText("Quantity"); ImGui::NextColumn();
+        ImGui::TrText("Date"); ImGui::NextColumn();
+        ImGui::TrText("Price"); ImGui::NextColumn();
 
         ImGui::Columns(3);
 
@@ -604,10 +604,10 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         ImGui::NextColumn();
 
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(100.0f));
-        if (ImGui::Button("Cancel"))
+        if (ImGui::Button(tr("Cancel")))
             title->show_buy_ui = false;
         ImGui::SameLine();
-        if (ImGui::Button("Apply"))
+        if (ImGui::Button(tr("Apply")))
         {
             config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
             config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);
@@ -658,9 +658,9 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
 
         if (ImGui::IsWindowAppearing())
             ImGui::SetKeyboardFocusHere();
-        ImGui::Text("Quantity"); ImGui::NextColumn();
-        ImGui::Text("Date"); ImGui::NextColumn();
-        ImGui::Text("Price"); ImGui::NextColumn();
+        ImGui::TrText("Quantity"); ImGui::NextColumn();
+        ImGui::TrText("Date"); ImGui::NextColumn();
+        ImGui::TrText("Price"); ImGui::NextColumn();
 
         ImGui::Columns(3);
 
@@ -684,16 +684,16 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
         ImGui::Columns(1);
         ImGui::MoveCursor(20, 15);
 
-        ImGui::Text("Sell Value: %.2lf $", quantity * price);
+        ImGui::TrText("Sell Value: %.2lf $", quantity * price);
 
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(115));
 
         ImGui::MoveCursor(0, -5);
-        if (ImGui::Button("Cancel"))
+        if (ImGui::Button(tr("Cancel")))
             title->show_sell_ui = false;
         ImGui::SameLine();
         ImGui::MoveCursor(0, -5);
-        if (ImGui::Button("Apply"))
+        if (ImGui::Button(tr("Apply")))
         {
             config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
             config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);

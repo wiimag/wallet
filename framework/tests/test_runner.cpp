@@ -267,7 +267,7 @@ FOUNDATION_STATIC void test_runner_window_render()
         }
 
         ImGui::SameLine();
-        if (ImGui::Button("Clear"))
+        if (ImGui::Button(tr("Clear")))
         {
             foreach(e, _test_runner_cases)
             {
@@ -275,7 +275,7 @@ FOUNDATION_STATIC void test_runner_window_render()
             }
         }
         ImGui::SameLine();
-        if (ImGui::Button("Run All"))
+        if (ImGui::Button(tr("Run All")))
         {
             foreach(e, _test_runner_table->rows)
             {
@@ -303,7 +303,7 @@ FOUNDATION_STATIC void test_runner_menu()
 {
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("Windows"))
+        if (ImGui::BeginMenu(tr("Windows")))
         {
             ImGui::MenuItem(ICON_MD_LOGO_DEV " Test Runner", nullptr, &_test_runner_window_opened);
             ImGui::EndMenu();

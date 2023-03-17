@@ -131,15 +131,16 @@ FOUNDATION_STATIC void app_menu(bool appended)
         {
             const string_t& path = menu->paths[i];
            
+           const char* path_tr = tr(STRING_ARGS(path), false).str;
             if (i == end - 1)
             {
                 const char* shortcut = menu->shortcut[0] ? menu->shortcut : nullptr;
-                if (ImGui::MenuItem(path.str, shortcut, false, true))
+                if (ImGui::MenuItem(path_tr, shortcut, false, true))
                     menu->handler(menu->user_data);
             }
             else
             {
-                if (!ImGui::BeginMenu(path.str, true))
+                if (!ImGui::BeginMenu(path_tr, true))
                     break;
                 ++menu_to_close_count;
             }
@@ -379,7 +380,7 @@ void app_menu_end(GLFWwindow* window)
 
 void app_menu_help(GLFWwindow* window)
 {
-    if (!ImGui::BeginMenu("Help"))
+    if (!ImGui::BeginMenu(tr("Help")))
            return;
 
     #if BUILD_DEVELOPMENT
@@ -433,7 +434,7 @@ void app_menu_help(GLFWwindow* window)
 
     #if BUILD_ENABLE_DEBUG_LOG
     bool show_debug_log = log_suppress(HASH_DEBUG) == ERRORLEVEL_NONE;
-    if (ImGui::MenuItem("Show Debug Logs", nullptr, &show_debug_log))
+    if (ImGui::MenuItem(tr("Show Debug Logs"), nullptr, &show_debug_log))
     {
         if (show_debug_log)
         {
@@ -450,7 +451,7 @@ void app_menu_help(GLFWwindow* window)
     #endif
 
     #if BUILD_ENABLE_MEMORY_STATISTICS && BUILD_ENABLE_MEMORY_TRACKER
-    if (ImGui::MenuItem("Show Memory Stats"))
+    if (ImGui::MenuItem(tr("Show Memory Stats")))
     {
         MEMORY_TRACKER(HASH_MEMORY);
         console_show();

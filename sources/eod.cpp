@@ -339,10 +339,10 @@ FOUNDATION_STATIC void eod_show_login_dialog()
     app_open_dialog("Enter EOD API KEY", [](void*)->bool
     {     
         // Explain that the EOD api needs to be set
-        ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com"));
-        ImGui::TextWrapped("EOD API Key is required to use this application.");
+        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com"));
+        ImGui::TextWrapped(tr("EOD API Key is required to use this application."));
         ImGui::NewLine();
-        ImGui::TextWrapped("You can get a free API key by registering at the link above. Please enter your API key below and press Continue");
+        ImGui::TextWrapped(tr("You can get a free API key by registering at the link above. Please enter your API key below and press Continue"));
 
         ImGui::NewLine();
         string_t eod_key = eod_get_key();
@@ -355,7 +355,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
 
         static float continue_button_width = 100;
         ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - continue_button_width, 0);
-        if (ImGui::Button("Continue", {100, imgui_get_font_ui_scale(30)}))
+        if (ImGui::Button(tr("Continue"), {100, imgui_get_font_ui_scale(30)}))
         {
             eod_refresh();
             return false;
@@ -426,7 +426,7 @@ FOUNDATION_STATIC void eod_main_menu_status()
     {
         string_t eod_key = eod_get_key();
 
-        if (ImGui::MenuItem("Refresh"))
+        if (ImGui::MenuItem(tr("Refresh")))
             eod_refresh();
 
         ImGui::Separator();

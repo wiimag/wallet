@@ -7,6 +7,7 @@
 
 #include <framework/common.h>
 #include <framework/function.h>
+#include <framework/localization.h>
 
 #include <imgui/imgui.h>
 #include <imgui/implot.h>
@@ -305,6 +306,13 @@ float imgui_calc_text_width(const char(&text)[N], imgui_calc_text_flags_t flags 
  */
 void imgui_bullet_text_wrapped(const char* fmt, ...);
 
+/*! Draw a bullet item with a wrapped text label.
+* *
+* *  @param fmt The format string.
+* *  @param args The format arguments.
+* */
+void imgui_bullet_text_wrappedV(const char* fmt, va_list args);
+
 namespace ImGui 
 {
     /*! Move the current cursor position.
@@ -371,7 +379,40 @@ namespace ImGui
     {
         va_list args;
         va_start(args, fmt);
-        imgui_bullet_text_wrapped(fmt, args);
+        imgui_bullet_text_wrappedV(fmt, args);
         va_end(args);
+    }
+
+    /*! Draw a text label with translated text. 
+     * 
+     *  @param fmt The format string.
+     *  @param ... The format arguments.
+     */
+    FOUNDATION_FORCEINLINE void TrText(const char* fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        #if BUILD_ENABLE_LOCALIZATION
+        string_const_t fmtstr = tr(fmt, string_length(fmt), false);
+        TextV(fmtstr.str, args);
+        #else
+        Text(fmt, args);
+        #endif
+        va_end(args);
+    }
+
+    /*! Draw an unformatted text label with translated text. 
+     * 
+     *  @param fmt The format string.
+     *  @param args The format arguments.
+     */
+    FOUNDATION_FORCEINLINE void TrTextUnformatted(const char* text)
+    {
+        #if BUILD_ENABLE_LOCALIZATION
+        string_const_t textstr = tr(text, string_length(text));
+        TextUnformatted(STRING_RANGE(textstr));
+        #else 
+        TextUnformatted(text, nullptr);
+        #endif
     }
 }

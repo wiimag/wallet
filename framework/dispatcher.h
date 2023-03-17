@@ -113,6 +113,27 @@ void dispatcher_shutdown();
  */
 bool dispatch(const function<void()>& callback, uint32_t delay_milliseconds = 0);
 
+/*! Dispatch a call to be executed on the main thread for a given object.
+ * 
+ *  @param self     Object to call the callback on.
+ *                  This object instance must remain valid until the callback is executed.
+ *  @param callback Callback to be executed on the object instance.
+ * 
+ *  @return True if the call was dispatched, false otherwise.
+ */
+template<typename T, typename Callback>
+bool dispatch_self(T* self, Callback callback, uint32_t delay_milliseconds = 0)
+{
+    FOUNDATION_ASSERT(self);
+    FOUNDATION_ASSERT(callback);
+
+    return dispatch([self, callback]()
+    { 
+        FOUNDATION_ASSERT(self);
+        (self->*callback)(); 
+    }, delay_milliseconds);
+}
+
 /*! Process events and run dispatched calls. */
 void dispatcher_update();
 

@@ -7,11 +7,10 @@
 
 #pragma once
 
-#include "function.h"
+#include <framework/string.h>
+#include <framework/common.h>
 
 #include <foundation/hash.h>
-
-struct service_t;
 
 typedef void (*service_initialize_handler_t)(void);
 typedef void (*service_shutdown_handler_t)(void);
@@ -29,7 +28,16 @@ typedef function<void()> service_invoke_handler_t;
 #define SERVICE_PRIORITY_UI_HEADLESS (190)
 #define SERVICE_PRIORITY_UI          (200)
 
-/*! Register a service to be initialized and shutdown at the appropriate time.
+FOUNDATION_FORCEINLINE const char* service_name_to_lower_static(const char* name, size_t len)
+{
+    static thread_local char ts_name_buffer[16];
+    string_t lname = string_to_lower_ascii(STRING_BUFFER(ts_name_buffer), name, len);
+    return lname.str;
+}
+
+/*! @def DEFINE_SERVICE
+ * 
+ * Register a service to be initialized and shutdown at the appropriate time.
  *
  * @param NAME          Name of the service.
  * @param initialize_fn Function to call to initialize the service.
@@ -37,11 +45,39 @@ typedef function<void()> service_invoke_handler_t;
  * @param ...           Optional priority of the service.
  */
 #define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, ...)   \
-    const Service __##NAME##_service(#NAME, HASH_##NAME, [](){ \
+    const Service __##NAME##_service(#NAME, HASH_##NAME, [](){  \
         memory_context_push(HASH_##NAME);                       \
         initialize_fn();                                        \
         memory_context_pop();                                   \
     }, shutdown_fn, __VA_ARGS__)
+
+/*! @def DEFINE_MODULE
+ * 
+ * Register a module to be initialized and shutdown at the appropriate time.
+ *
+ * @param NAME          Name of the module.
+ * @param CONTENT       Body of the module (it can include anything a struct can contain).
+ *                      The body must contain minimally the following functions:
+ *                          - void initialize()
+ *                          - void shutdown()
+ * @param ...           Optional priority of the module.
+ */
+#define DEFINE_MODULE(NAME, CONTENT, ...)                               \
+    const hash_t HASH_##NAME = string_hash(service_name_to_lower_static(#NAME, sizeof(#NAME)-1), sizeof(#NAME)-1);  \
+    struct NAME                                                         \
+        CONTENT                                                         \
+        *_module = nullptr;                                             \
+    const Service __##NAME##_service(#NAME, HASH_##NAME, []() {         \
+        static_hash_store(service_name_to_lower_static(#NAME, sizeof(#NAME)-1), sizeof(#NAME)-1, HASH_##NAME);         \
+        memory_context_push(HASH_##NAME);                               \
+        _module = MEM_NEW(HASH_##NAME, NAME);                           \
+        _module->initialize();                                          \
+        memory_context_pop();                                           \
+    }, []() {                                                           \
+        _module->shutdown();                                            \
+        MEM_DELETE(_module);                                            \
+        _module = nullptr;                                              \
+    }, __VA_ARGS__)
 
  /*! Service object to be instantiated in the global scope to manage 
   *  the service initialization and shutdown sequence. 

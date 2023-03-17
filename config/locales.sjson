@@ -1,0 +1,576 @@
+{
+	images = []
+	strings = [
+		{
+			fr = "<racine>"
+			en = "<root>"
+		}
+		{
+			hash = "315259d58df4971e"
+			en = "File"
+			fr = "Fichier"
+		}
+		{
+			hash = "3cd9abbe69023cf5"
+			en = "Create"
+			fr = "Cr\xc3\xa9er"
+		}
+		{
+			hash = "cba02097bd28edff"
+			en = "Open"
+			fr = "Ouvrir"
+		}
+		{
+			hash = "2db70e0343e151ce"
+			en = "\xee\xa1\xb9 Exit"
+			fr = "\xee\xa1\xb9 Quitter"
+		}
+		{
+			hash = "e85cb85742aca2c7"
+			en = "Language"
+			fr = "Langue"
+		}
+		{
+			hash = "270e253161ae0ca9"
+			en = "EOD API Key"
+			fr = "Cl\xc3\xa9 API EOD"
+		}
+		{
+			hash = "c8e0c8e596234111"
+			en = "i.e. USD"
+			fr = "soit USD"
+		}
+		{
+			hash = "4a88a66f5d6db835"
+			en = "i.e. USD%s is %.2lf $"
+			fr = "USD%s vaut %.2lf $"
+		}
+		{
+			hash = "1af16e15bd83b48c"
+			en = "Preferred Dividends %"
+			fr = "Taux de rendement souhait\xc3\xa9 (%)"
+		}
+		{
+			hash = "3db8b69ff90df38c"
+			en = "Show logo banners"
+			fr = "Afficher les banni\xc3\xa8res"
+		}
+		{
+			hash = "c29864d9b8d44011"
+			en = "Font scaling"
+			fr = "Taille de la police de caract\xc3\xa8res"
+		}
+		{
+			hash = "ed7f7b6b299c9462"
+			en = "Changing that settings requires restarting the application."
+			fr = "Le changement de cette option requiert le red\xc3\xa9marrage de l'application."
+		}
+		{
+			hash = "86f60888f62f3e63"
+			en = "Frame Throttling"
+			fr = "Limitation des images par seconde"
+		}
+		{
+			hash = "40c96ee67e70b275"
+			en = "%d milliseconds"
+			fr = "%d millisecondes"
+		}
+		{
+			hash = "7c3a4fd11ab3bba7"
+			en = "Time to wait before rendering another frame (ms).
+The higher the number, less resources are used, therefore more battery time!"
+			fr = "Temps d'attente avant de rafra\xc3\xaechir l'\xc3\xa9cran (ms).
+Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9es, donc plus d'autonomie !"
+		}
+		{
+			hash = "7acd7163c9e895ef"
+			en = "Symbols"
+			fr = "Symboles"
+		}
+		{
+			hash = "e34fb7bc1ab67af5"
+			en = "Indexes"
+			fr = "Indices"
+		}
+		{
+			hash = "b0387866bf2040ee"
+			en = "IPOs"
+			fr = "IPO"
+		}
+		{
+			hash = "f3bd23add0cfa5cb"
+			en = "TO Symbols"
+			fr = "Symboles TO"
+		}
+		{
+			hash = "2f82ed49ee0686d8"
+			en = "CVE Symbols"
+			fr = "Symboles V (TO)"
+		}
+		{
+			hash = "3dacf030a2e757b2"
+			en = "NEO Symbols"
+			fr = "Symboles NEO"
+		}
+		{
+			hash = "426a2b4a41ec2995"
+			en = "US Symbols"
+			fr = "Symboles US"
+		}
+		{
+			hash = "cc4fb256b46fc384"
+			en = "\xef\x80\xaf Search "
+			fr = "\xef\x80\xaf Rechercher "
+		}
+		{
+			hash = "fc1683103971e92e"
+			en = "Add Entry"
+			fr = "Ajouter"
+		}
+		{
+			hash = "40261f2015b16d6a"
+			en = "Show Extra Charts"
+			fr = "Afficher les graphiques suppl\xc3\xa9mentaires"
+		}
+		{
+			hash = "c893566fe75c5978"
+			en = "Delete"
+			fr = "Supprimer"
+		}
+		{
+			hash = "74f7620f89c1cce1"
+			en = "Update"
+			fr = "Mettre \xc3\xa0 jour"
+		}
+		{
+			hash = "d1ef06780ef49011"
+			en = "Close"
+			fr = "Fermer"
+		}
+		{
+			hash = "27401988236d16f6"
+			en = "\xef\xa3\xbf Wallet "
+			fr = "\xef\xa3\xbf Portefeuille "
+		}
+		{
+			hash = "c6b41e97455fa2e8"
+			en = "\xee\xa2\xb8 Settings "
+			fr = "\xee\xa2\xb8 Param\xc3\xa8tres "
+		}
+		{
+			hash = "5c747c30cd981112"
+			en = "\xef\xa3\xbf Wallet"
+			fr = "\xef\xa3\xbf Portefeuille"
+		}
+		{
+			hash = "5cf2a32132e1f637"
+			en = "Limits"
+			fr = "Limites"
+		}
+		{
+			hash = "9322d0fcabd9e3ae"
+			en = "Extra Charts"
+			fr = "Graphiques suppl\xc3\xa9mentaires"
+		}
+		{
+			hash = "7cac35efd47d5817"
+			en = "Invert Time"
+			fr = "Inverser temps"
+		}
+		{
+			hash = "711104e142ec1249"
+			en = "History"
+			fr = "Historique"
+		}
+		{
+			hash = "8e063595fb0ed8cd"
+			en = "Target %"
+			fr = "Cible %"
+		}
+		{
+			hash = "cd70a4bfc875a8f7"
+			en = "Currency"
+			fr = "Devise"
+		}
+		{
+			hash = "475bad5102c30808"
+			en = "Fund"
+			fr = "Fonds"
+		}
+		{
+			hash = "4b0d1fd532e28b2c"
+			en = "Search"
+			fr = "Rechercher"
+		}
+		{
+			hash = "43666ee604354304"
+			en = "Last Day"
+			fr = "Dernier jour"
+		}
+		{
+			hash = "939f9f77732b5991"
+			en = "This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software."
+			fr = "Ce logiciel est fourni 'tel quel', sans aucune garantie explicite ou implicite. En aucun cas les auteurs ne pourront \xc3\xaatre tenus responsables de tout dommage direct ou indirect, quel qu'il soit, r\xc3\xa9sultant de l'utilisation de ce logiciel."
+		}
+		{
+			hash = "bb8a54cdfd4df0ff"
+			en = "This software uses the following third-party libraries:"
+			fr = "Ce logiciel utilise les biblioth\xc3\xa8ques suivantes:"
+		}
+		{
+			hash = "1073dbbcd4594f61"
+			en = "Modules"
+			fr = "Modules"
+		}
+		{
+			hash = "58aa8ad1c1165789"
+			en = "Windows"
+			fr = "Fen\xc3\xaatre"
+		}
+		{
+			hash = "5500876517d161e7"
+			en = "Help"
+			fr = "Aide"
+		}
+		{
+			hash = "3b0e2dcdf6d198f6"
+			en = "Report"
+			fr = "Rapport"
+		}
+		{
+			hash = "f193fca30f6cf7f"
+			en = "Report..."
+			fr = "Rapport..."
+		}
+		{
+			hash = "2abbf2b45050b321"
+			en = "\xee\xa0\xb7 Realtime"
+			fr = "\xee\xa0\xb7 Temps r\xc3\xa9el"
+		}
+		{
+			hash = "d4283431a94d2409"
+			en = "\xef\x83\xb5 Indicators"
+			fr = "\xef\x83\xb5 Indicateurs"
+		}
+		{
+			hash = "21951936139215b8"
+			en = "\xee\x85\x85 Add Title"
+			fr = "\xee\x85\x85 Ajouter un titre"
+		}
+		{
+			hash = "f91c72167e609479"
+			en = "\xee\xa6\x9b Expression Columns"
+			fr = "\xee\xa6\x9b Colonnes d'expression"
+		}
+		{
+			hash = "3ecef1454b889dfe"
+			en = "\xef\x81\x9b Show Sold"
+			fr = "\xef\x81\x9b Afficher les ventes"
+		}
+		{
+			hash = "776f1bba8ac9c221"
+			en = "\xef\x81\xb1 Show Summary"
+			fr = "\xef\x81\xb1 Afficher le r\xc3\xa9sum\xc3\xa9"
+		}
+		{
+			hash = "a65f890b150f757a"
+			en = "\xee\xa4\xa2 Show Timeline"
+			fr = "\xee\xa4\xa2 Afficher la timeline"
+		}
+		{
+			hash = "421dba4b950dae0a"
+			en = "\xee\x93\xbb Show Transactions"
+			fr = "\xee\x93\xbb Afficher les transactions"
+		}
+		{
+			hash = "116db394b3bab225"
+			en = "\xee\x85\xa1 Save"
+			fr = "\xee\x85\xa1 Enregistrer"
+		}
+		{
+			hash = "e6ec130651b34b51"
+			en = "\xee\x97\x95 Refresh"
+			fr = "\xee\x97\x95 Actualiser"
+		}
+		{
+			hash = "3816a7208e1719bf"
+			en = "Pattern"
+			fr = "Pattern"
+		}
+		{
+			hash = "eaba272290cf7113"
+			en = "Read News"
+			fr = "Lire les nouvelles"
+		}
+		{
+			hash = "73cae61d9fb6e08f"
+			en = "EOD"
+			fr = "EOD"
+		}
+		{
+			hash = "50f32017880c8c4f"
+			en = "Trends"
+			fr = "Tendances"
+		}
+		{
+			hash = "97f9befa718bf86"
+			en = "Earnings"
+			fr = "R\xc3\xa9sultats"
+		}
+		{
+			hash = "5ffd55d600dabe55"
+			en = "Technical"
+			fr = "Technique"
+		}
+		{
+			hash = "dd6d943002125f86"
+			en = "Fundamentals"
+			fr = "Fondamentaux"
+		}
+		{
+			hash = "6b126e73f1110fd2"
+			en = "Real-time"
+			fr = "Temps r\xc3\xa9el"
+		}
+		{
+			hash = "24ad4dccb5387e92"
+			en = "Show Debug Logs"
+			fr = "Information de d\xc3\xa9bogage"
+		}
+		{
+			hash = "4bb994bfcdedfc77"
+			en = "Show Memory Stats"
+			fr = "Statistiques de m\xc3\xa9moire"
+		}
+		{
+			hash = "4ce3491c214c6d9c"
+			en = "About"
+			fr = "A propos"
+		}
+		{
+			hash = "6b148d06922621a5"
+			en = "\xee\xab\x96 Console"
+			fr = "\xee\xab\x96 Console"
+		}
+		{
+			hash = "bc12dfe85036ed5c"
+			en = "Refresh"
+			fr = "Actualiser"
+		}
+		{
+			hash = "7a5e874223c9b29c"
+			en = "Price trend is positive."
+			fr = "La tendance du prix est positive."
+		}
+		{
+			hash = "728f0c10a12232f3"
+			en = "Moving trends are null or slightly negative and about to go up (crossing each others)."
+			fr = "Les tendances mobiles sont nulles ou l\xc3\xa9g\xc3\xa8rement n\xc3\xa9gatives et vont bient\xc3\xb4t monter (en croisant les unes les autres)."
+		}
+		{
+			hash = "d1153fda485d9a6d"
+			en = "Activity polarity trend is positive."
+			fr = "La tendance de polarit\xc3\xa9 de l'activit\xc3\xa9 est positive."
+		}
+		{
+			hash = "3b180db0010add5d"
+			en = "Sell limit is higher or equal to 3%."
+			fr = "La limite de vente est sup\xc3\xa9rieure ou \xc3\xa9gale \xc3\xa0 3%."
+		}
+		{
+			hash = "b48b275ae988db9b"
+			en = "Beta is higher or equal to 90%."
+			fr = "Le beta est sup\xc3\xa9rieur ou \xc3\xa9gal \xc3\xa0 90%."
+		}
+		{
+			hash = "2643099fdc2c4f8f"
+			en = "Flex difference is higher than 6%."
+			fr = "La diff\xc3\xa9rence de flex est sup\xc3\xa9rieure \xc3\xa0 6%."
+		}
+		{
+			hash = "6c53715ac969e32d"
+			en = "MAX mark is higher than 25%."
+			fr = "La marque MAX est sup\xc3\xa9rieure \xc3\xa0 25%."
+		}
+		{
+			hash = "45fb6b16fff9af8a"
+			en = "Target limits are interesting."
+			fr = "Les limites de cible sont int\xc3\xa9ressantes."
+		}
+		{
+			hash = "bcbdf4b8966ab776"
+			en = "Today"
+			fr = "Aujourd'hui"
+		}
+		{
+			hash = "7452885a53082ba0"
+			en = "Planning"
+			fr = "Planification"
+		}
+		{
+			hash = "97f4660be0bcc0ad"
+			en = "Notes"
+			fr = "Notes"
+		}
+		{
+			hash = "fa158c5df092a229"
+			en = "News"
+			fr = "Nouvelles"
+		}
+		{
+			hash = "18228e0d326d0ef5"
+			en = "Volume"
+			fr = "Volume"
+		}
+		{
+			hash = "d4f07f8997e08d23"
+			en = "High 52"
+			fr = "Haut 52"
+		}
+		{
+			hash = "89bf781b81458680"
+			en = "Low 52"
+			fr = "Bas 52"
+		}
+		{
+			hash = "f9bf886dd690bc51"
+			en = "Yield"
+			fr = "Rendement"
+		}
+		{
+			hash = "df1621dd32cdd115"
+			en = "Beta"
+			fr = "Beta"
+		}
+		{
+			hash = "936bcf4d80e9c680"
+			en = "Flex"
+			fr = "Flex"
+		}
+		{
+			hash = "37016667dd38b6b3"
+			en = "Buy Limit"
+			fr = "Limite Achat"
+		}
+		{
+			hash = "86949fd726c1e516"
+			en = "Sell Limit"
+			fr = "Limite Vente"
+		}
+		{
+			hash = "86a3ab2b8059be8"
+			en = "Target Limit"
+			fr = "Limite Cible"
+		}
+		{
+			hash = "6970966beb7676b9"
+			en = "%d days"
+			fr = "%d jours"
+		}
+		{
+			hash = "61bcc04fb634fe12"
+			en = "Google"
+			fr = "Google"
+		}
+		{
+			hash = "bd920b9371b567cd"
+			en = "La Presse"
+			fr = "La Presse"
+		}
+		{
+			hash = "b25f13a759c7ddb2"
+			en = "Default"
+			fr = "D\xc3\xa9faut"
+		}
+		{
+			hash = "c14dfd0797a53403"
+			en = "Analysis"
+			fr = "Analyse"
+		}
+		{
+			hash = "d587b52c6279314b"
+			en = "LCF"
+			fr = "LCF"
+		}
+		{
+			hash = "31ba976406f16d22"
+			en = "Activity"
+			fr = "Activit\xc3\xa9"
+		}
+		{
+			hash = "8ce54b5ad259ebee"
+			en = "Price"
+			fr = "Prix"
+		}
+		{
+			hash = "9befa4c712f18eed"
+			en = "Polarity"
+			fr = "Polarit\xc3\xa9"
+		}
+		{
+			hash = "dcbb2247c4456a36"
+			en = "Popularity"
+			fr = "Popularit\xc3\xa9"
+		}
+		{
+			hash = "30c0d99c4bb48f86"
+			en = "Hits"
+			fr = "R\xc3\xa9sultats"
+		}
+		{
+			hash = "e3c759b5f7fad3f2"
+			en = "Change"
+			fr = "Diff\xc3\xa9rence"
+		}
+		{
+			hash = "3694d3741079eb3e"
+			en = "Buy"
+			fr = "Achat"
+		}
+		{
+			hash = "c75a1ca5c868ddb4"
+			en = "Sell"
+			fr = "Vente"
+		}
+		{
+			hash = "1d9ca1ffbbe54378"
+			en = "Flex Low"
+			fr = "Flex Bas"
+		}
+		{
+			hash = "1575e43e8075257b"
+			en = "Flex High"
+			fr = "Flex Haut"
+		}
+		{
+			hash = "6c3146e247b33fcc"
+			en = "WS"
+			fr = "Wall Street"
+		}
+		{
+			hash = "d71f6efaf738b92c"
+			en = "Low"
+			fr = "Bas"
+		}
+		{
+			hash = "59ff7c0ef1579ef8"
+			en = "High"
+			fr = "Haut"
+		}
+		{
+			hash = "6024f24bede2299e"
+			en = "Zero"
+			fr = "Z\xc3\xa9ro"
+		}
+		{
+			hash = "18acc03186d6353f"
+			en = "Trend"
+			fr = "Tendance"
+		}
+		{
+			hash = "bc44b82da566f3d3"
+			en = "Title"
+			fr = "Titre"
+		}
+	]
+}

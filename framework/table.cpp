@@ -903,7 +903,7 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
     int column_count = (int)table_column_count(table);
     if (column_count == 0)
     {
-        ImGui::Text("No columns to render for %.*s table", STRING_FORMAT(table->name));
+        ImGui::TrText("No columns to render for %.*s table", STRING_FORMAT(table->name));
         return;
     }
 

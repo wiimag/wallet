@@ -46,13 +46,13 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 
     {
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("History");
+        ImGui::TrTextUnformatted("History");
         last_item_size = ImGui::GetItemRectSize().x;
         ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(32.0f), 0, true);
         if (ImGui::Checkbox("##History", &wallet->track_history))
             updated |= true;
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Track historical data for this report.");
+            ImGui::SetTooltip(tr("Track historical data for this report."));
     }
 
     {
@@ -60,7 +60,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::TableNextColumn();
 
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Target %");
+        ImGui::TrTextUnformatted("Target %");
         last_item_size = ImGui::GetItemRectSize().x;
 
         const float control_width = IM_SCALEF(60.0f);
@@ -79,7 +79,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::TableNextColumn();
 
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Currency");
+        ImGui::TrTextUnformatted("Currency");
         last_item_size = ImGui::GetItemRectSize().x;
 
         char currency[64];
@@ -102,7 +102,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::TableNextColumn();
 
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Fund");
+        ImGui::TrTextUnformatted("Fund");
         last_item_size = ImGui::GetItemRectSize().x;
 
         const float control_width = IM_SCALEF(96.0f);
@@ -193,7 +193,7 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
     ImGui::Dummy(ImVec2(0.0f, 0.0f));
     ImGui::SameLine(0, 8);
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("Report");
+    ImGui::TrTextUnformatted("Report");
     ImGui::SameLine(0, 16);
     ImGui::SetNextItemWidth(300.0f);
     const size_t report_count = ::report_count();
@@ -224,20 +224,20 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
         wallet_t* wallet = selected_report->wallet;
         ImGui::SameLine();
         ImGui::BeginDisabled(!eod_availalble());
-        if (ImGui::Button("Add Entry"))
+        if (ImGui::Button(tr("Add Entry")))
         {
             wallet_history_add_new_entry(selected_report, wallet);
         }
         ImGui::EndDisabled();
 
         ImGui::SameLine(0, 100.0f);
-        if (ImGui::Checkbox("Show Extra Charts", &wallet->show_extra_charts))
+        if (ImGui::Checkbox(tr("Show Extra Charts"), &wallet->show_extra_charts))
             ImPlot::SetNextAxesToFit();
     }
     else if (report_count == 0)
     {
         ImGui::SameLine();
-        if (ImGui::Button("Create New"))
+        if (ImGui::Button(tr("Create New")))
         {
             SETTINGS.show_create_report_ui = true;
         }
@@ -521,14 +521,14 @@ FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, histo
         ImGui::BeginGroup();
 
         ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
-        if (ImGui::Button("Delete"))
+        if (ImGui::Button(tr("Delete")))
             wallet_history_delete_entry(report, h);
         ImGui::PopStyleColor(1);
 
         if (h->source && (h - &h->source->history[0]) == 0)
         {
             ImGui::SameLine(0, control_width - IM_SCALEF(60.0f));
-            if (ImGui::Button("Update"))
+            if (ImGui::Button(tr("Update")))
                 wallet_history_update_entry(report, h->source, *h);
 
             ImGui::SameLine();
@@ -536,7 +536,7 @@ FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, histo
         else
             ImGui::SameLine(0, control_width);
 
-        if (ImGui::Button("Close"))
+        if (ImGui::Button(tr("Close")))
             h->show_edit_ui = false;
             
         ImGui::EndGroup();
@@ -614,7 +614,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     const unsigned history_count = array_size(wallet->history);
     if (history_count <= 1)
     {
-        ImGui::TextUnformatted("Not enough entries to display graph");
+        ImGui::TrTextUnformatted("Not enough entries to display graph");
         return;
     }
 
