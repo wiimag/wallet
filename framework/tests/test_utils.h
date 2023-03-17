@@ -22,7 +22,6 @@
 #include <ostream>
 #include <initializer_list>
 
-extern void main_dispatcher();
 extern GLFWwindow* main_test_window();
 extern bool main_poll(GLFWwindow* window);
 extern void main_update(GLFWwindow* window, const app_update_handler_t& render);

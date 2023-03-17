@@ -24,6 +24,7 @@
 #include <framework/service.h>
 #include <framework/tabs.h>
 #include <framework/string.h>
+#include <framework/localization.h>
 
 #include <foundation/hash.h>
 #include <foundation/array.h>
@@ -416,8 +417,7 @@ FOUNDATION_STATIC void symbol_code_selected(table_element_ptr_const_t element, c
 
 FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(string_const_t)> selector = nullptr)
 {
-    table_t* table = table_allocate(name);
-    table->flags |= TABLE_HIGHLIGHT_HOVERED_ROW;
+    table_t* table = table_allocate(name, TABLE_HIGHLIGHT_HOVERED_ROW | TABLE_LOCALIZATION_CONTENT);
 
     table->update = [](table_element_ptr_t element)->bool
     {
@@ -463,7 +463,7 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
         string_const_t code = string_table_decode_const(symbol->code);
         if (selector)
         {
-            if (ImGui::MenuItem("Select symbol"))
+            if (ImGui::MenuItem(tr("Select symbol")))
                 selector(code);
         }
         else if (pattern_menu_item(STRING_ARGS(code)))
@@ -587,7 +587,7 @@ FOUNDATION_STATIC void symbols_render_search(string_const_t search_filter, const
     }
     else
     {
-        ImGui::TextWrapped("No search results for %.*s\nYou can still add the search term as a title by pressing Add.", STRING_FORMAT(search_filter));
+        ImGui::TextWrapped(tr("No search results for %.*s\nYou can still add the search term as a title by pressing Add."), STRING_FORMAT(search_filter));
     }
 }
 
@@ -620,7 +620,7 @@ void symbols_render(const char* market, bool filter_null_isin /*= true*/)
     }
     else
     {
-        ImGui::Text("No results for %s", market);
+        ImGui::TrText("No results for %s", market);
     }
 }
 
@@ -633,14 +633,14 @@ void symbols_render_search(const function<void(string_const_t)>& selector /*= nu
     if (selector)
     {
         ImGui::SameLine();
-        if (ImGui::Button("Add"))
+        if (ImGui::Button(tr("Add")))
             selector(search_filter);
     }
 
     if (SETTINGS.search_terms[0] != '\0')
         symbols_render_search(search_filter, selector);
     else
-        ImGui::TextUnformatted("No search query");
+        ImGui::TrTextUnformatted("No search query");
 }
 
 FOUNDATION_STATIC void symbols_render_menus()
@@ -648,21 +648,21 @@ FOUNDATION_STATIC void symbols_render_menus()
     if (!ImGui::BeginMenuBar())
         return;
     
-    if (ImGui::BeginMenu("Symbols"))
+    if (ImGui::BeginMenu(tr("Symbols")))
     {
-        ImGui::MenuItem("Indexes", nullptr, &SETTINGS.show_symbols_INDX);
+        ImGui::MenuItem(tr("Indexes"), nullptr, &SETTINGS.show_symbols_INDX);
         if (ImGui::MenuItem("La Presse", nullptr, nullptr, true))
             open_in_shell("https://www.google.com/search?q=bourse+site:lapresse.ca&tbas=0&source=lnt&tbs=qdr:w&sa=X&biw=1920&bih=902&dpr=2");
 
         ImGui::Separator();
         #if BUILD_DEVELOPMENT
-        if (ImGui::MenuItem("IPOs", nullptr, nullptr, true))
+        if (ImGui::MenuItem(tr("IPOs"), nullptr, nullptr, true))
             open_in_shell(eod_build_url("calendar", "ipos", FORMAT_JSON).str);
         #endif
-        ImGui::MenuItem("TO Symbols", nullptr, &SETTINGS.show_symbols_TO);
-        ImGui::MenuItem("CVE Symbols", nullptr, &SETTINGS.show_symbols_CVE);
-        ImGui::MenuItem("NEO Symbols", nullptr, &SETTINGS.show_symbols_NEO);
-        ImGui::MenuItem("US Symbols", nullptr, &SETTINGS.show_symbols_US);      
+        ImGui::MenuItem(tr("TO Symbols"), nullptr, &SETTINGS.show_symbols_TO);
+        ImGui::MenuItem(tr("CVE Symbols"), nullptr, &SETTINGS.show_symbols_CVE);
+        ImGui::MenuItem(tr("NEO Symbols"), nullptr, &SETTINGS.show_symbols_NEO);
+        ImGui::MenuItem(tr("US Symbols"), nullptr, &SETTINGS.show_symbols_US);      
 
         ImGui::EndMenu();
     }
@@ -681,7 +681,7 @@ FOUNDATION_STATIC void symbols_render_tabs()
     if (SETTINGS.show_symbols_US) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (US)", &SETTINGS.show_symbols_US, L0(symbols_render("US")));
     if (SETTINGS.show_symbols_INDX) tab_draw(ICON_MD_TRENDING_UP " Indexes", &SETTINGS.show_symbols_INDX, L0(symbols_render("INDX", false)));
 
-    tab_draw(ICON_MD_MANAGE_SEARCH " Search ", nullptr, ImGuiTabItemFlags_Trailing, []() { symbols_render_search(nullptr); }, nullptr);
+    tab_draw(tr(ICON_MD_MANAGE_SEARCH " Search ##Search"), nullptr, ImGuiTabItemFlags_Trailing, []() { symbols_render_search(nullptr); }, nullptr);
 }
 
 //

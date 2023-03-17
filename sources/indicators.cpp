@@ -531,9 +531,9 @@ FOUNDATION_STATIC void indicators_render_menus()
     if (!ImGui::BeginMenuBar())
         return;
 
-    if (ImGui::BeginMenu("Modules"))
+    if (ImGui::BeginMenu(tr("Modules")))
     {
-        ImGui::MenuItem(ICON_MD_BATCH_PREDICTION " Indicators", NULL, &_indicators->show_tab);
+        ImGui::MenuItem(tr(ICON_MD_BATCH_PREDICTION " Indicators"), NULL, &_indicators->show_tab);
         ImGui::EndMenu();
     }
 

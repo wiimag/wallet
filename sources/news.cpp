@@ -114,7 +114,8 @@ FOUNDATION_STATIC news_window_t* news_window_allocate(const char* symbol, size_t
     news_window_t* news_window = MEM_NEW(HASH_NEWS, news_window_t);
 
     string_copy(STRING_BUFFER(news_window->symbol), symbol, symbol_length);
-    string_format(STRING_BUFFER(news_window->title), STRING_CONST("News %.*s"), (int)symbol_length, symbol);
+    string_const_t news_title_format = RTEXT("News %.*s");
+    string_format(STRING_BUFFER(news_window->title), STRING_ARGS(news_title_format), (int)symbol_length, symbol);
 
     // Fetch symbol news
     if (!eod_fetch_async("news", nullptr, FORMAT_JSON, "s", symbol, "limit", "10", L1(news_fetch_data(news_window, _1))))
@@ -154,7 +155,7 @@ FOUNDATION_STATIC bool news_window_render(void* obj)
 
     if (array_empty(news_window->news))
     {
-        ImGui::TextWrapped("No news feed");
+        ImGui::TextWrapped(tr("No news feed"));
         return true;
     }
 
@@ -213,7 +214,7 @@ FOUNDATION_STATIC bool news_window_render(void* obj)
         ImGui::TextEx(STRING_RANGE(news->summary), ImGuiTextFlags_None);
         ImGui::PopTextWrapPos();
 
-        ImGui::TextURL("more...", nullptr, STRING_ARGS(news->url));
+        ImGui::TextURL(tr("more..."), nullptr, STRING_ARGS(news->url));
 
         ImGui::PopID();
 

@@ -2211,7 +2211,7 @@ void expr_render_evaluators()
                         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
                         if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(ev.label), ImGuiInputTextFlags_EnterReturnsTrue))
                             evaluate_expression = true;
-                        ImGui::Text("%u Records", array_size(ev.records));
+                        ImGui::TrText("%u Records", array_size(ev.records));
                     }
 
                     if (ImGui::TableNextColumn())
@@ -2249,7 +2249,7 @@ void expr_render_evaluators()
 
                         ImGui::TextWrapped("%s", ev.assembled);
 
-                        if (ImGui::SmallButton("Clear records"))
+                        if (ImGui::SmallButton(tr("Clear records")))
                         {
                             array_deallocate(ev.records);
                             evaluate_expression = true;

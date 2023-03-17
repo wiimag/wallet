@@ -178,12 +178,9 @@ void tabs_draw_all()
     {
         service_foreach_tabs();
 
-
         tabbar_t* tb = array_last(_tabbars);
         if (tb)
-        {
             _tab_current = max(0, min(_tab_current, tb->tab_index-1));
-        }
         tabs_end();
     }
 

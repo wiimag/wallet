@@ -1040,8 +1040,10 @@ static FOUNDATION_FORCEINLINE bool config_sjson_is_primitive_type(const config_v
 static void config_sjson_write_array(config_handle_t array_handle, config_sjson_t& sjson, int indentation);
 static void config_sjson_write_object(config_handle_t array_handle, config_sjson_t& sjson, int indentation);
 
-static void config_sjson_write_string(config_sjson_t& sjson, string_const_t value)
+static void config_sjson_write_string(config_sjson_t& sjson, string_const_t value, config_option_flags_t options)
 {
+    constexpr char hexchar[] = "0123456789abcdef";
+
     config_sjson_add_char(sjson, '"');
     const char* s = value.str;
     for (int i = 0; i < value.length && *s; ++i, ++s)
@@ -1049,7 +1051,20 @@ static void config_sjson_write_string(config_sjson_t& sjson, string_const_t valu
         char c = *s;
         if (c == '"' || c == '\\')
             config_sjson_add_char(sjson, '\\');
-        config_sjson_add_char(sjson, c);
+
+        // Check if we need to escape the UTF-8 character
+        if ((uint8_t)c >= 0x80 && (options & CONFIG_OPTION_WRITE_ESCAPE_UTF8) == CONFIG_OPTION_WRITE_ESCAPE_UTF8)
+        {
+            // Escape the UTF-8 character as \xXX
+            config_sjson_add_char(sjson, '\\');
+            config_sjson_add_char(sjson, 'x');
+            config_sjson_add_char(sjson, hexchar[(uint8_t)c >> 4]);
+            config_sjson_add_char(sjson, hexchar[(uint8_t)c & 0x0F]);
+        }
+        else
+        {
+            config_sjson_add_char(sjson, c);
+        }
     }
     config_sjson_add_char(sjson, '"');
 }
@@ -1066,7 +1081,7 @@ static void config_sjson_write(config_handle_t value_handle, config_sjson_t& sjs
     {
         string_const_t value_string = config_value_as_string(value_handle);
         if (value->type == CONFIG_VALUE_STRING)
-            config_sjson_write_string(sjson, value_string);
+            config_sjson_write_string(sjson, value_string, value_handle.config->options);
         else
             config_sjson_add_string(sjson, value_string.str, value_string.length);
     }
@@ -1175,7 +1190,7 @@ static size_t config_sjson_write_object_fields(config_handle_t obj_handle, confi
             config_sjson_add_string(sjson, key.str, key.length);
         else
         {
-            config_sjson_write_string(sjson, key);
+            config_sjson_write_string(sjson, key, obj_handle.config->options);
             wants_same_line = false;
         }
 
@@ -1472,6 +1487,55 @@ string_t config_parse_string(string_const_t json, int& index, config_option_flag
                     s = array_push(s, '\\');
                     s = array_push(s, 'u');
                 }
+            }
+            else if (q == 'x')
+            {
+                // Parse UTF-8 char
+                if (options & CONFIG_OPTION_PARSE_UNICODE_UTF8)
+                {
+                    char b1 = config_parse_next(json, index);
+                    char b2 = config_parse_next(json, index + 1);
+                    if (b1 == '0' && b2 == '0')
+                    {
+                        s = array_push(s, '\0');
+                        index += 2;
+                    }
+                    else
+                    {
+                        // Convert b1 and b2 to uint8_t
+                        uint8_t b1v = 0;
+                        uint8_t b2v = 0;
+                        if (b1 >= '0' && b1 <= '9')
+                            b1v = b1 - '0';
+                        else if (b1 >= 'a' && b1 <= 'f')
+                            b1v = b1 - 'a' + 10;
+                        else if (b1 >= 'A' && b1 <= 'F')
+                            b1v = b1 - 'A' + 10;
+                        else
+                            throw config_parse_exception(json, index, "Invalid hex character");
+
+                        if (b2 >= '0' && b2 <= '9')
+                            b2v = b2 - '0';
+                        else if (b2 >= 'a' && b2 <= 'f')
+                            b2v = b2 - 'a' + 10;
+                        else if (b2 >= 'A' && b2 <= 'F')
+                            b2v = b2 - 'A' + 10;
+                        else
+                            throw config_parse_exception(json, index, "Invalid hex character");
+
+                        // Convert to UTF-8
+                        uint8_t b = (b1v << 4) | b2v;
+
+                        s = array_push(s, (char)b);
+                    }
+                }
+                else
+                {
+                    s = array_push(s, '\\');
+                    s = array_push(s, 'x');
+                }
+
+                index += 2;
             }
             else
                 throw config_parse_exception(json, index, "Unknown escape code");

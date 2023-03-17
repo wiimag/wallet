@@ -201,7 +201,6 @@ const char* eod_build_image_url(const char* image_url, size_t image_url_length)
     string_t url = string_copy(STRING_BUFFER(IMAGE_URL_BUFFER), STRING_ARGS(HOST_API));
     
     return string_append(STRING_ARGS_BUFFER(url, IMAGE_URL_BUFFER), image_url, image_url_length).str;
-    //return string_append(STRING_ARGS(url), STRING_CONST_LENGTH(IMAGE_URL_BUFFER), image_url, image_url_length).str;
 }
 
 const char* eod_build_url(const char* api, query_format_t format, const char* uri_format, ...)
@@ -318,7 +317,7 @@ FOUNDATION_STATIC void eod_update_window_title()
     else if (!is_main_branch)
         branch_name = string_to_const(GIT_BRANCH);
 
-    string_const_t license_name = EOD->CONNECTED && EOD->USER_NAME[0] != 0 ? string_to_const(EOD->USER_NAME) : CTEXT("disconnected");
+    string_const_t license_name = EOD->CONNECTED && EOD->USER_NAME[0] != 0 ? string_to_const(EOD->USER_NAME) : RTEXT("disconnected");
     string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
 
     static char title[128] = PRODUCT_NAME;
@@ -339,10 +338,10 @@ FOUNDATION_STATIC void eod_show_login_dialog()
     app_open_dialog("Enter EOD API KEY", [](void*)->bool
     {     
         // Explain that the EOD api needs to be set
-        ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com"));
-        ImGui::TextWrapped("EOD API Key is required to use this application.");
+        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com"));
+        ImGui::TextWrapped(tr("EOD API Key is required to use this application."));
         ImGui::NewLine();
-        ImGui::TextWrapped("You can get a free API key by registering at the link above. Please enter your API key below and press Continue");
+        ImGui::TextWrapped(tr("You can get a free API key by registering at the link above. Please enter your API key below and press Continue"));
 
         ImGui::NewLine();
         string_t eod_key = eod_get_key();
@@ -355,7 +354,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
 
         static float continue_button_width = 100;
         ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - continue_button_width, 0);
-        if (ImGui::Button("Continue", {100, imgui_get_font_ui_scale(30)}))
+        if (ImGui::Button(tr("Continue"), {100, imgui_get_font_ui_scale(30)}))
         {
             eod_refresh();
             return false;
@@ -375,9 +374,9 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
     EOD->API_LIMIT = EOD->CONNECTED ? json["dailyRateLimit"].as_number() : 1;
     EOD->CAPACITY = EOD->API_CALLS / EOD->API_LIMIT;
 
-    string_const_t name = EOD->CONNECTED ? json["name"].as_string() : CTEXT("Disconnected");
-    string_const_t email = EOD->CONNECTED ? json["email"].as_string() : CTEXT("Disconnected");
-    string_const_t subtype = EOD->CONNECTED ? json["subscriptionType"].as_string() : CTEXT("Disconnected");
+    string_const_t name = EOD->CONNECTED ? json["name"].as_string() : RTEXT("Disconnected");
+    string_const_t email = EOD->CONNECTED ? json["email"].as_string() : RTEXT("Disconnected");
+    string_const_t subtype = EOD->CONNECTED ? json["subscriptionType"].as_string() : RTEXT("Disconnected");
 
     if (EOD->CONNECTED)
     {
@@ -386,10 +385,12 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
         string_copy(STRING_BUFFER(EOD->SUBSCRIPTION_TYPE), STRING_ARGS(subtype));
     }
 
-    string_format(STRING_BUFFER(EOD->STATUS), STRING_CONST("Name: %.*s\nEmail: %.*s\nSubscription: %.*s\nRequest: %lg/%lg"),
+    string_const_t fmttr = RTEXT("Name: %.*s\nEmail: %.*s\nSubscription: %.*s\nRequest: %lg/%lg");
+    string_format(STRING_BUFFER(EOD->STATUS), STRING_ARGS(fmttr),
         STRING_FORMAT(name), STRING_FORMAT(email), STRING_FORMAT(subtype), EOD->API_CALLS, EOD->API_LIMIT);
 
-    string_format(STRING_BUFFER(EOD->USAGE_LABEL), STRING_CONST("EOD [API USAGE %.3lg %%]"), EOD->API_CALLS * 100 / EOD->API_LIMIT);
+    fmttr = RTEXT("EOD [API USAGE %.3lg %%]");
+    string_format(STRING_BUFFER(EOD->USAGE_LABEL), STRING_ARGS(fmttr), EOD->API_CALLS * 100 / EOD->API_LIMIT);
 
     EOD->UPDATE_TICK = time_current();
 
@@ -426,7 +427,7 @@ FOUNDATION_STATIC void eod_main_menu_status()
     {
         string_t eod_key = eod_get_key();
 
-        if (ImGui::MenuItem("Refresh"))
+        if (ImGui::MenuItem(tr("Refresh")))
             eod_refresh();
 
         ImGui::Separator();
@@ -448,9 +449,9 @@ FOUNDATION_STATIC void eod_main_menu_status()
         else if (eod_is_at_capacity())
         {
             ImGui::SetTooltip(
-                "%s\n\nYou exceeded your daily EOD API requests limit.\n"
+                tr("%s\n\nYou exceeded your daily EOD API requests limit.\n"
                 "Please contact support@eodhistoricaldata.com.\n\n"
-                "All request will use the local cache if available.", EOD->STATUS);
+                "All request will use the local cache if available."), EOD->STATUS);
         }
         else
             ImGui::SetTooltip("%s", EOD->STATUS);

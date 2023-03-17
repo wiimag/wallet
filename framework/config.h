@@ -46,7 +46,8 @@ typedef enum : uint32_t {
     CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS = 1 << 22,
     CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES = 1 << 23,
     CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS = 1 << 24,
-    CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL = 1 << 25
+    CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL = 1 << 25,
+    CONFIG_OPTION_WRITE_ESCAPE_UTF8 = 1 << 26,
 
 } config_option_t;
 typedef uint32_t config_option_flags_t;
@@ -198,6 +199,10 @@ bool config_is_null(config_handle_t v, const char* key = nullptr, size_t key_len
 bool config_is_undefined(config_handle_t v, const char* key = nullptr, size_t key_length = 0);
 
 bool config_write_file(string_const_t file_path, config_handle_t data, config_option_flags_t write_json_flags = CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_WRITE_SKIP_NULL);
+FOUNDATION_FORCEINLINE bool config_write_file(const char* file_path, size_t file_path_length, config_handle_t data, config_option_flags_t write_json_flags = CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_WRITE_SKIP_NULL)
+{
+    return config_write_file(string_const(file_path, file_path_length), data, write_json_flags);
+}
 bool config_write_file(
     string_const_t file_path,
     function<bool(config_handle_t data)> write_callback,

@@ -13,40 +13,35 @@
 #include <framework/profiler.h>
 #include <framework/tabs.h>
 #include <framework/string_table.h>
-#include <framework/session.h>
 #include <framework/progress.h>
 #include <framework/jobs.h>
 #include <framework/query.h>
-#include <framework/console.h>
+#include <framework/session.h>
 #include <framework/dispatcher.h>
-#include <framework/string.h>
-#include <framework/array.h>
+#include <framework/localization.h>
 
 #include <foundation/version.h>
-#include <foundation/hashstrings.h>
-#include <foundation/stacktrace.h>
 #include <foundation/process.h>
-#include <foundation/hashtable.h>
 
 FOUNDATION_STATIC void app_main_menu_begin(GLFWwindow* window)
 {
     if (!ImGui::BeginMenuBar())
         return;
 
-    if (ImGui::BeginMenu("File"))
+    if (ImGui::BeginMenu(tr("File")))
     {
-        if (ImGui::BeginMenu("Create"))
+        if (ImGui::BeginMenu(tr("Create")))
         {
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu("Open"))
+        if (ImGui::BeginMenu(tr("Open")))
         {
             ImGui::EndMenu();
         }
 
         ImGui::Separator();
-        if (ImGui::MenuItem(ICON_MD_EXIT_TO_APP " Exit", "Alt+F4"))
+        if (ImGui::MenuItem(tr(ICON_MD_EXIT_TO_APP " Exit"), "Alt+F4"))
             glfw_request_close_window(window);
             
         ImGui::EndMenu();
@@ -63,7 +58,7 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
 
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("Windows"))
+        if (ImGui::BeginMenu(tr("Windows")))
             ImGui::EndMenu();
 
         app_menu_help(window);
@@ -84,7 +79,7 @@ FOUNDATION_STATIC void app_tabs_content_filter()
     if (shortcut_executed(true, ImGuiKey_F))
         ImGui::SetKeyboardFocusHere();
     ImGui::InputTextEx("##SearchFilter", "Filter... " ICON_MD_FILTER_LIST_ALT, STRING_BUFFER(SETTINGS.search_filter),
-        ImVec2(imgui_get_font_ui_scale(300.0f), 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
+        ImVec2(IM_SCALEF(150.0f), 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
 }
 
 FOUNDATION_STATIC void app_tabs()
@@ -96,7 +91,8 @@ FOUNDATION_STATIC void app_tabs()
         service_foreach_tabs();
 
         tab_set_color(TAB_COLOR_SETTINGS);
-        tab_draw(ICON_MD_SETTINGS " Settings ", nullptr, ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoReorder, settings_draw);
+        tab_draw(tr(ICON_MD_SETTINGS " Settings ##Settings"), nullptr, 
+            ImGuiTabItemFlags_NoPushId | ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoReorder, settings_draw);
 
         tabs_end();
     }

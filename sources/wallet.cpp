@@ -46,13 +46,13 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 
     {
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("History");
+        ImGui::TrTextUnformatted("History");
         last_item_size = ImGui::GetItemRectSize().x;
         ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(32.0f), 0, true);
         if (ImGui::Checkbox("##History", &wallet->track_history))
             updated |= true;
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Track historical data for this report.");
+            ImGui::SetTooltip(tr("Track historical data for this report."));
     }
 
     {
@@ -60,7 +60,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::TableNextColumn();
 
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Target %");
+        ImGui::TrTextUnformatted("Target %");
         last_item_size = ImGui::GetItemRectSize().x;
 
         const float control_width = IM_SCALEF(60.0f);
@@ -79,7 +79,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::TableNextColumn();
 
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Currency");
+        ImGui::TrTextUnformatted("Currency");
         last_item_size = ImGui::GetItemRectSize().x;
 
         char currency[64];
@@ -102,7 +102,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::TableNextColumn();
 
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted("Fund");
+        ImGui::TrTextUnformatted("Fund");
         last_item_size = ImGui::GetItemRectSize().x;
 
         const float control_width = IM_SCALEF(96.0f);
@@ -193,11 +193,11 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
     ImGui::Dummy(ImVec2(0.0f, 0.0f));
     ImGui::SameLine(0, 8);
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("Report");
+    ImGui::TrTextUnformatted("Report");
     ImGui::SameLine(0, 16);
     ImGui::SetNextItemWidth(300.0f);
     const size_t report_count = ::report_count();
-    if (ImGui::BeginCombo("##Report", !selected_report ? "None" : string_table_decode(selected_report->name), ImGuiComboFlags_None))
+    if (ImGui::BeginCombo("##Report", !selected_report ? tr("None") : string_table_decode(selected_report->name), ImGuiComboFlags_None))
     {
         for (int i = 0; i < report_count; ++i)
         {
@@ -224,20 +224,20 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
         wallet_t* wallet = selected_report->wallet;
         ImGui::SameLine();
         ImGui::BeginDisabled(!eod_availalble());
-        if (ImGui::Button("Add Entry"))
+        if (ImGui::Button(tr("Add Entry")))
         {
             wallet_history_add_new_entry(selected_report, wallet);
         }
         ImGui::EndDisabled();
 
         ImGui::SameLine(0, 100.0f);
-        if (ImGui::Checkbox("Show Extra Charts", &wallet->show_extra_charts))
+        if (ImGui::Checkbox(tr("Show Extra Charts"), &wallet->show_extra_charts))
             ImPlot::SetNextAxesToFit();
     }
     else if (report_count == 0)
     {
         ImGui::SameLine();
-        if (ImGui::Button("Create New"))
+        if (ImGui::Button(tr("Create New")))
         {
             SETTINGS.show_create_report_ui = true;
         }
@@ -450,8 +450,9 @@ FOUNDATION_STATIC void wallet_history_edit_value(table_element_ptr_const_t eleme
 
 FOUNDATION_STATIC table_t* wallet_history_create_table(report_t* report)
 {
-    table_t* history_table = table_allocate(string_format_static_const("History###%s", string_table_decode(report->name)));
-    history_table->flags |= ImGuiTableFlags_NoHostExtendY | ImGuiTableFlags_SizingFixedFit;
+    table_t* history_table = table_allocate(
+        string_format_static_const("History###%s", string_table_decode(report->name)),
+        ImGuiTableFlags_NoHostExtendY | ImGuiTableFlags_SizingFixedFit | TABLE_LOCALIZATION_CONTENT);
     history_table->selected = wallet_history_edit_value;
 
     table_add_column(history_table, STRING_CONST(ICON_MD_TODAY " Date      "), wallet_history_column_date, COLUMN_FORMAT_DATE, COLUMN_CUSTOM_DRAWING);
@@ -472,7 +473,8 @@ FOUNDATION_STATIC table_t* wallet_history_create_table(report_t* report)
 FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, history_t* h)
 {
     ImGui::SetNextWindowSize(ImVec2(IM_SCALEF(235), IM_SCALEF(230)), ImGuiCond_Once);
-    string_const_t popup_id = string_format_static(STRING_CONST("Edit History (%.*s)###EH19"), STRING_FORMAT(string_from_date(h->date)));
+    string_const_t fmttr = RTEXT("Edit History (%.*s)###EH19");
+    string_const_t popup_id = string_format_static(STRING_ARGS(fmttr), STRING_FORMAT(string_from_date(h->date)));
     if (!report_render_dialog_begin(popup_id, &h->show_edit_ui, ImGuiWindowFlags_NoResize))
         return;
 
@@ -493,6 +495,12 @@ FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, histo
             h->date = mktime(&tm_date);
             updated = true;
         }
+
+        ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Delete"), { IM_SCALEF(80), IM_SCALEF(20) }))
+            wallet_history_delete_entry(report, h);
+        ImGui::PopStyleColor(1);
 
         ImGui::SetNextItemWidth(control_width);
         if (ImGui::InputDouble("Funds", &h->funds, 0, 0, "%.2lf $"))
@@ -518,26 +526,24 @@ FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, histo
         if (ImGui::InputDouble("Assets Value", &h->other_assets, 0, 0, "%.2lf $"))
             updated = true;
 
+        ImGui::Spacing();
         ImGui::BeginGroup();
-
-        ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
-        if (ImGui::Button("Delete"))
-            wallet_history_delete_entry(report, h);
-        ImGui::PopStyleColor(1);
 
         if (h->source && (h - &h->source->history[0]) == 0)
         {
-            ImGui::SameLine(0, control_width - IM_SCALEF(60.0f));
-            if (ImGui::Button("Update"))
+            if (ImGui::Button(tr("Update"), { IM_SCALEF(80), IM_SCALEF(20) }))
                 wallet_history_update_entry(report, h->source, *h);
 
-            ImGui::SameLine();
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(88));
+            if (ImGui::Button(tr("Close"), { IM_SCALEF(80), IM_SCALEF(20) }))
+                h->show_edit_ui = false;
         }
         else
-            ImGui::SameLine(0, control_width);
-
-        if (ImGui::Button("Close"))
-            h->show_edit_ui = false;
+        {
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(88));
+            if (ImGui::Button(tr("Close"), { IM_SCALEF(80), IM_SCALEF(20) }))
+                h->show_edit_ui = false;
+        }
             
         ImGui::EndGroup();
 
@@ -614,7 +620,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     const unsigned history_count = array_size(wallet->history);
     if (history_count <= 1)
     {
-        ImGui::TextUnformatted("Not enough entries to display graph");
+        ImGui::TrTextUnformatted("Not enough entries to display graph");
         return;
     }
 

@@ -1212,7 +1212,7 @@ window_handle_t window_open(
 
 void window_menu()
 {
-    if (ImGui::BeginMenu("Windows"))
+    if (ImGui::BeginMenu(tr("Windows")))
         ImGui::EndMenu();
 }
 

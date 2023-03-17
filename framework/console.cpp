@@ -318,7 +318,7 @@ FOUNDATION_STATIC void console_render_toolbar()
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Clear"))
+    if (ImGui::Button(tr("Clear")))
         console_clear_all();
     clear_button_width = ImGui::GetItemRectSize().x;
     ImGui::EndGroup();
@@ -378,7 +378,7 @@ FOUNDATION_STATIC void console_render_evaluator()
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Eval", ImVec2(-1, -1)))
+    if (ImGui::Button(tr("Eval"), ImVec2(-1, -1)))
         evaluate = true;
 
     if (evaluate)

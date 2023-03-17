@@ -5,7 +5,7 @@
 
 #pragma once
 
-#include "function.h"
+#include <framework/function.h>
 
 #include <foundation/fs.h>
 #include <foundation/time.h>

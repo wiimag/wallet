@@ -162,7 +162,7 @@ FOUNDATION_STATIC void profiler_render_time_ms_column(double time_ms)
 
     ImGui::NextColumn();
     if (time_ms >= 1.0f)
-        ImGui::Text("%4.0lf ms", time_ms); 
+        ImGui::TrText("%4.0lf ms", time_ms);
     else
         ImGui::TextColored(TEXT_TIME_US, "%4.0lf us", time_ms * 1000.0f);
 }
@@ -262,9 +262,9 @@ FOUNDATION_STATIC void profiler_menu()
 {
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("Windows"))
+        if (ImGui::BeginMenu(tr("Windows")))
         {
-            ImGui::MenuItem(ICON_MD_LOGO_DEV " Profiler", nullptr, &_profiler_window_opened);
+            ImGui::MenuItem(tr(ICON_MD_LOGO_DEV " Profiler"), nullptr, &_profiler_window_opened);
             ImGui::EndMenu();
         }
 

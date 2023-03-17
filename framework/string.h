@@ -15,9 +15,10 @@ struct tm;
 
 // ## MACROS
 
-#define CTEXT(str) string_const_t{ STRING_CONST(str) }
+#define CTEXT(str) string_const_t{ (const char*)(str), (sizeof((str)) - 1) }
 
 #define TEXT_UTF8(str) (const char*)(u8 ## str)
+#define CTEXT_UTF8(str) string_const_t{ (const char*)(u8 ## str), (sizeof((str)) - 1) }
 
 // ## STRUCTURES
 

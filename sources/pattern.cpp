@@ -182,16 +182,6 @@ FOUNDATION_STATIC string_const_t pattern_format_percentage(double value, double 
     return pattern_format_number(STRING_ARGS(fmt), value, default_value);
 }
 
-FOUNDATION_STATIC void pattern_render_info(const char* field_name, double value, const char* fmt)
-{
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    ImGui::TextWrapped("%s", field_name);
-
-    ImGui::TableNextColumn();
-    table_cell_right_aligned_label(STRING_ARGS(string_from_currency(value, fmt)));
-}
-
 FOUNDATION_STATIC int pattern_format_date_label(double value, char* buff, int size, void* user_data)
 {
     pattern_graph_data_t& graph = *(pattern_graph_data_t*)user_data;
@@ -228,16 +218,19 @@ FOUNDATION_STATIC int pattern_formatx_label(double value, char* buff, int size, 
     return (int)string_format(buff, size, STRING_CONST("%.0lfD"), value).length;
 }
 
-FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v1_url, string_const_t v2, string_const_t v3, string_const_t v4)
+FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v1_url, string_const_t v2, string_const_t v3, string_const_t v4, bool translate = false)
 {
     ImGui::TableNextRow();
 
     ImGui::TableNextColumn();
     if (!string_is_null(v1)) 
-        table_cell_right_aligned_label(STRING_ARGS(v1), STRING_ARGS(v1_url));
+    {
+        string_const_t trv1 = translate ? tr(STRING_ARGS(v1), false) : v1;
+        table_cell_right_aligned_label(STRING_ARGS(trv1), STRING_ARGS(v1_url));
+    }
 
     ImGui::TableNextColumn();
-    ImGui::SetWindowFontScale(0.6f);
+    ImGui::SetWindowFontScale(0.7f);
     ImGui::SetCursorPosY(ImGui::GetCursorPosY() + 3.0f);
     if (!string_is_null(v2)) table_cell_middle_aligned_label(STRING_ARGS(v2));
     ImGui::SetWindowFontScale(0.8f);
@@ -249,9 +242,9 @@ FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_co
     if (!string_is_null(v4)) table_cell_right_aligned_label(STRING_ARGS(v4));
 }
 
-FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v2, string_const_t v3, string_const_t v4)
+FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v2, string_const_t v3, string_const_t v4, bool translate = false)
 {
-    pattern_render_planning_line(v1, string_null(), v2, v3, v4);
+    pattern_render_planning_line(v1, string_null(), v2, v3, v4, translate);
 }
 
 FOUNDATION_STATIC double pattern_mark_change_p(const pattern_t* pattern, int mark_index)
@@ -287,7 +280,8 @@ FOUNDATION_STATIC string_const_t pattern_mark_change_p_to_string(const pattern_t
     return string_format_static(STRING_CONST("%.*g %%"), math_abs(change_p) < 0.01 ? 2 : 3, change_p * 100.0);
 }
 
-FOUNDATION_STATIC void pattern_render_planning_url(string_const_t label, string_const_t url, const pattern_t* pattern, int mark_index, bool can_skip_if_not_valid = false)
+FOUNDATION_STATIC void pattern_render_planning_url(string_const_t label, string_const_t url, const pattern_t* pattern, int mark_index, 
+    bool can_skip_if_not_valid = false, bool translate = false)
 {
     pattern_mark_t& mark = ((pattern_t*)pattern)->marks[mark_index];
     string_const_t change_p_str = pattern_mark_change_p_to_string(pattern, mark_index);
@@ -298,24 +292,27 @@ FOUNDATION_STATIC void pattern_render_planning_url(string_const_t label, string_
 
     char dbuf[16];
     size_t dbuf_length = (size_t)pattern_formatx_label(FIXED_MARKS[mark_index], dbuf, ARRAY_COUNT(dbuf), nullptr);
+
     pattern_render_planning_line(label, url,
         mark_valid ? string_const(dbuf, dbuf_length) : CTEXT("-"),
         mark_valid ? string_from_date(mark.date) : CTEXT("-"),
-        change_p_str);
+        change_p_str, label.length > 1 && translate);
 }
 
-FOUNDATION_STATIC void pattern_render_planning_line(string_const_t label, const pattern_t* pattern, int mark_index, bool can_skip_if_not_valid = false)
+FOUNDATION_STATIC void pattern_render_planning_line(string_const_t label, const pattern_t* pattern, int mark_index, bool can_skip_if_not_valid = false, bool translate = false)
 {
-    pattern_render_planning_url(label, string_null(), pattern, mark_index, can_skip_if_not_valid);
+    pattern_render_planning_url(label, string_null(), pattern, mark_index, can_skip_if_not_valid, translate);
 }
 
-FOUNDATION_STATIC void pattern_render_stats_line(string_const_t v1, string_const_t v2, string_const_t v3)
+FOUNDATION_STATIC void pattern_render_stats_line(string_const_t v1, string_const_t v2, string_const_t v3, bool translate = false)
 {
     ImGui::TableNextRow();
 
     ImGui::TableNextColumn();
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15.0f);
-    ImGui::TextWrapped("%.*s", STRING_FORMAT(v1));
+
+    string_const_t trv1 = translate && v1.length > 1 ? tr(STRING_ARGS(v1), false) : v1;
+    ImGui::TextWrapped("%.*s", STRING_FORMAT(trv1));
 
     ImGui::TableNextColumn();
     if (!string_is_null(v2)) table_cell_right_aligned_label(STRING_ARGS(v2));
@@ -339,6 +336,11 @@ FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const
 
     ImGui::TableNextColumn();
     ImGui::TextWrapped("%.*s", (int)text_length, text);
+}
+
+FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const char* text)
+{
+    pattern_render_decision_line(rank, check, text, string_length(text));
 }
 
 FOUNDATION_STATIC string_const_t pattern_price(const pattern_t* pattern)
@@ -441,12 +443,12 @@ FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
     ImGui::TableSetupColumn("V2", ImGuiTableColumnFlags_WidthFixed, STATS_COLUMN_V2_WIDTH);
     //ImGui::TableHeadersRow();
 
-    pattern_render_planning_line(CTEXT("Today"), 
+    pattern_render_planning_line(CTEXT("Today"),
         CTEXT(""), 
         string_from_date(time_now()), 
-        pattern_format_percentage(s->current.change_p));
+        pattern_format_percentage(s->current.change_p), true);
 
-    pattern_render_planning_line(CTEXT("Planning"), pattern, 0);
+    pattern_render_planning_line(CTEXT("Planning"), pattern, 0, false, true);
 
     string_const_t url = string_null();
     string_const_t updated_at = string_null();
@@ -473,7 +475,7 @@ FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
     else
         pattern_render_planning_line(CTEXT(""), pattern, 5);
     pattern_render_planning_url(CTEXT("Google"), pattern_google_finance_url(pattern), pattern, 6);
-    pattern_render_planning_url(CTEXT("News"), pattern_google_news_url(pattern), pattern, 7);
+    pattern_render_planning_url(CTEXT("News"), pattern_google_news_url(pattern), pattern, 7, false, true);
     pattern_render_planning_line(CTEXT(""), pattern, 8, true);
     pattern_render_planning_line(CTEXT(""), pattern, 9, true);
     pattern_render_planning_line(CTEXT(""), pattern, 10, true);
@@ -508,32 +510,32 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         double share_p = s->current.volume / s->shares_count;
         pattern_render_stats_line(CTEXT("Volume"), 
             pattern_format_number(STRING_CONST("%.0lf"), s->current.volume),
-            pattern_format_number(STRING_CONST("%.2lf %%"), share_p * 100.0));
+            pattern_format_number(STRING_CONST("%.2lf %%"), share_p * 100.0), true);
         pattern_render_stats_line(CTEXT("High 52"), 
             pattern_format_currency(s->high_52),
-            pattern_format_percentage(s->current.adjusted_close / s->high_52 * 100.0));
+            pattern_format_percentage(s->current.adjusted_close / s->high_52 * 100.0), true);
         pattern_render_stats_line(CTEXT("Low 52"), 
             pattern_format_currency(s->low_52),
-            pattern_format_percentage(s->low_52 / s->current.adjusted_close * 100.0));
+            pattern_format_percentage(s->low_52 / s->current.adjusted_close * 100.0), true);
         
         double performance_ratio = (s->high_52 / math_ifnan(s->ws_target, s->low_52)) * math_ifnan(math_ifnan(s->pe, s->peg), 1.0);
         pattern_render_stats_line(CTEXT("Yield"), 
             pattern_format_percentage(s->dividends_yield.get_or_default() * 100.0),
-            pattern_format_percentage(performance_ratio));
+            pattern_format_percentage(performance_ratio), true);
         pattern_render_stats_line(CTEXT("Beta"), 
             pattern_format_percentage(s->beta * 100.0),
-            pattern_format_percentage(s->dma_200 / s->dma_50 * 100.0));
+            pattern_format_percentage(s->dma_200 / s->dma_50 * 100.0), true);
 
         const double eps_diff = s->earning_trend_difference.fetch();
         const double eps_percent = s->earning_trend_percent.fetch();
         ImGui::PushStyleColor(ImGuiCol_Text, eps_diff <= 0.1 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
         pattern_render_stats_line(CTEXT("Earnings"),
             pattern_format_currency(s->diluted_eps_ttm),
-            pattern_format_percentage(eps_percent));
+            pattern_format_percentage(eps_percent), true);
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(" Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n"
-                                  "           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% ", 
+            ImGui::SetTooltip(tr(" Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n"
+                                  "           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "), 
                 s->diluted_eps_ttm, s->earning_trend_actual.fetch(), s->earning_trend_estimate.fetch(), s->earning_trend_difference.fetch(), eps_percent, 
                 s->diluted_eps_ttm / s->current.close * 100.0);
         
@@ -549,7 +551,7 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         double flex_high_p = pattern->flex_high.fetch();
         pattern_render_stats_line(CTEXT("Flex"), 
             CTEXT("-"),
-            pattern_format_percentage(flex_low_p * 100.0));
+            pattern_format_percentage(flex_low_p * 100.0), false);
         pattern_render_stats_line(CTEXT(""), 
             pattern_format_percentage((flex_high_p - flex_low_p) * 100.0),
             pattern_format_percentage(flex_high_p * 100.0));
@@ -563,21 +565,21 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         double buy_limit = min(s->current.adjusted_close + (s->current.adjusted_close * (flex_low_p + math_abs(mcp))), s->current.adjusted_close - (s->current.adjusted_close * pattern->flex_high.fetch()));
         pattern_render_stats_line(CTEXT("Buy Limit"), 
             pattern_format_percentage((buy_limit / s->current.adjusted_close - 1.0) * 100.0),
-            pattern_format_currency(buy_limit));
+            pattern_format_currency(buy_limit), true);
 
         const double flex_price_high = s->current.adjusted_close + (s->current.adjusted_close * (flex_high_p - mcp));
         const double sell_limit_p = (flex_price_high / buy_limit - 1.0) * 100.0;
         ImGui::PushStyleColor(ImGuiCol_Text, sell_limit_p < 0 ? TEXT_BAD_COLOR : (sell_limit_p > 3 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR));
         pattern_render_stats_line(CTEXT("Sell Limit"), 
             pattern_format_percentage(sell_limit_p),
-            pattern_format_currency(flex_price_high));
+            pattern_format_currency(flex_price_high), true);
 
         const double profit_price = s->dma_50;
         const double profit_percentage = (profit_price / flex_price_high - 1) * 100.0;
         ImGui::PushStyleColor(ImGuiCol_Text, profit_percentage < 0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
         pattern_render_stats_line(CTEXT("Target Limit"),
             pattern_format_percentage(profit_percentage),
-            pattern_format_currency(profit_price));
+            pattern_format_currency(profit_price), true);
 
         const double ws_limit = max(s->ws_target, max(s->current.adjusted_close * s->peg, s->dma_200));
         const double ws_limit_percentage = (ws_limit / flex_price_high - 1) * 100.0;
@@ -613,14 +615,14 @@ FOUNDATION_STATIC float pattern_render_decisions(const pattern_t* pattern)
     //ImGui::TableHeadersRow();
 
     pattern_check_t* checks = ((pattern_t*)pattern)->checks;
-    pattern_render_decision_line(1, &checks[0].checked, STRING_CONST("Price trend is positive."));
-    pattern_render_decision_line(2, &checks[1].checked, STRING_CONST("Moving trends are null or slightly negative and about to go up (crossing each others)."));
-    pattern_render_decision_line(3, &checks[2].checked, STRING_CONST("Activity polarity trend is positive."));
-    pattern_render_decision_line(4, &checks[3].checked, STRING_CONST("Sell limit is higher or equal to 3%."));
-    pattern_render_decision_line(5, &checks[4].checked, STRING_CONST("Beta is higher or equal to 90%."));
-    pattern_render_decision_line(6, &checks[5].checked, STRING_CONST("Flex difference is higher than 6%."));
-    pattern_render_decision_line(7, &checks[6].checked, STRING_CONST("MAX mark is higher than 25%."));
-    pattern_render_decision_line(8, &checks[7].checked, STRING_CONST("Target limits are interesting."));
+    pattern_render_decision_line(1, &checks[0].checked, tr("Price trend is positive."));
+    pattern_render_decision_line(2, &checks[1].checked, tr("Moving trends are null or slightly negative and about to go up (crossing each others)."));
+    pattern_render_decision_line(3, &checks[2].checked, tr("Activity polarity trend is positive."));
+    pattern_render_decision_line(4, &checks[3].checked, tr("Sell limit is higher or equal to 3%."));
+    pattern_render_decision_line(5, &checks[4].checked, tr("Beta is higher or equal to 90%."));
+    pattern_render_decision_line(6, &checks[5].checked, tr("Flex difference is higher than 6%."));
+    pattern_render_decision_line(7, &checks[6].checked, tr("MAX mark is higher than 25%."));
+    pattern_render_decision_line(8, &checks[7].checked, tr("Target limits are interesting."));
 
     float y_offset = ImGui::GetCursorPosY();
     ImGui::EndTable();
@@ -787,7 +789,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
     plot_context_t c{ pattern->date, min(size_t(4096), s->history_count), 1, s->history };
     c.acc = pattern->range;
     ImPlot::SetAxis(y_axis);
-    ImPlot::PlotLineG("Price", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotLineG(tr("Price"), [](int idx, void* user_data)->ImPlotPoint
     {
         plot_context_t* c = (plot_context_t*)user_data;
         const day_result_t* history = c->history;
@@ -807,7 +809,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
     if (c.n > 0 && pattern->show_limits)
     {
         pattern_compute_trend(c);
-        pattern_render_trend("Price", c, x_axis_inverted);
+        pattern_render_trend(tr("Price"), c, x_axis_inverted);
     }
 }
 
@@ -965,7 +967,7 @@ FOUNDATION_STATIC void pattern_render_graph_flex(pattern_t* pattern, pattern_gra
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.3g %%");
 
     plot_context_t c{ pattern->date, array_size(pattern->flex), 1, pattern->flex};
-    ImPlot::PlotBarsG("Flex", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotBarsG(tr("Flex"), [](int idx, void* user_data)->ImPlotPoint
     {
         const plot_context_t* c = (plot_context_t*)user_data;
         const pattern_flex_t& f = c->flex[idx];
@@ -978,9 +980,9 @@ FOUNDATION_STATIC void pattern_render_graph_flex(pattern_t* pattern, pattern_gra
     {
         const double fl = pattern->flex_low.fetch() * 100.0;
         const double fh = pattern->flex_high.fetch() * 100.0;
-        pattern_render_graph_limit("Low", min_d, max_d, fl);
-        pattern_render_graph_limit("High", min_d, max_d, fh);
-        pattern_render_graph_limit("Today", min_d, max_d, pattern->stock->current.change_p);
+        pattern_render_graph_limit(tr("Low"), min_d, max_d, fl);
+        pattern_render_graph_limit(tr("High"), min_d, max_d, fh);
+        pattern_render_graph_limit(tr("Today"), min_d, max_d, pattern->stock->current.change_p);
 
         ImPlot::TagY(pattern->flex_high.fetch() * 100.0, ImColor::HSV(139 / 360.0f, 0.63f, 1.0f), ICON_MD_CHANGE_HISTORY " %.3g %%", fh - fl);
     }
@@ -1201,9 +1203,9 @@ FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
         ImGui::TableSetupScrollFreeze(1, 2);
 
         string_const_t pattern_code = string_table_decode_const(pattern->code);
-        ImGui::TableSetupColumn("Title", ImGuiTableColumnFlags_None);
+        ImGui::TableSetupColumn(tr("Title"), ImGuiTableColumnFlags_None);
         ImGui::TableSetupColumn(string_format_static(STRING_CONST("DNA (%d)"), min(pattern->range, date_count)).str, ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn("Hits", ImGuiTableColumnFlags_None);
+        ImGui::TableSetupColumn(tr("Hits"), ImGuiTableColumnFlags_None);
         ImGui::TableHeadersRow();
         
         double total_match = 0;
@@ -1372,7 +1374,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
     if (pattern->show_limits)
     {
         ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.0f);
-        pattern_render_graph_limit("Zero", graph, 0);
+        pattern_render_graph_limit(tr("Zero"), graph, 0);
 
         ImPlot::PopStyleVar(1);
     }
@@ -1419,11 +1421,11 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
         }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
 
         pattern_compute_trend(c);
-        pattern_render_trend("Trend", c, pattern->x_axis_inverted);
+        pattern_render_trend(tr("Trend"), c, pattern->x_axis_inverted);
     }
     else
     {
-        ImPlot::Annotation((trend_max_d - trend_min_d) / 2.0, 0, ImVec4(0.8f, 0.6f, 0.54f, 0.8f), ImVec2(0,-10), true, "Loading data...");
+        ImPlot::Annotation((trend_max_d - trend_min_d) / 2.0, 0, ImVec4(0.8f, 0.6f, 0.54f, 0.8f), ImVec2(0,-10), true, tr("Loading data..."));
     }
 
     ImPlot::EndPlot();
@@ -1526,12 +1528,12 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
     {
         ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 1.5f);
         const double buy_flex = s->current.adjusted_close + (s->current.adjusted_close * pattern->flex_low.fetch());
-        pattern_render_graph_limit("Buy", graph, buy_flex);
-        ImPlot::TagY(buy_flex, ImPlot::GetLastItemColor(), "Buy");
+        pattern_render_graph_limit(tr("Buy"), graph, buy_flex);
+        ImPlot::TagY(buy_flex, ImPlot::GetLastItemColor(), tr("Buy"));
 
         const double sell_flex = s->current.adjusted_close + (s->current.adjusted_close * pattern->flex_high.fetch());
-        pattern_render_graph_limit("Sell", graph, sell_flex);
-        ImPlot::TagY(sell_flex, ImPlot::GetLastItemColor(), "Sell");
+        pattern_render_graph_limit(tr("Sell"), graph, sell_flex);
+        ImPlot::TagY(sell_flex, ImPlot::GetLastItemColor(), tr("Sell"));
         ImPlot::PopStyleVar(1);
     }
 
@@ -1571,9 +1573,9 @@ FOUNDATION_STATIC void pattern_render_graph_analysis(pattern_t* pattern, pattern
 
     if (pattern->show_limits)
     {
-        pattern_render_graph_limit("Flex Low", graph, pattern->flex_low.get_or_default() * 100.0);
-        pattern_render_graph_limit("Flex High", graph, pattern->flex_high.get_or_default() * 100.0);
-        pattern_render_graph_limit("WS", graph, (pattern->stock->ws_target - pattern->stock->current.adjusted_close) / pattern->stock->current.adjusted_close * 100.0);
+        pattern_render_graph_limit(tr("Flex Low"), graph, pattern->flex_low.get_or_default() * 100.0);
+        pattern_render_graph_limit(tr("Flex High"), graph, pattern->flex_high.get_or_default() * 100.0);
+        pattern_render_graph_limit(tr("WS"), graph, (pattern->stock->ws_target - pattern->stock->current.adjusted_close) / pattern->stock->current.adjusted_close * 100.0);
     }
 
     // Render patterns
@@ -1640,7 +1642,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('5')) pattern->type = PATTERN_LONG_COORDINATED_FLEX;
     if (shortcut_executed('6') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
 
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.15f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.10f);
     if (ImGui::BeginCombo("##Type", GRAPH_TYPES[pattern->type], ImGuiComboFlags_None))
     {
         for (int n = 0; n < ARRAY_COUNT(GRAPH_TYPES); n++)
@@ -1648,7 +1650,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
             if (GRAPH_TYPES[n] == nullptr)
                 continue;
             const bool is_selected = (pattern->type == n);
-            if (ImGui::Selectable(GRAPH_TYPES[n], is_selected))
+            if (ImGui::Selectable(tr(GRAPH_TYPES[n], 0, true).str, is_selected))
             {
                 pattern->type = n;
                 break;
@@ -1667,8 +1669,8 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     }
 
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.4f);
-    if (ImGui::SliderInt("##Range", &pattern->range, (int)graph.min_d, (int)graph.max_d, "%d days", ImGuiSliderFlags_Logarithmic))
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
+    if (ImGui::SliderInt("##Range", &pattern->range, (int)graph.min_d, (int)graph.max_d, tr("%d days"), ImGuiSliderFlags_Logarithmic))
     {
         if (pattern->type == PATTERN_GRAPH_TRENDS)
             graph.refresh = true;
@@ -1678,7 +1680,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
         pattern_render_graph_zoom(pattern, graph);
     if (pattern->type == PATTERN_GRAPH_DEFAULT && ImGui::BeginPopupContextItem())
     {
-        if (ImGui::MenuItem("Zoom"))
+        if (ImGui::MenuItem(tr("Zoom")))
             pattern_render_graph_zoom(pattern, graph);
         ImGui::EndPopup();
     }
@@ -1686,15 +1688,15 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (pattern->type >= PATTERN_GRAPH_BEGIN && pattern->type < PATTERN_GRAPH_END)
     {
         ImGui::SameLine();
-        if (ImGui::Checkbox("Limits", &pattern->show_limits))
+        if (ImGui::Checkbox(tr("Limits"), &pattern->show_limits))
             graph.refresh = true;
 
         ImGui::SameLine();
-        if (ImGui::Checkbox("Extra Charts", &pattern->extra_charts))
+        if (ImGui::Checkbox(tr("Extra Charts"), &pattern->extra_charts))
             graph.refresh = true;
 
         ImGui::SameLine();
-        if (ImGui::Checkbox("Invert Time", &pattern->x_axis_inverted))
+        if (ImGui::Checkbox(tr("Invert Time"), &pattern->x_axis_inverted))
             graph.refresh = true;
     }
     else if (pattern->type == PATTERN_LONG_COORDINATED_FLEX)
@@ -1708,7 +1710,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Refresh"))
+    if (ImGui::Button(tr("Refresh")))
     {
         pattern_refresh(pattern);
         graph.refresh = true;
@@ -1849,7 +1851,7 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
     c.acc = pattern->range;
     ImPlot::SetAxis(ImAxis_Y1);
     static int last_index = -1;
-    ImPlot::PlotBarsG("Polarity", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotBarsG(tr("Polarity"), [](int idx, void* user_data)->ImPlotPoint
     {
         plot_context_t* c = (plot_context_t*)user_data;
         const pattern_activity_t& h = ((pattern_activity_t*)c->data)[idx];
@@ -1867,10 +1869,10 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
     }, &c, (int)c.range, bar_width, ImPlotBarsFlags_None);
 
     pattern_compute_trend(c);
-    pattern_render_trend("Popularity", c, !pattern->x_axis_inverted);
+    pattern_render_trend(tr("Popularity"), c, !pattern->x_axis_inverted);
 
     //ImPlot::SetAxis(ImAxis_Y2);
-    ImPlot::PlotScatterG("Hits", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotScatterG(tr("Hits"), [](int idx, void* user_data)->ImPlotPoint
     {
         plot_context_t* c = (plot_context_t*)user_data;
         const pattern_activity_t& h = ((pattern_activity_t*)c->data)[idx];
@@ -1886,7 +1888,7 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
         c2.acc = (double)min_d;
         c2.lx = (double)pattern->range;
         ImPlot::SetAxis(ImAxis_Y1);
-        ImPlot::PlotScatterG("Change", [](int idx, void* user_data)->ImPlotPoint
+        ImPlot::PlotScatterG(tr("Change"), [](int idx, void* user_data)->ImPlotPoint
         {
             plot_context_t* c = (plot_context_t*)user_data;
             const day_result_t& h = c->history[idx];
@@ -2047,7 +2049,7 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     }
     if (ImGui::TableNextColumn())
     {
-        ImGui::Text("Notes");
+        ImGui::TrText("Notes");
         if (focus_notes)
         {
             ImGui::SetKeyboardFocusHere();
@@ -2081,13 +2083,13 @@ FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
 {
     if (ImGui::BeginPopupContextItem())
     {
-        if (ImGui::BeginMenu("Add"))
+        if (ImGui::BeginMenu(tr("Add")))
         {
             pattern_add_to_report_menu(handle);
             ImGui::EndMenu();
         }
 
-        if (ImGui::MenuItem("Float Window"))
+        if (ImGui::MenuItem(tr("Float Window")))
             pattern_open_floating_window(handle);
 
         ImGui::EndPopup();
@@ -2095,35 +2097,35 @@ FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
 
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("Pattern"))
+        if (ImGui::BeginMenu(tr("Pattern")))
         {
             pattern_t* pattern = (pattern_t*)pattern_get(handle);
             string_const_t code = string_table_decode_const(pattern->code);
 
-            if (ImGui::MenuItem("Read News"))
+            if (ImGui::MenuItem(tr("Read News")))
                 news_open_window(STRING_ARGS(code));
 
             #if BUILD_DEVELOPMENT
-            if (ImGui::MenuItem("EOD", nullptr, nullptr, true))
+            if (ImGui::MenuItem(tr("EOD"), nullptr, nullptr, true))
                 open_in_shell(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
 
-            if (ImGui::MenuItem("Trends", nullptr, nullptr, true))
+            if (ImGui::MenuItem(tr("Trends"), nullptr, nullptr, true))
                 open_in_shell(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
 
-            if (ImGui::MenuItem("Earnings", nullptr, nullptr, true))
+            if (ImGui::MenuItem(tr("Earnings"), nullptr, nullptr, true))
             {
                 time_t since_last_year = time_add_days(time_now(), -465);
                 string_const_t date_str = string_from_date(since_last_year);
                 open_in_shell(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
             }
 
-            if (ImGui::MenuItem("Technical", nullptr, nullptr, true))
+            if (ImGui::MenuItem(tr("Technical"), nullptr, nullptr, true))
                 open_in_shell(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);
 
-            if (ImGui::MenuItem("Fundamentals", nullptr, nullptr, true))
+            if (ImGui::MenuItem(tr("Fundamentals"), nullptr, nullptr, true))
                 open_in_shell(eod_build_url("fundamentals", code.str, FORMAT_JSON).str);
 
-            if (ImGui::MenuItem("Real-time", nullptr, nullptr, true))
+            if (ImGui::MenuItem(tr("Real-time"), nullptr, nullptr, true))
                 open_in_shell(eod_build_url("real-time", code.str, FORMAT_JSON).str);
             #endif
 

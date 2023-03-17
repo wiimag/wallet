@@ -596,7 +596,7 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
     }
 
     ImGui::SameLine();
-    if (ImGui::Button("Update"))
+    if (ImGui::Button(tr("Update")))
     {
         sw->table->needs_sorting = true;
         const size_t search_query_length = string_length(sw->query);
@@ -623,7 +623,7 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
             time_unit = "us";
             elapsed_time *= 1000.0;
         }
-        ImGui::Text("Search found %u result(s) and took %.3lg %s", array_size(sw->results), elapsed_time, time_unit);
+        ImGui::TrText("Search found %u result(s) and took %.3lg %s", array_size(sw->results), elapsed_time, time_unit);
         if (ImGui::IsItemHovered())
         {
             ImGui::SetTooltip(" Symbols: %u \n Properties: %u ", search_database_document_count(sw->db), search_database_index_count(sw->db));
@@ -920,20 +920,20 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
 
     ImGui::Separator();
 
-    if (ImGui::MenuItem("Read News"))
+    if (ImGui::MenuItem(tr("Read News")))
         news_open_window(STRING_ARGS(symbol));
 
     #if BUILD_DEVELOPMENT
-    if (ImGui::MenuItem("Browse News"))
+    if (ImGui::MenuItem(tr("Browse News")))
         {open_in_shell(eod_build_url("news", nullptr, FORMAT_JSON, "s", symbol.str).str);}
 
-    if (ImGui::MenuItem("Browse Fundamentals"))
+    if (ImGui::MenuItem(tr("Browse Fundamentals")))
         open_in_shell(eod_build_url("fundamentals", symbol.str, FORMAT_JSON).str);
     #endif
 
     ImGui::Separator();
 
-    if (ImGui::MenuItem("Re-index..."))
+    if (ImGui::MenuItem(tr("Re-index...")))
     {
         string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s\")\nSEARCH_INDEX(\"%.*s\")"), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
         eval(STRING_ARGS(expr));
@@ -942,8 +942,7 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
 
 FOUNDATION_STATIC table_t* search_create_table()
 {
-    table_t* table = table_allocate("QuickSearch##15");
-    table->flags |= TABLE_HIGHLIGHT_HOVERED_ROW;
+    table_t* table = table_allocate("QuickSearch##15", TABLE_HIGHLIGHT_HOVERED_ROW | TABLE_LOCALIZATION_CONTENT);
     table->context_menu = search_table_contextual_menu;
 
     table_add_column(table, search_table_column_symbol, "Symbol", COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING)
@@ -1067,10 +1066,10 @@ FOUNDATION_STATIC void search_menu()
     if (!ImGui::BeginMenuBar())
         return;
 
-    if (ImGui::BeginMenu("Symbols"))
+    if (ImGui::BeginMenu(tr("Symbols")))
     {
         //ImGui::Separator();
-        if (ImGui::MenuItem("Search", ICON_MD_KEYBOARD_OPTION_KEY "+`", nullptr, true))
+        if (ImGui::MenuItem(tr("Search"), ICON_MD_KEYBOARD_OPTION_KEY "+`", nullptr, true))
             search_open_quick_search();
 
         ImGui::Separator();

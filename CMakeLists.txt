@@ -113,6 +113,11 @@ add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_GUARD=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_STATISTICS=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_STATIC_HASH_DEBUG=1>")
 
+# If the option BUILD_ENABLE_LOCALIZATION is OFF, then disable localization
+if(NOT BUILD_ENABLE_LOCALIZATION)
+    add_compile_options(-DBUILD_ENABLE_LOCALIZATION=0)
+endif()
+
 # Set compiler specific flags
 if(MSVC)
 

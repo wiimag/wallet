@@ -15,6 +15,9 @@ to the application to alter the application runtime.
 | **Cloud Options** | <hr> |
 | ```--host=<string>``` | Override the default `https://cloud.<domain>.com` URL to execute all cloud queries. |
 | ```--apikey=<string>``` | Force the application to use the developer API key to run all cloud queries. |
+| **Localization Options** | <hr> |
+| ```--lang=<string>``` | Override the default locale to use for the application. (i.e. `--lang=en` or `--lang=fr`) |
+| ```--build-locales``` | Build and update the localization file for the application at `config/locales.sjson`. |
 | **Developer Options** | <hr> |
 | ```--console``` | Open the developer console on startup. |
 | ```--bgfx-ignore-logs``` | Omit BGFX traces from the application log. |
