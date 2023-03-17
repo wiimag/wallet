@@ -19,6 +19,8 @@
 
 #define HASH_TEST_RUNNER static_hash_string("test_runner", 11, 0x9b1ffcb52dac6a0fULL)
 
+extern GLFWwindow* _test_window;
+
 typedef struct TestRunnerCase {
     string_t name;
     string_t suite;
@@ -172,7 +174,7 @@ FOUNDATION_STATIC void test_runner_case_name_tooltip(table_element_ptr_const_t e
     if (tc->description.length > 0)
         ImGui::TextUnformatted(STRING_RANGE(tc->description));
     else
-        ImGui::TextUnformatted("No description");
+        ImGui::TrTextUnformatted("No description");
 }
 
 FOUNDATION_STATIC void test_runner_case_status_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
@@ -181,7 +183,7 @@ FOUNDATION_STATIC void test_runner_case_status_tooltip(table_element_ptr_const_t
     if (tc->results.length > 0)
         ImGui::TextUnformatted(STRING_RANGE(tc->results));
     else
-        ImGui::TextUnformatted("No Results");
+        ImGui::TrTextUnformatted("No Results");
 }
 
 FOUNDATION_STATIC cell_t test_runner_case_suite(table_element_ptr_t element, const column_t* column)
@@ -201,7 +203,7 @@ FOUNDATION_STATIC cell_t test_runner_case_actions(table_element_ptr_t element, c
     test_runner_case_t* tc = (test_runner_case_t*)element;
     if ((column->flags & COLUMN_RENDER_ELEMENT) != 0)
     {
-        if (ImGui::SmallButton("Run"))
+        if (ImGui::SmallButton(tr("Run")))
             test_runner_run_case(tc);
     }
 
@@ -228,8 +230,7 @@ FOUNDATION_STATIC void test_runner_case_selected(table_element_ptr_const_t eleme
 
 FOUNDATION_STATIC void test_runner_create_table()
 {
-    _test_runner_table = table_allocate("test_runner#4");
-    _test_runner_table->flags |= TABLE_HIGHLIGHT_HOVERED_ROW;
+    _test_runner_table = table_allocate("test_runner#4", TABLE_HIGHLIGHT_HOVERED_ROW);
     _test_runner_table->search_filter = string_const(_test_runner_search_filter, string_length(_test_runner_search_filter));
     table_add_column(_test_runner_table, "Actions", test_runner_case_actions, COLUMN_FORMAT_NUMBER, COLUMN_CUSTOM_DRAWING | COLUMN_HIDE_HEADER_TEXT | COLUMN_MIDDLE_ALIGN)
         .set_width(imgui_get_font_ui_scale(90.0f));
@@ -254,13 +255,13 @@ FOUNDATION_STATIC void test_runner_window_render()
     if (!window_opened_once)
         ImGui::SetNextWindowSizeConstraints(ImVec2(imgui_get_font_ui_scale(770.0f), 420), ImVec2(INFINITY, INFINITY));
 
-    if (ImGui::Begin("Test Runner##1", &_test_runner_window_opened, ImGuiWindowFlags_AlwaysUseWindowPadding))
+    if (ImGui::Begin(tr("Test Runner##1"), &_test_runner_window_opened, ImGuiWindowFlags_AlwaysUseWindowPadding))
     {
         if (_test_runner_table == nullptr)
             test_runner_create_table();
 
         ImGui::BeginGroup();
-        if (ImGui::InputTextWithHint("##SearchFilter", "Filter test cases...", 
+        if (ImGui::InputTextWithHint("##SearchFilter", tr("Filter test cases..."), 
             STRING_BUFFER(_test_runner_search_filter), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EscapeClearsAll))
         {
             _test_runner_table->search_filter = string_const(_test_runner_search_filter, string_length(_test_runner_search_filter));
@@ -305,7 +306,7 @@ FOUNDATION_STATIC void test_runner_menu()
     {
         if (ImGui::BeginMenu(tr("Windows")))
         {
-            ImGui::MenuItem(ICON_MD_LOGO_DEV " Test Runner", nullptr, &_test_runner_window_opened);
+            ImGui::MenuItem(tr(ICON_MD_LOGO_DEV " Test Runner"), nullptr, &_test_runner_window_opened);
             ImGui::EndMenu();
         }
 
@@ -314,6 +315,11 @@ FOUNDATION_STATIC void test_runner_menu()
 
     if (_test_runner_window_opened)
         test_runner_window_render();
+}
+
+extern GLFWwindow* main_test_window()
+{
+    return _test_window;
 }
 
 //

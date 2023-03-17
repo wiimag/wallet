@@ -34,17 +34,6 @@ extern thread_local size_t _tr_out_size;
  */
 #define RTEXT(str) tr((str), sizeof((str)) - 1, true)
 
-/*! @def TSTRING_CONST
- * 
- *  @brief Macro to translate a string literal and unpack the resulted constant string 
- *         for function that takes str and length as two separated arguments.
- * 
- *  @param str String literal to translate.
- * 
- *  @return Translated constant string object and length.
- */
-#define TSTRING_CONST(str) tr_out_size((str), sizeof((str)) - 1, true, &_tr_out_size), _tr_out_size
-
 /*! Translate a (default English) string to the current user language.
  * 
  *  @note It is safe to cache translate string until the current language changes. 
@@ -59,20 +48,9 @@ extern thread_local size_t _tr_out_size;
  */
 string_const_t tr(const char* str, size_t length, bool literal = false);
 
-/* @internal 
- * @see TSTRING_CONST
- */
-FOUNDATION_FORCEINLINE const char* tr_out_size(const char* str, size_t length, bool literal, size_t& out_size)
-{
-    string_const_t result = tr(str, length, literal);
-    out_size = result.length;
-    return result.str;
-}
-
 #else
 
 #define RTEXT(str) CTEXT(str)
-#define TSTRING_CONST(str) STRING_CONST(str)
 
 FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const char* tr(const char* str, size_t length, bool literal = false) 
 { 

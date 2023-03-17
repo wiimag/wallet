@@ -9,11 +9,13 @@
 			hash = "315259d58df4971e"
 			en = "File"
 			fr = "Fichier"
+			it = "File"
 		}
 		{
 			hash = "3cd9abbe69023cf5"
 			en = "Create"
 			fr = "Cr\xc3\xa9er"
+			it = "Creare"
 		}
 		{
 			hash = "cba02097bd28edff"
@@ -24,6 +26,7 @@
 			hash = "2db70e0343e151ce"
 			en = "\xee\xa1\xb9 Exit"
 			fr = "\xee\xa1\xb9 Quitter"
+			it = "\xee\xa1\xb9 Uscire"
 		}
 		{
 			hash = "e85cb85742aca2c7"
@@ -34,6 +37,7 @@
 			hash = "270e253161ae0ca9"
 			en = "EOD API Key"
 			fr = "Cl\xc3\xa9 API EOD"
+			it = "Chiave API EOD"
 		}
 		{
 			hash = "c8e0c8e596234111"
@@ -49,11 +53,13 @@
 			hash = "1af16e15bd83b48c"
 			en = "Preferred Dividends %"
 			fr = "Taux de rendement souhait\xc3\xa9 (%)"
+			it = "Dividendi privilegiati %"
 		}
 		{
 			hash = "3db8b69ff90df38c"
 			en = "Show logo banners"
 			fr = "Afficher les banni\xc3\xa8res"
+			it = "Mostra banner con logo"
 		}
 		{
 			hash = "c29864d9b8d44011"
@@ -64,6 +70,7 @@
 			hash = "ed7f7b6b299c9462"
 			en = "Changing that settings requires restarting the application."
 			fr = "Le changement de cette option requiert le red\xc3\xa9marrage de l'application."
+			it = "La modifica delle impostazioni richiede il riavvio dell'applicazione."
 		}
 		{
 			hash = "86f60888f62f3e63"
@@ -118,9 +125,8 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 			fr = "Symboles US"
 		}
 		{
-			hash = "cc4fb256b46fc384"
-			en = "\xef\x80\xaf Search "
-			fr = "\xef\x80\xaf Rechercher "
+			en = "\xef\x80\xaf Search ##Search"
+			fr = "\xef\x80\xaf Rechercher ##Search"
 		}
 		{
 			hash = "fc1683103971e92e"
@@ -140,7 +146,7 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 		{
 			hash = "74f7620f89c1cce1"
 			en = "Update"
-			fr = "Mettre \xc3\xa0 jour"
+			fr = "Rafr\xc3\xa9chir"
 		}
 		{
 			hash = "d1ef06780ef49011"
@@ -151,11 +157,6 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 			hash = "27401988236d16f6"
 			en = "\xef\xa3\xbf Wallet "
 			fr = "\xef\xa3\xbf Portefeuille "
-		}
-		{
-			hash = "c6b41e97455fa2e8"
-			en = "\xee\xa2\xb8 Settings "
-			fr = "\xee\xa2\xb8 Param\xc3\xa8tres "
 		}
 		{
 			hash = "5c747c30cd981112"
@@ -525,12 +526,12 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 		{
 			hash = "3694d3741079eb3e"
 			en = "Buy"
-			fr = "Achat"
+			fr = "Acheter"
 		}
 		{
 			hash = "c75a1ca5c868ddb4"
 			en = "Sell"
-			fr = "Vente"
+			fr = "Vendre"
 		}
 		{
 			hash = "1d9ca1ffbbe54378"
@@ -571,6 +572,636 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 			hash = "bc44b82da566f3d3"
 			en = "Title"
 			fr = "Titre"
+		}
+		{
+			hash = "ac435e0d3a221970"
+			en = "No news feed"
+			fr = "Aucun flux d'actualit\xc3\xa9"
+		}
+		{
+			hash = "8d00a6818129a9e5"
+			en = "Track historical data for this report."
+			fr = "Suivre les donn\xc3\xa9es historiques pour ce rapport."
+		}
+		{
+			hash = "f5877510a374dc64"
+			en = "Target"
+			fr = "Cible"
+		}
+		{
+			hash = "6435d22c518f05ad"
+			en = "Profit"
+			fr = "Profit"
+		}
+		{
+			hash = "849a5394bd019de9"
+			en = "Avg. Days"
+			fr = "Jours Moy."
+		}
+		{
+			hash = "9486aaebc4d3a302"
+			en = " Average Rate (USD): %.2lf $ 
+ Based on the average acquisition time of every titles (%.0lf). "
+			fr = " Taux moyen (USD): %.2lf $
+ Bas\xc3\xa9 sur le temps moyen d'acquisition de chaque titre (%.0lf). "
+		}
+		{
+			hash = "ea0639e8c1f19a5a"
+			en = "Daily average"
+			fr = "Moyenne quotidienne"
+		}
+		{
+			hash = "13077de7a316417d"
+			en = "Day Gain"
+			fr = "Gain journalier"
+		}
+		{
+			hash = "9f9be50f55873d2d"
+			en = "Dividends"
+			fr = "Dividendes"
+		}
+		{
+			hash = "c197a757a1510aa2"
+			en = "Capital"
+			fr = "Capitale"
+		}
+		{
+			hash = "9588b18155b69105"
+			en = "Enhanced earnings"
+			fr = "Rendement am\xc3\xa9lior\xc3\xa9"
+		}
+		{
+			hash = "4b43130c85f9d879"
+			en = "Sell Count"
+			fr = "Nb. de ventes"
+		}
+		{
+			hash = "9604271db991303c"
+			en = "Sell Total"
+			fr = "Total des ventes"
+		}
+		{
+			hash = "1ac3a34529026188"
+			en = "Sell Average"
+			fr = "Moyenne des ventes"
+		}
+		{
+			hash = "49dec57816301850"
+			en = "Sell Greediness"
+			fr = "Ventes pr\xc3\xa9cipit\xc3\xa9es"
+		}
+		{
+			hash = "785d583f91bf5766"
+			en = "Sells (Loses)"
+			fr = "Ventes (Pertes)"
+		}
+		{
+			hash = "794f094c2e7fdbd"
+			en = "Investments"
+			fr = "Investissements"
+		}
+		{
+			hash = "d202a1ca79af04a7"
+			en = "Total Value"
+			fr = "Valeur totale"
+		}
+		{
+			hash = "b9144d477bbe8a4a"
+			en = "Total Gain"
+			fr = "Gain total"
+		}
+		{
+			hash = "23de0f6c0f415f2b"
+			en = "Rename"
+			fr = "Renommer"
+		}
+		{
+			hash = "6e0e74ea33e46472"
+			en = "Save"
+			fr = "Sauvegarder"
+		}
+		{
+			hash = "aebfa8119b9d12bf"
+			en = "Name"
+			fr = "Nom"
+		}
+		{
+			hash = "fd194a001ab63919"
+			en = "\xee\xa3\x9f Date"
+			fr = "\xee\xa3\x9f Date"
+		}
+		{
+			hash = "ce0596beea8b9429"
+			en = " \xee\xab\x87||\xee\xab\x87 Quantity"
+			fr = " \xee\xab\x87||\xee\xab\x87 Quantit\xc3\xa9"
+		}
+		{
+			hash = "f70bb285f1575462"
+			en = "  Buy \xee\x95\x8e||\xee\x95\x8e Average Cost"
+			fr = "Achat \xee\x95\x8e||\xee\x95\x8e Co\xc3\xbft moyen"
+		}
+		{
+			hash = "73d4f924ffbcd287"
+			en = "Price \xee\x89\xa3||\xee\x89\xa3 Market Price"
+			fr = "Prix \xee\x89\xa3||\xee\x89\xa3 Prix du march\xc3\xa9"
+		}
+		{
+			hash = "a25d5009c2c41b82"
+			en = "  Ask \xef\x81\x8b||\xef\x81\x8b Ask Price"
+			fr = " Dem. \xef\x81\x8b||\xef\x81\x8b Prix \xc3\xa0 demander"
+		}
+		{
+			hash = "73905916a7af6d77"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "  Jour \xee\x88\xa7||\xee\x88\xa7 Gain journalier. "
+		}
+		{
+			hash = "1ee46f4831f7601a"
+			en = "PS \xee\xa3\xa5||\xee\xa3\xa5 Prediction Sensor"
+			fr = "PS \xee\xa3\xa5||\xee\xa3\xa5 Pr\xc3\xa9diction"
+		}
+		{
+			hash = "9cd484e4a69fe675"
+			en = "EPS \xee\xa3\xa5||\xee\xa3\xa5 Earning Trend"
+			fr = "EPS \xee\xa3\xa5||\xee\xa3\xa5 Tendance des b\xc3\xa9n\xc3\xa9fices"
+		}
+		{
+			hash = "91b27dfca733dc39"
+			en = " Day %||\xef\x81\x8a Day % "
+			fr = "Auj. %||\xef\x81\x8a Jour % "
+		}
+		{
+			hash = "ef5856daf090c774"
+			en = "  Y. \xee\xa4\xb6||\xee\xa4\xb6 Yesterday % "
+			fr = "Hier \xee\xa4\xb6||\xee\xa4\xb6 Hier % "
+		}
+		{
+			hash = "4701b90af262966c"
+			en = "  1W \xee\xbf\xa8||\xee\xbf\xa8 % since 1 week"
+			fr = "  1W \xee\xbf\xa8||\xee\xbf\xa8 % depuis 1 semaine"
+		}
+		{
+			hash = "7cd455720e9b392c"
+			en = "  1M \xee\xbf\xa7||\xee\xbf\xa7 % since 1 month"
+			fr = "  1M \xee\xbf\xa7||\xee\xbf\xa7 % depuis 1 mois"
+		}
+		{
+			hash = "83886e42eebed610"
+			en = "  3M \xee\xbf\xa7||\xee\xbf\xa7 % since 3 months"
+			fr = "  3M \xee\xbf\xa7||\xee\xbf\xa7 % depuis 3 mois"
+		}
+		{
+			hash = "bc0cca9c5f9036fa"
+			en = "1Y \xee\xaf\x8c||\xee\xaf\x8c % since 1 year"
+			fr = "1Y \xee\xaf\x8c||\xee\xaf\x8c % depuis 1 an"
+		}
+		{
+			hash = "6afc4a3a796f4019"
+			en = "10Y \xee\xaf\x8c||\xee\xaf\x8c % since 10 years"
+			fr = "10Y \xee\xaf\x8c||\xee\xaf\x8c % depuis 10 ans"
+		}
+		{
+			hash = "58301bb1fa7e4767"
+			en = "   \xee\xad\xb0||\xee\xad\xb0 Exchange Rate"
+			fr = "   \xee\xad\xb0||\xee\xad\xb0 Taux de change"
+		}
+		{
+			hash = "84cb06a745e32963"
+			en = " R. \xee\xa1\xa0||\xee\xa1\xa0 Return Rate (Yield)"
+			fr = " R. \xee\xa1\xa0||\xee\xa1\xa0 Taux de rendement"
+		}
+		{
+			hash = "5ee1fffa19128806"
+			en = "      I. \xee\x8b\xab||\xee\x8b\xab Total Investments (based on average cost)"
+			fr = "      I. \xee\x8b\xab||\xee\x8b\xab Investissement Total (bas\xc3\xa9 sur le prix moyen)"
+		}
+		{
+			hash = "4f743c9957329d7a"
+			en = "      V. \xee\xa1\x90||\xee\xa1\x90 Total Value (as of today)"
+			fr = "      V. \xee\xa1\x90||\xee\xa1\x90 Valeur totale (aujourd'hui)"
+		}
+		{
+			hash = "595f681f7c9f118d"
+			en = "   Gain \xee\xad\xbd||\xee\xad\xbd Total Gain (as of today)"
+			fr = "   Gain \xee\xad\xbd||\xee\xad\xbd Gain total (aujourd'hui)"
+		}
+		{
+			hash = "f00ab2c582ae7d3"
+			en = " % \xef\x81\x8a||\xef\x81\x8a Total Gain % "
+			fr = " % \xef\x81\x8a||\xef\x81\x8a Gain total % "
+		}
+		{
+			hash = "b1c7ef6e963c47f3"
+			en = "\xee\xa3\x91 Sector"
+			fr = "\xee\xa3\x91 Secteur"
+		}
+		{
+			hash = "27ed4411c52b33e5"
+			en = "\xee\xa4\x96||\xee\xa4\x96 Elapsed Days"
+			fr = "\xee\xa4\x96||\xee\xa4\x96 Jours \xc3\xa9coul\xc3\xa9s"
+		}
+		{
+			hash = "7192addd0eda75de"
+			en = "   \xef\x81\x8a %||\xef\x81\x8a Total Gain % "
+			fr = "   \xef\x81\x8a %||\xef\x81\x8a Gain total % "
+		}
+		{
+			hash = "4a4da79411834587"
+			en = "     \xee\x96\x87 Assets||\xee\x96\x87 Any other accounted assets"
+			fr = "     \xee\x96\x87 Actifs||\xee\x96\x87 Tous les autres actifs comptabilis\xc3\xa9s"
+		}
+		{
+			hash = "701383ae56a567c6"
+			en = "     \xee\xa1\x8f Wealth||\xee\xa1\x8f Total wealth of all your earnings"
+			fr = "     \xee\xa1\x8f Richesse||\xee\xa1\x8f Richesse totale de tous vos revenus"
+		}
+		{
+			hash = "472a198828c1ccb6"
+			en = "         \xee\xa1\xab $||\xee\xa1\xab Change in $ since last time"
+			fr = "         \xee\xa1\xab $||\xee\xa1\xab Changement en $ depuis la derni\xc3\xa8re fois"
+		}
+		{
+			hash = "5391aa28a44f36de"
+			en = "    \xee\xa1\xab %||\xee\xa1\xab Change in % since last time"
+			fr = "    \xee\xa1\xab %||\xee\xa1\xab Changement en % depuis la derni\xc3\xa8re fois"
+		}
+		{
+			hash = "eacdb448b5b5f77c"
+			en = "Edit History (%.*s)###EH19"
+			fr = "Modifier l'historique (%.*s)###EH1"
+		}
+		{
+			hash = "69a7cedeb597d699"
+			en = "Name: %.*s
+Email: %.*s
+Subscription: %.*s
+Request: %lg/%lg"
+			fr = "Nom: %.*s
+Courriel: %.*s
+Abonnement: %.*s
+Requete: %lg/%lg"
+		}
+		{
+			hash = "e5bf46021bca5a81"
+			en = "EOD [API USAGE %.3lg %%]"
+			fr = "EOD [UTILISATION DE L'API %.3lg %%]"
+		}
+		{
+			hash = "474e31e5cea23a4b"
+			en = "Loading data..."
+			fr = "Chargement des donn\xc3\xa9es..."
+		}
+		{
+			hash = "e238e56710ae711f"
+			en = "\xee\xab\x96 Test Runner"
+			fr = "\xee\xab\x96 Test Runner"
+		}
+		{
+			hash = "40f1ff2a36908e81"
+			en = "Clear"
+			fr = "Effacer"
+		}
+		{
+			hash = "b84b7ced06b479e"
+			en = "Run All"
+			fr = "Ex\xc3\xa9cuter Tout"
+		}
+		{
+			hash = "fb6cb8c7e65ffda0"
+			en = "Test Runner##1"
+			fr = "Test Runner##1"
+		}
+		{
+			hash = "40eaa8d51049b637"
+			en = "Filter test cases..."
+			fr = "Filtrer les cas de test..."
+		}
+		{
+			hash = "14c67d2a50928bad"
+			en = "Run"
+			fr = "Ex\xc3\xa9cuter"
+		}
+		{
+			hash = "32a0a4b9fed7551a"
+			en = "Eval"
+			fr = "Eval"
+		}
+		{
+			hash = "83b6f0476bdacd0e"
+			en = "\xee\xa3\x9f Date      "
+			fr = "\xee\xa3\x9f Date      "
+		}
+		{
+			hash = "931f26f4ee2bc6e8"
+			en = "      \xef\xa3\xbf Funds||\xef\xa3\xbf Funds"
+			fr = "      \xef\xa3\xbf Fonds||\xef\xa3\xbf Fonds"
+		}
+		{
+			hash = "fe7174ee8cf52220"
+			en = "     \xee\x9c\xba Broker||\xee\x9c\xba Brokerage Value"
+			fr = "   \xee\x9c\xba Courtier||\xee\x9c\xba Valeur de courtage"
+		}
+		{
+			hash = "2c4fa523c5a122e1"
+			en = " \xee\x8b\xab Investments||\xee\x8b\xab Investments"
+			fr = " \xee\x8b\xab Investissements||\xee\x8b\xab Investissements"
+		}
+		{
+			hash = "beda56c1eafebcca"
+			en = "      \xee\xa1\x90 Value||\xee\xa1\x90 Total Value"
+			fr = "     \xee\xa1\x90 Valeur||\xee\xa1\x90 Valeur totale"
+		}
+		{
+			hash = "5ece67481d620d5d"
+			en = "        \xef\x81\x8a \xee\x88\xa7||\xef\x81\x8a Total Gain $"
+			fr = "        \xef\x81\x8a \xee\x88\xa7||\xef\x81\x8a Gain total $"
+		}
+		{
+			hash = "2fef29a591d0f3ef"
+			en = "MAX %||\xee\xaf\x8c % since creation"
+			fr = "MAX %||\xee\xaf\x8c % depuis la cr\xc3\xa9ation"
+		}
+		{
+			hash = "6aa0ab6ff3cdf401"
+			en = "No search results for %.*s
+You can still add the search term as a title by pressing Add."
+			fr = "Aucun r\xc3\xa9sultat pour %.*s
+Vous pouvez toujours ajouter le terme de recherche comme titre en appuyant sur Ajouter."
+		}
+		{
+			hash = "95ba79ab6f6c42eb"
+			en = "\xef\x87\x90 Sector"
+			fr = "\xef\x87\x90 Secteur"
+		}
+		{
+			hash = "268a91fc1bba3a08"
+			en = "\xee\xae\xbc Industry"
+			fr = "\xee\xae\xbc Industrie"
+		}
+		{
+			hash = "6feacd1bc385b36a"
+			en = " Day %||\xef\x81\x8a Day % "
+			fr = " Jour %||\xef\x81\x8a Jour % "
+		}
+		{
+			hash = "acc878abd1b3b54a"
+			en = "  1W \xee\xbf\xa8||\xee\xbf\xa8 % since 1 week"
+			fr = "  1W \xee\xbf\xa8||\xee\xbf\xa8 % depuis 1 semaine"
+		}
+		{
+			hash = "57c16d8aef37139f"
+			en = "  1M \xee\xbf\xa7||\xee\xbf\xa7 % since 1 month"
+			fr = "  1M \xee\xbf\xa7||\xee\xbf\xa7 % depuis 1 mois"
+		}
+		{
+			hash = "cfa46cbafa10fd83"
+			en = "1Y \xee\xaf\x8c||\xee\xaf\x8c % since 1 year"
+			fr = "1Y \xee\xaf\x8c||\xee\xaf\x8c % depuis 1 an"
+		}
+		{
+			hash = "1658bb6f7b2adc8e"
+			en = "MAX %||\xee\xaf\x8c % since creation"
+			fr = "MAX %||\xee\xaf\x8c % depuis la cr\xc3\xa9ation"
+		}
+		{
+			hash = "ff4f6a2ea20d3b1"
+			en = " R. \xee\xa1\xa0||\xee\xa1\xa0 Return Rate (Yield)"
+			fr = " R. \xee\xa1\xa0||\xee\xa1\xa0 Taux de Rendement"
+		}
+		{
+			hash = "d66a916b0f366a2c"
+			en = "    Price \xee\x89\xa3||\xee\x89\xa3 Market Price"
+			fr = "     Prix \xee\x89\xa3||\xee\x89\xa3 Prix du March\xc3\xa9"
+		}
+		{
+			hash = "e68d90b754d27798"
+			en = "Search found %u result(s) and took %.3lg %s"
+			fr = "La recherche a trouv\xc3\xa9 %u r\xc3\xa9sultat(s) et a pris %.3lg %s"
+		}
+		{
+			hash = "b2415f253adf4ef9"
+			en = "\xee\xa2\xb8 Settings ##Settings"
+			fr = "\xee\xa2\xb8 Param\xc3\xa8tres ##Settings"
+		}
+		{
+			hash = "555894755280056e"
+			en = "Browse News"
+			fr = "Afficher Nouvelles"
+		}
+		{
+			hash = "e919a78f20503558"
+			en = "Browse Fundamentals"
+			fr = "Afficher Fondamentaux"
+		}
+		{
+			hash = "e5420778e0e9b1fe"
+			en = "Re-index..."
+			fr = "Re-indexer..."
+		}
+		{
+			hash = "344f8917ef9b84e"
+			en = "\xee\x82\xaf Name"
+			fr = "\xee\x82\xaf Nom"
+		}
+		{
+			hash = "7b3587c50fa64a69"
+			en = "\xee\x85\x93||\xee\x85\x93 Currency"
+			fr = "\xee\x85\x93||\xee\x85\x93 Devise"
+		}
+		{
+			hash = "af280717584495e7"
+			en = "\xee\x85\xb9 Type    "
+			fr = "\xee\x85\xb9 Type    "
+		}
+		{
+			hash = "77d2d6e518b30572"
+			en = "Symbol"
+			fr = "Symbole"
+		}
+		{
+			hash = "30f16eee7423ce02"
+			en = "\xee\x85\x93 Country"
+			fr = "\xee\x85\x93 Pays"
+		}
+		{
+			hash = "fb16cb79d88858b4"
+			en = "\xee\x9f\xb1||\xee\x9f\xb1 Exchange"
+			fr = "\xee\x9f\xb1||\xee\x9f\xb1 Bourse"
+		}
+		{
+			hash = "1de78950999246a2"
+			en = "\xee\x85\xb9 Type"
+			fr = "\xee\x85\xb9 Type"
+		}
+		{
+			hash = "5fa8693484c745d"
+			en = "\xee\x95\xb4 Category"
+			fr = "\xee\x95\xb4 Cat\xc3\xa9gorie"
+		}
+		{
+			hash = "bf3f7cb505b494c2"
+			en = "\xee\xa4\x8d ISIN     "
+			fr = "\xee\xa4\x8d ISIN     "
+		}
+		{
+			hash = "5697f989d5de400f"
+			en = "||Order Type"
+			fr = "||Type d'Ordre"
+		}
+		{
+			hash = "72c76745b3fd2538"
+			en = "Quantity \xee\xab\x87||\xee\xab\x87 Order Quantity"
+			fr = "Quantit\xc3\xa9 \xee\xab\x87||\xee\xab\x87 Quantit\xc3\xa9 d'Ordre"
+		}
+		{
+			hash = "34d2a61ba27fff5b"
+			en = "Price \xee\x89\xa3||\xee\x89\xa3 Order Price"
+			fr = "Prix \xee\x89\xa3||\xee\x89\xa3 Prix d'Ordre"
+		}
+		{
+			hash = "fd1b52653bf7e8c9"
+			en = "Close \xee\x89\xa3||\xee\x89\xa3 Close Price"
+			fr = "Fermeture \xee\x89\xa3||\xee\x89\xa3 Prix de Fermeture"
+		}
+		{
+			hash = "feec5f9861a4db79"
+			en = "Split \xee\x89\xa3||\xee\x89\xa3 Split Price"
+			fr = "Split \xee\x89\xa3||\xee\x89\xa3 Prix de Split"
+		}
+		{
+			hash = "6620bed98d44e1b5"
+			en = "Rate \xee\xad\xb0||\xee\xad\xb0 Exchange Rate"
+			fr = "Taux \xee\xad\xb0||\xee\xad\xb0 Taux de Change"
+		}
+		{
+			hash = "475a23b5220d8f1f"
+			en = "Adjusted \xee\x89\xa3||\xee\x89\xa3 Adjusted Price"
+			fr = "Ajust\xc3\xa9 \xee\x89\xa3||\xee\x89\xa3 Prix Ajust\xc3\xa9"
+		}
+		{
+			hash = "f21b2eb3991b99fd"
+			en = "Ask \xee\x89\xa3||\xee\x89\xa3 Ask Price"
+			fr = "Demande \xee\x89\xa3||\xee\x89\xa3 Prix de Demande"
+		}
+		{
+			hash = "fffa1967636c75aa"
+			en = "   Value \xee\xa1\x90||\xee\xa1\x90 Total Value (as of today)"
+			fr = "  Valeur \xee\xa1\x90||\xee\xa1\x90 Valeur Totale (aujourd'hui)"
+		}
+		{
+			hash = "6da7a4dc730bb37b"
+			en = "           Gain \xef\x81\x8a||\xef\x81\x8a Total Gain"
+			fr = "           Gain \xef\x81\x8a||\xef\x81\x8a Gain Total"
+		}
+		{
+			hash = "b3997a9adb262c8a"
+			en = "\xef\x87\x81||\xef\x87\x81 Actions"
+			fr = "\xef\x87\x81||\xef\x87\x81 Actions"
+		}
+		{
+			hash = "4d89195bc358fe6e"
+			en = "Details"
+			fr = "D\xc3\xa9tails"
+		}
+		{
+			hash = "d1ca36ca244ab217"
+			en = "Show Financials"
+			fr = "Afficher Finances"
+		}
+		{
+			hash = "e1e04b06af9fe806"
+			en = "Remove"
+			fr = "Supprimer"
+		}
+		{
+			hash = "6e3ca2777251b773"
+			en = "Quantity"
+			fr = "Quantit\xc3\xa9"
+		}
+		{
+			hash = "def3b6fb44555ca8"
+			en = "Date"
+			fr = "Date"
+		}
+		{
+			hash = "75acb4c16c4cc589"
+			en = "Cancel"
+			fr = "Annuler"
+		}
+		{
+			hash = "eef8c829b05f47f9"
+			en = "Apply"
+			fr = "Appliquer"
+		}
+		{
+			hash = "8944de02d84900"
+			en = "Sell Value: %.2lf $"
+			fr = "Valeur de Vente: %.2lf $"
+		}
+		{
+			hash = "4e05f47aeaec8a1f"
+			en = "\xee\x95\x8e Buy %.*s##13"
+			fr = "\xee\x95\x8e Acheter %.*s##13"
+		}
+		{
+			hash = "bfc5bb006c9a3f2a"
+			en = " Total Investment %12s "
+			fr = " Investissement Total %12s "
+		}
+		{
+			hash = "e759c6094559eab2"
+			en = " Total Value      %12s "
+			fr = " Valeur Totale    %12s "
+		}
+		{
+			hash = "6c57b260e920bd0b"
+			en = " Exchange Gain    %12s "
+			fr = " Gain de Change   %12s "
+		}
+		{
+			hash = "af548d5adfa44c41"
+			en = "\xef\x81\x9b Sell %.*s##7"
+			fr = "\xef\x81\x9b Vendre %.*s##7"
+		}
+		{
+			hash = "486867b4a4ff0a50"
+			en = "\xee\xab\x96 Profiler"
+			fr = "@TODO"
+		}
+		{
+			hash = "f7555cee2d02bc16"
+			en = "\xef\x88\xab [%u] %.*s"
+			fr = "@TODO"
+		}
+		{
+			hash = "9726993b9b489ed8"
+			en = "\xef\xa3\xbf %.2lf $"
+			fr = "@TODO"
+		}
+		{
+			hash = "37fef283789a9cba"
+			en = "\xee\xad\xbd %.2lf $"
+			fr = "@TODO"
+		}
+		{
+			hash = "c7bf2b3fa89cf5e7"
+			en = "\xee\xa1\xa0 %.2lf $"
+			fr = "@TODO"
+		}
+		{
+			hash = "9d5d6290f2e6dd6d"
+			en = "\xee\x8b\xab %.*s"
+			fr = "@TODO"
+		}
+		{
+			hash = "16b3c3953dbed846"
+			en = "\xee\xa1\x90 %.*s"
+			fr = "@TODO"
+		}
+		{
+			hash = "a8f164e0efa1ec0"
+			en = "\xef\x81\x8a %.*s"
+			fr = "@TODO"
 		}
 	]
 }

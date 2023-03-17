@@ -59,6 +59,15 @@ file(GLOB_RECURSE DEVS_RESOURCE_FILES
 )
 source_group("resources" FILES ${DEVS_RESOURCE_FILES})
 
+# Load config files
+file(GLOB_RECURSE CONFIG_FILES
+    "${ROOT_DIR}/config/*.sjson"
+)
+source_group("config" FILES ${CONFIG_FILES})
+
+# Copy the config/*.sjson files to the build directory
+file(COPY ${CONFIG_FILES} DESTINATION ${ROOT_DIR}/build)
+
 # Load stb source files
 file(GLOB STB_SOURCES
     "${ROOT_DIR}/external/stb/*.c"
@@ -88,7 +97,14 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 include_directories(${ROOT_DIR}/sources)
 
 # Create the bx library
-add_library(framework STATIC ${FRAMEWORK_SOURCES} ${TEST_SOURCES} ${EXTERNAL_SOURCES} ${STB_SOURCES} ${DOCTEST_SOURCES} ${DEVS_RESOURCE_FILES})
+add_library(framework STATIC 
+    ${FRAMEWORK_SOURCES} 
+    ${TEST_SOURCES} 
+    ${EXTERNAL_SOURCES} 
+    ${STB_SOURCES} 
+    ${DOCTEST_SOURCES} 
+    ${CONFIG_FILES}
+    ${DEVS_RESOURCE_FILES})
 
 # Add dependencies to other libs
 target_link_libraries(framework PUBLIC foundation bx bgfx imgui)

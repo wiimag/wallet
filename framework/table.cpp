@@ -312,12 +312,13 @@ FOUNDATION_STATIC bool table_default_sorter(table_t* table, column_t* sorting_co
     return sorting_context.completly_sorted;
 }
 
-table_t* table_allocate(const char* name)
+table_t* table_allocate(const char* name, table_flags_t flags /*= TABLE_DEFAULT_OPTIONS*/)
 {
     void* table_mem = memory_allocate(0, sizeof(table_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
     table_t* new_table = new (table_mem) table_t();
     new_table->name = string_allocate_format(STRING_CONST("Table_%s_1"), name);
     new_table->sort = &table_default_sorter;
+    new_table->flags |= flags;
     return new_table;
 }
 
@@ -958,7 +959,15 @@ column_t& table_add_column(table_t* table,
         {
             c = &table->columns[i];
             c->used = true;
-            c->name = string_table_encode(name, name_length);
+            if ((table->flags & TABLE_LOCALIZATION_CONTENT) == 0 || (flags & COLUMN_NO_LOCALIZATION) == COLUMN_NO_LOCALIZATION)
+            {
+                c->name = string_table_encode(name, name_length);
+            }
+            else
+            {
+                string_const_t trname = tr(name, name_length, false);
+                c->name = string_table_encode(STRING_ARGS(trname));
+            }
             c->format = format;
             c->flags = flags;
             c->fetch_value = fetch_value_handler;

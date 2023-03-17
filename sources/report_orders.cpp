@@ -403,8 +403,7 @@ FOUNDATION_STATIC cell_t report_order_column_actions(table_element_ptr_t element
 
 FOUNDATION_STATIC table_t* report_create_title_details_table(const bool title_is_sold, const bool show_ask_price)
 {
-    table_t* table = table_allocate("Orders##3");
-    table->flags |= ImGuiTableFlags_SizingFixedFit;
+    table_t* table = table_allocate("Orders##3", ImGuiTableFlags_SizingFixedFit | TABLE_LOCALIZATION_CONTENT);
 
     table_add_column(table, STRING_CONST("||Order Type"), report_order_column_type,
         COLUMN_FORMAT_TEXT, COLUMN_MIDDLE_ALIGN | COLUMN_HIDE_HEADER_TEXT | COLUMN_SORTABLE)
@@ -529,7 +528,8 @@ void report_render_title_details(report_t* report, title_t* title)
 
 void report_render_buy_lot_dialog(report_t* report, title_t* title)
 {
-    string_const_t title_buy_popup_id = string_format_static(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##13"), title->code_length, title->code);
+    string_const_t fmttr = tr(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##13"), true);
+    string_const_t title_buy_popup_id = string_format_static(STRING_ARGS(fmttr), title->code_length, title->code);
     if (!report_render_dialog_begin(title_buy_popup_id, &title->show_buy_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
         return;
 
@@ -603,11 +603,11 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         ImGui::NextColumn();
         ImGui::NextColumn();
 
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(100.0f));
-        if (ImGui::Button(tr("Cancel")))
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(152.0f));
+        if (ImGui::Button(tr("Cancel"), { IM_SCALEF(70.0f) , IM_SCALEF(24.0f) }))
             title->show_buy_ui = false;
         ImGui::SameLine();
-        if (ImGui::Button(tr("Apply")))
+        if (ImGui::Button(tr("Apply"), { IM_SCALEF(75.0f), IM_SCALEF(24.0f) }))
         {
             config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
             config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);
@@ -629,7 +629,8 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
 
 void report_render_sell_lot_dialog(report_t* report, title_t* title)
 {
-    string_const_t title_popup_id = string_format_static(STRING_CONST(ICON_MD_SELL " Sell %.*s##7"), title->code_length, title->code);
+    string_const_t fmttr = tr(STRING_CONST(ICON_MD_SELL " Sell %.*s##7"), true);
+    string_const_t title_popup_id = string_format_static(STRING_ARGS(fmttr), title->code_length, title->code);
     if (!report_render_dialog_begin(title_popup_id, &title->show_sell_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
         return;
 
@@ -686,14 +687,14 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
 
         ImGui::TrText("Sell Value: %.2lf $", quantity * price);
 
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(115));
+        ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(165));
 
         ImGui::MoveCursor(0, -5);
-        if (ImGui::Button(tr("Cancel")))
+        if (ImGui::Button(tr("Cancel"), { IM_SCALEF(70.0f) , IM_SCALEF(24.0f) }))
             title->show_sell_ui = false;
         ImGui::SameLine();
         ImGui::MoveCursor(0, -5);
-        if (ImGui::Button(tr("Apply")))
+        if (ImGui::Button(tr("Apply"), { IM_SCALEF(75.0f) , IM_SCALEF(24.0f) }))
         {
             config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
             config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);

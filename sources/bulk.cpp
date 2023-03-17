@@ -393,8 +393,7 @@ FOUNDATION_STATIC void bulk_create_symbols_table()
     if (_symbols_table)
         table_deallocate(_symbols_table);
 
-    _symbols_table = table_allocate("Bulk##_2");
-    _symbols_table->flags |= TABLE_HIGHLIGHT_HOVERED_ROW;
+    _symbols_table = table_allocate("Bulk##_2", TABLE_HIGHLIGHT_HOVERED_ROW | TABLE_LOCALIZATION_CONTENT);
     _symbols_table->context_menu = bulk_table_context_menu;
     _symbols_table->search = bulk_table_search;
 

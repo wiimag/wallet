@@ -30,7 +30,11 @@ struct localization_language_t
 constexpr const char* LOCALIZATION_DEFAULT_LANGUAGE = "en";
 const localization_language_t LOCALIZATION_SUPPORTED_LANGUAGES[] = {
     { CTEXT("en"), CTEXT_UTF8("English") },
-    { CTEXT("fr"), CTEXT(u8"Français") }
+    { CTEXT("fr"), CTEXT(u8"Français") },
+//  { CTEXT("de"), CTEXT(u8"Deutsch") },
+//  { CTEXT("es"), CTEXT(u8"Español") },
+//  { CTEXT("it"), CTEXT(u8"Italiano") },
+//  { CTEXT("ja"), CTEXT(u8"日本語") },
 };
 
 typedef enum class LocaleType {
@@ -190,6 +194,7 @@ FOUNDATION_STATIC string_locale_t* localization_sort_locales(string_locale_t* lo
 
 FOUNDATION_STATIC string_t localization_build_locales_path()
 {
+    #if BUILD_DEVELOPMENT
     // Get the locales.sjson path
     // Look if we can find the locales.sjson in the devs repo
     string_const_t exe_path = environment_executable_path();
@@ -200,6 +205,9 @@ FOUNDATION_STATIC string_t localization_build_locales_path()
     locales_json_path = path_append(STRING_ARGS(locales_json_path), BUILD_MAX_PATHLEN, STRING_CONST("../config/locales.sjson"));
     locales_json_path = path_clean(STRING_ARGS(locales_json_path), BUILD_MAX_PATHLEN);
     return locales_json_path;
+    #else
+    return {};
+    #endif
 }
 
 FOUNDATION_STATIC string_const_t localization_system_locales_path()
@@ -329,7 +337,7 @@ string_const_t tr(const char* str, size_t length, bool literal /*= false*/)
 {
     PERFORMANCE_TRACKER("tr");
 
-    if (str == nullptr)
+    if (str == nullptr || _localization_module == nullptr)
         return string_null();
 
     if (length == 0)

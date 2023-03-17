@@ -273,9 +273,10 @@ FOUNDATION_STATIC bool report_table_row_end(table_t* table, row_t* row, table_el
 
 FOUNDATION_STATIC void report_table_setup(report_handle_t report_handle, table_t* table)
 {
-    table->flags = ImGuiTableFlags_ScrollX
+    table->flags |= ImGuiTableFlags_ScrollX
         | TABLE_SUMMARY
-        | TABLE_HIGHLIGHT_HOVERED_ROW;
+        | TABLE_HIGHLIGHT_HOVERED_ROW
+        | TABLE_LOCALIZATION_CONTENT;
 
     table->update = report_table_update;
     table->search = report_table_search;
@@ -1236,7 +1237,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         string_const_t column_name = string_format_static(STRING_CONST("%s||" ICON_MD_VIEW_COLUMN " %s (%.*s)"),
             c->name, c->name, min(16, (int)string_length(c->expression)), c->expression);
         table_add_column(table, STRING_ARGS(column_name), LC2(report_column_evaluate_expression(_1, _2, report_handle, c)), c->format, 
-            COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | (c->format == COLUMN_FORMAT_TEXT ? COLUMN_SEARCHABLE : COLUMN_OPTIONS_NONE));
+            COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_NO_LOCALIZATION | (c->format == COLUMN_FORMAT_TEXT ? COLUMN_SEARCHABLE : COLUMN_OPTIONS_NONE));
     }
 }
 
@@ -1549,9 +1550,9 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     }    
 
     ImGui::TableNextRow();
-    report_render_summary_info(report, "Target", report->wallet->target_ask * 100.0, pourcentage_fmt);
-    report_render_summary_info(report, "Profit", report->wallet->profit_ask * 100.0, pourcentage_fmt);
-    report_render_summary_info(report, "Avg. Days", report->wallet->average_days, integer_fmt);
+    report_render_summary_info(report, tr("Target"), report->wallet->target_ask * 100.0, pourcentage_fmt);
+    report_render_summary_info(report, tr("Profit"), report->wallet->profit_ask * 100.0, pourcentage_fmt);
+    report_render_summary_info(report, tr("Avg. Days"), report->wallet->average_days, integer_fmt);
 
     ImGui::TableNextRow();
     string_const_t user_preferred_currency = string_const(SETTINGS.preferred_currency);
@@ -1573,57 +1574,57 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
         }
         average_rate /= average_count;
         if (!math_real_is_nan(average_rate))
-            ImGui::SetTooltip(" Average Rate (USD): %.2lf $ \n Based on the average acquisition time of every titles (%.0lf). ", 
+            ImGui::SetTooltip(tr(" Average Rate (USD): %.2lf $ \n Based on the average acquisition time of every titles (%.0lf). "), 
                 average_rate, average_count);
     }
 
     ImGui::TableNextRow();
-    report_render_summary_info(report, "Daily average", report->total_daily_average_p, pourcentage_fmt, true);
+    report_render_summary_info(report, tr("Daily average"), report->total_daily_average_p, pourcentage_fmt, true);
     ImGui::PushStyleColor(ImGuiCol_Text, report->total_day_gain > 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
-    report_render_summary_info(report, "Day Gain", report->total_day_gain, currency_fmt, true);
+    report_render_summary_info(report, tr("Day Gain"), report->total_day_gain, currency_fmt, true);
     ImGui::PopStyleColor(1);
 
     ImGui::TableNextRow();
     const double capital = max(0.0, report->wallet->funds - report->total_investment);
-    report_render_summary_info(report, "Dividends", report->wallet->total_dividends, currency_fmt);
+    report_render_summary_info(report, tr("Dividends"), report->wallet->total_dividends, currency_fmt);
 
     if (report->wallet->funds > 0)
-        report_render_summary_info(report, "Capital", max(0.0, report->wallet->funds - report->total_investment + report->wallet->sell_total_gain), currency_fmt);
+        report_render_summary_info(report, tr("Capital"), max(0.0, report->wallet->funds - report->total_investment + report->wallet->sell_total_gain), currency_fmt);
 
     const double total_gain_with_sells = report->total_gain + report->wallet->sell_total_gain;
 
     if (report->wallet->total_title_sell_count > 0)
     {
-        report_render_summary_info(report, "Enhanced earnings", report->wallet->enhanced_earnings, currency_fmt);
+        report_render_summary_info(report, tr("Enhanced earnings"), report->wallet->enhanced_earnings, currency_fmt);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Minimal amount (%.2lf) to sell titles if you want to increase your gain considerably.", report->wallet->total_sell_gain_if_kept);
+            ImGui::SetTooltip(tr("Minimal amount (%.2lf) to sell titles if you want to increase your gain considerably."), report->wallet->total_sell_gain_if_kept);
 
         ImGui::TableRowSeparator();
 
         ImGui::TableNextRow();
-        report_render_summary_info(report, "Sell Count", report->wallet->total_title_sell_count, integer_fmt);
-        report_render_summary_info(report, "Sell Total", report->wallet->sell_total_gain, currency_fmt, true);
-        report_render_summary_info(report, "Sell Average", report->wallet->sell_gain_average, currency_fmt, true);
+        report_render_summary_info(report, tr("Sell Count"), report->wallet->total_title_sell_count, integer_fmt);
+        report_render_summary_info(report, tr("Sell Total"), report->wallet->sell_total_gain, currency_fmt, true);
+        report_render_summary_info(report, tr("Sell Average"), report->wallet->sell_gain_average, currency_fmt, true);
 
         ImGui::PushStyleColor(ImGuiCol_Text, report->wallet->total_sell_gain_if_kept_p <= 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
         ImGui::BeginGroup();
-        report_render_summary_info(report, "Sell Greediness", report->wallet->total_sell_gain_if_kept_p * 100.0, pourcentage_fmt, true);
+        report_render_summary_info(report, tr("Sell Greediness"), report->wallet->total_sell_gain_if_kept_p * 100.0, pourcentage_fmt, true);
         report_render_summary_info(report, "", report->wallet->total_sell_gain_if_kept, currency_fmt, true);
-        report_render_summary_info(report, "Sells (Loses)", total_gain_with_sells - report->wallet->total_sell_gain_if_kept, currency_fmt, true);
+        report_render_summary_info(report, tr("Sells (Loses)"), total_gain_with_sells - report->wallet->total_sell_gain_if_kept, currency_fmt, true);
         ImGui::EndGroup();
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(" Loses or (Gains) if titles were kept longer before being sold");
+            ImGui::SetTooltip(tr(" Loses or (Gains) if titles were kept longer before being sold"));
         ImGui::PopStyleColor(1);
     }
 
     ImGui::TableRowSeparator();
 
     ImGui::TableNextRow();
-    report_render_summary_info(report, "Investments", report->total_investment, currency_fmt);
-    report_render_summary_info(report, "Total Value", report->total_value, currency_fmt);
+    report_render_summary_info(report, tr("Investments"), report->total_investment, currency_fmt);
+    report_render_summary_info(report, tr("Total Value"), report->total_value, currency_fmt);
 
     ImGui::PushStyleColor(ImGuiCol_Text, report->total_gain > 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
-    report_render_summary_info(report, "Total Gain", report->total_gain, currency_fmt, true);
+    report_render_summary_info(report, tr("Total Gain"), report->total_gain, currency_fmt, true);
     ImGui::PopStyleColor(1);
 
     ImGui::PushStyleColor(ImGuiCol_Text, total_gain_with_sells > 0 ? TEXT_GOOD_COLOR : TEXT_BAD_COLOR);
@@ -1631,7 +1632,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     {
         report_render_summary_info(report, "", total_gain_with_sells, currency_fmt, true);
         if (ImGui::IsItemHovered())
-            ImGui::SetTooltip("Gain including previous sells (%.2lf $)", report->wallet->sell_total_gain);
+            ImGui::SetTooltip(tr("Gain including previous sells (%.2lf $)"), report->wallet->sell_total_gain);
     }
 
     const double gain_p = total_gain_with_sells / report->total_investment * 100.0;
@@ -1640,7 +1641,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
 
     ImGui::TableNextRow();
     if (report_is_loading(report))
-        report_render_summary_info(report, "Loading data...", NAN, nullptr);
+        report_render_summary_info(report, tr("Loading data..."), NAN, nullptr);
 
     ImGui::PopStyleColor(1);
 
@@ -1719,7 +1720,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
 FOUNDATION_STATIC void report_render_rename_dialog(report_t* report)
 {
     string_const_t current_name = string_table_decode_const(report->name);
-    string_const_t name = report_render_input_dialog(CTEXT("Rename##1"), CTEXT("Apply"), current_name, 
+    string_const_t name = report_render_input_dialog(CTEXT("Rename##1"), RTEXT("Apply"), current_name, 
         current_name, &report->show_rename_ui);
     if (!string_is_null(name))
         report_rename(report, name);
@@ -1729,7 +1730,8 @@ FOUNDATION_STATIC void report_render_add_title_dialog(report_t* report)
 {
     ImGui::SetNextWindowSize(ImVec2(1200, 600), ImGuiCond_Once);
 
-    string_const_t popup_id = string_format_static(STRING_CONST("Add Title (%.*s)##5"), STRING_FORMAT(string_table_decode_const(report->name)));
+    string_const_t fmttr = RTEXT("Add Title (%.*s)##5");
+    string_const_t popup_id = string_format_static(STRING_ARGS(fmttr), STRING_FORMAT(string_table_decode_const(report->name)));
     if (report_render_dialog_begin(popup_id, &report->show_add_title_ui, ImGuiWindowFlags_None))
     {
         if (ImGui::IsWindowAppearing())
@@ -1773,8 +1775,6 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     // No need to retry syncing right away
     if (time_elapsed(report->fully_resolved) < 1.0)
         return false;
-
-    //TIME_TRACKER(50.0, "report_initial_sync");
 
     bool fully_resolved = true;
     const int title_count = array_size(report->titles);
@@ -2233,7 +2233,7 @@ void report_render_create_dialog(bool* show_ui)
 {
     FOUNDATION_ASSERT(show_ui);
 
-    string_const_t name = report_render_input_dialog(CTEXT("Create Report##1"), CTEXT("Create"), CTEXT(""), CTEXT("Name"), show_ui);
+    string_const_t name = report_render_input_dialog(CTEXT("Create Report##1"), RTEXT("Create"), CTEXT(""), RTEXT("Name"), show_ui);
     if (!string_is_null(name))
         report_create(STRING_ARGS(name));
 }

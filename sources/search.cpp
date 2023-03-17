@@ -942,8 +942,7 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
 
 FOUNDATION_STATIC table_t* search_create_table()
 {
-    table_t* table = table_allocate("QuickSearch##15");
-    table->flags |= TABLE_HIGHLIGHT_HOVERED_ROW;
+    table_t* table = table_allocate("QuickSearch##15", TABLE_HIGHLIGHT_HOVERED_ROW | TABLE_LOCALIZATION_CONTENT);
     table->context_menu = search_table_contextual_menu;
 
     table_add_column(table, search_table_column_symbol, "Symbol", COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING)

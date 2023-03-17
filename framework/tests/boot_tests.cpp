@@ -31,7 +31,7 @@
 
 #include <ostream>
 
-static GLFWwindow* _test_window;
+extern GLFWwindow* _test_window = nullptr;
 
 struct TestReporter : public doctest::IReporter
 {
@@ -244,11 +244,6 @@ extern int main_tests(void* _context, GLFWwindow* window)
     if (context.shouldExit())
         return res;
     return res;
-}
-
-extern GLFWwindow* main_test_window()
-{
-    return _test_window;
 }
 
 REGISTER_REPORTER("foundation", 1, TestReporter);

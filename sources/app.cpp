@@ -79,7 +79,7 @@ FOUNDATION_STATIC void app_tabs_content_filter()
     if (shortcut_executed(true, ImGuiKey_F))
         ImGui::SetKeyboardFocusHere();
     ImGui::InputTextEx("##SearchFilter", "Filter... " ICON_MD_FILTER_LIST_ALT, STRING_BUFFER(SETTINGS.search_filter),
-        ImVec2(imgui_get_font_ui_scale(300.0f), 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
+        ImVec2(IM_SCALEF(150.0f), 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
 }
 
 FOUNDATION_STATIC void app_tabs()
@@ -91,7 +91,8 @@ FOUNDATION_STATIC void app_tabs()
         service_foreach_tabs();
 
         tab_set_color(TAB_COLOR_SETTINGS);
-        tab_draw(tr(ICON_MD_SETTINGS " Settings "), nullptr, ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoReorder, settings_draw);
+        tab_draw(tr(ICON_MD_SETTINGS " Settings ##Settings"), nullptr, 
+            ImGuiTabItemFlags_NoPushId | ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoReorder, settings_draw);
 
         tabs_end();
     }

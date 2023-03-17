@@ -417,8 +417,7 @@ FOUNDATION_STATIC void symbol_code_selected(table_element_ptr_const_t element, c
 
 FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(string_const_t)> selector = nullptr)
 {
-    table_t* table = table_allocate(name);
-    table->flags |= TABLE_HIGHLIGHT_HOVERED_ROW;
+    table_t* table = table_allocate(name, TABLE_HIGHLIGHT_HOVERED_ROW | TABLE_LOCALIZATION_CONTENT);
 
     table->update = [](table_element_ptr_t element)->bool
     {
@@ -682,7 +681,7 @@ FOUNDATION_STATIC void symbols_render_tabs()
     if (SETTINGS.show_symbols_US) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (US)", &SETTINGS.show_symbols_US, L0(symbols_render("US")));
     if (SETTINGS.show_symbols_INDX) tab_draw(ICON_MD_TRENDING_UP " Indexes", &SETTINGS.show_symbols_INDX, L0(symbols_render("INDX", false)));
 
-    tab_draw(tr(ICON_MD_MANAGE_SEARCH " Search "), nullptr, ImGuiTabItemFlags_Trailing, []() { symbols_render_search(nullptr); }, nullptr);
+    tab_draw(tr(ICON_MD_MANAGE_SEARCH " Search ##Search"), nullptr, ImGuiTabItemFlags_Trailing, []() { symbols_render_search(nullptr); }, nullptr);
 }
 
 //
