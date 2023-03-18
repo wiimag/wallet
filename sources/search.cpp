@@ -57,6 +57,7 @@ constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
     CTEXT("Listings"),
     //CTEXT("ESGScores"),
     CTEXT("Valuations_Growth"),
+    CTEXT("Top_10_Holdings")
 };
 
 struct search_result_entry_t
@@ -76,16 +77,21 @@ struct search_window_t
     search_result_entry_t* results{ nullptr };
     char                           query[1024] = { 0 };
     tick_t                         query_tick{ 0 };
-    dispatcher_event_listener_id_t dispatcher_event_db_loaded{ INVALID_DISPATCHER_EVENT_LISTENER_ID };
+    dispatcher_event_listener_id_t event_db_loaded{ INVALID_DISPATCHER_EVENT_LISTENER_ID };
+    dispatcher_event_listener_id_t event_query_updated{ INVALID_DISPATCHER_EVENT_LISTENER_ID };
 
     char                           error[1024] = { 0 };
+
+    tick_t                         delayed_tick{ 0 };
+    bool                           delayed_input{ false };
 };
 
 static struct SEARCH_MODULE {
 
-    search_database_t* db{ nullptr };
-    char                           query[1024] = { 0 };
-    dispatcher_thread_handle_t     indexing_thread{};
+    search_database_t*          db{ nullptr };
+    char                        query[1024] = { 0 };
+    dispatcher_thread_handle_t  indexing_thread{};
+    string_t*                   saved_queries{ nullptr };
 
 } *_search;
 
@@ -263,6 +269,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     string_const_t gic_group = General["GicGroup"].as_string();
     string_const_t gic_sub_industry = General["GicSubIndustry"].as_string();
     string_const_t gic_industry = General["GicIndustry"].as_string();
+    string_const_t category = General["Category"].as_string();
     string_const_t home_category = General["HomeCategory"].as_string();
         
     search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
@@ -287,6 +294,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     search_database_index_text(db, doc, STRING_ARGS(gic_group), true);
     search_database_index_text(db, doc, STRING_ARGS(gic_industry), true);
     search_database_index_text(db, doc, STRING_ARGS(gic_sub_industry), true);
+    search_database_index_text(db, doc, STRING_ARGS(category), true);
     search_database_index_text(db, doc, STRING_ARGS(home_category), true);
     search_database_index_exact_match(db, doc, STRING_ARGS(isin), true);
 
@@ -302,6 +310,24 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         {
             search_database_index_property(db, doc, STRING_CONST("Financials"), (double)sheet_date);
             search_index_fundamental_object_data(Financials, db, doc);
+        }
+    }
+
+    // Index ETF top 10 holdings
+    const auto ETF_Data = json["ETF_Data"];
+    if (ETF_Data.is_valid())
+    {
+        const auto Holdings = ETF_Data["Holdings"];
+        if (Holdings.is_valid())
+        {
+            for (auto h : Holdings)
+            {
+                string_const_t code = h["Code"].as_string();
+                if (string_is_null(code))
+                    continue;
+
+                search_database_index_property(db, doc, STRING_CONST("hold"), STRING_ARGS(code), false);
+            }
         }
     }
       
@@ -533,6 +559,49 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
     return 0;
 }
 
+FOUNDATION_STATIC bool search_compare_search_and_saved_query(const string_t& saved_query, const string_const_t& search_query)
+{
+    if (string_equal_nocase(STRING_ARGS(saved_query), STRING_ARGS(search_query)))
+        return true;
+
+    int lvd = string_levenstein_distance(STRING_ARGS(search_query), STRING_ARGS(saved_query));
+    log_debugf(HASH_SEARCH,
+        STRING_CONST("Levenstein distance between `%.*s` and `%.*s` is %d"),
+        STRING_FORMAT(search_query), STRING_FORMAT(saved_query), lvd);
+
+    if (lvd < 4)
+        return true;
+
+    return false;
+}
+
+FOUNDATION_STATIC void search_save_query(const char* search_text, size_t search_text_length)
+{
+    string_const_t search_query = string_const(search_text, search_text_length);
+    if (string_is_null(search_query))
+        return;
+
+    // Save query to history
+    const int entry_pos = array_index_of(_search->saved_queries, search_query, search_compare_search_and_saved_query);
+    if (entry_pos >= 0)
+    {
+        // Move to end of list
+        if (entry_pos != array_size(_search->saved_queries) - 1)
+        {
+            string_t tmp = _search->saved_queries[entry_pos];
+            array_erase_ordered_safe(_search->saved_queries, entry_pos);
+            array_push(_search->saved_queries, tmp);
+        }
+    }
+    else
+    {
+        if (array_size(_search->saved_queries) > 20)
+            array_erase(_search->saved_queries, 0);
+
+        array_push(_search->saved_queries, string_clone(search_text, search_text_length));
+    }
+}
+
 FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const char* search_text, size_t search_text_length)
 {
     FOUNDATION_ASSERT(sw);
@@ -555,8 +624,6 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
         {
             const search_result_t* results = search_database_query_results(db, query);
 
-            // TODO: Sort results?
-
             foreach(r, results)
             {
                 search_result_entry_t entry;
@@ -568,6 +635,11 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
             if (!search_database_query_dispose(db, query))
             {
                 log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to dispose query"));
+            }
+            else if (sw->table && array_size(sw->results) > 0)
+            {
+                dispatcher_post_event(EVENT_SEARCH_QUERY_UPDATED);
+                search_save_query(search_text, search_text_length);
             }
         }
         else
@@ -594,22 +666,50 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
     if (ImGui::IsWindowAppearing())
         ImGui::SetKeyboardFocusHere();
 
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - IM_SCALEF(100.0f));
-    if (ImGui::InputTextWithHint("##SearchQuery", "Search stocks... " ICON_MD_FILTER_LIST_ALT, STRING_BUFFER(sw->query), ImGuiInputTextFlags_AutoSelectAll))
+    const float button_padding = IM_SCALEF(4.0f);
+    const float update_button_width = IM_SCALEF(90.0f);
+    const float drop_down_button_width = IM_SCALEF(20.0f);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - update_button_width - drop_down_button_width - button_padding * 2.0f);
+    if (ImGui::InputTextWithHint("##SearchQuery", 
+        tr("Search stocks... " ICON_MD_FILTER_LIST_ALT), 
+        STRING_BUFFER(sw->query), ImGuiInputTextFlags_AutoSelectAll))
     {
-        const size_t search_query_length = string_length(sw->query);
-        search_window_execute_query(sw, sw->query, search_query_length);        
+        sw->delayed_input = true;
+        sw->delayed_tick = time_current();
     }
 
     ImGui::SameLine();
-    if (ImGui::Button(tr("Update"), { IM_SCALEF(100.0f), 0 }))
+    if (ImGui::Button(ICON_MD_ARROW_DROP_DOWN, { drop_down_button_width, 0 }))
     {
-        sw->table->needs_sorting = true;
-        const size_t search_query_length = string_length(sw->query);
-        search_window_execute_query(sw, sw->query, search_query_length);
+        ImGui::OpenPopup("##SearchQueryHistory");
     }
 
-    table_render(sw->table, sw->results, 0, -ImGui::GetFontSize() - 8.0f);
+    if (ImGui::BeginPopup("##SearchQueryHistory"))
+    {
+        foreach(query, _search->saved_queries)
+        {
+            if (ImGui::Selectable(query->str, false, ImGuiSelectableFlags_DontClosePopups))
+            {
+                string_copy(STRING_BUFFER(sw->query), query->str, query->length);
+                sw->delayed_input = true;
+
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        ImGui::EndPopup();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Update"), { update_button_width, 0 }) || 
+       (sw->delayed_input && time_elapsed(sw->delayed_tick) > 0.250))
+    {
+        const size_t search_query_length = string_length(sw->query);
+        search_window_execute_query(sw, sw->query, search_query_length);
+
+        sw->delayed_input = false;
+    }
+
+    table_render(sw->table, sw->results, 0.0f, -ImGui::GetFontSize() - 8.0f);
 
     if (sw->error[0] != 0)
     {
@@ -642,15 +742,14 @@ FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry
     if (entry->stock.initialized())
         return entry->stock.resolve();
 
-    if (column->flags & COLUMN_SORTING_ELEMENT)
-        return nullptr;
-     
+    const bool sorting = (column->flags & COLUMN_SORTING_ELEMENT) != 0;
     if (entry->uptime == 0)
     {
         entry->uptime = time_current();
-        return nullptr;
+        if (!sorting)
+            return nullptr;
     }
-    else if (time_elapsed(entry->uptime) < 1.25)
+    else if (time_elapsed(entry->uptime) < (!sorting ? 1.25 : 0.25))
         return nullptr;
 
     string_const_t symbol = search_database_document_name(entry->db, entry->doc);
@@ -860,6 +959,37 @@ FOUNDATION_STATIC cell_t search_table_column_price(table_element_ptr_t element, 
     return s->current.close;
 }
 
+FOUNDATION_STATIC cell_t search_table_column_since(table_element_ptr_t element, const column_t* column)
+{
+    search_result_entry_t* entry = (search_result_entry_t*)element;
+    const stock_t* s = search_result_resolve_stock(entry, column);
+    if (s == nullptr)
+        return nullptr;
+
+    auto* first_day = array_last(s->history);
+    if (first_day)
+        return first_day->date;
+    return (time_t)0;
+}
+
+FOUNDATION_STATIC cell_t search_table_column_percentage_per_year(table_element_ptr_t element, const column_t* column)
+{
+    search_result_entry_t* entry = (search_result_entry_t*)element;
+    const stock_t* s = search_result_resolve_stock(entry, column);
+    if (s == nullptr)
+        return nullptr;
+
+    auto* first_day = array_last(s->history);
+    if (first_day)
+    {
+        const double years = time_elapsed_days(first_day->date, time_now()) / 365.0;
+        double max_percentage = (s->current.close - first_day->adjusted_close) / first_day->adjusted_close * 100.0f;
+        return max_percentage / years;
+    }
+
+    return NAN;
+}
+
 FOUNDATION_STATIC void search_table_column_dividends_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
@@ -944,6 +1074,15 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
         string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s\")\nSEARCH_INDEX(\"%.*s\")"), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
         eval(STRING_ARGS(expr));
     }
+
+    #if BUILD_DEVELOPMENT
+    if (ImGui::MenuItem(tr("Remove index...")))
+    {
+        string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s\")"), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
+        eval(STRING_ARGS(expr));
+        dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);
+    }
+    #endif
 }
 
 FOUNDATION_STATIC table_t* search_create_table()
@@ -981,7 +1120,7 @@ FOUNDATION_STATIC table_t* search_create_table()
 
     table_add_column(table, search_table_column_change_p, " Day %||" ICON_MD_PRICE_CHANGE " Day % ", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
         .set_width(imgui_get_font_ui_scale(100.0f))
-    .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 2.9)));
+        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, 2.9)));
 
     table_add_column(table, search_table_column_change_week, "  1W " ICON_MD_CALENDAR_VIEW_WEEK "||" ICON_MD_CALENDAR_VIEW_WEEK " % since 1 week", COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER)
         .set_width(imgui_get_font_ui_scale(80.0f))
@@ -1002,11 +1141,27 @@ FOUNDATION_STATIC table_t* search_create_table()
     table_add_column(table, search_table_column_return_rate, " R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)", COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT | COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
         .set_width(imgui_get_font_ui_scale(90.0f))
         .set_style_formatter(search_table_column_dividends_formatter);
-    
-    table_add_column(table, search_table_column_price, "    Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price", COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SORTABLE | COLUMN_NOCLIP_CONTENT)
+
+    table_add_column(table, search_table_column_since, "Since " ICON_MD_FILTER_VINTAGE "||" ICON_MD_FILTER_VINTAGE " First day with stock", COLUMN_FORMAT_DATE, COLUMN_HIDE_DEFAULT | COLUMN_SORTABLE)
+        .set_width(imgui_get_font_ui_scale(120.0f));
+
+    table_add_column(table, search_table_column_percentage_per_year, "Y/Y %||" ICON_MD_CALENDAR_MONTH " Year after year % gain", COLUMN_FORMAT_PERCENTAGE, COLUMN_HIDE_DEFAULT |COLUMN_SORTABLE)
+        .set_style_formatter(LCCCR(search_table_column_change_p_formatter(_1, _2, _3, _4, SETTINGS.good_dividends_ratio * 100.0)));
+
+    table_add_column(table, search_table_column_price, "    Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price", COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_NOCLIP_CONTENT)
         .set_width(imgui_get_font_ui_scale(120.0f));
 
     return table;
+}
+
+FOUNDATION_STATIC bool search_window_event_query_updated(const dispatcher_event_args_t& args)
+{
+    search_window_t* search_window = (search_window_t*)args.user_data;
+    FOUNDATION_ASSERT(search_window && search_window->table);
+
+    if (search_window->table)
+        search_window->table->needs_sorting = true;
+    return true;
 }
 
 FOUNDATION_STATIC bool search_window_event_db_loaded(const dispatcher_event_args_t& args)
@@ -1017,7 +1172,6 @@ FOUNDATION_STATIC bool search_window_event_db_loaded(const dispatcher_event_args
     const size_t query_length = string_length(_search->query);
     if (query_length)
         search_window_execute_query(search_window, _search->query, query_length);
-    search_window->table->needs_sorting = true;
     return true;
 }
 
@@ -1031,8 +1185,8 @@ FOUNDATION_STATIC search_window_t* search_window_allocate()
     if (!string_is_null(opening_query))
         search_window_execute_query(search_window, STRING_ARGS(opening_query));
 
-    search_window->dispatcher_event_db_loaded = dispatcher_register_event_listener(
-        EVENT_SEARCH_DATABASE_LOADED, search_window_event_db_loaded, 0U, search_window);
+    search_window->event_db_loaded = dispatcher_register_event_listener(EVENT_SEARCH_DATABASE_LOADED, search_window_event_db_loaded, 0U, search_window);
+    search_window->event_query_updated = dispatcher_register_event_listener(EVENT_SEARCH_QUERY_UPDATED, search_window_event_query_updated, 0U, search_window);
 
     return search_window;
 }
@@ -1042,7 +1196,8 @@ FOUNDATION_STATIC void search_window_deallocate(void* window)
     search_window_t* search_window = (search_window_t*)window;
     FOUNDATION_ASSERT(search_window);
 
-    dispatcher_unregister_event_listener(search_window->dispatcher_event_db_loaded);
+    dispatcher_unregister_event_listener(search_window->event_db_loaded);
+    dispatcher_unregister_event_listener(search_window->event_query_updated);
     
     table_deallocate(search_window->table);
     array_deallocate(search_window->results);
@@ -1136,6 +1291,49 @@ FOUNDATION_STATIC expr_result_t search_expr_keywords(const expr_func_t* f, vec_e
     return NIL;
 }
 
+FOUNDATION_STATIC string_t* search_load_queries(const char* filename, size_t filename_length)
+{
+    string_const_t queries_file_path = session_get_user_file_path(filename, filename_length);
+    stream_t* queries_stream = fs_open_file(STRING_ARGS(queries_file_path), STREAM_IN);
+    if (!queries_stream)
+    {
+        log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to open queries file %.*s"), STRING_FORMAT(queries_file_path));
+        return nullptr;
+    }
+
+    string_t* queries = nullptr;
+    while (!stream_eos(queries_stream))
+    {
+        string_t query = stream_read_line(queries_stream, '\n');
+        if (string_is_null(query))
+            continue;
+
+        array_push(queries, query);
+    }
+
+    stream_deallocate(queries_stream);
+    return queries;
+}
+
+FOUNDATION_STATIC void search_save_queries(string_t* queries, const char* filename, size_t filename_length)
+{
+    string_const_t queries_file_path = session_get_user_file_path(filename, filename_length);
+    stream_t* queries_stream = fs_open_file(STRING_ARGS(queries_file_path), STREAM_CREATE | STREAM_OUT | STREAM_TRUNCATE);
+    if (!queries_stream)
+    {
+        log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to open queries file %.*s"), STRING_FORMAT(queries_file_path));
+        return;
+    }
+
+    foreach(q, queries)
+    {
+        stream_write_string(queries_stream, q->str, q->length);
+        stream_write_endl(queries_stream);
+    }
+
+    stream_deallocate(queries_stream);
+}
+
 //
 // # PUBLIC API
 //
@@ -1158,6 +1356,7 @@ FOUNDATION_STATIC void search_initialize()
     _search->indexing_thread = dispatch_thread("Search Indexer", search_indexing_thread_fn);
     FOUNDATION_ASSERT(_search->indexing_thread);
 
+    _search->saved_queries = search_load_queries(STRING_CONST("queries.txt"));
     session_get_string("search_query", STRING_BUFFER(_search->query), "");
 
     expr_register_function("SEARCH_KEYWORDS", search_expr_keywords, nullptr, 0);
@@ -1194,6 +1393,10 @@ FOUNDATION_STATIC void search_shutdown()
     }
     
     search_database_deallocate(_search->db);
+
+    // Save queries to queries.json
+    search_save_queries(_search->saved_queries, STRING_CONST("queries.txt"));
+    string_array_deallocate(_search->saved_queries);
 
     MEM_DELETE(_search);
 }

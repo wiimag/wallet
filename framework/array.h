@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <framework/common.h>
 #include <framework/function.h>
 
 #include <foundation/array.h>
@@ -306,6 +307,32 @@ template<typename T, typename U>
 bool array_contains(const T* arr, const U& v)
 {
     return array_contains(arr, v, [](const T& a, const U& b) { return a == b; });
+}
+
+/*! Checks if a dynamic array contains a given element.
+ *
+ *  @param arr              The array to search.
+ *  @param value            The value to search for.
+ *  @param compare_equal    The comparison function to use.
+ *
+ *  @return The index of the first occurrence of the value in the array, or -1 if the value is not present in the array.
+ *
+ *  @note The comparison function must be a function that takes two arguments of type T and returns a bool.
+ *        The return value should be true if the arguments are equal, false otherwise.
+ *
+ *  @example
+ *      FOUNDATION_ASSERT(array_index_of(numbers, 2, [](int a, int b) { return a == b; }) == 1);
+ */
+template<typename T, typename U, typename Compare>
+int array_index_of(const T* arr, const U& value, const Compare& compare_equal)
+{
+    for (unsigned i = 0, end = array_size(arr); i < end; ++i)
+    {
+        if (compare_equal(arr[i], value))
+            return to_int(i);
+    }
+
+    return -1;
 }
 
 /*! Executes a binary search on #array to find the insertion index of #_key.

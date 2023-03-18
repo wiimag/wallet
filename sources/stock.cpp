@@ -245,7 +245,9 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     string_const_t subindustry = general["GicSubIndustry"].as_string();
     entry.activity = string_table_encode_unescape(subindustry);
 
-    string_const_t category = general["HomeCategory"].as_string();
+    string_const_t category = general["Category"].as_string();
+    if (string_is_null(category))
+        category = general["HomeCategory"].as_string();
     entry.category = string_table_encode_unescape(category);
 
     const json_object_t& hightlights = json["Highlights"];

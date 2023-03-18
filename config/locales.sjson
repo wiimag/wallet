@@ -1208,5 +1208,30 @@ Vous pouvez toujours ajouter le terme de recherche comme titre en appuyant sur A
 			en = "Total Wealth"
 			fr = "Richesse Totale"
 		}
+		{
+			hash = "c646d329b21a905c"
+			en = "Search stocks... \xee\xa5\x8e"
+			fr = "@TODO"
+		}
+		{
+			hash = "43c568accbc1d3e8"
+			en = "    Since \xee\x8f\xa3||\xee\x8f\xa3 First day with stock"
+			fr = "@TODO"
+		}
+		{
+			hash = "9a1120bb0338ec05"
+			en = "Remove index..."
+			fr = "@TODO"
+		}
+		{
+			hash = "63efb54b61b8700e"
+			en = "Since \xee\x8f\xa3||\xee\x8f\xa3 First day with stock"
+			fr = "@TODO"
+		}
+		{
+			hash = "51f1445bbc5c3f49"
+			en = "Y/Y %||\xee\xaf\x8c Year after year % gain"
+			fr = "@TODO"
+		}
 	]
 }

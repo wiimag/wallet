@@ -556,3 +556,5 @@ string_const_t string_join(const T* list, const Iter& iter,
  * @return The random string.
  */
 string_const_t random_string(char* buf, size_t capacity);
+
+int string_levenstein_distance(const char* str1, size_t length1, const char* str2, size_t length2);

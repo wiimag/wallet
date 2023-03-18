@@ -57,7 +57,7 @@ struct string_table_t
     /// </summary>
     /// <param name="index"></param>
     /// <returns></returns>
-    inline char* strings(size_t index = 0) const
+    FOUNDATION_FORCEINLINE char* strings(size_t index = 0) const
     {
         return (uses_16_bit_hash_slots ?
             (char*)(h16() + num_hash_slots) :
