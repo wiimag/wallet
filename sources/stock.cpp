@@ -16,6 +16,7 @@
 #include <framework/dispatcher.h>
 #include <framework/math.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/path.h>
 #include <foundation/hashtable.h>
@@ -959,6 +960,32 @@ string_const_t stock_get_currency(const char* code, size_t code_length)
     }
 
     return string_const(SETTINGS.preferred_currency, string_length(SETTINGS.preferred_currency));
+}
+
+bool stock_get_time_range(const char* symbol, size_t symbol_length, time_t* start_time, time_t* end_time, double timeout_seconds)
+{
+    stock_handle_t handle = stock_request(symbol, symbol_length, FetchLevel::EOD);
+    if (!handle)
+        return false;
+
+    tick_t timeout = time_current();
+    while (!handle->has_resolve(FetchLevel::EOD) && time_elapsed(timeout) < timeout_seconds)
+        dispatcher_wait_for_wakeup_main_thread();
+
+    if (!handle->has_resolve(FetchLevel::EOD))
+        return false;
+
+    const stock_t* stock = handle.resolve();
+    if (stock == nullptr || stock->history_count == 0)
+        return false;
+
+    if (start_time)
+        *start_time = array_last(stock->history)->date;
+
+    if (end_time)
+        *end_time = array_first(stock->history)->date;
+
+    return true;
 }
 
 //

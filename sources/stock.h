@@ -16,7 +16,10 @@ struct job_t;
 struct json_object_t;
 typedef uint64_t stock_index_t;
 
-typedef enum class FetchLevel /*: unsigned int*/ {
+/*! Define various stock fetch levels. 
+ *  These levels are used to determine how much data to fetch from the server.
+ */
+typedef enum class FetchLevel {
     NONE					= 0,
 
     REALTIME				= 1 << 0, // Cost  1 call
@@ -34,6 +37,7 @@ typedef enum class FetchLevel /*: unsigned int*/ {
 } fetch_level_t;
 DEFINE_ENUM_FLAGS(FetchLevel);
 
+/*! Represents a single realtime data snapshot. */
 FOUNDATION_ALIGNED_STRUCT(stock_realtime_record_t, 8)
 {
     time_t timestamp;
@@ -41,6 +45,7 @@ FOUNDATION_ALIGNED_STRUCT(stock_realtime_record_t, 8)
     double volume;
 };
 
+/*! Represents stock realtime data. */
 FOUNDATION_ALIGNED_STRUCT(stock_realtime_t, 8)
 {
     hash_t key;
@@ -53,6 +58,7 @@ FOUNDATION_ALIGNED_STRUCT(stock_realtime_t, 8)
     stock_realtime_record_t* records{ nullptr };
 };
 
+/*! Represents a stock day results. */
 FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
 {
     time_t date{ 0 };
@@ -86,6 +92,7 @@ FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
     double cci{ NAN };
 };
 
+/*! Represents a stock. */
 FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
 {
     hash_t id;
@@ -183,6 +190,9 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     }
 };
 
+/*! Represents a stock handle. 
+ *  The handles are used to reference stocks without having to keep a pointer to the stock_t object.
+ */
 struct stock_handle_t
 {
     hash_t id;
@@ -226,88 +236,234 @@ struct stock_handle_t
         return true;
     }
 
-    FOUNDATION_FORCEINLINE const stock_t* operator*() const { return resolve(); }
-    FOUNDATION_FORCEINLINE operator const stock_t* () const { return resolve(); }
     FOUNDATION_FORCEINLINE stock_t* operator->() { return (stock_t*)get(); }
     FOUNDATION_FORCEINLINE const stock_t* operator->() const { return get(); }
+    FOUNDATION_FORCEINLINE const stock_t* operator*() const { return resolve(); }
+    FOUNDATION_FORCEINLINE operator const stock_t* () const { return resolve(); }
 };
 
-/// <summary>
-/// Request the stock data pointer if already resolved.
-/// The returned pointer is unsafe as it might get invalidated over time.
-/// </summary>
+/*! Request the stock data pointer if already resolved.
+ *  The returned pointer is unsafe as it might get invalidated over time. 
+ * 
+ *  @param handle The stock handle.
+ *  @param out_stock The stock pointer.
+ * 
+ *  @return True if the stock was already resolved, false otherwise.
+ */
 bool stock_request(const stock_handle_t& handle, const stock_t** out_stock);
 
-/// <summary>
-/// Initialize a stock handle structure.
-/// </summary>
+/*! Initialize a stock handle structure. 
+ *  The stock handle is used to reference stocks without having to keep a pointer to the stock_t object.
+ * 
+ *  @param code The stock code.
+ *  @param code_length The length of the stock code.
+ *  @param stock_handle The stock handle to initialize.
+ * 
+ *  @return True if the stock handle was initialized, false otherwise.
+ */
 status_t stock_initialize(const char* code, size_t code_length, stock_handle_t* stock_handle);
 
-/// <summary>
-/// Attempt to resolve a stock at a given fetch level.
-/// </summary>
+/*! Attempt to resolve a stock at a given fetch level. 
+ * 
+ *  @param stock_handle The stock handle to resolve.
+ *  @param fetch_levels The fetch level to resolve.
+ * 
+ *  @return True if the stock was resolved, false otherwise.
+ */
 status_t stock_resolve(stock_handle_t& stock_handle, fetch_level_t fetch_levels);
 
-/// <summary>
-/// Request and resolve a stock symbol.
-/// </summary>
-/// <param name="symbol">The symbol to resolve.</param>
-/// <param name="symbol_length">The length of the symbol.</param>
-/// <param name="fetch_level">The fetch level to resolve.</param>
-/// 
+/*! Request and resolve a stock symbol. 
+ *  This function will attempt to resolve the stock at the given fetch level.
+ * 
+ *  @param symbol The stock symbol.
+ *  @param symbol_length The length of the stock symbol.
+ *  @param fetch_level The fetch level to resolve.
+ * 
+ *  @return The stock handle.
+ */
 stock_handle_t stock_request(const char* symbol, size_t symbol_length, fetch_level_t fetch_level);
 
-/// <summary>
-/// 
-/// </summary>
+/*! Request and update a stock symbol. 
+ * 
+ *  @param handle The stock handle to update.
+ *  @param fetch_level The fetch level to resolve.
+ *  @param timeout The timeout in seconds to wait for the stock to be resolved.
+ * 
+ *  @return True if the stock was resolved, false otherwise (i.e. timeout happens).
+ */
 bool stock_update(stock_handle_t& handle, fetch_level_t fetch_level, double timeout = 15.0);
 
-/// <summary>
-/// 
-/// </summary>
+/*! Request and update a stock symbol. 
+ * 
+ *  @param code The stock symbol code.
+ *  @param code_length The length of the stock symbol code.
+ *  @param handle The stock handle to update.
+ *  @param fetch_level The fetch level to resolve.
+ *  @param timeout The timeout in seconds to wait for the stock to be resolved.
+ * 
+ *  @return True if the stock was resolved, false otherwise (i.e. timeout happens).
+ */
 bool stock_update(const char* code, size_t code_length, stock_handle_t& handle, fetch_level_t fetch_level, double timeout = 5.0);
 
-/// <summary>
-/// 
-/// </summary>
+/*! Returns the exchange rate between two currencies.
+ * 
+ *  @param from The currency code to convert from.
+ *  @param from_length The length of the currency code to convert from.
+ *  @param to The currency code to convert to.
+ *  @param to_length The length of the currency code to convert to.
+ *  @param at The date to get the exchange rate at.
+ * 
+ *  @return The exchange rate between the two currencies.
+ */
 double stock_exchange_rate(const char* from, size_t from_length, const char* to, size_t to_length, time_t at = 0);
 
-/// <summary>
-/// 
-/// </summary>
+/*! Returns the end-of-day data for a stock from a given range based on today.
+ * 
+ *  @param stock_data The stock data.
+ *  @param rel_day The relative day to get the data for.
+ *  @param take_last If true, the last available data will be returned if the given date is not available.
+ * 
+ *  @return The end-of-day data for the stock at the given date.
+ */
 const day_result_t* stock_get_EOD(const stock_t* stock_data, int rel_day, bool take_last = false);
 
-/// <summary>
-/// 
-/// </summary>
+/*! Returns the end-of-day data for a stock at a given date.
+ * 
+ *  @param stock_data The stock data.
+ *  @param day_time The date to get the data for.
+ *  @param take_last If true, the last available data will be returned if the given date is not available.
+ * 
+ *  @return The end-of-day data for the stock at the given date.
+ */
 const day_result_t* stock_get_EOD(const stock_t* stock_data, time_t day_time, bool take_last = false);
 
-/*! @brief Get the split adjusted data at a given date.
+/*! Get the split adjusted data at a given date.
+ * 
  *  @param code         The stock symbol code
  *  @param code_length  The length of the stock symbol code
  *  @param at           Query date
+ * 
  *  @return The split adjusted data at the given date
  */
 day_result_t stock_get_split(const char* code, size_t code_length, time_t at);
 
+/*! Get the EOD data for a given symbol (skipping the need for a stock handle).
+ * 
+ *  @param code         The stock symbol code
+ *  @param code_length  The length of the stock symbol code
+ *  @param at           Query date
+ * 
+ *  @return The EOD data at the given date. It is possible that the data is not available and therefore we return a default constructed day_result_t.
+ */
 day_result_t stock_get_eod(const char* code, size_t code_length, time_t at);
 
+/*! Get the split factor at a given date.
+ * 
+ *  @param handle The stock handle.
+ *  @param at     Query date
+ * 
+ *  @return The split adjusted data at the given date
+ */
 double stock_get_split_factor(const char* code, size_t code_length, time_t at);
 
+/*! Get the EOD price factor at a given date. We take the adjusted price and divide it by the unadjusted price of that day.
+ * 
+ *  @param handle The stock handle.
+ *  @param at     Query date
+ * 
+ *  @return The EOD price factor at the given date
+ */
 double stock_get_eod_price_factor(const char* code, size_t code_length, time_t at);
 
+/*! Get the split adjusted factor at a given date. We take the adjusted price and divide it by the unadjusted price of that day.
+ * 
+ *  @param handle The stock handle.
+ *  @param at     Query date
+ * 
+ *  @return The split adjusted factor at the given date
+ */
 double stock_get_split_adjusted_factor(const char* code, size_t code_length, time_t at);
 
+/*! Get the full stock name for a given symbol.
+ * 
+ *  @param code         The stock symbol code
+ *  @param code_length  The length of the stock symbol code
+ * 
+ *  @return The full stock name for the given symbol.
+ */
 string_const_t stock_get_name(const char* code, size_t code_length);
 
+/*! Get the short stock name for a given symbol.
+ * 
+ *  Too shorten the name we remove some suffixes like "Inc.", "Corp.", "Ltd.", "AG", "SA", "NV", "PLC", "AB", "S.A.", "S.A",
+ *  This is helpful to run web queries on the name.
+ * 
+ *  @param code         The stock symbol code
+ *  @param code_length  The length of the stock symbol code
+ * 
+ *  @return The short stock name for the given symbol.
+ */
 string_const_t stock_get_short_name(const char* code, size_t code_length);
 
+/*! Get the stock name using a valid stock handle.
+ * 
+ *  @param handle The stock handle.
+ * 
+ *  @return The stock name.
+ */
 string_const_t stock_get_name(const stock_handle_t& handle);
 
+/*! Get the short stock name using a valid stock handle.
+ * 
+ *  Too shorten the name we remove some suffixes like "Inc.", "Corp.", "Ltd.", "AG", "SA", "NV", "PLC", "AB", "S.A.", "S.A",
+ *  This is helpful to run web queries on the name.
+ * 
+ *  @param handle The stock handle.
+ * 
+ *  @return The short stock name.
+ */
 string_const_t stock_get_short_name(const stock_handle_t& handle);
 
+/*! Get the currency for a given symbol.
+ * 
+ *  @param code         The stock symbol code
+ *  @param code_length  The length of the stock symbol code
+ * 
+ *  @return The currency for the given symbol.
+ */
 string_const_t stock_get_currency(const char* code, size_t code_length);
 
+/*! Extract from a "real-time" EOD query the realtime data.
+ * 
+ *  This can be useful if you want to query the realtime data for a stock yourself using #eod_fetch.
+ * 
+ *  @param stock_index The stock index.
+ *  @param json        The JSON object.
+ *  @param d           The day result.
+ * 
+ *  @return True if the data was extracted successfully.
+ */
 bool stock_read_real_time_results(stock_index_t stock_index, const json_object_t& json, day_result_t& d);
 
+/*! Get the stock index for a given symbol.
+ * 
+ *  @remark This is mainly used for internal purposes. There is no guarantee that the index will be the same in the future.
+ * 
+ *  @param symbol         The stock symbol code
+ *  @param symbol_length  The length of the stock symbol code
+ * 
+ *  @return The stock index for the given symbol.
+ */
 stock_index_t stock_index(const char* symbol, size_t symbol_length);
+
+/*! Get the start and end time for which we have data for a given symbol.
+ * 
+ *  @param symbol         The stock symbol code
+ *  @param symbol_length  The length of the stock symbol code
+ *  @param start_time     The start time
+ *  @param end_time       The end time
+ *  @param timeout        The timeout in seconds. If 0, the default timeout will be used.
+ * 
+ *  @return True if the data was extracted successfully.
+ */
+bool stock_get_time_range(const char* symbol, size_t symbol_length, time_t* start_time, time_t* end_time = nullptr, double timeout = 1);

@@ -146,7 +146,7 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 		{
 			hash = "74f7620f89c1cce1"
 			en = "Update"
-			fr = "Rafr\xc3\xa9chir"
+			fr = "Actualiser"
 		}
 		{
 			hash = "d1ef06780ef49011"
@@ -1166,42 +1166,47 @@ Vous pouvez toujours ajouter le terme de recherche comme titre en appuyant sur A
 		{
 			hash = "486867b4a4ff0a50"
 			en = "\xee\xab\x96 Profiler"
-			fr = "@TODO"
+			fr = "\xee\xab\x96 Profiler"
 		}
 		{
-			hash = "f7555cee2d02bc16"
-			en = "\xef\x88\xab [%u] %.*s"
-			fr = "@TODO"
+			hash = "b50a6066ed65388a"
+			en = "disconnected"
+			fr = "d\xc3\xa9connect\xc3\xa9"
 		}
 		{
-			hash = "9726993b9b489ed8"
-			en = "\xef\xa3\xbf %.2lf $"
-			fr = "@TODO"
+			hash = "2f2266178a3008b2"
+			en = "Timeline %.*s"
+			fr = "Ligne du temps %.*s"
 		}
 		{
-			hash = "37fef283789a9cba"
-			en = "\xee\xad\xbd %.2lf $"
-			fr = "@TODO"
+			hash = "78373d23a0f098ff"
+			en = "Gain"
+			fr = "Gain"
 		}
 		{
-			hash = "c7bf2b3fa89cf5e7"
-			en = "\xee\xa1\xa0 %.2lf $"
-			fr = "@TODO"
+			hash = "e39c7abd75d07bab"
+			en = "Stock Value"
+			fr = "Valeur des Actions"
 		}
 		{
-			hash = "9d5d6290f2e6dd6d"
-			en = "\xee\x8b\xab %.*s"
-			fr = "@TODO"
+			hash = "16153549dda98076"
+			en = "+Funds"
+			fr = "+Fonds"
 		}
 		{
-			hash = "16b3c3953dbed846"
-			en = "\xee\xa1\x90 %.*s"
-			fr = "@TODO"
+			hash = "dc2feb8bb9a9eb85"
+			en = "+Dividends"
+			fr = "+Dividendes"
 		}
 		{
-			hash = "a8f164e0efa1ec0"
-			en = "\xef\x81\x8a %.*s"
-			fr = "@TODO"
+			hash = "7447eb9e766df9af"
+			en = "Total Value##5"
+			fr = "Valeur Totale##5"
+		}
+		{
+			hash = "13bf4cf6f9be9da3"
+			en = "Total Wealth"
+			fr = "Richesse Totale"
 		}
 	]
 }

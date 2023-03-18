@@ -14,14 +14,9 @@
 #include "news.h"
 
 #include <framework/imgui.h>
-#include <framework/string.h>
-#include <framework/common.h>
 #include <framework/session.h>
 #include <framework/service.h>
-#include <framework/database.h>
 #include <framework/dispatcher.h>
-#include <framework/string_table.h>
-#include <framework/search_query.h>
 #include <framework/search_database.h>
 #include <framework/profiler.h>
 #include <framework/table.h>
@@ -30,42 +25,11 @@
 #include <framework/array.h>
 
 #include <foundation/stream.h>
+#include <foundation/thread.h>
 
 #define HASH_SEARCH static_hash_string("search", 6, 0xc9d4e54fbae76425ULL)
 
-struct search_window_t;
-
 static const ImU32 SEARCH_PATTERN_VIEWED_COLOR = (ImU32)ImColor::HSV(0.6f, 0.3f, 0.9f);
-
-struct search_result_entry_t
-{
-    search_database_t*       db{ nullptr };
-    search_document_handle_t doc{ SEARCH_DOCUMENT_INVALID_ID };
-    
-    stock_handle_t           stock{};
-    tick_t                   uptime{ 0 };
-    bool                     viewed{ false };
-};
-
-struct search_window_t 
-{
-    search_database_t*             db{ nullptr };
-    table_t*                       table{ nullptr };
-    search_result_entry_t*         results{ nullptr };
-    char                           query[1024] = { 0 };
-    tick_t                         query_tick{ 0 };
-    dispatcher_event_listener_id_t dispatcher_event_db_loaded{ INVALID_DISPATCHER_EVENT_LISTENER_ID };
-
-    char                           error[1024] = { 0 };
-};
-
-static struct SEARCH_MODULE {
-    
-    search_database_t*             db{ nullptr };
-    char                           query[1024] = { 0 };
-    dispatcher_thread_handle_t     indexing_thread{};
-
-} *_search;
 
 constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
     CTEXT("date"),
@@ -94,6 +58,36 @@ constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
     //CTEXT("ESGScores"),
     CTEXT("Valuations_Growth"),
 };
+
+struct search_result_entry_t
+{
+    search_database_t* db{ nullptr };
+    search_document_handle_t doc{ SEARCH_DOCUMENT_INVALID_ID };
+
+    stock_handle_t           stock{};
+    tick_t                   uptime{ 0 };
+    bool                     viewed{ false };
+};
+
+struct search_window_t
+{
+    search_database_t* db{ nullptr };
+    table_t* table{ nullptr };
+    search_result_entry_t* results{ nullptr };
+    char                           query[1024] = { 0 };
+    tick_t                         query_tick{ 0 };
+    dispatcher_event_listener_id_t dispatcher_event_db_loaded{ INVALID_DISPATCHER_EVENT_LISTENER_ID };
+
+    char                           error[1024] = { 0 };
+};
+
+static struct SEARCH_MODULE {
+
+    search_database_t* db{ nullptr };
+    char                           query[1024] = { 0 };
+    dispatcher_thread_handle_t     indexing_thread{};
+
+} *_search;
 
 //
 // PRIVATE
@@ -347,7 +341,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         {
             search_database_index_property(db, doc, STRING_ARGS(id), (double)date);
         }
-        else //if (value.length < SEARCH_INDEX_WORD_MAX_LENGTH-1)
+        else
         {
             // Add suppor to index activity fields such as {"Activity":"controversialWeapons","Involvement":"Yes"}
             if (string_equal(STRING_ARGS(id), STRING_CONST("Activity")))
@@ -367,9 +361,21 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         }
     }
     
+    // Index some news data
     if (!eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", symbol.str, LC1(search_index_news_data(_1, doc)), 8 * 24 * 60 * 60ULL))
     {
         log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch news for symbol %*.s"), STRING_FORMAT(symbol));
+    }
+
+    // Index EOD stock data
+    time_t start = 0;
+    if (stock_get_time_range(STRING_ARGS(symbol), &start, nullptr, 5.0))
+    {
+        search_database_index_property(db, doc, STRING_CONST("since"), (double)start);
+    }
+    else
+    {
+        log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch time range for symbol %*.s"), STRING_FORMAT(symbol));
     }
 
     search_database_document_update_timestamp(db, doc);
@@ -381,17 +387,23 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
 
     search_database_t* db = _search->db;
 
-    for(auto e : data)
-    {        
-        // Wait to connect to EOD services
-        const tick_t timeout = time_current();
-        while (!eod_availalble() && time_elapsed(timeout) < 30.0)
+    // Wait to connect to EOD services
+    const tick_t timeout = time_current();
+    while (!eod_availalble() && time_elapsed(timeout) < 30.0)
+    {
+        if (thread_try_wait(100))
         {
-            if (thread_try_wait(100))
-            {
-                *stop_indexing = true;
-                return;
-            }
+            *stop_indexing = true;
+            return;
+        }
+    }
+
+    for(auto e : data)
+    {   
+        if (thread_try_wait(10))
+        {
+            *stop_indexing = true;
+            break;
         }
 
         if (!eod_availalble())
@@ -404,7 +416,7 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         if (eod_capacity() > 0.8)
         {
             *stop_indexing = true;
-            log_warnf(HASH_SEARCH, WARNING_NETWORK, STRING_CONST("EOD full capacity is near, stopping search indexing."));
+            log_warnf(HASH_SEARCH, WARNING_NETWORK, STRING_CONST("EOD full api usage is near, stopping search indexing."));
             return;
         }
     
@@ -453,12 +465,6 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
             LC1(search_index_fundamental_data(_1, string_to_const(symbol))), 31 * 24 * 60 * 60ULL))
         {
             log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
-        }
-            
-        if (thread_try_wait(50))
-        {
-            *stop_indexing = true;
-            break;
         }
     }
 }
@@ -588,7 +594,7 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
     if (ImGui::IsWindowAppearing())
         ImGui::SetKeyboardFocusHere();
 
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - imgui_get_font_ui_scale(98.0f));
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - IM_SCALEF(100.0f));
     if (ImGui::InputTextWithHint("##SearchQuery", "Search stocks... " ICON_MD_FILTER_LIST_ALT, STRING_BUFFER(sw->query), ImGuiInputTextFlags_AutoSelectAll))
     {
         const size_t search_query_length = string_length(sw->query);
@@ -596,7 +602,7 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
     }
 
     ImGui::SameLine();
-    if (ImGui::Button(tr("Update")))
+    if (ImGui::Button(tr("Update"), { IM_SCALEF(100.0f), 0 }))
     {
         sw->table->needs_sorting = true;
         const size_t search_query_length = string_length(sw->query);

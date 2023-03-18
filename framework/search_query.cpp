@@ -416,7 +416,7 @@ FOUNDATION_STATIC void search_query_print_evaluation_order(search_query_node_t* 
     bool printed = false;
     if (node->type == SearchQueryNodeType::Or || node->type == SearchQueryNodeType::And || node->type == SearchQueryNodeType::Not)
     {
-        log_infof(0, STRING_CONST("%*s%s: %s-%s"), level * 2, "", search_query_node_type_name(node->type), node->left ? "L" : "", node->right ? "R" : "");
+        log_debugf(0, STRING_CONST("%*s%s: %s-%s"), level * 2, "", search_query_node_type_name(node->type), node->left ? "L" : "", node->right ? "R" : "");
         printed = true;
     }
 
@@ -430,11 +430,11 @@ FOUNDATION_STATIC void search_query_print_evaluation_order(search_query_node_t* 
     {
         if (node->token)
         {
-            log_infof(0, STRING_CONST("%*s%s: %s-%s | %.*s"), level * 2, "", search_query_node_type_name(node->type),
+            log_debugf(0, STRING_CONST("%*s%s: %s-%s | %.*s"), level * 2, "", search_query_node_type_name(node->type),
                 node->left ? "L" : "", node->right ? "R" : "", STRING_FORMAT(node->token->identifier));
         }
         else
-            log_infof(0, STRING_CONST("%*s%s: %s-%s"), level * 2, "", search_query_node_type_name(node->type), node->left ? "L" : "", node->right ? "R" : "");
+            log_debugf(0, STRING_CONST("%*s%s: %s-%s"), level * 2, "", search_query_node_type_name(node->type), node->left ? "L" : "", node->right ? "R" : "");
     }
 }
 
@@ -442,7 +442,7 @@ FOUNDATION_STATIC void search_query_print_tokens(search_query_token_t* tokens, i
 {
     foreach(t, tokens)
     {
-        log_infof(0, STRING_CONST("%*s%s: %.*s"), level * 2, "", search_query_token_type_name(t->type), STRING_FORMAT(t->identifier));
+        log_debugf(0, STRING_CONST("%*s%s: %.*s"), level * 2, "", search_query_token_type_name(t->type), STRING_FORMAT(t->identifier));
         
         if (t->children)
             search_query_print_tokens(t->children, level + 1);

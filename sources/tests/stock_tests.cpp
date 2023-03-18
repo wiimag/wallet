@@ -78,6 +78,20 @@ static const char* stock500[] = {
 
 TEST_SUITE("Stocks")
 {
+    TEST_CASE("stock_get_time_range" * doctest::timeout(30))
+    {
+        string_const_t symbol = CTEXT("NPI.TO");
+
+        CHECK_FALSE(stock_get_time_range(STRING_CONST("INVALID.US"), nullptr));
+        CHECK_FALSE(stock_get_time_range(nullptr, 0, nullptr));
+
+        time_t start = 0, end = 0;
+        CHECK(stock_get_time_range(STRING_ARGS(symbol), &start, &end, 10.0));
+        CHECK_NE(start, 0);
+        CHECK_NE(end, 0);
+        CHECK_LT(start, end);
+    }
+
     TEST_CASE("Initialize")
     {
         stock_handle_t handle{};
