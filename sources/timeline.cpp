@@ -9,10 +9,8 @@
 #include "report.h"
 #include "wallet.h"
 
-#include <framework/app.h>
 #include <framework/imgui.h>
 #include <framework/common.h>
-#include <framework/service.h>
 #include <framework/dispatcher.h>
 #include <framework/string.h>
 #include <framework/window.h>
@@ -62,10 +60,6 @@ struct timeline_stock_t
     double          qty{ 0 };
     double          total_value{ 0 };
     double          average_price{ 0 };
-
-    // TODO: Remove if not used at the end.
-    //double          total_exchange_rate{};
-    //double          average_exchange_rate{ 1.0 };
 };
 
 struct timeline_t
@@ -323,7 +317,8 @@ FOUNDATION_STATIC void timeline_update_day(timeline_t& day, const timeline_trans
         if (s.qty - t->qty < 0)
         {
             string_const_t date_string = string_from_date(t->date);
-            log_warnf(HASH_TIMELINE, WARNING_SUSPICIOUS, STRING_CONST("[%s] %.*s -> Selling more stock (%.0lf) than available (%.0lf) [Make sure dates are accurante?]"),
+            log_warnf(HASH_TIMELINE, WARNING_SUSPICIOUS, 
+                STRING_CONST("[%s] %.*s -> Selling more stock (%.0lf) than available (%.0lf) [Make sure dates are accurante?]"),
                 t->code, STRING_FORMAT(date_string), t->qty, s.qty);
 
             adjusted_quantity_if_error = s.qty;
@@ -468,7 +463,8 @@ FOUNDATION_STATIC timeline_report_t* timeline_report_allocate(const report_t* re
     timeline_report->transactions = nullptr;
     
     string_const_t report_name = SYMBOL_CONST(report->name);
-    timeline_report->title = string_allocate_format(STRING_CONST("Timeline %.*s"), STRING_FORMAT(report_name));
+    string_const_t fmttr = RTEXT("Timeline %.*s");
+    timeline_report->title = string_allocate_format(STRING_ARGS(fmttr), STRING_FORMAT(report_name));
     timeline_report->preferred_currency = string_to_const(report->wallet->preferred_currency);
 
     return timeline_report;
@@ -483,7 +479,7 @@ FOUNDATION_STATIC void timeline_report_deallocate(timeline_report_t*& timeline_r
     timeline_report = nullptr;
 }
 
-FOUNDATION_STATIC void timeline_report_plot_day_value(const char* title, const timeline_t* timeline, function<double(const timeline_t* day)>&& fn, float line_weight = 2.0f, bool default_hide = false)
+FOUNDATION_STATIC void timeline_report_plot_day_value(const char* title, size_t title_length, const timeline_t* timeline, function<double(const timeline_t* day)>&& fn, float line_weight = 2.0f, bool default_hide = false)
 {
     timeline_plot_day_t plot{ timeline, fn };
     
@@ -491,7 +487,7 @@ FOUNDATION_STATIC void timeline_report_plot_day_value(const char* title, const t
     ImPlot::HideNextItem(default_hide, ImPlotCond_Once);
 
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, line_weight);
-    ImPlot::PlotLineG(title, [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotLineG(tr(title, title_length, false).str, [](int idx, void* user_data)->ImPlotPoint
     {
         timeline_plot_day_t* plot = (timeline_plot_day_t*)user_data;
         const timeline_t* t = plot->timeline + idx;
@@ -502,7 +498,7 @@ FOUNDATION_STATIC void timeline_report_plot_day_value(const char* title, const t
     ImPlot::PopStyleVar(1);
 }
 
-FOUNDATION_STATIC void timeline_report_plot_day_bar_value(const char* title, const timeline_t* timeline, function<double(const timeline_t* day)>&& fn, double bar_size = 8 * 60 * 60.0, bool default_hide = false)
+FOUNDATION_STATIC void timeline_report_plot_day_bar_value(const char* title, size_t title_length, const timeline_t* timeline, function<double(const timeline_t* day)>&& fn, double bar_size = 8 * 60 * 60.0, bool default_hide = false)
 {
     timeline_plot_day_t plot{ timeline, fn };
 
@@ -512,7 +508,7 @@ FOUNDATION_STATIC void timeline_report_plot_day_bar_value(const char* title, con
     ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::HideNextItem(default_hide, ImPlotCond_Once);
 
-    ImPlot::PlotBarsG(title, [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotBarsG(tr(title, title_length, false).str, [](int idx, void* user_data)->ImPlotPoint
     {
         timeline_plot_day_t* plot = (timeline_plot_day_t*)user_data;
         const timeline_t* t = plot->timeline + idx;
@@ -522,11 +518,11 @@ FOUNDATION_STATIC void timeline_report_plot_day_bar_value(const char* title, con
     }, &plot, array_size(timeline), bar_size, ImPlotBarsFlags_None);
 }
 
-FOUNDATION_STATIC void timeline_report_graph_limit(const char* label, double min, double max, double value)
+FOUNDATION_STATIC void timeline_report_graph_limit(const char* label, size_t label_length, double min, double max, double value)
 {
     const double range[]{ min, max };
     const double limit[]{ value, value };
-    ImPlot::PlotLine(label, range, limit, ARRAY_COUNT(limit), ImPlotLineFlags_NoClip);
+    ImPlot::PlotLine(tr(label, label_length, false).str, range, limit, ARRAY_COUNT(limit), ImPlotLineFlags_NoClip);
 }
 
 FOUNDATION_STATIC int timeline_report_graph_date_format(double value, char* buff, int size, void* user_data)
@@ -616,37 +612,37 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
 
     ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::HideNextItem(false, ImPlotCond_Once);
-    timeline_report_plot_day_bar_value("Gain", report->days, L1(_1->total_gain + _1->total_dividends));
+    timeline_report_plot_day_bar_value(STRING_CONST("Gain"), report->days, L1(_1->total_gain + _1->total_dividends));
 
     ImPlot::SetAxis(ImAxis_Y1);
     ImPlot::HideNextItem(true, ImPlotCond_Once);
-    timeline_report_graph_limit("Stock Value", min_d, max_d, summary->total_value);
-    timeline_report_plot_day_value("Stock Value", report->days, L1(_1->total_value), 2.0f, true);
+    timeline_report_graph_limit(STRING_CONST("Stock Value"), min_d, max_d, summary->total_value);
+    timeline_report_plot_day_value(STRING_CONST("Stock Value"), report->days, L1(_1->total_value), 2.0f, true);
 
     ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::HideNextItem(false, ImPlotCond_Once);
-    timeline_report_plot_day_bar_value("+Funds", report->days, L1(_1->total_fund), 0, true);
+    timeline_report_plot_day_bar_value(STRING_CONST("+Funds"), report->days, L1(_1->total_fund), 0, true);
 
     ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::HideNextItem(true, ImPlotCond_Once);
-    timeline_report_graph_limit("+Dividends", min_d, max_d, summary->total_dividends);
-    timeline_report_plot_day_bar_value("+Dividends", report->days, L1(_1->total_dividends), 0, true);
+    timeline_report_graph_limit(STRING_CONST("+Dividends"), min_d, max_d, summary->total_dividends);
+    timeline_report_plot_day_bar_value(STRING_CONST("+Dividends"), report->days, L1(_1->total_dividends), 0, true);
 
-    timeline_report_plot_day_value("+Funds", report->days, L1(_1->total_value + _1->total_fund), 1.0f, true);
-    timeline_report_plot_day_value("+Dividends", report->days, L1(_1->total_value + _1->total_dividends), 1.0f, true);
-
-    ImPlot::SetAxis(ImAxis_Y1);
-    timeline_report_graph_limit("Investments", min_d, max_d, summary->total_investment - summary->total_dividends - summary->total_gain);
-    timeline_report_plot_day_value("Investments", report->days, L1(_1->total_investment - _1->total_dividends - _1->total_gain), 2.0f);
+    timeline_report_plot_day_value(STRING_CONST("+Funds"), report->days, L1(_1->total_value + _1->total_fund), 1.0f, true);
+    timeline_report_plot_day_value(STRING_CONST("+Dividends"), report->days, L1(_1->total_value + _1->total_dividends), 1.0f, true);
 
     ImPlot::SetAxis(ImAxis_Y1);
-    timeline_report_graph_limit("Total Value##5", min_d, max_d, summary->total_value + summary->total_fund + summary->total_dividends);
-    timeline_report_plot_day_value("Total Value##5", report->days, L1(_1->total_value + _1->total_fund + _1->total_dividends), 4.0f);
+    timeline_report_graph_limit(STRING_CONST("Investments"), min_d, max_d, summary->total_investment - summary->total_dividends - summary->total_gain);
+    timeline_report_plot_day_value(STRING_CONST("Investments"), report->days, L1(_1->total_investment - _1->total_dividends - _1->total_gain), 2.0f);
+
+    ImPlot::SetAxis(ImAxis_Y1);
+    timeline_report_graph_limit(STRING_CONST("Total Value##5"), min_d, max_d, summary->total_value + summary->total_fund + summary->total_dividends);
+    timeline_report_plot_day_value(STRING_CONST("Total Value##5"), report->days, L1(_1->total_value + _1->total_fund + _1->total_dividends), 4.0f);
 
     ImPlot::SetAxis(ImAxis_Y1);
     ImPlot::HideNextItem(true, ImPlotCond_Once);
-    timeline_report_graph_limit("Total Wealth", min_d, max_d, summary->total_investment);
-    timeline_report_plot_day_value("Total Wealth", report->days, L1(_1->total_investment), 2.0f, true);
+    timeline_report_graph_limit(STRING_CONST("Total Wealth"), min_d, max_d, summary->total_investment);
+    timeline_report_plot_day_value(STRING_CONST("Total Wealth"), report->days, L1(_1->total_investment), 2.0f, true);
 
     const time_t min_time = (time_t)limits.X.Min + time_one_day() * 5;
     const int year_range = math_ceil(time_elapsed_days((time_t)min_time, (time_t)max_d) / 365.0);
@@ -712,53 +708,53 @@ FOUNDATION_STATIC void timeline_report_toolbar(timeline_report_t* report)
     auto last_day = array_last(report->days);
     string_const_t last_date_string = string_from_date(last_day->date);
 
-    ImGui::TrText(ICON_MD_STACKED_LINE_CHART " [%u] %.*s", transaction_count, STRING_FORMAT(last_date_string));
+    ImGui::Text(ICON_MD_STACKED_LINE_CHART " [%u] %.*s", transaction_count, STRING_FORMAT(last_date_string));
     if (ImGui::IsItemHovered())
     {
         auto first_day = &report->days[0];
         string_const_t first_date_string = string_from_date(first_day->date);
-        ImGui::SetTooltip("You've made %u transactions since %.*s", transaction_count, STRING_FORMAT(first_date_string));
+        ImGui::SetTooltip(tr("You've made %u transactions since %.*s"), transaction_count, STRING_FORMAT(first_date_string));
     }
 
     ImGui::SameLine();
-    ImGui::TrText(ICON_MD_WALLET " %.2lf $", last_day->total_fund);
+    ImGui::Text(ICON_MD_WALLET " %.2lf $", last_day->total_fund);
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("You should have about %.0lf $ fund remaining as of %.*s", last_day->total_fund, STRING_FORMAT(last_date_string));
+        ImGui::SetTooltip(tr("You should have about %.0lf $ fund remaining as of %.*s"), last_day->total_fund, STRING_FORMAT(last_date_string));
 
     ImGui::SameLine();
-    ImGui::TrText(ICON_MD_DIFFERENCE " %.2lf $", last_day->total_gain);
+    ImGui::Text(ICON_MD_DIFFERENCE " %.2lf $", last_day->total_gain);
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("You've made about %.0lf $ by selling stock so far", last_day->total_gain);
+        ImGui::SetTooltip(tr("You've made about %.0lf $ by selling stock so far"), last_day->total_gain);
 
     ImGui::SameLine();
-    ImGui::TrText(ICON_MD_ASSIGNMENT_RETURN " %.2lf $", last_day->total_dividends);
+    ImGui::Text(ICON_MD_ASSIGNMENT_RETURN " %.2lf $", last_day->total_dividends);
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("You've made about %.0lf $ in dividend's return.", last_day->total_dividends);
+        ImGui::SetTooltip(tr("You've made about %.0lf $ in dividend's return."), last_day->total_dividends);
 
     ImGui::SameLine();
     const double raw_investment_cost = last_day->total_investment - last_day->total_dividends - last_day->total_gain;
     string_const_t currency_formatted = string_from_currency(raw_investment_cost, STRING_ARGS(LARGE_AMOUNT_FORMAT));
-    ImGui::TrText(ICON_MD_SAVINGS " %.*s", STRING_FORMAT(currency_formatted));
+    ImGui::Text(ICON_MD_SAVINGS " %.*s", STRING_FORMAT(currency_formatted));
     if (ImGui::IsItemHovered())
     {
         const double imin = min(raw_investment_cost, last_day->total_investment);
         const double imax = max(raw_investment_cost, last_day->total_investment);
-        ImGui::SetTooltip("You've taken about %.0lf $ out of your wallet to make those investments and re-invested gain for about %.0lf $.", imin, imax);
+        ImGui::SetTooltip(tr("You've taken about %.0lf $ out of your wallet to make those investments and re-invested gain for about %.0lf $."), imin, imax);
     }
 
     ImGui::SameLine();
     const double total_value_adjusted = last_day->total_value + last_day->total_dividends + last_day->total_fund;
     currency_formatted = string_from_currency(total_value_adjusted, STRING_ARGS(LARGE_AMOUNT_FORMAT));
-    ImGui::TrText(ICON_MD_ACCOUNT_BALANCE_WALLET " %.*s", STRING_FORMAT(currency_formatted));
+    ImGui::Text(ICON_MD_ACCOUNT_BALANCE_WALLET " %.*s", STRING_FORMAT(currency_formatted));
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("As of %.*s your stock value is worth about %.0lf $.", STRING_FORMAT(last_date_string), total_value_adjusted);
+        ImGui::SetTooltip(tr("As of %.*s your stock value is worth about %.0lf $."), STRING_FORMAT(last_date_string), total_value_adjusted);
 
     ImGui::SameLine();
     const double total_gain = total_value_adjusted - raw_investment_cost;
     currency_formatted = string_from_currency(total_gain, STRING_ARGS(LARGE_AMOUNT_FORMAT));
-    ImGui::TrText(ICON_MD_PRICE_CHANGE " %.*s", STRING_FORMAT(currency_formatted));
+    ImGui::Text(ICON_MD_PRICE_CHANGE " %.*s", STRING_FORMAT(currency_formatted));
     if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("As of %.*s you can say that you've gain or lost about %.0lf $.", STRING_FORMAT(last_date_string), total_gain);
+        ImGui::SetTooltip(tr("As of %.*s you can say that you've gain or lost about %.0lf $."), STRING_FORMAT(last_date_string), total_gain);
 
     ImGui::EndGroup();
 }
@@ -854,28 +850,8 @@ void timeline_render_graph(const report_t* report)
         timeline_report->days = array_insert(days, didx, day);
     }
 
-    #if 0
-    app_open_dialog(timeline_report->title.str, 
-        timeline_report_graph_dialog, 1200, 900, true, 
-        timeline_report, timeline_report_graph_close);
-    #else
     window_open(
         "timeline_window", STRING_ARGS(timeline_report->title), 
         timeline_window_render_report, timeline_window_report_close, 
         timeline_report, WindowFlags::Transient | WindowFlags::Maximized);
-    #endif
 }
-
-//
-// # SYSTEM
-//
-
-FOUNDATION_STATIC void timeline_initialize()
-{
-}
-
-FOUNDATION_STATIC void timeline_shutdown()
-{    
-}
-
-DEFINE_SERVICE(TIMELINE, timeline_initialize, timeline_shutdown, SERVICE_PRIORITY_UI);

@@ -2197,3 +2197,33 @@ void string_deallocate(string_t& str)
     str.str = nullptr;
     str.length = 0;
 }
+
+int string_levenstein_distance(const char* str1, size_t length1, const char* str2, size_t length2)
+{
+    int* d = (int*)memory_allocate(0, sizeof(int) * (length1 + 1) * (length2 + 1), 0, MEMORY_TEMPORARY);
+    int* p = d;
+    int* q = d + (length1 + 1);
+
+    for (size_t i = 0; i <= length1; ++i)
+        p[i] = (int)i;
+
+    for (size_t j = 1; j <= length2; ++j)
+    {
+        q[0] = (int)j;
+        for (size_t i = 1; i <= length1; ++i)
+        {
+            int cost = str1[i - 1] == str2[j - 1] ? 0 : 1;
+            int a = p[i] + 1;
+            int b = q[i - 1] + 1;
+            int c = p[i - 1] + cost;
+            q[i] = a < b ? (a < c ? a : c) : (b < c ? b : c);
+        }
+        int* tmp = p;
+        p = q;
+        q = tmp;
+    }
+
+    int result = p[length1];
+    memory_deallocate(d);
+    return result;
+}
