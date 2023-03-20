@@ -41,6 +41,9 @@ file(GLOB TEST_SOURCES
 )
 source_group("tests" FILES ${TEST_SOURCES})
 
+# Exclude *_tests.cpp files from the framework library as they will be included by the app executable
+list(FILTER TEST_SOURCES EXCLUDE REGEX ".*_tests.cpp")
+
 # Load some external source files (only at the root of the external folder)
 file(GLOB EXTERNAL_SOURCES
     "${ROOT_DIR}/external/*.c"

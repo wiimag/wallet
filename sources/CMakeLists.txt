@@ -52,8 +52,9 @@ source_group("shaders" FILES ${SHADERS_SOURCES})
 # Load test source files
 #
 file(GLOB TEST_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp"
+    "${ROOT_DIR}/framework/tests/*_tests.cpp"
 )
 source_group("tests" FILES ${TEST_SOURCES})
 

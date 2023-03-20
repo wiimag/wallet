@@ -10,6 +10,7 @@
 #include <framework/shared_mutex.h>
 #include <framework/scoped_string.h>
 #include <framework/string.h>
+#include <framework/array.h>
 
 #include <foundation/hash.h>
 #include <foundation/memory.h>
@@ -19,17 +20,25 @@
 
 #define HASH_FACTOR (2.0f)
 
+struct string_table_free_slot_t
+{
+    string_table_symbol_t symbol;
+    size_t                length;
+};
+
+/*! Global string table lock mutex. */
+static shared_mutex _string_table_lock;
+
 /// <summary>
 /// Global string table shared by all systems of the application.
 /// Only allocated on demand.
 /// </summary>
 static string_table_t* GLOBAL_STRING_TABLE = nullptr;
-static shared_mutex _string_table_lock;
 
 /// <summary>
 /// Contains the hash key of string stored in a string table.
 /// </summary>
-struct HashAndLength
+struct string_table_hash_length_t
 {
     const char* s;
     uint32_t hash;
@@ -126,6 +135,7 @@ string_table_t* string_table_allocate(int bytes, int average_string_size)
 
 void string_table_deallocate(string_table_t* st)
 {
+    array_deallocate(st->free_slots);
     memory_deallocate(st);
 }
 
@@ -133,8 +143,9 @@ void string_table_init(string_table_t* st, int bytes, int average_strlen)
 {
     FOUNDATION_ASSERT(bytes >= STRING_TABLE_MIN_SIZE);
 
-    st->allocated_bytes = bytes;
     st->count = 0;
+    st->free_slots = nullptr;
+    st->allocated_bytes = bytes;
 
     float bytes_per_string = average_strlen + 1 + sizeof(uint16_t) * HASH_FACTOR;
     float num_strings = (bytes - sizeof(*st)) / bytes_per_string;
@@ -160,36 +171,38 @@ void string_table_init(string_table_t* st, int bytes, int average_strlen)
 /// </summary>
 /// <param name="start"></param>
 /// <returns></returns>
-static FOUNDATION_FORCEINLINE HashAndLength hash_and_length(const char* start)
+FOUNDATION_STATIC FOUNDATION_FORCEINLINE string_table_hash_length_t string_table_calc_hash_and_length(const char* start)
 {
     uint32_t h = 0;
     const char* s = start;
     for (; *s; ++s)
         h = h ^ ((h << 5) + (h >> 2) + (unsigned char)*s);
 
-    return HashAndLength { start, h, (int)(s - start) };
+    return string_table_hash_length_t { start, h, (int)(s - start) };
 }
 
-static FOUNDATION_FORCEINLINE HashAndLength hash_and_length(const char* start, size_t length)
+FOUNDATION_STATIC FOUNDATION_FORCEINLINE string_table_hash_length_t string_table_calc_hash_and_length(const char* start, size_t length)
 {
     if (length == 0)
-        return hash_and_length(start);
+        return string_table_calc_hash_and_length(start);
 
     uint32_t h = 0;
     const char* s = start;
     for (int i = 0; i < length && *s; ++i, ++s)
         h = h ^ ((h << 5) + (h >> 2) + (unsigned char)*s);
 
-    return HashAndLength { start, h, (int)(s - start) };
+    return string_table_hash_length_t { start, h, (int)(s - start) };
 }
 
-template<typename T> static void rebuild_hash_table(const string_table_t* st, T* const ht)
+template<typename T> 
+FOUNDATION_STATIC void string_table_rebuild_hash_table(const string_table_t* st, T* const ht)
 {
     const char* strs = st->strings();
     const char* s = strs + 1;
 
-    while (s < strs + st->string_bytes) {
-        const HashAndLength& hl = hash_and_length(s);
+    while (s < strs + st->string_bytes) 
+    {
+        const string_table_hash_length_t& hl = string_table_calc_hash_and_length(s);
         int i = hl.hash % st->num_hash_slots;
         while (ht[i])
             i = (i + 1) % st->num_hash_slots;
@@ -198,7 +211,7 @@ template<typename T> static void rebuild_hash_table(const string_table_t* st, T*
     }
 }
 
-static void rebuild_hash_table(string_table_t* st)
+FOUNDATION_STATIC void string_table_rebuild_hash_table(string_table_t* st)
 {
     const char* strs = st->strings();
     const char* s = strs + 1;
@@ -206,9 +219,9 @@ static void rebuild_hash_table(string_table_t* st)
     memset(st->h16(), 0, st->num_hash_slots * st->hsize());
 
     if (st->uses_16_bit_hash_slots)
-        rebuild_hash_table(st, st->h16());
+        string_table_rebuild_hash_table(st, st->h16());
     else
-        rebuild_hash_table(st, st->h32());
+        string_table_rebuild_hash_table(st, st->h32());
 }
 
 void string_table_grow(string_table_t* st, int bytes)
@@ -227,9 +240,12 @@ void string_table_grow(string_table_t* st, int bytes)
     int bytes_for_strings_32 = bytes - sizeof(*st) - sizeof(uint32_t) * st->num_hash_slots;
     st->uses_16_bit_hash_slots = bytes_for_strings_32 <= 64 * 1024;
 
+    // Delete free slots
+    array_deallocate(st->free_slots);
+
     char* const new_strings = st->strings();
     memmove(new_strings, old_strings, st->string_bytes);
-    rebuild_hash_table(st);
+    string_table_rebuild_hash_table(st);
 }
 
 string_table_t* string_table_grow(string_table_t** out_st, int bytes /*= 0*/)
@@ -273,31 +289,102 @@ size_t string_table_pack(string_table_t* st)
 
     char* const new_strings = st->strings();
     memmove(new_strings, old_strings, st->string_bytes);
-    rebuild_hash_table(st);
+    string_table_rebuild_hash_table(st);
 
     st->allocated_bytes = (new_strings + st->string_bytes) - (char*)st;
     return st->allocated_bytes;
 }
 
-static inline int available_string_bytes(string_table_t* st)
+FOUNDATION_FORCEINLINE int string_table_available_string_bytes(string_table_t* st)
 {
     return (int)(st->allocated_bytes - sizeof(*st) - st->num_hash_slots * st->hsize());
 }
 
-template<typename T> static string_table_symbol_t find_symbol(const string_table_t* st, T* const ht, const HashAndLength& key)
+template<typename T>
+FOUNDATION_STATIC int string_table_find_slot_index(const string_table_t* st, T* const ht, const string_table_hash_length_t& key)
 {
     char* const strs = st->strings();
     int i = key.hash % st->num_hash_slots;
-    while (ht[i]) {
-        if (strncmp(key.s, strs + ht[i], key.length) == 0)
-            return ht[i];
+    while (ht[i])
+    {
+        const char* str = strs + ht[i];
+        if (str[key.length] == '\0' && strncmp(key.s, str, key.length) == 0)
+            return i;
         i = (i + 1) % st->num_hash_slots;
     }
 
     return ~i;
 }
 
-string_table_symbol_t string_table_to_symbol(string_table_t* st, const char* s, size_t length /*= 0*/)
+template<typename T> 
+FOUNDATION_STATIC string_table_symbol_t string_table_find_symbol(const string_table_t* st, T* const ht, const string_table_hash_length_t& key)
+{
+    int slot_idx = string_table_find_slot_index(st, ht, key);
+    if (slot_idx >= 0)
+        return ht[slot_idx];
+    return slot_idx;
+}
+
+FOUNDATION_FORCEINLINE int string_table_free_slot_binary_search_compare(const string_table_free_slot_t& slot, size_t length)
+{
+    if (slot.length < length)
+        return -1;
+    if (slot.length > length)
+        return 1;
+    return 0;
+}
+
+FOUNDATION_STATIC int string_table_insert_free_slot(string_table_t* st, const string_table_free_slot_t& slot)
+{
+    int slot_idx = array_binary_search_compare(st->free_slots, slot.length, string_table_free_slot_binary_search_compare);
+    if (slot_idx < 0)
+        slot_idx = ~slot_idx;
+    array_insert_memcpy_safe(st->free_slots, slot_idx, &slot);
+    return slot_idx;
+}
+
+FOUNDATION_STATIC string_table_symbol_t string_table_available_slot(string_table_t* st, size_t length)
+{
+    if (array_size(st->free_slots) > 0)
+    {
+        int slot_idx = array_binary_search_compare(st->free_slots, length, string_table_free_slot_binary_search_compare);
+        if (slot_idx >= 0)
+        {
+            const string_table_free_slot_t* fs = st->free_slots + slot_idx;
+            const string_table_symbol_t symbol = fs->symbol;
+            array_erase_ordered_safe(st->free_slots, slot_idx);
+            return symbol;
+        }
+        else
+        {
+            slot_idx = ~slot_idx;
+            while (slot_idx < to_int(array_size(st->free_slots)))
+            {
+                const string_table_free_slot_t* fs = st->free_slots + slot_idx;
+                if (fs->length >= length)
+                {
+                    string_table_free_slot_t cfs = *fs;
+                    const string_table_symbol_t symbol = fs->symbol;
+                    array_erase_ordered_safe(st->free_slots, slot_idx);
+
+                    if (fs->length > length)
+                    {
+                        cfs.length -= (length + 1);
+                        cfs.symbol += (string_table_symbol_t)(length + 1);
+                        string_table_insert_free_slot(st, cfs);
+                    }
+                    
+                    return symbol;
+                }
+                ++slot_idx;
+            }
+        }
+    }
+
+    return (string_table_symbol_t)st->string_bytes;
+}
+
+string_table_symbol_t string_table_to_symbol(string_table_t* st, const char* s, size_t length)
 {
     int i = string_table_find_symbol(st, s, length);
     if (i >= 0)
@@ -309,39 +396,43 @@ string_table_symbol_t string_table_to_symbol(string_table_t* st, const char* s, 
     if ((float)st->num_hash_slots / (float)(st->count + 1) < HASH_FACTOR)
         return STRING_TABLE_FULL;
 
-    if (st->string_bytes + length + 1 > available_string_bytes(st))
+    const string_table_symbol_t symbol = string_table_available_slot(st, length);
+
+    if ((size_t)symbol + length + 1 > string_table_available_string_bytes(st))
         return STRING_TABLE_FULL;
 
-    const string_table_symbol_t symbol = (string_table_symbol_t)st->string_bytes;
-    if (st->uses_16_bit_hash_slots) {
+    if (st->uses_16_bit_hash_slots) 
+    {
         if (symbol > 64 * 1024)
             return STRING_TABLE_FULL;
         st->h16(~i, (uint16_t)symbol);
     }
-    else {
+    else 
+    {
         st->h32(~i, (uint32_t)symbol);
     }
-    st->count++;
 
     char* const strs = st->strings();
-    char* const dest = strs + st->string_bytes;
-    memcpy(dest, s, length + 1);
+    char* const dest = strs + symbol;
+    memcpy(dest, s, length);
     dest[length] = '\0';
 
-    st->string_bytes += length + 1;
+    st->count++;
+    if (st->string_bytes < symbol + length + 1)
+        st->string_bytes = symbol + length + 1;
     return symbol;
 }
 
-string_table_symbol_t string_table_find_symbol(const string_table_t* st, const char* s, size_t length /*= 0*/)
+string_table_symbol_t string_table_find_symbol(const string_table_t* st, const char* s, size_t length)
 {
     // "" maps to 0
     if (!*s) return 0;
 
-    const HashAndLength& hl = hash_and_length(s, length);
+    const string_table_hash_length_t& hl = string_table_calc_hash_and_length(s, length);
 
     if (st->uses_16_bit_hash_slots)
-        return find_symbol(st, st->h16(), hl);
-    return find_symbol(st, st->h32(), hl);
+        return string_table_find_symbol(st, st->h16(), hl);
+    return string_table_find_symbol(st, st->h32(), hl);
 }
 
 const char* string_table_to_string(string_table_t* st, string_table_symbol_t symbol)
@@ -373,4 +464,83 @@ size_t string_table_average_string_length(string_table_t* st)
     if (st->count == 0)
         return 0;
     return math_ceil(st->string_bytes / (double)st->count);
+}
+
+bool string_table_symbol_equal(string_table_symbol_t symbol, string_const_t str)
+{
+    return string_table_symbol_equal(symbol, str.str, str.length);
+}
+
+bool string_table_is_valid(string_table_t* st)
+{
+    if (st == nullptr)
+        return false;
+
+    if (st->count < 0)
+        return false;
+
+    if (st->string_bytes < 0)
+        return false;
+
+    if (st->allocated_bytes < STRING_TABLE_MIN_SIZE)
+        return false;
+
+    if (st->num_hash_slots < 1)
+        return false;
+
+    return true;
+}
+
+bool string_table_remove_symbol(string_table_t* st, string_table_symbol_t symbol)
+{
+    if (symbol == 0)
+        return false;
+
+    string_const_t str = string_table_to_string_const(st, symbol);
+    if (str.length == 0)
+        return false;
+
+    // Find the symbol in the hash table and reset it.
+    string_table_hash_length_t hl = string_table_calc_hash_and_length(STRING_ARGS(str));
+    if (st->uses_16_bit_hash_slots)
+    {
+        uint16_t* ht = st->h16();
+        int slot_idx = string_table_find_slot_index(st, ht, hl);
+        FOUNDATION_ASSERT(slot_idx >= 0 && ht[slot_idx] == symbol);
+        ht[slot_idx] = 0;
+    }
+    else
+    {
+        uint32_t* ht = st->h32();
+        int slot_idx = string_table_find_slot_index(st, ht, hl);
+        FOUNDATION_ASSERT(slot_idx >= 0);
+        ht[slot_idx] = 0;
+    }
+
+    auto strs = st->strings();
+    string_table_free_slot_t free_slot;
+    free_slot.symbol = symbol;
+    free_slot.length = str.length;
+    string_table_insert_free_slot(st, free_slot);
+
+    // Clear the string content
+    memset((void*)str.str, 0, str.length);
+
+    // Decrement the string count
+    --st->count;
+
+    return true;
+
+}
+
+string_table_symbol_t string_table_add_symbol(string_table_t*& st, const char* str, size_t length)
+{
+    string_table_symbol_t symbol = string_table_to_symbol(st, str, length);
+    while (symbol == STRING_TABLE_FULL)
+    {
+        string_table_grow(&st, (int)(st->allocated_bytes * HASH_FACTOR));
+        symbol = string_table_to_symbol(st, str, length);
+    }
+
+    return symbol;
 }

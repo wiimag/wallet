@@ -995,6 +995,18 @@ TEST_SUITE("SearchQuery")
         CHECK(array_contains(results, bob));
     }
 
+    TEST_CASE_FIXTURE(SearchQueryFixture, "Query 17.a" * doctest::timeout(30))
+    {
+        string_const_t query_string = CTEXT(R"(
+            job:RET
+        )");
+
+        const search_result_t* results = evaluate_query_sync(query_string);
+        REQUIRE_EQ(array_size(results), 2);
+        CHECK(array_contains(results, joe));
+        CHECK(array_contains(results, yolland));
+    }
+
     TEST_CASE_FIXTURE(SearchQueryFixture, "Query 17" * doctest::timeout(30))
     {
         string_const_t query_string = CTEXT(R"(

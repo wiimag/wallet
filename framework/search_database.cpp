@@ -322,7 +322,7 @@ FOUNDATION_FORCEINLINE string_const_t search_database_clean_up_text(const char* 
 
 FOUNDATION_STATIC hash_t search_database_string_to_symbol(search_database_t* db, const char* str, size_t length)
 {
-    hash_t symbol = string_table_to_symbol(db->strings, str, length);
+    string_table_symbol_t symbol = string_table_to_symbol(db->strings, str, length);
     while (symbol == STRING_TABLE_FULL)
     {
         const int grow_size = (int)math_align_up(db->strings->allocated_bytes * 1.5f, 8);
@@ -331,7 +331,8 @@ FOUNDATION_STATIC hash_t search_database_string_to_symbol(search_database_t* db,
         symbol = string_table_to_symbol(db->strings, str, length);
     }
 
-    return symbol;
+    FOUNDATION_ASSERT(symbol > 0);
+    return (hash_t)(symbol);
 }
 
 FOUNDATION_STATIC int32_t search_database_string_to_key(search_database_t* db, const char* str, size_t length, search_index_key_t& key)
@@ -910,7 +911,7 @@ FOUNDATION_STATIC search_result_t* search_database_query_property(
 
     string_const_t property_name = search_database_format_word(STRING_ARGS(name), indexing_flags);
     key.crc = string_table_find_symbol(db->strings, STRING_ARGS(property_name));
-    if (key.crc <= 0)
+    if ((int64_t)key.crc <= 0)
         return nullptr;
         
     time_t date;
@@ -933,7 +934,7 @@ FOUNDATION_STATIC search_result_t* search_database_query_property(
     else
     {
         key.hash = string_table_find_symbol(db->strings, STRING_ARGS(property_value));
-        if (key.hash <= 0)
+        if ((int64_t)key.hash <= 0)
             return nullptr;
     }     
         
@@ -959,7 +960,7 @@ FOUNDATION_STATIC search_result_t* search_database_query_word(
     SHARED_READ_LOCK(db->mutex);
 
     key.crc = string_table_find_symbol(db->strings, STRING_ARGS(word));
-    if (key.crc <= 0)
+    if ((int64_t)key.crc <= 0)
         return nullptr;
 
     search_database_get_key_document_results(db, key, and_set, results);
@@ -1107,6 +1108,7 @@ bool search_database_load(search_database_t* db, stream_t* stream)
     FOUNDATION_ASSERT(strings);
     
     stream_read(stream, strings, allocated_bytes);
+    strings->free_slots = nullptr;
     FOUNDATION_ASSERT(strings->count == string_count);
     FOUNDATION_ASSERT(strings->allocated_bytes == allocated_bytes);
     FOUNDATION_ASSERT(string_table_average_string_length(strings) == average_string_length);
