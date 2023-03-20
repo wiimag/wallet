@@ -54,7 +54,6 @@ typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_TOTAL_FUNDAMENTAL,
     REPORT_FORMULA_ELAPSED_DAYS,
     REPORT_FORMULA_EXCHANGE_RATE,
-    REPORT_FORMULA_DAY_GAIN,
     REPORT_FORMULA_TYPE,
     REPORT_FORMULA_PS,
     REPORT_FORMULA_ASK,
@@ -317,6 +316,22 @@ FOUNDATION_STATIC cell_t report_column_get_buy_price(table_element_ptr_t element
     return buy_price_cell;
 }
 
+FOUNDATION_STATIC cell_t report_column_get_day_gain(table_element_ptr_t element, const column_t* column)
+{
+    title_t* t = *(title_t**)element;
+    if (t == nullptr)
+        return nullptr;
+
+    const stock_t* s = t->stock;
+    if (s == nullptr)
+        return nullptr;
+
+    if (title_is_index(t))
+        return s->current.change;
+
+    return title_get_day_change(t, s);
+}
+
 FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element, const column_t* column)
 {
     title_t* t = *(title_t**)element;
@@ -464,9 +479,7 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
             if (title_is_index(t) && t->average_quantity == 0)
                 return NAN;
             return stock_data->current.adjusted_close;
-        case REPORT_FORMULA_DAY_CHANGE:	return stock_data->current.change_p;
-
-        case REPORT_FORMULA_DAY_GAIN:			return title_get_day_change(t, stock_data);
+        case REPORT_FORMULA_DAY_CHANGE:	        return stock_data->current.change_p;
         case REPORT_FORMULA_TOTAL_GAIN:			return title_get_total_gain(t);
         case REPORT_FORMULA_TOTAL_GAIN_P:		return title_get_total_gain_p(t);
         case REPORT_FORMULA_YESTERDAY_CHANGE:	return title_get_yesterday_change(t, stock_data);
@@ -1170,8 +1183,8 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .set_selected_callback(report_title_open_sell_view)
         .set_tooltip_callback(report_title_ask_price_gain_tooltip);
 
-    table_add_column(table, STRING_CONST("   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. "),
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_DAY_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE)
+    table_add_column(table, "   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. ",
+        report_column_get_day_gain, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE)
         .set_tooltip_callback(report_title_day_change_tooltip);
 
     table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"),

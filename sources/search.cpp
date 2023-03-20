@@ -1030,7 +1030,11 @@ FOUNDATION_STATIC cell_t search_table_column_sector(table_element_ptr_t element,
     const stock_t* s = search_result_resolve_stock(entry, column);
     if (s == nullptr)
         return nullptr;
-    return s->sector;
+    if (s->sector)
+        return s->sector;
+    if (s->category)
+        return s->category;
+    return s->type;
 }
 
 FOUNDATION_STATIC cell_t search_table_column_industry(table_element_ptr_t element, const column_t* column)

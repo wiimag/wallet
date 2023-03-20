@@ -1240,5 +1240,25 @@ Demande: %lg/%lg"
 			en = " Loses or (Gains) if titles were kept longer before being sold"
 			fr = " Perte ou (Gain) si les titres avaient \xc3\xa9t\xc3\xa9 conserv\xc3\xa9s plus longtemps avant d'\xc3\xaatre vendus"
 		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "  Jour \xee\x88\xa7||\xee\x88\xa7 Gain du Jour. "
+		}
+		{
+			hash = "d489ebf80e463996"
+			en = "Sells (Saved)"
+			fr = "Ventes (Gain)"
+		}
+		{
+			hash = "f01bd913345e3c50"
+			en = "Gain including previous sells (%.2lf $)"
+			fr = "Gain incluant les ventes pr\xc3\xa9c\xc3\xa9dentes (%.2lf $)"
+		}
+		{
+			hash = "f5ddf376ae51569"
+			en = "Minimal amount (%.2lf) to sell titles if you want to increase your gain considerably."
+			fr = "Montant minimal (%.2lf) pour vendre des titres si vous voulez augmenter votre gain consid\xc3\xa9rablement."
+		}
 	]
 }
