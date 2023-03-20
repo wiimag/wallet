@@ -1696,6 +1696,8 @@ config_handle_t config_parse_value(string_const_t json, int& index, config_handl
         res = config_set(value, STRING_ARGS(s.value));
         return res;
     }
+
+    log_warnf(0, WARNING_INVALID_VALUE, STRING_CONST("Invalid value '%.*s'"), min((int)json.length - index, 32), json.str + index);
     throw config_parse_exception(json, index, "Unexpected character");
 }
 

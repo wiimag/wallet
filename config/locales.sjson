@@ -831,17 +831,6 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 			fr = "Modifier l'historique (%.*s)###EH1"
 		}
 		{
-			hash = "69a7cedeb597d699"
-			en = "Name: %.*s
-Email: %.*s
-Subscription: %.*s
-Request: %lg/%lg"
-			fr = "Nom: %.*s
-Courriel: %.*s
-Abonnement: %.*s
-Requete: %lg/%lg"
-		}
-		{
 			hash = "e5bf46021bca5a81"
 			en = "EOD [API USAGE %.3lg %%]"
 			fr = "EOD [UTILISATION DE L'API %.3lg %%]"
@@ -1227,6 +1216,24 @@ Vous pouvez toujours ajouter le terme de recherche comme titre en appuyant sur A
 			hash = "51f1445bbc5c3f49"
 			en = "Y/Y %||\xee\xaf\x8c Year after year % gain"
 			fr = "Y/Y %||\xee\xaf\x8c Gain % par an"
+		}
+		{
+			hash = "69a7cedeb597d699"
+			en = "Name: %.*s
+Email: %.*s
+Subscription: %.*s
+Request: %lg/%lg"
+			fr = "Nom: %.*s
+Email: %.*s
+Abonnement: %.*s
+Demande: %lg/%lg"
+		}
+		{
+			hash = "eb4f96ff1e5e7a8e"
+			en = " Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain 
+           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
+			fr = " R\xc3\xa9sultats:  1 Ann\xc3\xa9e /  R\xc3\xa9el /  Estim\xc3\xa9 /  Diff.  / Surprise /   Gain 
+		   %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
 		}
 	]
 }

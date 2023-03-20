@@ -17,7 +17,7 @@
 #include <foundation/stream.h>
 
  /*! Search database version */
-constexpr uint8_t SEARCH_DATABASE_VERSION = 5;
+constexpr uint8_t SEARCH_DATABASE_VERSION = 7;
 
 /*! Search database index entry types */
 typedef enum class SearchIndexType : uint32_t
@@ -119,10 +119,12 @@ FOUNDATION_ALIGNED_STRUCT(search_database_header_t, 8) {
     uint8_t index_key_struct_size = 0;
     uint8_t document_struct_size = 0;
     uint8_t db_struct_size = 0;
+    uint8_t string_table_size = 0;
 } SEARCH_DATABASE_HEADER{
     { 'S', 'E', 'A', 'R' }, SEARCH_DATABASE_VERSION, 
     sizeof(search_index_t), sizeof(search_index_key_t),
-    sizeof(search_document_t), sizeof(search_database_t)
+    sizeof(search_document_t), sizeof(search_database_t),
+    sizeof(string_table_t)
 };
 
 //

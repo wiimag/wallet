@@ -260,9 +260,13 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("FUND")))
         return;
 
+    string_const_t description = General["Description"].as_string();
+    if (string_is_null(description) || string_equal(STRING_ARGS(description), STRING_CONST("NA")))
+        return;
+
     string_const_t name = General["Name"].as_string();
     string_const_t country = General["Country"].as_string();
-    string_const_t description = General["Description"].as_string();
+
     string_const_t industry = General["Industry"].as_string();
     string_const_t sector = General["Sector"].as_string();
     string_const_t gic_sector = General["GicSector"].as_string();
@@ -1383,7 +1387,7 @@ FOUNDATION_STATIC void search_shutdown()
             {
                 TIME_TRACKER("Saving search database");
                 search_database_save(_search->db, search_db_stream);
-                stream_deallocate(search_db_stream);
+                stream_deallocate(search_db_stream); 
             }
         }
         else

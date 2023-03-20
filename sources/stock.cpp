@@ -630,6 +630,8 @@ bool stock_request(const stock_handle_t& handle, const stock_t** out_stock)
         return false;
 
     FOUNDATION_ASSERT(_db_stocks);
+
+    SHARED_READ_LOCK(_db_lock);
     FOUNDATION_ASSERT(index > 0 && index < array_size(_db_stocks));
 
     const stock_t& s = _db_stocks[index];
