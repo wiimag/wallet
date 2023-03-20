@@ -30,6 +30,8 @@ typedef enum class SearchDatabaseFlags : uint32_t {
     IndexDocumentName       = 1 << 2, // TODO
     IndexDocumentSource     = 1 << 3, // TODO
 
+    SkipCommonWords         = 1 << 4,
+
     Default = None
 
 } search_database_flags_t;
@@ -118,3 +120,9 @@ bool search_database_load(search_database_t* database, stream_t* stream);
 bool search_database_save(search_database_t* database, stream_t* stream);
 
 string_t* search_database_property_keywords(search_database_t* database);
+
+/*! Print statistics about the search database to the console.
+ *
+ *  @param database The search database to print statistics for.
+ */
+void search_database_print_stats(search_database_t* database);

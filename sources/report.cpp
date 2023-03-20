@@ -1610,7 +1610,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
         ImGui::BeginGroup();
         report_render_summary_info(report, tr("Sell Greediness"), report->wallet->total_sell_gain_if_kept_p * 100.0, pourcentage_fmt, true);
         report_render_summary_info(report, "", report->wallet->total_sell_gain_if_kept, currency_fmt, true);
-        report_render_summary_info(report, tr("Sells (Loses)"), total_gain_with_sells - report->wallet->total_sell_gain_if_kept, currency_fmt, true);
+        report_render_summary_info(report, tr("Sells (Saved)"), total_gain_with_sells - report->wallet->total_sell_gain_if_kept, currency_fmt, true);
         ImGui::EndGroup();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(tr(" Loses or (Gains) if titles were kept longer before being sold"));

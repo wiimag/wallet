@@ -308,7 +308,8 @@ FOUNDATION_STATIC int string_table_find_slot_index(const string_table_t* st, T* 
     while (ht[i])
     {
         const char* str = strs + ht[i];
-        if (str[key.length] == '\0' && strncmp(key.s, str, key.length) == 0)
+        const size_t strs_remaining_length = st->string_bytes - (str - strs);
+        if (key.length < strs_remaining_length && str[key.length] == '\0' && strncmp(key.s, str, key.length) == 0)
             return i;
         i = (i + 1) % st->num_hash_slots;
     }

@@ -29,6 +29,49 @@
 
 #define HASH_SEARCH static_hash_string("search", 6, 0xc9d4e54fbae76425ULL)
 
+constexpr string_const_t COMMON_STOCK_WORDS[] = {
+    CTEXT("the"), CTEXT("and"), CTEXT("inc"), CTEXT("this"), CTEXT("that"), CTEXT("not"), CTEXT("are"),
+    CTEXT("was"), CTEXT("were"), CTEXT("been"), CTEXT("have"), CTEXT("has"), CTEXT("had"), CTEXT("does"),
+    CTEXT("did"), CTEXT("can"), CTEXT("could"), CTEXT("may"), CTEXT("might"), CTEXT("must"), CTEXT("shall"),
+    CTEXT("its"), CTEXT("also"), CTEXT("such"), CTEXT("only"), CTEXT("more"), CTEXT("most"), CTEXT("less"),
+    CTEXT("with"), CTEXT("without"), CTEXT("into"), CTEXT("onto"), CTEXT("out"), CTEXT("off"), CTEXT("on"),
+    CTEXT("should"), CTEXT("will"), CTEXT("would"), CTEXT("for"), CTEXT("from"), CTEXT("stock"), CTEXT("common"),
+    CTEXT("through"), CTEXT("between"), CTEXT("during"), CTEXT("under"), CTEXT("over"), CTEXT("before"),
+    CTEXT("company"), CTEXT("companies"), 
+    CTEXT("provide"), CTEXT("provides"),
+    CTEXT("annual"), CTEXT("known"),
+    CTEXT("flow"), CTEXT("value"), CTEXT("growth"), CTEXT("rate"), CTEXT("rates"), CTEXT("price"), CTEXT("prices"),
+    CTEXT("inc"), CTEXT("ltd"), 
+    CTEXT("corp"), CTEXT("corporation"), CTEXT("limited"),
+    CTEXT("mr"), CTEXT("mrs"), CTEXT("ms"), CTEXT("dr"), CTEXT("prof"), CTEXT("jr"), CTEXT("sr"), CTEXT("llc"),
+    CTEXT("share"), CTEXT("shares"), 
+    CTEXT("investor"), CTEXT("investors"),
+    CTEXT("asset"), CTEXT("assets"),
+    CTEXT("market"), CTEXT("markets"),
+    CTEXT("earning"), CTEXT("earnings"),
+    CTEXT("shareholder"), CTEXT("shareholders"),
+    CTEXT("product"), CTEXT("products"), CTEXT("service"), CTEXT("services"),
+    CTEXT("business"), CTEXT("industry"), CTEXT("sector"), CTEXT("sector"), CTEXT("industry"),
+    CTEXT("result"), CTEXT("results"),
+    CTEXT("cash"), CTEXT("per"), CTEXT("equity"), CTEXT("other"), CTEXT("stat"), CTEXT("officer"),
+    CTEXT("well"), CTEXT("project"), CTEXT("board"), 
+    CTEXT("director"), CTEXT("directors"), CTEXT("executive"), CTEXT("executives"), CTEXT("chief"),
+    CTEXT("own"), CTEXT("headquartered"), CTEXT("incorporated"), CTEXT("financial"), CTEXT("management"),
+    CTEXT("operate"), CTEXT("operating"), CTEXT("operates"), CTEXT("operated"), CTEXT("operate"), CTEXT("operates"),
+    CTEXT("name"), CTEXT("changed"), 
+    CTEXT("news"),
+    CTEXT("founded"), CTEXT("located"),
+    CTEXT("property"), CTEXT("properties"),
+    CTEXT("engage"), CTEXT("engages"),
+    CTEXT("group"), CTEXT("groups"),
+    CTEXT("hold"), CTEXT("holds"),
+    CTEXT("holdings"), CTEXT("holding"),
+    CTEXT("area"), CTEXT("areas"),
+    CTEXT("state"), CTEXT("states"),
+    CTEXT("street"), CTEXT("avenue"), CTEXT("road"), CTEXT("boulevard"), CTEXT("drive"), CTEXT("lane"), CTEXT("court"),
+
+};
+
 static const ImU32 SEARCH_PATTERN_VIEWED_COLOR = (ImU32)ImColor::HSV(0.6f, 0.3f, 0.9f);
 
 constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
@@ -57,7 +100,9 @@ constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
     CTEXT("Listings"),
     //CTEXT("ESGScores"),
     CTEXT("Valuations_Growth"),
-    CTEXT("Top_10_Holdings")
+    CTEXT("Top_10_Holdings"),
+    CTEXT("currency_symbol"),
+    CTEXT("Phone"),
 };
 
 struct search_result_entry_t
@@ -109,6 +154,116 @@ FOUNDATION_STATIC bool search_index_skip_fundamental_field(const char* field, si
     return false;
 }
 
+FOUNDATION_STATIC bool search_database_index_text_skip_common_words(
+    search_database_t* db, search_document_handle_t doc,
+    const char* _text, size_t text_length,
+    bool include_variations)
+{
+    if (_text == nullptr || text_length == 0)
+        return false;
+
+    if (!search_database_is_document_valid(db, doc))
+        return false;
+
+    string_const_t expression, r = string_trim(string_trim(string_const(_text, text_length)), '.');
+
+    if (r.length <= 16)
+    {
+        search_database_index_word(db, doc, STRING_ARGS(r), false);
+    }
+
+    do
+    {
+        // Split words by space
+        string_split(STRING_ARGS(r), STRING_CONST(","), &expression, &r, false);
+        if (expression.length)
+        {
+            // Split words by space
+            string_const_t word, rr = string_trim(string_trim(expression), '.');
+            do
+            {
+                string_split(STRING_ARGS(rr), STRING_CONST(" "), &word, &rr, false);
+                word = string_trim(word, '.');
+                word = string_trim(word, ';');
+                if (word.length >= 3)
+                {
+                    bool skip_word = false;
+                    for (const auto& cw : COMMON_STOCK_WORDS)
+                    {
+                        if (string_equal_nocase(STRING_ARGS(cw), STRING_ARGS(word)))
+                        {
+                            skip_word = true;
+                            break;
+                        }
+                    }
+
+                    if (skip_word)
+                        continue;
+                    search_database_index_word(db, doc, STRING_ARGS(word), include_variations);
+                }
+            } while (rr.length > 0);
+        }
+    } while (r.length > 0);
+
+    return true;
+}
+
+FOUNDATION_STATIC bool search_database_index_property_skip_common_words(
+    search_database_t* db, search_document_handle_t doc,
+    const char* name, size_t name_length,
+    const char* _value, size_t _value_length,
+    bool include_variations)
+{
+    if (_value == nullptr || _value_length == 0)
+        return false;
+
+    if (!search_database_is_document_valid(db, doc))
+        return false;
+
+    string_const_t expression, r = string_trim(string_trim(string_const(_value, _value_length)), '.');
+
+    if (r.length <= 16)
+    {
+        search_database_index_property(db, doc, name, name_length, STRING_ARGS(r), false);
+    }
+
+    do
+    {
+        // Split words by space
+        string_split(STRING_ARGS(r), STRING_CONST(","), &expression, &r, false);
+        if (expression.length)
+        {
+            // Split words by space
+            string_const_t word, rr = string_trim(string_trim(expression), '.');
+            do
+            {
+                string_split(STRING_ARGS(rr), STRING_CONST(" "), &word, &rr, false);
+                word = string_trim(word, '.');
+                word = string_trim(word, ';');
+                if (word.length >= 3)
+                {
+                    bool skip_word = false;
+                    for (const auto& cw : COMMON_STOCK_WORDS)
+                    {
+                        if (string_equal_nocase(STRING_ARGS(cw), STRING_ARGS(word)))
+                        {
+                            skip_word = true;
+                            break;
+                        }
+                    }
+
+                    if (skip_word)
+                        continue;
+                    search_database_index_property(db, doc, name, name_length, STRING_ARGS(word), 
+                        include_variations && (word.length >= 6 || word.length < 12));
+                }
+            } while (rr.length > 0);
+        }
+    } while (r.length > 0);
+
+    return true;
+}
+
 FOUNDATION_STATIC void search_index_news_data(const json_object_t& json, search_document_handle_t doc)
 {
     search_database_t* db = _search->db;
@@ -139,7 +294,7 @@ FOUNDATION_STATIC void search_index_news_data(const json_object_t& json, search_
             if (string_is_null(tag))
                 continue;
 
-            search_database_index_text(db, doc, STRING_ARGS(tag), false);
+            search_database_index_text_skip_common_words(db, doc, STRING_ARGS(tag), false);
         }
     }
 }
@@ -171,6 +326,10 @@ FOUNDATION_STATIC void search_index_fundamental_object_data(const json_object_t&
         if (value.length == 0 || string_equal(STRING_ARGS(value), STRING_CONST("null")))
             continue;
 
+        // Skip date with value "0000-00-00"
+        if (value.length == 10 && string_equal(STRING_ARGS(value), STRING_CONST("0000-00-00")))
+            continue;
+
         time_t date;
         double number = NAN;
         if (value.length < 21 && string_try_convert_number(STRING_ARGS(value), number))
@@ -184,7 +343,7 @@ FOUNDATION_STATIC void search_index_fundamental_object_data(const json_object_t&
         }
         else
         {
-            search_database_index_property(db, doc, STRING_ARGS(id), STRING_ARGS(value), value.length < 12);
+            search_database_index_property_skip_common_words(db, doc, STRING_ARGS(id), STRING_ARGS(value), false);
         }        
     }
 }
@@ -287,20 +446,20 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     search_database_index_word(db, doc, STRING_ARGS(symbol), true);
 
     // Index basic information
-    search_database_index_text(db, doc, STRING_ARGS(name));
-    search_database_index_word(db, doc, STRING_ARGS(name), false);
-    search_database_index_text(db, doc, STRING_ARGS(country), false);
-    search_database_index_text(db, doc, STRING_ARGS(type), false);
-    search_database_index_text(db, doc, STRING_ARGS(description), false);
-    search_database_index_text(db, doc, STRING_ARGS(industry), true);
-    search_database_index_text(db, doc, STRING_ARGS(sector), true);
-    search_database_index_text(db, doc, STRING_ARGS(gic_sector), true);    
-    search_database_index_text(db, doc, STRING_ARGS(gic_group), true);
-    search_database_index_text(db, doc, STRING_ARGS(gic_industry), true);
-    search_database_index_text(db, doc, STRING_ARGS(gic_sub_industry), true);
-    search_database_index_text(db, doc, STRING_ARGS(category), true);
-    search_database_index_text(db, doc, STRING_ARGS(home_category), true);
-    search_database_index_exact_match(db, doc, STRING_ARGS(isin), true);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(name), true);
+    search_database_index_exact_match(db, doc, STRING_ARGS(isin), false);
+    search_database_index_exact_match(db, doc, STRING_ARGS(name), false);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(country), false);
+    //search_database_index_text_skip_common_words(db, doc, STRING_ARGS(type), false);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(description), false);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(industry), true);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(sector), true);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(gic_sector), true);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(gic_group), true);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(gic_industry), true);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(gic_sub_industry), true);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(category), true);
+    search_database_index_text_skip_common_words(db, doc, STRING_ARGS(home_category), true);
 
     search_database_index_property(db, doc, STRING_CONST("exchange"), STRING_ARGS(exchange), false);
 
@@ -314,6 +473,19 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         {
             search_database_index_property(db, doc, STRING_CONST("Financials"), (double)sheet_date);
             search_index_fundamental_object_data(Financials, db, doc);
+        }
+    }
+
+    // Index recent cash flow data
+    const auto Cashflow = json["Financials"]["Cash_Flow"]["quarterly"].get(0ULL);
+    if (Cashflow.is_valid())
+    {
+        time_t sheet_date;
+        const auto sheet_date_string = Cashflow["date"].as_string();
+        if (string_try_convert_date(STRING_ARGS(sheet_date_string), sheet_date))
+        {
+            search_database_index_property(db, doc, STRING_CONST("Cashflow"), (double)sheet_date);
+            search_index_fundamental_object_data(Cashflow, db, doc);
         }
     }
 
@@ -357,6 +529,10 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         if (value.length == 0 || string_equal(STRING_ARGS(value), STRING_CONST("null")))
             continue;
 
+        // Skip date with value "0000-00-00"
+        if (value.length == 10 && string_equal(STRING_ARGS(value), STRING_CONST("0000-00-00")))
+            continue;
+
         if (string_equal(STRING_ARGS(value), STRING_CONST("NA")))
             continue;
                 
@@ -384,10 +560,10 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
             else if (string_equal_nocase(STRING_ARGS(id), STRING_CONST("name")) ||
                      string_equal_nocase(STRING_ARGS(id), STRING_CONST("title")))
             {
-                search_database_index_text(db, doc, STRING_ARGS(value), false);
+                search_database_index_text_skip_common_words(db, doc, STRING_ARGS(value), false);
             }
             else
-                search_database_index_property(db, doc, STRING_ARGS(id), STRING_ARGS(value), value.length < 12);
+                search_database_index_property_skip_common_words(db, doc, STRING_ARGS(id), STRING_ARGS(value), false);
         }
     }
     
@@ -504,7 +680,7 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
     MEMORY_TRACKER(HASH_SEARCH);
 
     // Load search database
-    _search->db = search_database_allocate();
+    _search->db = search_database_allocate(SearchDatabaseFlags::SkipCommonWords);
     string_const_t search_db_path = session_get_user_file_path(STRING_CONST("search.db"));
     stream_t* search_db_stream = fs_open_file(STRING_ARGS(search_db_path), STREAM_IN | STREAM_BINARY);
     if (search_db_stream)
@@ -1245,6 +1421,16 @@ FOUNDATION_STATIC void search_menu()
     ImGui::EndMenuBar();
 }
 
+FOUNDATION_STATIC expr_result_t search_expr_stats(const expr_func_t* f, vec_expr_t* args, void* context)
+{
+    search_database_t* db = _search->db;
+    FOUNDATION_ASSERT(db);
+
+    search_database_print_stats(db);
+
+    return NIL;
+}
+
 FOUNDATION_STATIC expr_result_t search_expr_index_document(const expr_func_t* f, vec_expr_t* args, void* context)
 {
     search_database_t* db = _search->db;
@@ -1366,6 +1552,7 @@ FOUNDATION_STATIC void search_initialize()
     expr_register_function("SEARCH_KEYWORDS", search_expr_keywords, nullptr, 0);
     expr_register_function("SEARCH_REMOVE_DOCUMENT", search_expr_remove_document, nullptr, 0);
     expr_register_function("SEARCH_INDEX", search_expr_index_document, nullptr, 0);
+    expr_register_function("SEARCH_STATS", search_expr_stats, nullptr, 0);
 
     service_register_menu(HASH_SEARCH, search_menu);
 }

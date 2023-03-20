@@ -1235,5 +1235,10 @@ Demande: %lg/%lg"
 			fr = " R\xc3\xa9sultats:  1 Ann\xc3\xa9e /  R\xc3\xa9el /  Estim\xc3\xa9 /  Diff.  / Surprise /   Gain 
 		   %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
 		}
+		{
+			hash = "eb1fdec0022d23c3"
+			en = " Loses or (Gains) if titles were kept longer before being sold"
+			fr = " Perte ou (Gain) si les titres avaient \xc3\xa9t\xc3\xa9 conserv\xc3\xa9s plus longtemps avant d'\xc3\xaatre vendus"
+		}
 	]
 }

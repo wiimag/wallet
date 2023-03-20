@@ -17,7 +17,38 @@
 #include <foundation/stream.h>
 
  /*! Search database version */
-constexpr uint8_t SEARCH_DATABASE_VERSION = 7;
+constexpr uint8_t SEARCH_DATABASE_VERSION = 12;
+
+/*! List of common words of three characters or more that we should skip for indexing text or words. */
+constexpr string_const_t COMMON_WORDS[] = {
+    CTEXT("the"),
+    CTEXT("and"),
+    CTEXT("inc"),
+    CTEXT("its"),
+    CTEXT("this"),
+    CTEXT("that"),
+    CTEXT("not"),
+    CTEXT("are"),
+    CTEXT("was"),
+    CTEXT("were"),
+    CTEXT("been"),
+    CTEXT("have"),
+    CTEXT("has"),
+    CTEXT("had"),
+    CTEXT("does"),
+    CTEXT("did"),
+    CTEXT("can"),
+    CTEXT("could"),
+    CTEXT("may"),
+    CTEXT("might"),
+    CTEXT("must"),
+    CTEXT("shall"),
+    CTEXT("should"),
+    CTEXT("will"),
+    CTEXT("would"),
+    CTEXT("for"),
+    CTEXT("from"),
+};
 
 /*! Search database index entry types */
 typedef enum class SearchIndexType : uint32_t
@@ -39,6 +70,7 @@ typedef enum class SearchIndexingFlags
     Lowercase           = 1 << 2,
     Variations          = 1 << 3,
     Exclude             = 1 << 4,
+    SkipCommonWords     = 1 << 5,
     
 } search_indexing_flags_t;
 DEFINE_ENUM_FLAGS(SearchIndexingFlags);
@@ -165,12 +197,18 @@ FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, s
     
     if (trim_word && word_length >= 4)
     {
-        // By default ignore s or es word ending
-        if ((word[word_length - 1] == 's') || (word[word_length - 1] == 'S'))
+        // Ignore plural of words
+        if (word[word_length - 1] == 's')
         {
-            --word_length;
-            if ((word[word_length - 1] == 'e') || (word[word_length - 1] == 'E'))
-                --word_length;
+            if (word[word_length - 2] == 'e' && word[word_length - 3] == 's')
+                word_length -= 2;
+            else if (word[word_length - 2] == 't' || 
+                     word[word_length - 2] == 'r' ||
+                     word[word_length - 2] == 'n' ||
+                     word[word_length - 2] == 'd')
+            {
+                word_length -= 1;
+            }
         }
     }
 
@@ -187,6 +225,7 @@ FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, s
         // Remove some chars
         word_lower = string_remove_character(STRING_ARGS(word_lower), sizeof(word_lower_buffer), '.');
         word_lower = string_remove_character(STRING_ARGS(word_lower), sizeof(word_lower_buffer), ',');
+        word_lower = string_remove_character(STRING_ARGS(word_lower), sizeof(word_lower_buffer), ':');
         word_lower = string_remove_character(STRING_ARGS(word_lower), sizeof(word_lower_buffer), ';');
     }
 
@@ -319,7 +358,12 @@ FOUNDATION_STATIC int search_database_insert_index(search_database_t* db, search
 
 FOUNDATION_FORCEINLINE string_const_t search_database_clean_up_text(const char* text, size_t text_length)
 {
-    return string_trim(string_trim(string_trim(string_const(text, text_length), '"'), '\''), ' ');
+    string_const_t clean_text = string_const(text, text_length);
+    clean_text = string_trim(clean_text, '"');
+    clean_text = string_trim(clean_text, '\'');
+    clean_text = string_trim(clean_text, '.');
+    clean_text = string_trim(clean_text, ':');
+    return string_trim(clean_text, ' ');
 }
 
 FOUNDATION_STATIC hash_t search_database_string_to_symbol(search_database_t* db, const char* str, size_t length)
@@ -344,6 +388,29 @@ FOUNDATION_STATIC int32_t search_database_string_to_key(search_database_t* db, c
     return -to_int(length);
 }
 
+FOUNDATION_STATIC bool search_database_skip_word(const char* _word, size_t _word_length, SearchIndexingFlags flags)
+{
+    string_const_t word = string_const(_word, _word_length);
+
+    if ((flags & SearchIndexingFlags::TrimWord) == SearchIndexingFlags::TrimWord)
+        word = search_database_clean_up_text(word.str, word.length);
+
+    if (word.str == nullptr || word.length < 3)
+        return true;
+
+    const bool skip_common_words = (flags & SearchIndexingFlags::SkipCommonWords) != 0;
+    if (skip_common_words)
+    {
+        for (const auto& cw : COMMON_WORDS)
+        {
+            if (string_equal_nocase(STRING_ARGS(cw), STRING_ARGS(word)))
+                return true;
+        }
+    }
+
+    return false;
+}
+
 FOUNDATION_STATIC bool search_database_index_word(
     search_database_t* db, search_document_handle_t doc, 
     const char* _word, size_t _word_length, 
@@ -351,7 +418,7 @@ FOUNDATION_STATIC bool search_database_index_word(
 {
     FOUNDATION_ASSERT(db);
 
-    if (_word == nullptr || _word_length < 3)
+    if (search_database_skip_word(_word, _word_length, flags))
         return false;
         
     if (!search_database_is_document_valid(db, doc))
@@ -389,7 +456,14 @@ FOUNDATION_STATIC bool search_database_index_word(
 
 FOUNDATION_FORCEINLINE SearchIndexingFlags search_database_case_indexing_flag(search_database_t* db)
 {
-    return (db->options & SearchDatabaseFlags::CaseSensitive) != 0 ? SearchIndexingFlags::None : SearchIndexingFlags::Lowercase;
+    SearchIndexingFlags flags = SearchIndexingFlags::None;
+    if ((db->options & SearchDatabaseFlags::CaseSensitive) == 0)
+        flags |= SearchIndexingFlags::Lowercase;
+
+    if ((db->options & SearchDatabaseFlags::SkipCommonWords) != 0)
+        flags |= SearchIndexingFlags::SkipCommonWords;
+
+    return flags;
 }
 
 //
@@ -652,21 +726,21 @@ bool search_database_index_property(
 {
     FOUNDATION_ASSERT(name && name_length > 0);
     
-    if (value == nullptr || value_length == 0)
+    const SearchIndexingFlags flags = search_database_case_indexing_flag(db) | SearchIndexingFlags::TrimWord;
+    if (value_length == 0 || (value_length >= 3 && search_database_skip_word(value, value_length, flags)))
         return false;
     
     if (!search_database_is_document_valid(db, doc))
         return false;
         
-    const SearchIndexingFlags case_indexing_flag = search_database_case_indexing_flag(db);
-    string_const_t property_name = search_database_format_word(name, name_length, case_indexing_flag);
+    string_const_t property_name = search_database_format_word(name, name_length, flags);
 
     search_index_key_t key;
     key.type = SearchIndexType::Property;
     key.score = to_int(value_length);
     key.crc = search_database_string_to_symbol(db, STRING_ARGS(property_name));
 
-    string_const_t property_value = search_database_format_word(value, value_length, case_indexing_flag);
+    string_const_t property_value = search_database_format_word(value, value_length, flags);
     key.hash = search_database_string_to_symbol(db, STRING_ARGS(property_value));
 
     search_database_insert_index(db, doc, key);
@@ -1311,4 +1385,146 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
     db->dirty |= document_removed;
     string_deallocate(doc->name);
     return document_removed;
+}
+
+void search_database_print_stats(search_database_t* db)
+{
+    SHARED_READ_LOCK(db->mutex);
+
+    // Print the average document count per index.
+    {
+        uint64_t total = 0;
+        for (unsigned i = 0, end = array_size(db->indexes); i < end; ++i)
+            total += db->indexes[i].document_count;
+        log_infof(0, STRING_CONST("Average document count per index: %.1lf"), (double)total / (double)array_size(db->indexes));
+    }
+
+    // Print the index with the most documents
+    {
+        unsigned max_index = 0;
+        unsigned max_count = 0;
+        for (unsigned i = 0, end = array_size(db->indexes); i < end; ++i)
+        {
+            if (db->indexes[i].document_count > max_count)
+            {
+                max_index = i;
+                max_count = db->indexes[i].document_count;
+            }
+        }
+        log_infof(0, STRING_CONST("Index with most documents: %u (%d) -> %s:%s(%.lf)"), 
+            max_index, db->indexes[max_index].key.type, 
+            string_table_to_string(db->strings, (int32_t)db->indexes[max_index].key.crc),
+            string_table_to_string(db->strings, (int32_t)db->indexes[max_index].key.hash),
+            db->indexes[max_index].key.number);
+    }
+
+    // Print the top 50 of the most used word
+    {
+        struct word_count_t
+        {
+            string_table_symbol_t symbol;
+            size_t                document_count;
+        };
+
+        word_count_t* word_counts = 0;
+        for (unsigned i = 0, end = array_size(db->indexes); i < end; ++i)
+        {
+            if (db->indexes[i].key.type == SearchIndexType::Word)
+            {
+                string_table_symbol_t symbol = (string_table_symbol_t)db->indexes[i].key.crc;
+                if (symbol > 0)
+                {
+                    bool found = false;
+                    for (unsigned j = 0, endj = array_size(word_counts); j < endj; ++j)
+                    {
+                        if (word_counts[j].symbol == symbol)
+                        {
+                            word_counts[j].document_count += db->indexes[i].document_count;
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        word_count_t wc = { symbol, db->indexes[i].document_count };
+                        array_push(word_counts, wc);
+                    }
+                }
+            }
+        }
+
+        // Sort by count
+        array_sort(word_counts, [](const word_count_t& w1, const word_count_t& w2)
+        {
+            if (w1.document_count == w2.document_count)
+                return 0;
+            return (w1.document_count > w2.document_count) ? -1 : 1;
+        });
+        
+        log_infof(0, STRING_CONST("Top 50 most used words:"));
+        for (unsigned i = 0, end = array_size(word_counts); i < end && i < 50; ++i)
+        {
+            const char* word = string_table_to_string(db->strings, (int32_t)word_counts[i].symbol);
+            log_infof(0, STRING_CONST("  %2u: %8s (%u)"), i + 1, word, word_counts[i].document_count);
+        }
+
+        array_deallocate(word_counts);
+    }
+
+    // Print the top 25 of most used property words/string
+    {
+        struct property_count_t
+        {
+            string_table_symbol_t name;
+            string_table_symbol_t symbol;
+            size_t                document_count;
+        };
+
+        property_count_t* property_counts = 0;
+        for (unsigned i = 0, end = array_size(db->indexes); i < end; ++i)
+        {
+            if (db->indexes[i].key.type == SearchIndexType::Property)
+            {
+                string_table_symbol_t symbol = (string_table_symbol_t)db->indexes[i].key.hash;
+                if (symbol > 0)
+                {
+                    bool found = false;
+                    for (unsigned j = 0, endj = array_size(property_counts); j < endj; ++j)
+                    {
+                        if (property_counts[j].symbol == symbol)
+                        {
+                            property_counts[j].document_count += db->indexes[i].document_count;
+                            found = true;
+                            break;
+                        }
+                    }
+
+                    if (!found)
+                    {
+                        property_count_t pc = { (string_table_symbol_t)db->indexes[i].key.crc, symbol, db->indexes[i].document_count };
+                        array_push(property_counts, pc);
+                    }
+                }
+            }
+        }
+
+        // Sort by count
+        array_sort(property_counts, [](const property_count_t& p1, const property_count_t& p2)
+        {
+            if (p1.document_count == p2.document_count)
+                return 0;
+            return (p1.document_count > p2.document_count) ? -1 : 1;
+        });
+
+        log_infof(0, STRING_CONST("Top 25 most used property words/strings:"));
+        for (unsigned i = 0, end = array_size(property_counts); i < end && i < 25; ++i)
+        {
+            const char* name = string_table_to_string(db->strings, (int32_t)property_counts[i].name);
+            const char* word = string_table_to_string(db->strings, (int32_t)property_counts[i].symbol);
+            log_infof(0, STRING_CONST("  %2u: %8s:%8s (%u)"), i + 1, name, word, property_counts[i].document_count);
+        }
+
+        array_deallocate(property_counts);
+    }
 }
