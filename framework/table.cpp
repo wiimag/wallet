@@ -588,7 +588,7 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
     //ImGui::TableNextRow();
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
-    ImGui::TextUnformatted("Summary");
+    ImGui::TrTextUnformatted("Summary");
     for (size_t i = 1; i < ARRAY_COUNT(summary_cells); i++)
     {	
         const column_t& column = table->columns[i];

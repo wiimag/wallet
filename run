@@ -99,11 +99,6 @@ COMMAND_COUNTER=0
 if [ ! -d "$SOLUTION_DIR" ] || [ ! -f "$SOLUTION_DIR/CMakeCache.txt" ]; then
   BUILD=1
   GENERATE=1
-
-  # If there is not arguments to ./run, then lets force start to be the default command
-  if [ $COMMAND_COUNTER -eq 0 ]; then
-    START=1
-  fi
 fi
 
 while [[ $# -gt 0 ]]; do
@@ -209,6 +204,11 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# If there is not arguments to ./run, then lets force start to be the default command
+if [ $COMMAND_COUNTER -eq 0 ]; then
+  START=1
+fi
 
 # Define a set of colors if NO_COLOR is not set
 if [ $NO_COLOR -eq 0 ]; then
@@ -512,14 +512,14 @@ fi
 #
 if [ $TESTS -ge 1 ]; then
 
-  echo 
-  echo -e "${green}Running tests...${normal}"
-  echo
-
   ADDITIONAL_ARGS=()
   if [ $TESTS -eq $COMMAND_COUNTER ]; then
     ADDITIONAL_ARGS=(${POSITIONAL_ARGS[@]})
   fi
+
+  echo 
+  echo -e "${green}${italic}Running tests with arguments: ${ADDITIONAL_ARGS[@]}${normal}"
+  echo
 
   if [ ${machine} == "MinGw" ]; then
     ./build/${SHORT_NAME}.exe --run-tests ${ADDITIONAL_ARGS[@]}

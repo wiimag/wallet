@@ -113,6 +113,11 @@ extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
 }
 #endif
 
+extern void app_render_3rdparty_libs()
+{
+    
+}
+
 extern int main_tests(void* _context, GLFWwindow* window)
 {
     FOUNDATION_ASSERT_FAIL("Not implemented");

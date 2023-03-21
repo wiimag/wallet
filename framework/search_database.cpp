@@ -1466,7 +1466,7 @@ void search_database_print_stats(search_database_t* db)
         for (unsigned i = 0, end = array_size(word_counts); i < end && i < 50; ++i)
         {
             const char* word = string_table_to_string(db->strings, (int32_t)word_counts[i].symbol);
-            log_infof(0, STRING_CONST("  %2u: %8s (%u)"), i + 1, word, word_counts[i].document_count);
+            log_infof(0, STRING_CONST("  %2u: %8s (%" PRIsize ")"), i + 1, word, word_counts[i].document_count);
         }
 
         array_deallocate(word_counts);
@@ -1522,7 +1522,7 @@ void search_database_print_stats(search_database_t* db)
         {
             const char* name = string_table_to_string(db->strings, (int32_t)property_counts[i].name);
             const char* word = string_table_to_string(db->strings, (int32_t)property_counts[i].symbol);
-            log_infof(0, STRING_CONST("  %2u: %8s:%8s (%u)"), i + 1, name, word, property_counts[i].document_count);
+            log_infof(0, STRING_CONST("  %2u: %8s:%8s (%" PRIsize ")"), i + 1, name, word, property_counts[i].document_count);
         }
 
         array_deallocate(property_counts);

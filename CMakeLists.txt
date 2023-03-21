@@ -33,6 +33,9 @@ endif()
 # Cache the root directory path
 set(ROOT_DIR ${CMAKE_CURRENT_SOURCE_DIR} CACHE PATH "Root directory path")
 
+# Set build output dir
+set(BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build CACHE PATH "Build directory path")
+
 # Cache the shared module path
 # Then each nested CMakeLists.txt can include the shared.cmake file using the following command:
 #   include(${SHARED_MODULE_PATH})
@@ -151,7 +154,6 @@ if(MSVC)
     add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:/Zi>")
 
     # Set the compiler to be /permissive-
-    add_definitions(-D_PERFECT_FORWARDING=1)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /permissive-")
 
     # Disable the security checks (/GS-) for the Release configuration
@@ -218,6 +220,9 @@ elseif(XCODE)
 
     # Enable GCC tuning model for Clang
     add_compile_options(-mtune=native)
+
+    # Allow extern variables to be initialized
+    add_compile_options(-Wno-extern-initializer)
 
     # Add debug info
     add_compile_options("$<$<CONFIG:DEPLOY>:-g0>")

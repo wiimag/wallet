@@ -19,8 +19,6 @@
 
 #define HASH_LOCALIZATION static_hash_string("localization", 12, 0xf40f9a08f45a6556ULL)
 
-extern thread_local size_t _tr_out_size = 0;
-
 struct localization_language_t
 {
     string_const_t lang;
@@ -197,11 +195,10 @@ FOUNDATION_STATIC string_t localization_build_locales_path()
     #if BUILD_DEVELOPMENT
     // Get the locales.sjson path
     // Look if we can find the locales.sjson in the devs repo
-    string_const_t exe_path = environment_executable_path();
-    string_const_t exe_dir = path_directory_name(STRING_ARGS(exe_path));
+    string_const_t build_path = environment_get_build_path();
 
     static thread_local char locales_json_path_buffer[BUILD_MAX_PATHLEN];
-    string_t locales_json_path = string_copy(STRING_BUFFER(locales_json_path_buffer), STRING_ARGS(exe_dir));
+    string_t locales_json_path = string_copy(STRING_BUFFER(locales_json_path_buffer), STRING_ARGS(build_path));
     locales_json_path = path_append(STRING_ARGS(locales_json_path), BUILD_MAX_PATHLEN, STRING_CONST("../config/locales.sjson"));
     locales_json_path = path_clean(STRING_ARGS(locales_json_path), BUILD_MAX_PATHLEN);
     return locales_json_path;
@@ -217,11 +214,10 @@ FOUNDATION_STATIC string_const_t localization_system_locales_path()
     {
         static thread_local char locales_json_path_buffer[BUILD_MAX_PATHLEN];
 
-        string_const_t exe_path = environment_executable_path();
-        string_const_t exe_dir = path_directory_name(STRING_ARGS(exe_path));
+        string_const_t resources_path = environment_get_resources_path();
         
         // Look if we can find the locales.sjson in the same dir as the exe
-        locales_json_path = string_copy(STRING_BUFFER(locales_json_path_buffer), STRING_ARGS(exe_dir));
+        locales_json_path = string_copy(STRING_BUFFER(locales_json_path_buffer), STRING_ARGS(resources_path));
         locales_json_path = path_append(STRING_ARGS(locales_json_path), BUILD_MAX_PATHLEN, STRING_CONST("locales.sjson"));
         locales_json_path = path_clean(STRING_ARGS(locales_json_path), BUILD_MAX_PATHLEN);
     }

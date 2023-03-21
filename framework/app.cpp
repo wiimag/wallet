@@ -380,7 +380,7 @@ void app_menu_end(GLFWwindow* window)
 
 void app_menu_help(GLFWwindow* window)
 {
-    if (!ImGui::BeginMenu(tr("Help")))
+    if (!ImGui::TrBeginMenu("Help"))
            return;
 
     #if BUILD_DEVELOPMENT
@@ -434,7 +434,7 @@ void app_menu_help(GLFWwindow* window)
 
     #if BUILD_ENABLE_DEBUG_LOG
     bool show_debug_log = log_suppress(HASH_DEBUG) == ERRORLEVEL_NONE;
-    if (ImGui::MenuItem(tr("Show Debug Logs"), nullptr, &show_debug_log))
+    if (ImGui::TrMenuItem("Show Debug Logs", nullptr, &show_debug_log))
     {
         if (show_debug_log)
         {
@@ -451,7 +451,7 @@ void app_menu_help(GLFWwindow* window)
     #endif
 
     #if BUILD_ENABLE_MEMORY_STATISTICS && BUILD_ENABLE_MEMORY_TRACKER
-    if (ImGui::MenuItem(tr("Show Memory Stats")))
+    if (ImGui::TrMenuItem("Show Memory Stats"))
     {
         MEMORY_TRACKER(HASH_MEMORY);
         console_show();
@@ -506,7 +506,7 @@ void app_menu_help(GLFWwindow* window)
     #endif
 
     #if BUILD_DEVELOPMENT && BUILD_ENABLE_MEMORY_TRACKER && BUILD_ENABLE_MEMORY_CONTEXT
-    if (ImGui::MenuItem("Show Memory Usages"))
+    if (ImGui::TrMenuItem("Show Memory Usages"))
     {
         console_show();
         const bool prefix_enaled = log_is_prefix_enabled();

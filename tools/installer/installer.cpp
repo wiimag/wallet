@@ -189,20 +189,20 @@ FOUNDATION_STATIC void installer_render_manifest_data()
 {
     if (string_is_null(_installer->manifest_app_name))
     {
-        ImGui::TextWrapped(tr("Downloading installer manifest..."));
+        ImGui::TrTextWrapped("Downloading installer manifest...");
         return;
     }
 
     if (array_size(_installer->manifest_versions) == 0)
     {
-        ImGui::TextWrapped(tr("No versions available"));
+        ImGui::TrTextWrapped("No versions available");
         return;
     }
 
     installer_version_t* latest_version = array_last(_installer->manifest_versions);
 
-    ImGui::TextWrapped("Latest version: %.*s (%.*s)", STRING_FORMAT(latest_version->version), STRING_FORMAT(latest_version->release_date));
-    ImGui::TextWrapped("Current version: %.*s", STRING_FORMAT(_installer->app_data_local_install_path));
+    ImGui::TrTextWrapped("Latest version: %.*s (%.*s)", STRING_FORMAT(latest_version->version), STRING_FORMAT(latest_version->release_date));
+    ImGui::TrTextWrapped("Current version: %.*s", STRING_FORMAT(_installer->app_data_local_install_path));
 
     ImGui::Spacing();
     ImGui::Spacing();
@@ -251,7 +251,7 @@ FOUNDATION_STATIC void installer_render()
         if (!mutex_unlock(_installer->manifest_mutex))
         {
             log_warnf(0, WARNING_DEADLOCK, STRING_CONST("Installer dead lock"));
-            ImGui::TextWrapped("Installer dead lock!");
+            ImGui::TrTextWrapped("Installer dead lock!");
             return;
         }
     }
@@ -262,7 +262,7 @@ FOUNDATION_STATIC void installer_render()
 
     // Draw privacy notice
     static bool agree = BUILD_DEBUG ? true : false;
-    ImGui::TextWrapped("By installing this software, you agree to the following privacy policy:");
+    ImGui::TrTextWrapped("By installing this software, you agree to the following privacy policy:");
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - 200.0f);
     ImGui::Checkbox(tr("I Agree"), &agree);
 

@@ -557,4 +557,20 @@ string_const_t string_join(const T* list, const Iter& iter,
  */
 string_const_t random_string(char* buf, size_t capacity);
 
+/*! Compute levenstein distance between two strings.
+ *
+ * @param str1 The first string.
+ * @param length1 The length of the first string.
+ * @param str2 The second string.
+ * @param length2 The length of the second string.
+ * @return The levenstein distance.
+ */
 int string_levenstein_distance(const char* str1, size_t length1, const char* str2, size_t length2);
+
+/*! Compute levenstein distance between two strings.
+ *
+ * @param str1 The first string.
+ * @param str2 The second string.
+ * @return The levenstein distance.
+ */
+int string_levenstein_distance(string_const_t str1, string_const_t str2);

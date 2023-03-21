@@ -9,6 +9,7 @@ project(bgfx)
 
 # bgfx library directory
 set(BGFX_DIR ${CMAKE_CURRENT_SOURCE_DIR}/)
+set(BGFX_DIR ${BGFX_DIR} PARENT_SCOPE)
 
 # Get bgfx library include files
 file(GLOB_RECURSE BGFX_INCLUDES
@@ -49,7 +50,6 @@ add_compile_definitions(BGFX_CONFIG_RENDERER_AGC=0)
 add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGL=0)
 
 add_compile_definitions(BGFX_CONFIG_MAX_DRAW_CALLS=1024)
-add_compile_definitions(BGFX_CONFIG_MAX_INSTANCE_DATA_COUNT=4)
 add_compile_definitions(BGFX_CONFIG_MAX_OCCLUSION_QUERIES=32)
 add_compile_definitions(BGFX_CONFIG_MAX_VIEW_NAME=64)
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_DECLS=32)
@@ -64,6 +64,8 @@ if (WIN32)
     # Enable directx backend renderers
     add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D11=1)
     add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D12=1)
+
+    add_compile_definitions(BGFX_CONFIG_MAX_INSTANCE_DATA_COUNT=4)
 
 elseif (APPLE)
 

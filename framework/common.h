@@ -117,8 +117,24 @@ string_t path_normalize_name(char* buff, size_t capacity, const char* path, size
 
 // ##FS
 
+/*! Returns all the text in a file.
+ * 
+ *  @param path Path to file
+ *  @param path_length Length of path
+ * 
+ *  @return Text in file
+ */
 string_t fs_read_text(const char* path, size_t path_length);
 
+/*! Clean the file name, removing any illegal chars.
+ * 
+ *  @remark The returned string is a static buffer, so it will be overwritten on the next call.
+ * 
+ *  @param filename File name to clean
+ *  @param filename_length Length of file name
+ * 
+ *  @return Cleaned file name
+ */
 string_const_t fs_clean_file_name(const char* filename, size_t filename_length);
 
 hash_t fs_hash_file(string_t file_path);
@@ -282,6 +298,22 @@ const char* system_platform_name(platform_t platform);
  *  @return Path to the application data folder.
  */
 string_const_t system_app_data_local_path();
+
+/*! Get the system application resources path.
+ * 
+ *  @remark This is the folder where the application can store data that is not user specific.
+ * 
+ *  @return Path to the application resources folder.
+ */
+string_const_t environment_get_resources_path();
+
+/*! Get the system application build path.
+ * 
+ *  @remark This folder is the executable folder on Windows and the bundle folder on macOS.
+ * 
+ *  @return Path to the application bundle folder.
+ */
+string_const_t environment_get_build_path();
 
 /*! Returns the true if the application is running in daemon mode, meaning that it is either running as a service or as a background process.
  * 

@@ -304,9 +304,9 @@ FOUNDATION_STATIC void test_runner_menu()
 {
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu(tr("Windows")))
+        if (ImGui::TrBeginMenu("Windows"))
         {
-            ImGui::MenuItem(tr(ICON_MD_LOGO_DEV " Test Runner"), nullptr, &_test_runner_window_opened);
+            ImGui::TrMenuItem(ICON_MD_LOGO_DEV " Test Runner", nullptr, &_test_runner_window_opened);
             ImGui::EndMenu();
         }
 

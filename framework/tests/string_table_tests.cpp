@@ -15,7 +15,7 @@
 #include <framework/common.h>
 #include <framework/string_table.h>
 
-TEST_SUITE("String Table")
+TEST_SUITE("StringTable")
 {
     TEST_CASE("Allocate")
     {
@@ -78,6 +78,34 @@ TEST_SUITE("String Table")
         CHECK_EQ(string_table_to_string_const(st, str6), CTEXT("AA"));
         CHECK_EQ(string_table_to_string_const(st, str7), CTEXT("JJJ"));
         CHECK_EQ(string_table_to_string_const(st, str8), CTEXT("This is a new string"));
+
+        string_table_deallocate(st);
+    }
+
+    TEST_CASE("Grow string table to 32 bits hashtable")
+    {
+        auto st = string_table_allocate();
+
+        // Add two simple strings
+        auto str1 = string_table_add_symbol(st, STRING_CONST("Hello"));
+        CHECK_EQ(str1, 1);
+
+        auto str2 = string_table_add_symbol(st, STRING_CONST("World"));
+        CHECK_EQ(str2, 7);
+
+        // Make sure that we are using 16 bit hash slots
+        CHECK_EQ(st->uses_16_bit_hash_slots, 1);
+
+        // Add many strings
+        for (uint32_t i = 0; i < 75536; ++i)
+        {
+            char buffer[32];
+            string_t s = string_format(STRING_BUFFER(buffer), STRING_CONST("String %u"), i);
+            string_table_add_symbol(st, STRING_ARGS(s));
+        }
+
+        // Now make sure we switched to 32 bit hash slots
+        CHECK_EQ(st->uses_16_bit_hash_slots, 0);
 
         string_table_deallocate(st);
     }

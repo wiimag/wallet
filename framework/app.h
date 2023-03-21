@@ -35,6 +35,9 @@ DEFINE_ENUM_FLAGS(AppMenuFlags);
 /*! Returns the application title. */
 extern const char* app_title();
 
+/*! Renders application 3rdparty libs using ImGui. */
+extern void app_render_3rdparty_libs();
+
 /*! Handles exception at the application level.
  * 
  *  @param dump_file The path to the dump file.

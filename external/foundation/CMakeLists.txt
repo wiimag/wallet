@@ -40,7 +40,7 @@ add_library(foundation STATIC ${foundation_src} ${foundation_includes})
 set_target_properties(foundation PROPERTIES FOLDER "libs")
 
 # Project include directories
-target_include_directories(foundation PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/../)
+target_include_directories(foundation PUBLIC ${ROOT_DIR}/external/)
 
 # Export a few defines to the project
 target_compile_definitions(foundation PUBLIC -DFOUNDATION_SIZE_REAL=8)

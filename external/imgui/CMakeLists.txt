@@ -25,7 +25,7 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Create the library
-add_library(imgui STATIC ${imgui_src} ${imgui_includes} ${imgui_natvis})
+add_library(imgui STATIC ${imgui_src} ${imgui_includes})
 
 # Depends on foundation lib project
 add_dependencies(imgui foundation)

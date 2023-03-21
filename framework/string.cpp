@@ -2227,3 +2227,8 @@ int string_levenstein_distance(const char* str1, size_t length1, const char* str
     memory_deallocate(d);
     return result;
 }
+
+int string_levenstein_distance(string_const_t str1, string_const_t str2)
+{
+    return string_levenstein_distance(str1.str, str1.length, str2.str, str2.length);
+}

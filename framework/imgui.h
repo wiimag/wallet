@@ -396,7 +396,20 @@ namespace ImGui
         string_const_t fmtstr = tr(fmt, string_length(fmt), false);
         TextV(fmtstr.str, args);
         #else
-        Text(fmt, args);
+        TextV(fmt, args);
+        #endif
+        va_end(args);
+    }
+
+    FOUNDATION_FORCEINLINE void TrTextWrapped(const char* fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        #if BUILD_ENABLE_LOCALIZATION
+        string_const_t fmtstr = tr(fmt, string_length(fmt), false);
+        TextWrappedV(fmtstr.str, args);
+        #else
+        TextWrappedV(fmt, args);
         #endif
         va_end(args);
     }
@@ -413,6 +426,46 @@ namespace ImGui
         TextUnformatted(STRING_RANGE(textstr));
         #else 
         TextUnformatted(text, nullptr);
+        #endif
+    }
+
+    FOUNDATION_FORCEINLINE bool TrBeginMenu(const char* label, bool enabled = true)
+    {
+        #if BUILD_ENABLE_LOCALIZATION
+        string_const_t labelstr = tr(label, string_length(label));
+        return BeginMenu(labelstr.str, enabled);
+        #else
+        return BeginMenu(label, enabled);
+        #endif
+    }
+
+    /*! Draw menu item with translated text.
+     * 
+     *  @param fmt The format string.
+     *  @param ... The format arguments.
+     */
+    FOUNDATION_FORCEINLINE bool TrMenuItem(const char* label, const char* shortcut = NULL, bool selected = false, bool enabled = true)
+    {
+        #if BUILD_ENABLE_LOCALIZATION
+        string_const_t labelstr = tr(label, string_length(label));
+        return MenuItem(labelstr.str, shortcut, selected, enabled);
+        #else
+        return MenuItem(label, shortcut, selected, enabled);
+        #endif
+    }
+
+    /*! Draw menu item with translated text.
+     * 
+     *  @param fmt The format string.
+     *  @param ... The format arguments.
+     */
+    FOUNDATION_FORCEINLINE bool TrMenuItem(const char* label, const char* shortcut, bool* p_selected, bool enabled = true)
+    {
+        #if BUILD_ENABLE_LOCALIZATION
+        string_const_t labelstr = tr(label, string_length(label));
+        return MenuItem(labelstr.str, shortcut, p_selected, enabled);
+        #else
+        return MenuItem(label, shortcut, p_selected, enabled);
         #endif
     }
 }

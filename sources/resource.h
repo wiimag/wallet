@@ -3,7 +3,7 @@
  * License: https://equals-forty-two.com/LICENSE
  */
 
- //{{NO_DEPENDENCIES}}
+//{{NO_DEPENDENCIES}}
 #define GLFW_ICON                       101
 #define IDD_MAIN_DIALOG                 102
 #define IDS_APP_TITLE                   103

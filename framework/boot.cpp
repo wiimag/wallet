@@ -437,24 +437,28 @@ extern int main_run(void* context)
 /*! Main application shutdown entry point. */
 extern void main_finalize()
 {    
-    WAIT_CURSOR;
-
-    GLFWwindow* main_window = glfw_main_window();
-    if (main_window && main_is_interactive_mode())
-        glfw_save_window_geometry(main_window);
-
-    app_shutdown();
-    dispatcher_shutdown();
-
-    if (main_is_graphical_mode())
     {
-        bgfx_shutdown();
-        imgui_shutdown();
-        glfw_shutdown();
+        WAIT_CURSOR;
+
+        GLFWwindow* main_window = glfw_main_window();
+        if (main_window && main_is_interactive_mode())
+            glfw_save_window_geometry(main_window);
+
+        app_shutdown();
+        dispatcher_shutdown();
+
+        if (main_is_graphical_mode())
+        {
+            bgfx_shutdown();
+            imgui_shutdown();
+        }
+
+        if (log_stdout())
+            process_release_console();
     }
 
-    if (log_stdout())
-        process_release_console();
+    if (main_is_graphical_mode())
+        glfw_shutdown();
 
     foundation_finalize();
 }

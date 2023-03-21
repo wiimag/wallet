@@ -66,10 +66,8 @@ source_group("resources" FILES ${DEVS_RESOURCE_FILES})
 file(GLOB_RECURSE CONFIG_FILES
     "${ROOT_DIR}/config/*.sjson"
 )
+set(CONFIG_FILES ${CONFIG_FILES} PARENT_SCOPE)
 source_group("config" FILES ${CONFIG_FILES})
-
-# Copy the config/*.sjson files to the build directory
-file(COPY ${CONFIG_FILES} DESTINATION ${ROOT_DIR}/build)
 
 # Load stb source files
 file(GLOB STB_SOURCES
@@ -84,6 +82,22 @@ file(GLOB DOCTEST_SOURCES
     "${ROOT_DIR}/external/doctest/*.h"
 )
 source_group("external\\doctest" FILES ${DOCTEST_SOURCES})
+
+# Set shaderc executable path
+if (MSVC)
+    
+    set(SHADERC_EXE "${ROOT_DIR}/tools/win64/shaderc.exe" PARENT_SCOPE)
+
+elseif (APPLE)
+
+    set(SHADERC_EXE "${ROOT_DIR}/tools/osx/shaderc" PARENT_SCOPE)
+
+else()
+
+    # Throw an error if the shaderc executable is not found
+    message(FATAL_ERROR "shaderc executable not set for this platform")
+
+endif()
 
 #
 # Compiler flags
@@ -148,8 +162,7 @@ if (WIN32)
 
 elseif(APPLE)
 
-    # Link with libglfw3.a
-    #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -L${ROOT_DIR}/external/glfw/lib-osx-universal -lglfw3")
+    # Link with GLFW3 and do not add /Debug to -L option
     target_link_directories(framework PUBLIC ${ROOT_DIR}/external/glfw/lib-osx-universal)
     target_link_libraries(framework PUBLIC glfw3)
 

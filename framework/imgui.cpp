@@ -427,6 +427,9 @@ bool imgui_right_aligned_button(const char* label, bool same_line /*= false*/, f
 
 void imgui_right_aligned_label(const char* label, bool same_line /*= false*/)
 {
+    if (label == nullptr)
+        return;
+
     const ImGuiStyle& style = ImGui::GetStyle();
     const float space_left = ImGui::GetContentRegionAvail().x;
     const float label_width = ImGui::CalcTextSize(label, nullptr, true).x;

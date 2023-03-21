@@ -262,9 +262,9 @@ FOUNDATION_STATIC void profiler_menu()
 {
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu(tr("Windows")))
+        if (ImGui::TrBeginMenu("Windows"))
         {
-            ImGui::MenuItem(tr(ICON_MD_LOGO_DEV " Profiler"), nullptr, &_profiler_window_opened);
+            ImGui::TrMenuItem(ICON_MD_LOGO_DEV " Profiler", nullptr, &_profiler_window_opened);
             ImGui::EndMenu();
         }
 

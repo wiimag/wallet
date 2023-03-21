@@ -150,6 +150,23 @@ void mom()
 
 ```
 
+### [localization.h/cpp](localization.h)
+
+The localization module contains the code to load and save the application localization. 
+
+Here's an example of how to use the localization module to load and save the application localization:
+
+```cpp
+
+#include <framework/localization.h>
+
+FOUNDATION_STATIC void render_page()
+{
+    ImGui::Text(tr("Hello World!"));
+    ImGui::Text(tr("This is a test page."));
+}
+```
+
 ### [jobs.h/cpp](jobs.h)
 
 The jobs module contains the code to create and manage jobs. The framework lauches a set of threads that will execute the jobs. The jobs are executed in a FIFO order.

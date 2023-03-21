@@ -645,3 +645,51 @@ const char* system_platform_name(platform_t platform)
             return "Unknown";
     }
 }
+
+string_const_t environment_get_resources_path()
+{
+    string_const_t exe_path = environment_executable_path();
+    string_const_t exe_dir = path_directory_name(STRING_ARGS(exe_path));
+
+    #if FOUNDATION_PLATFORM_WINDOWS
+        // On windows the resources path is the same as the executable dir
+        return exe_dir;
+    #elif FOUNDATION_PLATFORM_MACOS
+        static thread_local char resources_path_buffer[BUILD_MAX_PATHLEN];
+
+        // On MacOS the resources path is the executable dir + ../Resources 
+        string_t resources_path = string_copy(STRING_BUFFER(resources_path_buffer), STRING_ARGS(exe_dir));
+        resources_path = path_append(STRING_ARGS(resources_path), BUILD_MAX_PATHLEN, STRING_CONST("../Resources"));
+        resources_path = path_clean(STRING_ARGS(resources_path), BUILD_MAX_PATHLEN);
+
+        return string_to_const(resources_path);
+    #else
+
+        #error Not implemented
+
+    #endif
+}
+
+string_const_t environment_get_build_path()
+{
+    string_const_t exe_path = environment_executable_path();
+    string_const_t exe_dir = path_directory_name(STRING_ARGS(exe_path));
+
+    #if FOUNDATION_PLATFORM_WINDOWS
+        // On windows the resources path is the same as the executable dir
+        return exe_dir;
+    #elif FOUNDATION_PLATFORM_MACOS
+        static thread_local char build_path_buffer[BUILD_MAX_PATHLEN];
+
+        // On MacOS the resources path is the executable dir + ../../../
+        string_t build_path = string_copy(STRING_BUFFER(build_path_buffer), STRING_ARGS(exe_dir));
+        build_path = path_append(STRING_ARGS(build_path), BUILD_MAX_PATHLEN, STRING_CONST("../../../"));
+        build_path = path_clean(STRING_ARGS(build_path), BUILD_MAX_PATHLEN);
+
+        return string_to_const(build_path);
+    #else
+
+        #error Not implemented
+
+    #endif
+}

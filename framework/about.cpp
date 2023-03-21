@@ -36,33 +36,34 @@ FOUNDATION_STATIC const char* FOUNDATION_RESTRICT about_configuration_cstr()
 FOUNDATION_STATIC void about_render_dialog()
 {
     ImGui::TextURL(PRODUCT_COMPANY, nullptr, STRING_CONST("https://equals-forty-two.com"));
-    ImGui::TextWrapped(PRODUCT_DESCRIPTION);
+    ImGui::TrTextWrapped(PRODUCT_DESCRIPTION);
 
     string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
-    ImGui::TextWrapped("Version %s %.*s (%s)", about_configuration_cstr(), STRING_FORMAT(version_string), __DATE__);
+    ImGui::TrTextWrapped("Version %s %.*s (%s)", about_configuration_cstr(), STRING_FORMAT(version_string), __DATE__);
 
     ImGui::Separator();
 
-    ImGui::TextWrapped(PRODUCT_COPYRIGHT);
+    ImGui::TrTextWrapped(PRODUCT_COPYRIGHT);
 
     ImGui::SetWindowFontScale(0.8f);
-    ImGui::TextWrapped(tr("This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software."));
+    ImGui::TrTextWrapped("This software is provided 'as-is', without any express or implied warranty. In no event will the authors be held liable for any damages arising from the use of this software.");
     ImGui::SetWindowFontScale(1.0f);
 
     ImGui::Separator();
 
-    ImGui::TextWrapped("Build %s", GIT_BRANCH);
-    ImGui::TextWrapped("Commit %s", GIT_SHORT_HASH);
-    ImGui::TextWrapped("Renderer %s", bgfx::getRendererName(bgfx::getRendererType()));
+    ImGui::TrTextWrapped("Build %s", GIT_BRANCH);
+    ImGui::TrTextWrapped("Commit %s", GIT_SHORT_HASH);
+    ImGui::TrTextWrapped("Renderer %s", bgfx::getRendererName(bgfx::getRendererType()));
 
     ImGui::Separator();
 
-    ImGui::TextWrapped(tr("This software uses the following third-party libraries:"));
+    ImGui::TrTextWrapped("This software uses the following third-party libraries:");
 
     ImGui::SetWindowFontScale(0.9f);
 
-    // Render EOD link
-    ImGui::TextURL("EOD Historical Data API", nullptr, STRING_CONST("https://eodhistoricaldata.com/financial-apis/"));
+    // Render app 3rd party libs
+    app_render_3rdparty_libs();
+	//ImGui::TextURL("EOD Historical Data API", nullptr, STRING_CONST("https://eodhistoricaldata.com/financial-apis/"));
 
     // Print foundation version
     version_t fv = foundation_version();
@@ -98,8 +99,8 @@ FOUNDATION_STATIC void about_menu_open_dialog(void* user_data)
 
 void about_open_window()
 {
-    const char* title = string_format_static_const("About - %s##7", PRODUCT_NAME);
-    app_open_dialog(title, UINT32_C(500), UINT32_C(700), false, about_render_dialog);
+    const char* title = string_format_static_const(tr("About - %s##8"), PRODUCT_NAME);
+    app_open_dialog(title, uint32_t(IM_SCALEF(350)), uint32_t(IM_SCALEF(500)), false, about_render_dialog);
 }
 
 //

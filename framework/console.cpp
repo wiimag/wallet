@@ -443,7 +443,7 @@ FOUNDATION_STATIC void console_menu()
 // 
 //     if (ImGui::BeginMenuBar())
 //     {
-//         if (ImGui::BeginMenu("Windows"))
+//         if (ImGui::TrBeginMenu("Windows"))
 //         {
 //             ImGui::MenuItem(ICON_MD_LOGO_DEV " Console", "F10", &_console_window_opened);
 //             ImGui::EndMenu();

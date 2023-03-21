@@ -43,10 +43,91 @@ source_group("bundle" FILES ${RESOURCES_FILES})
 #
 # Load app shader files
 #
-file(GLOB_RECURSE SHADERS_SOURCES
-    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.*"
-)
-source_group("shaders" FILES ${SHADERS_SOURCES})
+file(GLOB_RECURSE VERTEX_SHADERS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.vsc")
+source_group("shaders\\vertex" FILES ${VERTEX_SHADERS})
+
+file(GLOB_RECURSE FRAGMENT_SHADERS "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.fsc")
+source_group("shaders\\fragment" FILES ${FRAGMENT_SHADERS})
+
+file(GLOB_RECURSE COMMON_SHADERS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.sc")
+source_group("shaders\\common" FILES ${COMMON_SHADERS_SOURCES})
+
+# Set generated shader headers list
+SET(GENERATED_SHADER_HEADERS "${GENERATED_SHADER_HEADERS}")
+
+#
+# Compile all shaders with shaderc
+#
+
+set(SHADER_OUTPUT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/shaders/generated)
+
+# Set the shader suffix backend
+if (WIN32)
+    set(SHADER_SUFFIX "dx11")
+    set(SHADER_PLATFORM "windows")
+    set(SHADER_VERTEX_MODEL "vs_5_0")
+    set(SHADER_FRAGMENT_MODEL "ps_5_0")
+elseif (APPLE)
+    set(SHADER_SUFFIX "metal")
+    set(SHADER_PLATFORM "osx")
+    set(SHADER_VERTEX_MODEL "metal")
+    set(SHADER_FRAGMENT_MODEL "metal")
+endif()
+
+# Compile all vertex shaders
+foreach(VERTEX_SHADER ${VERTEX_SHADERS})
+
+    # Get shader name
+    get_filename_component(VERTEX_SHADER_NAME ${VERTEX_SHADER} NAME_WE)
+
+    # Get shader directory
+    get_filename_component(VERTEX_SHADER_DIR ${VERTEX_SHADER} DIRECTORY)
+
+    # Set varying.def.sc file path
+    set(VARYING_DEF_FILE "${VERTEX_SHADER_DIR}/varying.def.sc")
+
+    # Set output shader file path
+    set(VERTEX_SHADER_OUTPUT_H "${SHADER_OUTPUT_DIR}/vs_${VERTEX_SHADER_NAME}.${SHADER_SUFFIX}.h")
+    
+    add_custom_command(
+        OUTPUT ${VERTEX_SHADER_OUTPUT_H}
+        COMMAND ${SHADERC_EXE} --type vertex --platform ${SHADER_PLATFORM} -p ${SHADER_VERTEX_MODEL} -O 3 -i "${BGFX_DIR}/src"
+            --varyingdef "${VARYING_DEF_FILE}"
+            -f ${VERTEX_SHADER} --bin2c vs_${VERTEX_SHADER_NAME}_${SHADER_SUFFIX}
+            -o ${VERTEX_SHADER_OUTPUT_H}
+        DEPENDS ${VERTEX_SHADER} ${VARYING_DEF_FILE}
+    )
+    list(APPEND GENERATED_SHADER_HEADERS ${VERTEX_SHADER_OUTPUT_H})
+endforeach()
+
+# Compile all fragment shaders
+foreach(FRAGMENT_SHADER ${FRAGMENT_SHADERS})
+
+    # Get shader name
+    get_filename_component(FRAGMENT_SHADER_NAME ${FRAGMENT_SHADER} NAME_WE)
+
+    # Get shader directory
+    get_filename_component(FRAGMENT_SHADER_DIR ${FRAGMENT_SHADER} DIRECTORY)
+
+    # Set varying.def.sc file path
+    set(VARYING_DEF_FILE "${FRAGMENT_SHADER_DIR}/varying.def.sc")
+
+    # Set output shader file path
+    set(FRAGMENT_SHADER_OUTPUT_H "${SHADER_OUTPUT_DIR}/fs_${FRAGMENT_SHADER_NAME}.${SHADER_SUFFIX}.h")
+    
+    add_custom_command(
+        OUTPUT ${FRAGMENT_SHADER_OUTPUT_H}
+        COMMAND ${SHADERC_EXE} --type fragment --platform ${SHADER_PLATFORM} -p ${SHADER_FRAGMENT_MODEL} -O 3 -i "${BGFX_DIR}/src"
+            --varyingdef "${VARYING_DEF_FILE}"
+            -f ${FRAGMENT_SHADER} --bin2c fs_${FRAGMENT_SHADER_NAME}_${SHADER_SUFFIX}
+            -o ${FRAGMENT_SHADER_OUTPUT_H}
+        DEPENDS ${FRAGMENT_SHADER} ${VARYING_DEF_FILE}
+    )
+    list(APPEND GENERATED_SHADER_HEADERS ${FRAGMENT_SHADER_OUTPUT_H})
+endforeach()
+
+source_group("shaders\\generated" FILES ${GENERATED_SHADER_HEADERS})
+set(SHADERS_SOURCES ${COMMON_SHADERS_SOURCES} ${VERTEX_SHADERS} ${FRAGMENT_SHADERS} ${GENERATED_SHADER_HEADERS})
 
 #
 # Load test source files
@@ -105,7 +186,12 @@ if (MSVC)
         ${RESOURCES_SOURCES}
         ${SHADERS_SOURCES}
         ${TEST_SOURCES}
+        ${EXTERNAL_SOURCES}
     )
+
+    # Copy the config/*.sjson files to the build directory
+    file(COPY ${CONFIG_FILES} DESTINATION ${ROOT_DIR}/build)
+
 
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${ROOT_DIR}/build/.)
@@ -127,7 +213,10 @@ if (MSVC)
 elseif(APPLE)
 
     # Set ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-    set_source_files_properties(${RESOURCES_FILES} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_source_files_properties(
+        ${RESOURCES_FILES} 
+        ${CONFIG_FILES} 
+        PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 
     # Set app icon
     set_source_files_properties(${ROOT_DIR}/resources/App.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
@@ -139,6 +228,8 @@ elseif(APPLE)
         ${RESOURCES_SOURCES}
         ${SHADERS_SOURCES}
         ${TEST_SOURCES}
+        ${EXTERNAL_SOURCES}
+        ${CONFIG_FILES} 
         ${ROOT_DIR}/resources/App.icns
     )
 

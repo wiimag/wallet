@@ -28,20 +28,20 @@ FOUNDATION_STATIC void app_main_menu_begin(GLFWwindow* window)
     if (!ImGui::BeginMenuBar())
         return;
 
-    if (ImGui::BeginMenu(tr("File")))
+    if (ImGui::TrBeginMenu("File"))
     {
-        if (ImGui::BeginMenu(tr("Create")))
+        if (ImGui::TrBeginMenu("Create"))
         {
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu(tr("Open")))
+        if (ImGui::TrBeginMenu("Open"))
         {
             ImGui::EndMenu();
         }
 
         ImGui::Separator();
-        if (ImGui::MenuItem(tr(ICON_MD_EXIT_TO_APP " Exit"), "Alt+F4"))
+        if (ImGui::TrMenuItem(ICON_MD_EXIT_TO_APP " Exit", "Alt+F4"))
             glfw_request_close_window(window);
             
         ImGui::EndMenu();
@@ -58,11 +58,11 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
 
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu(tr("Windows")))
+        if (ImGui::TrBeginMenu("Windows"))
             ImGui::EndMenu();
-
-        app_menu_help(window);
             
+        app_menu_help(window);
+
         // Update special application menu status.
         // Usually controls are displayed at the far right of the menu.
         profiler_menu_timer();
@@ -101,10 +101,6 @@ FOUNDATION_STATIC void app_tabs()
         tabs_init_flags |= ImGuiTabBarFlags_AutoSelectNewTabs;
 }
 
-//
-// # SYSTEM (Usually invoked within boot.cpp)
-//
-
 extern const char* app_title()
 {
     return PRODUCT_NAME;
@@ -120,9 +116,6 @@ extern void app_exception_handler(const char* dump_file, size_t length)
 
 extern void app_configure(foundation_config_t& config, application_t& application)
 {
-    #if BUILD_ENABLE_STATIC_HASH_DEBUG
-    config.hash_store_size = 256;
-    #endif
     application.name = string_const(PRODUCT_NAME, string_length(PRODUCT_NAME));
     application.short_name = string_const(PRODUCT_CODE_NAME, string_length(PRODUCT_CODE_NAME));
     application.company = string_const(STRING_CONST(PRODUCT_COMPANY));
@@ -135,12 +128,11 @@ extern int app_initialize(GLFWwindow* window)
 {
     // Framework systems
     string_table_initialize();
-    progress_initialize();
+    progress_initialize();    
     jobs_initialize();
-    query_initialize();
-
     session_setup(nullptr);
-
+    query_initialize();
+    
     // App systems
     settings_initialize();
     service_initialize();
@@ -187,14 +179,19 @@ extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
         ImGuiWindowFlags_NoTitleBar |
         ImGuiWindowFlags_MenuBar))
     {
-
         app_main_menu_begin(window);
-        dispatcher_update();
+        //dispatcher_update();
 
         app_tabs();
         app_main_menu_end(window);
 
         service_foreach_window();
-
     } ImGui::End();
+}
+
+extern void app_render_3rdparty_libs()
+{
+    // Render fast_obj library
+    //string_const_t fast_obj_version_string = string_format_static(STRING_CONST("fast_obj %d.%d"), FAST_OBJ_VERSION_MAJOR, FAST_OBJ_VERSION_MINOR);
+    //ImGui::TextURL(STRING_RANGE(fast_obj_version_string), STRING_CONST("https://github.com/thisistherk/fast_obj"));
 }
