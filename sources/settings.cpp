@@ -141,20 +141,26 @@ void settings_draw()
 
     ImGui::MoveCursor(0, 30.0f);
     {
+        static bool restart_to_apply_effect = false;
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(tr("Font scaling"));
 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-        if (ImGui::InputFloat("##FontScaling", &SETTINGS.font_scaling, 0.25, 0, "%.2lf", ImGuiInputTextFlags_AutoSelectAll))
+        float font_scaling = session_get_float("font_scaling", 1.0f);
+        if (ImGui::InputFloat("##FontScaling", &font_scaling, 0.25, 0, "%.2lf", ImGuiInputTextFlags_AutoSelectAll))
         {
-            imgui_set_font_ui_scale(SETTINGS.font_scaling);
+            restart_to_apply_effect = true;
+            imgui_set_font_ui_scale(font_scaling);
         }
 
         ImGui::NextColumn();
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(tr("Changing that settings requires restarting the application."));
+        if (restart_to_apply_effect)
+        {
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextColored(ImColor(TEXT_WARN_COLOR), tr("Changing that settings requires restarting the application."));
+        }
     }
 
     {
@@ -185,7 +191,6 @@ void settings_initialize()
 
     SETTINGS.current_tab = session_get_integer(SESSION_KEY_CURRENT_TAB, SETTINGS.current_tab);
     SETTINGS.good_dividends_ratio = (double)session_get_float("good_dividends_ratio", (float)SETTINGS.good_dividends_ratio);
-    SETTINGS.font_scaling = session_get_float("font_scaling", 1.0f);
 
     // Restore some session settings from the user registry
     string_copy(STRING_BUFFER(SETTINGS.search_terms), STRING_ARGS(session_get_string(SESSION_KEY_SEARCH_TERMS, "")));
@@ -206,5 +211,4 @@ void settings_shutdown()
     session_set_string(SESSION_KEY_SEARCH_FILTER, SETTINGS.search_filter);
     session_set_string("preferred_currency", SETTINGS.preferred_currency);
     session_set_float("good_dividends_ratio", (float)SETTINGS.good_dividends_ratio);
-    session_set_float("font_scaling", SETTINGS.font_scaling);
 }

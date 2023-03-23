@@ -160,60 +160,9 @@ FOUNDATION_STATIC bool symbols_contains(const symbol_t* symbols, string_const_t 
     return false;
 }
 
-FOUNDATION_STATIC void symbols_fetch_from_news(int current_symbols_load_id, const json_object_t& json, symbol_t** symbols)
-{
-    if (json.root == nullptr)
-        return;
-
-    for (unsigned int i = 0; i < json.root->value_length; ++i)
-    {
-        const auto& e = json[i];
-        const auto& symbols_data = e["symbols"];
-
-        if (symbols_data.root == nullptr)
-            continue;
-
-        for (unsigned int s = 0; s < symbols_data.root->value_length; ++s)
-        {
-            if (current_symbols_load_id != _loading_symbols_id)
-                return;
-
-            string_const_t code = symbols_data[s].as_string();
-            if (const auto& lock = scoped_mutex_t(_symbols_lock))
-            {
-                if (symbols_contains(*symbols, code))
-                    continue;
-
-                symbol_t symbol{};
-                symbol.code = string_table_encode(STRING_ARGS(code));
-                if (symbol.code == STRING_TABLE_NULL_SYMBOL)
-                    continue;
-
-                stock_update(STRING_ARGS(code), symbol.stock,
-                    FetchLevel::REALTIME | FetchLevel::EOD | FetchLevel::FUNDAMENTALS);
-                *symbols = array_push(*symbols, symbol);
-            }
-        }
-    }
-}
-
 FOUNDATION_STATIC void symbols_read_search_results(int loading_symbols_id, const json_object_t& data, symbol_t** symbols, string_const_t search_filter)
 {
     symbols_load(loading_symbols_id, symbols, data, nullptr);
-
-    if (search_filter.length < 3)
-        return;
-
-    if (array_size(*symbols) < 5)
-    {
-        eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", search_filter.str, "limit", "5",
-            [loading_symbols_id, symbols](const json_object_t& data) { symbols_fetch_from_news(loading_symbols_id, data, symbols); });
-    }
-    if (array_size(*symbols) < 50)
-    {
-        eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "t", search_filter.str, "limit", "5",
-            [loading_symbols_id, symbols](const json_object_t& data) { symbols_fetch_from_news(loading_symbols_id, data, symbols); });
-    }
 }
 
 FOUNDATION_STATIC void symbols_search(symbol_t** symbols, string_const_t search_filter)

@@ -468,7 +468,9 @@ float imgui_get_font_ui_scale(float value /*= 1.0f*/)
 
 void imgui_set_font_ui_scale(float scale)
 {
-    ImGui::GetIO().FontGlobalScale = 1.0f + (scale - _global_font_scaling);
+    //ImGui::GetIO().FontGlobalScale = 1.0f + (scale - _global_font_scaling);
+    log_warnf(HASH_IMGUI, WARNING_UI, 
+        STRING_CONST("Setting font scaling to %f. You need to restart the application to take effect."), scale);
     session_set_float("font_scaling", scale);
 }
 

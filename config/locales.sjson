@@ -1260,5 +1260,185 @@ Demande: %lg/%lg"
 			en = "Minimal amount (%.2lf) to sell titles if you want to increase your gain considerably."
 			fr = "Montant minimal (%.2lf) pour vendre des titres si vous voulez augmenter votre gain consid\xc3\xa9rablement."
 		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "413e11792044c145"
+			en = "Summary"
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "fdcf0213a67735cb"
+			en = "\xee\x85\x85 Add title"
+			fr = "@TODO"
+		}
+		{
+			hash = "531561efda6eddf2"
+			en = "Add Title (%.*s)##5"
+			fr = "@TODO"
+		}
+		{
+			hash = "ba6ea28da819b481"
+			en = "Add"
+			fr = "@TODO"
+		}
+		{
+			hash = "ec80b0453912a57"
+			en = "Select symbol"
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "e957ee4367144e43"
+			en = "Y./Y. %.2lf %%"
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "9d7015a3ba968731"
+			en = "Y./Y. %.2lf %% (%.0lf years)"
+			fr = "@TODO"
+		}
+		{
+			hash = "ecce5bbfb8f07c0a"
+			en = " Total Dividends %.2lf $ "
+			fr = "@TODO"
+		}
+		{
+			hash = "c24a9b29c17fab15"
+			en = " Y./Y. %.2lf %% (%.0lf years) "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "4407e9c560049000"
+			en = " Year after Year yielding (%.0lf years)"
+			fr = "@TODO"
+		}
+		{
+			hash = "7bcb01a1b4804172"
+			en = " Year after Year yielding (%.0lf years) "
+			fr = "@TODO"
+		}
+		{
+			hash = "783d7c267ac41e8a"
+			en = " Year after Year yielding %.lg %% (%.0lf years) "
+			fr = "@TODO"
+		}
+		{
+			hash = "b011a1f6bf736194"
+			en = " Year after Year yielding %.3g %% (%.0lf years) "
+			fr = "@TODO"
+		}
+		{
+			hash = "e241f397d23aba25"
+			en = " Year after Year yielding (Overall ratio %.3g %%) (%.0lf years) "
+			fr = "@TODO"
+		}
+		{
+			hash = "477c0f76ba1f2233"
+			en = "Yield %s"
+			fr = "@TODO"
+		}
+		{
+			hash = "bfeda6e623516d9f"
+			en = "Yield \xee\xa3\xa5"
+			fr = "@TODO"
+		}
+		{
+			hash = "95fa1dfa8355f211"
+			en = "Yield \xee\xa3\xa3"
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "372b185b5f8cfd5e"
+			en = " Year after Year yielding (Overall ratio %.3g %%) (~%.0lf years) "
+			fr = "@TODO"
+		}
+		{
+			hash = "459e7854c9bcb1ec"
+			en = " Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) "
+			fr = "@TODO"
+		}
+		{
+			hash = "cf08357a97ebfb2d"
+			en = "Float Window"
+			fr = "@TODO"
+		}
+		{
+			hash = "437bd88bee778259"
+			en = "Disconnected"
+			fr = "@TODO"
+		}
+		{
+			hash = "2cb44803b44c281a"
+			en = "EOD API Key is required to use this application."
+			fr = "@TODO"
+		}
+		{
+			hash = "a6731e33a076e379"
+			en = "You can get a free API key by registering at the link above. Please enter your API key below and press Continue"
+			fr = "@TODO"
+		}
+		{
+			hash = "4e0692c8104efb9f"
+			en = "Continue"
+			fr = "@TODO"
+		}
 	]
 }

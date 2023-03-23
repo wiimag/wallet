@@ -87,6 +87,9 @@ struct pattern_t
     pattern_flex_medavg_t flex_execute{};
     double_option_t flex_low{ DNAN };
     double_option_t flex_high{ DNAN };
+    double_option_t yy_ratio{ DNAN };
+    double_option_t performance_ratio{ DNAN };
+    double_option_t years{ DNAN };
 
     // Persisted data
     bool opened{ true };

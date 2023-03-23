@@ -1109,7 +1109,21 @@ FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_co
         return;
 
     const double avg = math_ifzero(title->average_price, title->stock->current.adjusted_close);
-    ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), "Total Dividends %.2lf $", title->total_dividends);
+    ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), tr(" Total Dividends %.2lf $ "), title->total_dividends);
+
+    // Get year after year yield
+    const stock_t* s = title->stock;
+    if (s != nullptr && array_size(s->history) > 1)
+    {
+        day_result_t* recent = array_first(s->history);
+        day_result_t* oldest = array_last(s->history);
+
+        const double years = (recent->date - oldest->date) / (365.0 * 24.0 * 60.0 * 60.0);
+        const double max_change = (recent->adjusted_close - oldest->adjusted_close) / oldest->adjusted_close;
+        const double yield = max_change / years * 100.0;
+
+        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), tr(" Y./Y. %.2lf %% (%.0lf years) "), yield, years);
+    }
 }
 
 FOUNDATION_STATIC void report_title_open_buy_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)

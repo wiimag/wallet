@@ -98,6 +98,9 @@ FOUNDATION_STATIC void session_backup(const char* _session_dir, size_t _session_
             if (string_starts_with(STRING_ARGS(*f), STRING_CONST("thumbnails/")))
                 continue;
 
+            if (string_starts_with(STRING_ARGS(*f), STRING_CONST("shots/")))
+                continue;
+
             char dest_path_buffer[BUILD_MAX_PATHLEN];
             string_t backup_file_path = path_concat(STRING_BUFFER(dest_path_buffer), STRING_ARGS(backup_folder_path), STRING_ARGS(*f));
             string_const_t backup_file_path_dir = path_directory_name(STRING_ARGS(backup_file_path));

@@ -486,6 +486,59 @@ FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
     return y_offset;
 }
 
+FOUNDATION_STATIC void pattern_compute_years_performance_ratios(pattern_t* pattern)
+{
+    // Get year after year yield
+    const stock_t* s = pattern->stock;
+    if (s == nullptr || !s->has_resolve(FetchLevel::FUNDAMENTALS | FetchLevel::EOD))
+        return;
+
+    if (!pattern->performance_ratio.initialized)
+    {
+        pattern->performance_ratio = (s->high_52 / math_ifnan(s->ws_target, s->low_52))
+            * math_ifnan(math_ifnan(s->pe, s->peg), 1.0);
+    }
+
+    if (pattern->yy_ratio.initialized)
+        return;
+
+    if (array_size(s->history) <= 1)
+        return;
+
+    day_result_t* recent = array_first(s->history);
+    day_result_t* oldest = array_last(s->history) - 300;
+    if (oldest < recent)
+        oldest = array_last(s->history);
+
+    const double max_change = (recent->adjusted_close - oldest->adjusted_close) / oldest->adjusted_close;
+    
+    pattern->years = (recent->date - oldest->date) / (365.0 * 24.0 * 60.0 * 60.0);
+    pattern->performance_ratio = max_change / pattern->years.fetch() * 100.0;
+
+    double* yratios = nullptr;
+    recent = &s->history[0];
+    unsigned start = 260, end = array_size(s->history);
+
+    if (end > 500)
+        end -= 260;
+    else
+        array_push(yratios, pattern->performance_ratio);
+
+    for (; start < end; start += 260)
+    {
+        oldest = s->history + start;
+        const double change_p = (recent->adjusted_close - oldest->adjusted_close) / oldest->adjusted_close * 100.0;
+        recent = oldest;
+        array_push(yratios, change_p);
+    }
+
+    double median, average;
+    array_sort(yratios);
+    double mavg = math_median_average(yratios, median, average);
+    pattern->yy_ratio = median;
+    array_deallocate(yratios);
+}
+
 FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
 {
     ImGuiTableFlags flags =
@@ -518,10 +571,23 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
             pattern_format_currency(s->low_52),
             pattern_format_percentage(s->low_52 / s->current.adjusted_close * 100.0), true);
         
-        double performance_ratio = (s->high_52 / math_ifnan(s->ws_target, s->low_52)) * math_ifnan(math_ifnan(s->pe, s->peg), 1.0);
-        pattern_render_stats_line(CTEXT("Yield"), 
-            pattern_format_percentage(s->dividends_yield.get_or_default() * 100.0),
+        const double yielding = s->dividends_yield.get_or_default() * 100.0;
+        const double performance_ratio = pattern->yy_ratio.get_or_default(pattern->performance_ratio.get_or_default(0.0));
+        const double performance_ratio_combined = max(pattern->yy_ratio.get_or_default(pattern->performance_ratio.fetch()), yielding);
+
+        string_const_t fmttr = RTEXT("Yield %s");
+        string_const_t yield_label = string_format_static(STRING_ARGS(fmttr), 
+            pattern->yy_ratio.fetch() > performance_ratio ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
+        ImGui::PushStyleColor(ImGuiCol_Text, performance_ratio <= 0 || performance_ratio_combined < SETTINGS.good_dividends_ratio * 100.0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
+        pattern_render_stats_line(yield_label,
+            pattern_format_percentage(yielding),
             pattern_format_percentage(performance_ratio), true);
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::SetTooltip(tr(" Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) "), performance_ratio, pattern->years.fetch());
+        }
+        ImGui::PopStyleColor();
+
         pattern_render_stats_line(CTEXT("Beta"), 
             pattern_format_percentage(s->beta * 100.0),
             pattern_format_percentage(s->dma_200 / s->dma_50 * 100.0), true);
@@ -1981,6 +2047,8 @@ FOUNDATION_STATIC bool pattern_handle_shortcuts(pattern_t* pattern)
 FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_flags_t render_flags = PatternRenderFlags::None)
 {
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
+
+    pattern_compute_years_performance_ratios(pattern);
 
     ImGuiTableFlags flags =
         ImGuiTableFlags_Resizable |

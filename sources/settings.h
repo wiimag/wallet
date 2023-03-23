@@ -11,7 +11,6 @@ struct settings_t
 {
     // UI settings
     int current_tab{ 0 };
-    float font_scaling{ 1.0f };
 
     // Preferences
     bool show_symbols_TO{ false };
