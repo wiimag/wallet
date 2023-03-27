@@ -27,6 +27,8 @@
 #include <GLFW/glfw3native.h>
 #endif
 
+#include <foundation/exception.h>
+
 #ifndef ENABLE_DIALOG_NO_WINDOW_DECORATION
     #define ENABLE_DIALOG_NO_WINDOW_DECORATION 0
 #endif
@@ -930,7 +932,16 @@ FOUNDATION_STATIC void window_update()
             continue;
 
         window_prepare(win);
-        window_render(win);
+
+        exception_try([](void* args)
+        {
+            window_t* win = (window_t*)args;
+            window_render(win);
+            return 0;
+        }, win, [](const char* file, size_t length)
+        {
+            log_errorf(HASH_WINDOW, ERROR_EXCEPTION, "Exception in window render: %.*s", (int)length, file);
+        }, STRING_CONST("window_dump"));
         
         // Check if the window should be closed
         GLFWwindow* glfw_window = win->glfw_window;
@@ -1023,11 +1034,11 @@ FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t win
     FOUNDATION_ASSERT(window_title);
 
     const bool user_requested_maximized = test(flags, WindowFlags::Maximized);
-
     const bool has_position = config_exists(config, STRING_CONST("x"));
-    const int window_x = math_trunc(config["x"].as_number(INT_MAX));
-    const int window_y = math_trunc(config["y"].as_number(INT_MAX));
     const bool window_maximized = config["maximized"].as_boolean(user_requested_maximized);
+
+    int window_x = math_trunc(config["x"].as_number(INT_MAX));
+    int window_y = math_trunc(config["y"].as_number(INT_MAX));
 
     GLFWmonitor* monitor = glfw_find_window_monitor(window_x, window_y);
     if (monitor == glfwGetPrimaryMonitor())
@@ -1053,8 +1064,16 @@ FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t win
         }
     }
 
-    const int window_width = math_trunc(config["width"].as_number(initial_width));
-    const int window_height = math_trunc(config["height"].as_number(initial_height));
+    int window_width = math_trunc(config["width"].as_number(initial_width));
+    int window_height = math_trunc(config["height"].as_number(initial_height));
+
+    if (window_height <= 0 || window_width <= 0)
+    {
+        window_x = INT_MAX;
+        window_y = INT_MAX;
+        window_width = initial_width;
+        window_height = initial_height;
+    }
     
     char window_title_null_terminated_buffer[512];
     string_copy(STRING_BUFFER(window_title_null_terminated_buffer), window_title, window_title_length);

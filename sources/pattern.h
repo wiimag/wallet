@@ -107,6 +107,13 @@ struct pattern_t
     job_t* lcf_job{ nullptr };
     pattern_lcf_t* lcf{ nullptr };
     pattern_lcf_symbol_t* lcf_symbols{ nullptr };
+
+    // Y./Y. data
+    struct yy_t
+    {
+        time_t beg, end;
+        double change_p;
+    } *yy{ nullptr };
 };
 
 pattern_handle_t pattern_find(const char* symbol, size_t symbol_length);

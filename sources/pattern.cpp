@@ -56,6 +56,7 @@ enum PatternType : int {
     PATTERN_GRAPH_ANALYSIS,
     PATTERN_GRAPH_FLEX,
     PATTERN_GRAPH_TRENDS,
+    PATTERN_GRAPH_YOY,
     PATTERN_GRAPH_END,
 
     PATTERN_SIMULATION_BEGIN,
@@ -71,6 +72,7 @@ constexpr const char* GRAPH_TYPES[PATTERN_ALL_END] = {
     "Analysis",
     "Flex",
     "Trends",
+    "Y/Y",
     nullptr,
     nullptr,
     "LCF",
@@ -188,6 +190,13 @@ FOUNDATION_STATIC int pattern_format_date_label(double value, char* buff, int si
     time_t then = graph.pattern->date - (time_t)value * time_one_day();
     string_const_t date_str = string_from_date(then);
     return (int)string_format(buff, size, STRING_CONST("%.*s (%d)"), STRING_FORMAT(date_str), math_round(value)).length;
+}
+
+FOUNDATION_STATIC int pattern_format_year_label(double value, char* buff, int size, void* user_data)
+{
+    time_t time = (time_t)math_trunc(value);
+    string_const_t date_str = string_from_date(time);
+    return (int)string_format(buff, size, STRING_CONST("%.*s"), min((int)date_str.length, 4), date_str.str).length;
 }
 
 FOUNDATION_STATIC int pattern_formatx_label(double value, char* buff, int size, void* user_data)
@@ -577,16 +586,17 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
 
         string_const_t fmttr = RTEXT("Yield %s");
         string_const_t yield_label = string_format_static(STRING_ARGS(fmttr), 
-            pattern->yy_ratio.fetch() > performance_ratio ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
+            pattern->yy_ratio.fetch() >= performance_ratio ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
         ImGui::PushStyleColor(ImGuiCol_Text, performance_ratio <= 0 || performance_ratio_combined < SETTINGS.good_dividends_ratio * 100.0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
         pattern_render_stats_line(yield_label,
             pattern_format_percentage(yielding),
             pattern_format_percentage(performance_ratio), true);
+        ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip(tr(" Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) "), performance_ratio, pattern->years.fetch());
+            ImGui::SetTooltip(tr(" Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) "), 
+                pattern->performance_ratio.fetch(), pattern->years.fetch());
         }
-        ImGui::PopStyleColor();
 
         pattern_render_stats_line(CTEXT("Beta"), 
             pattern_format_percentage(s->beta * 100.0),
@@ -1396,6 +1406,46 @@ FOUNDATION_STATIC void pattern_render_lcf(pattern_t* pattern, pattern_graph_data
     }
 }
 
+FOUNDATION_STATIC void pattern_render_graph_yoy(pattern_t* pattern, pattern_graph_data_t& graph)
+{
+    const unsigned yy_count = array_size(pattern->yy);
+    if (yy_count <= 1)
+    {
+        ImGui::TextUnformatted("No data");
+        return;
+    }
+
+    const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
+    if (!ImPlot::BeginPlot("Pattern YOY##1", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
+        return;
+
+    ImPlot::SetupLegend(ImPlotLocation_NorthWest);
+
+    const double time_beg = (double)array_first(pattern->yy)->beg;
+    const double time_end = (double)array_last(pattern->yy)->end;
+
+    ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_LockMax | ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
+    ImPlot::SetupAxisLimits(ImAxis_X1, time_beg, time_end, ImPlotCond_Once);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, time_beg, time_end);
+    ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_year_label, &graph);
+    
+    ImPlot::SetupAxis(ImAxis_Y1, "##Percentage", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, "%.3g %%");
+
+    ImPlot::PlotBarsG("##Slopes", [](int idx, void* user_data)->ImPlotPoint
+    {
+        const pattern_t::yy_t* data = (const pattern_t::yy_t*)user_data;
+        const pattern_t::yy_t* c = data + idx;
+        
+        const double x = (c->end + c->beg) / 2.0;
+        const double y = c->change_p;
+
+        return ImPlotPoint(x, y);
+    }, &pattern->yy[0], (int)yy_count, time_one_day() * 180.0, ImPlotBarsFlags_None);
+
+    ImPlot::EndPlot();
+}
+
 FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     const stock_t* s = pattern->stock;
@@ -1509,6 +1559,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
 FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_graph_data_t& graph)
 {
+    // FIXME: stock would need to be locked here...
     const stock_t* s = pattern->stock;
     if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::EOD))
         return;
@@ -1705,8 +1756,9 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('2')) pattern->type = PATTERN_GRAPH_ANALYSIS;
     if (shortcut_executed('3') || shortcut_executed('F')) pattern->type = PATTERN_GRAPH_FLEX;
     if (shortcut_executed('4') || shortcut_executed('T')) pattern->type = PATTERN_GRAPH_TRENDS;
-    if (shortcut_executed('5')) pattern->type = PATTERN_LONG_COORDINATED_FLEX;
-    if (shortcut_executed('6') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
+    if (shortcut_executed('5') || shortcut_executed('Y')) pattern->type = PATTERN_GRAPH_YOY;
+    if (shortcut_executed('6')) pattern->type = PATTERN_LONG_COORDINATED_FLEX;
+    if (shortcut_executed('7') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
 
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.10f);
     if (ImGui::BeginCombo("##Type", GRAPH_TYPES[pattern->type], ImGuiComboFlags_None))
@@ -1757,13 +1809,16 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
         if (ImGui::Checkbox(tr("Limits"), &pattern->show_limits))
             graph.refresh = true;
 
-        ImGui::SameLine();
-        if (ImGui::Checkbox(tr("Extra Charts"), &pattern->extra_charts))
-            graph.refresh = true;
+        if (pattern->type != PATTERN_GRAPH_YOY)
+        {
+            ImGui::SameLine();
+            if (ImGui::Checkbox(tr("Extra Charts"), &pattern->extra_charts))
+                graph.refresh = true;
 
-        ImGui::SameLine();
-        if (ImGui::Checkbox(tr("Invert Time"), &pattern->x_axis_inverted))
-            graph.refresh = true;
+            ImGui::SameLine();
+            if (ImGui::Checkbox(tr("Invert Time"), &pattern->x_axis_inverted))
+                graph.refresh = true;
+        }
     }
     else if (pattern->type == PATTERN_LONG_COORDINATED_FLEX)
     {
@@ -2015,6 +2070,10 @@ FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
             pattern_render_graph_trends(pattern, graph_data);
             break;
 
+        case PATTERN_GRAPH_YOY:
+            pattern_render_graph_yoy(pattern, graph_data);
+            break;
+
         case PATTERN_LONG_COORDINATED_FLEX:
             pattern_render_lcf(pattern, graph_data);
             break;
@@ -2044,13 +2103,50 @@ FOUNDATION_STATIC bool pattern_handle_shortcuts(pattern_t* pattern)
     return false;
 }
 
+FOUNDATION_STATIC bool pattern_update_year_after_year_results(pattern_t* pattern)
+{
+    if (pattern->yy != nullptr)
+        return true;
+
+    // Get year after year yield
+    const stock_t* s = pattern->stock;
+    if (s == nullptr || !s->has_resolve(FetchLevel::FUNDAMENTALS | FetchLevel::EOD))
+        return false;
+
+    if (array_size(s->history) <= 1)
+    {
+        string_const_t code = string_table_decode_const(pattern->code);
+        log_debugf(HASH_PATTERN, STRING_CONST("Pattern %.*s has no history"), STRING_FORMAT(code));
+
+        array_reserve(pattern->yy, 1);
+        return false;
+    }
+
+    day_result_t* oldest = array_last(s->history);
+    day_result_t* recent = array_first(s->history);
+    
+    for (unsigned start = 250, end = array_size(s->history); start < end; start += 260)
+    {
+        oldest = s->history + start;
+        const double change_p = (recent->adjusted_close - oldest->adjusted_close) / oldest->adjusted_close * 100.0;
+
+        pattern_t::yy_t yc = { oldest->date, recent->date, change_p };
+        array_insert(pattern->yy, 0, yc);
+        recent = oldest;
+    }
+
+    return true;
+}
+
+FOUNDATION_STATIC void pattern_update(pattern_t* pattern)
+{
+    pattern_update_year_after_year_results(pattern);
+    pattern_compute_years_performance_ratios(pattern);
+}
+
 FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_flags_t render_flags = PatternRenderFlags::None)
 {
-    pattern_t* pattern = (pattern_t*)pattern_get(handle);
-
-    pattern_compute_years_performance_ratios(pattern);
-
-    ImGuiTableFlags flags =
+    const ImGuiTableFlags flags =
         ImGuiTableFlags_Resizable |
         ImGuiTableFlags_Hideable |
         ImGuiTableFlags_Reorderable |
@@ -2058,14 +2154,17 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
         ImGuiTableFlags_SizingStretchProp | 
         ImGuiTableFlags_PadOuterX;
 
-    char pattern_id[64];
+    pattern_t* pattern = (pattern_t*)pattern_get(handle);
     string_const_t code = string_table_decode_const(pattern->code);
     if (!pattern->stock->is_resolving(FETCH_ALL))
         stock_update(STRING_ARGS(code), pattern->stock, FETCH_ALL, 8.0);
 
+    char pattern_id[64];
     string_format(STRING_BUFFER(pattern_id), STRING_CONST("Pattern###%.*s"), STRING_FORMAT(code));
     if (!ImGui::BeginTable(pattern_id, 3, flags))
         return;
+
+    pattern_update(pattern);
         
     string_const_t code_str = string_table_decode_const(pattern->code);
     ImGui::TableSetupColumn(code_str.str, ImGuiTableColumnFlags_WidthFixed, 500.0f, 0U, table_cell_right_aligned_column_label, nullptr);
@@ -2406,6 +2505,31 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
         pattern_open(symbol, symbol_length);
     }
 
+    if (ImGui::MenuItem("Open Web Site " ICON_MD_OPEN_IN_NEW))
+    {
+        stock_handle_t stock_handle = stock_request(symbol, symbol_length, FetchLevel::FUNDAMENTALS);
+        if (stock_handle)
+        {
+            const stock_t* s = stock_handle.resolve();
+            while (s && !s->has_resolve(FetchLevel::FUNDAMENTALS))
+                dispatcher_wait_for_wakeup_main_thread();
+            if (s)
+            {
+                const char* url = SYMBOL_CSTR(s->url);
+                if (url)
+                {
+                    open_in_shell(url);
+                    return true;
+                }
+                else
+                {
+                    log_warnf(HASH_PATTERN, WARNING_INVALID_VALUE, STRING_CONST("No URL for stock %.*s"), (int)symbol_length, symbol);
+                }
+            }
+        }
+        
+    }
+
     return load_pattern_tab;
 }
 
@@ -2435,6 +2559,22 @@ FOUNDATION_STATIC void pattern_initialize()
     service_register_tabs(HASH_PATTERN, pattern_render_tabs);
 }
 
+FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
+{
+    job_deallocate(pattern->lcf_job);
+
+    foreach(lcfs, pattern->lcf_symbols)
+        array_deallocate(lcfs->sequence);
+    array_deallocate(pattern->lcf_symbols);
+
+    foreach(e, pattern->lcf)
+        array_deallocate(e->symbols);
+    array_deallocate(pattern->lcf);
+
+    array_deallocate(pattern->flex);
+    array_deallocate(pattern->yy);
+}
+
 FOUNDATION_STATIC void pattern_shutdown()
 {
     array_deallocate(_activities);
@@ -2454,21 +2594,15 @@ FOUNDATION_STATIC void pattern_shutdown()
                 pattern_save(pattern_data, pattern);
             }
 
-            job_deallocate(pattern.lcf_job);
-
-            foreach(lcfs, pattern.lcf_symbols)
-                array_deallocate(lcfs->sequence);
-            array_deallocate(pattern.lcf_symbols);
-
-            foreach (e, pattern.lcf)
-                array_deallocate(e->symbols);
-            array_deallocate(pattern.lcf);
-            array_deallocate(pattern.flex);
+            pattern_deallocate(&pattern);
         }
 
         return true;
-    }, CONFIG_VALUE_ARRAY, CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_PRESERVE_INSERTION_ORDER | 
-        CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
+    }, CONFIG_VALUE_ARRAY, 
+        CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | 
+        CONFIG_OPTION_PRESERVE_INSERTION_ORDER | 
+        CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES | 
+        CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
 
     array_deallocate(_patterns);
     _patterns = nullptr;

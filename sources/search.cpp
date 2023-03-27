@@ -776,7 +776,10 @@ FOUNDATION_STATIC void search_save_query(const char* search_text, size_t search_
     else
     {
         if (array_size(_search->saved_queries) > 20)
+        {
+            string_deallocate(_search->saved_queries[0].str);
             array_erase(_search->saved_queries, 0);
+        }
 
         array_push(_search->saved_queries, string_clone(search_text, search_text_length));
     }
@@ -1500,7 +1503,10 @@ FOUNDATION_STATIC string_t* search_load_queries(const char* filename, size_t fil
     {
         string_t query = stream_read_line(queries_stream, '\n');
         if (string_is_null(query))
+        {
+            string_deallocate(query.str);
             continue;
+        }
 
         array_push(queries, query);
     }

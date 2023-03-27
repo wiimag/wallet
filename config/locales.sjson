@@ -1261,154 +1261,49 @@ Demande: %lg/%lg"
 			fr = "Montant minimal (%.2lf) pour vendre des titres si vous voulez augmenter votre gain consid\xc3\xa9rablement."
 		}
 		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
 			hash = "413e11792044c145"
 			en = "Summary"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
+			fr = "R\xc3\xa9sum\xc3\xa9"
 		}
 		{
 			hash = "fdcf0213a67735cb"
 			en = "\xee\x85\x85 Add title"
-			fr = "@TODO"
+			fr = "\xee\x85\x85 Ajouter un titre"
 		}
 		{
 			hash = "531561efda6eddf2"
 			en = "Add Title (%.*s)##5"
-			fr = "@TODO"
+			fr = "Ajouter un Titre (%.*s)##5"
 		}
 		{
 			hash = "ba6ea28da819b481"
 			en = "Add"
-			fr = "@TODO"
+			fr = "Ajouter"
 		}
 		{
 			hash = "ec80b0453912a57"
 			en = "Select symbol"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "e957ee4367144e43"
-			en = "Y./Y. %.2lf %%"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "9d7015a3ba968731"
-			en = "Y./Y. %.2lf %% (%.0lf years)"
-			fr = "@TODO"
+			fr = "S\xc3\xa9lectionner le symbole"
 		}
 		{
 			hash = "ecce5bbfb8f07c0a"
 			en = " Total Dividends %.2lf $ "
-			fr = "@TODO"
-		}
-		{
-			hash = "c24a9b29c17fab15"
-			en = " Y./Y. %.2lf %% (%.0lf years) "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "4407e9c560049000"
-			en = " Year after Year yielding (%.0lf years)"
-			fr = "@TODO"
-		}
-		{
-			hash = "7bcb01a1b4804172"
-			en = " Year after Year yielding (%.0lf years) "
-			fr = "@TODO"
-		}
-		{
-			hash = "783d7c267ac41e8a"
-			en = " Year after Year yielding %.lg %% (%.0lf years) "
-			fr = "@TODO"
-		}
-		{
-			hash = "b011a1f6bf736194"
-			en = " Year after Year yielding %.3g %% (%.0lf years) "
-			fr = "@TODO"
-		}
-		{
-			hash = "e241f397d23aba25"
-			en = " Year after Year yielding (Overall ratio %.3g %%) (%.0lf years) "
-			fr = "@TODO"
+			fr = " Total des Dividendes %.2lf $ "
 		}
 		{
 			hash = "477c0f76ba1f2233"
 			en = "Yield %s"
-			fr = "@TODO"
+			fr = "Rendement %s"
 		}
 		{
 			hash = "bfeda6e623516d9f"
 			en = "Yield \xee\xa3\xa5"
-			fr = "@TODO"
+			fr = "Rendement \xee\xa3\xa5"
 		}
 		{
 			hash = "95fa1dfa8355f211"
 			en = "Yield \xee\xa3\xa3"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "372b185b5f8cfd5e"
-			en = " Year after Year yielding (Overall ratio %.3g %%) (~%.0lf years) "
-			fr = "@TODO"
+			fr = "Rendement \xee\xa3\xa3"
 		}
 		{
 			hash = "459e7854c9bcb1ec"
@@ -1418,26 +1313,168 @@ Demande: %lg/%lg"
 		{
 			hash = "cf08357a97ebfb2d"
 			en = "Float Window"
-			fr = "@TODO"
+			fr = "Rendre flottante"
 		}
 		{
 			hash = "437bd88bee778259"
 			en = "Disconnected"
-			fr = "@TODO"
+			fr = "D\xc3\xa9connect\xc3\xa9"
 		}
 		{
 			hash = "2cb44803b44c281a"
 			en = "EOD API Key is required to use this application."
-			fr = "@TODO"
+			fr = "La cl\xc3\xa9 API EOD est requise pour utiliser cette application."
 		}
 		{
 			hash = "a6731e33a076e379"
 			en = "You can get a free API key by registering at the link above. Please enter your API key below and press Continue"
-			fr = "@TODO"
+			fr = "Vous pouvez obtenir une cl\xc3\xa9 API gratuite en vous inscrivant au lien ci-dessus. Veuillez saisir votre cl\xc3\xa9 API ci-dessous et appuyer sur Continuer"
 		}
 		{
 			hash = "4e0692c8104efb9f"
 			en = "Continue"
+			fr = "Continuer"
+		}
+		{
+			hash = "6d6904a5238c971d"
+			en = "Type"
+			fr = "Type"
+		}
+		{
+			hash = "eedf78d12e7ed029"
+			en = "Ex.||Exchange"
+			fr = "Ex.||Bourse"
+		}
+		{
+			hash = "eaf3a10f1d6df167"
+			en = "\xee\xa5\x8f Cap.||Moving Capitalization"
+			fr = "\xee\xa5\x8f Cap.||Capitalisation Mobile"
+		}
+		{
+			hash = "48e72dd7046738de"
+			en = "  Cap.||Capitalization"
+			fr = "  Cap.||Capitalisation"
+		}
+		{
+			hash = "d9d3f9f5dc14ff6c"
+			en = "Lost Cap.||Lost Capitalization"
+			fr = "Cap. Perdue||Capitalisation Perdue"
+		}
+		{
+			hash = "641bae999381c4fa"
+			en = "  Beta||Beta"
+			fr = "  Beta||Beta"
+		}
+		{
+			hash = "77c5eed9696d89a2"
+			en = "    Open||Open"
+			fr = "Ouverture||Ouverture"
+		}
+		{
+			hash = "a40557be511ebcfe"
+			en = "   Close||Close"
+			fr = "Fermeture||Fermeture"
+		}
+		{
+			hash = "3c8efbadb3628190"
+			en = "     Low||Low"
+			fr = "     Bas||Bas"
+		}
+		{
+			hash = "85143d9fd29eaf2f"
+			en = "    High||High"
+			fr = "    Haut||Haut"
+		}
+		{
+			hash = "19133ed855b0bdd2"
+			en = "    %||Day Change"
+			fr = "    %||Variation"
+		}
+		{
+			hash = "1b21b87668662d50"
+			en = "EMA %||Exponential Moving Averages Gain"
+			fr = "EMA %||Gain Moyen Mobile Exponentiel"
+		}
+		{
+			hash = "87f5b3edcb7ec9a8"
+			en = "EMA 50d||Exponential Moving Averages (50 days)"
+			fr = "EMA 50j||Moyenne Mobile Exponentielle (50 jours)"
+		}
+		{
+			hash = "e90b8adaa3fb5fdb"
+			en = "EMA 200d||Exponential Moving Averages (200 days)"
+			fr = "EMA 200j||Moyenne Mobile Exponentielle (200 jours)"
+		}
+		{
+			hash = "8972880488dbb121"
+			en = " L. 250d||Low 250 days"
+			fr = " B. 250j||Bas 250 jours"
+		}
+		{
+			hash = "e61711275abe5c7b"
+			en = " H. 250d||High 250 days"
+			fr = " H. 250j||Haut 250 jours"
+		}
+		{
+			hash = "8035b0038ab58f57"
+			en = "V. 14d||Average Volume 14 days"
+			fr = "V. 14j||Volume Moyen 14 jours"
+		}
+		{
+			hash = "c8818d4f612eed65"
+			en = "V. 50d||Average Volume 50 days"
+			fr = "V. 50j||Volume Moyen 50 jours"
+		}
+		{
+			hash = "b3efc2c3a48f2e6c"
+			en = "V. 200d||Average Volume 200 days"
+			fr = "V. 200j||Volume Moyen 200 jours"
+		}
+		{
+			hash = "307756bfc093d7fd"
+			en = "No capitalization"
+			fr = "Aucune capitalisation"
+		}
+		{
+			hash = "b3b839ec8afbfef0"
+			en = "No Volume"
+			fr = "Aucun Volume"
+		}
+		{
+			hash = "664162ce674b3d7a"
+			en = "No Beta"
+			fr = "Aucun Beta"
+		}
+		{
+			hash = "37d6fef203e61953"
+			en = "       %d symbols"
+			fr = "      %d symboles"
+		}
+		{
+			hash = "86e461e5f603e100"
+			en = "Average capitalization movement since 14 days
+%.*s"
+			fr = "Mouvement moyen de la capitalisation depuis 14 jours
+%.*s"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "   Jour \xee\x88\xa7||\xee\x88\xa7 Gain Jour. "
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
 			fr = "@TODO"
 		}
 	]
