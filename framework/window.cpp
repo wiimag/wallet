@@ -842,6 +842,8 @@ FOUNDATION_STATIC void window_render(window_t* win)
     window_bgfx_new_frame(win);
     window_imgui_new_frame(win);
 
+    imgui_set_current_window_scale(glfw_get_window_scale(win->glfw_window));
+
     ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
     ImGui::SetNextWindowSize(ImVec2((float)win->frame_width , (float)win->frame_height), ImGuiCond_Always);
 

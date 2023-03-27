@@ -435,9 +435,13 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     string_const_t category = General["Category"].as_string();
     string_const_t home_category = General["HomeCategory"].as_string();
         
+    bool new_document_added = false;
     search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
     if (doc == SEARCH_DOCUMENT_INVALID_ID)
+    {
+        new_document_added = true;
         doc = search_database_add_document(db, STRING_ARGS(symbol));
+    }
 
     TIME_TRACKER(2.0, HASH_SEARCH, "[%u] Indexing [%12.*s] %-7.*s -> %.*s -> %.*s",
         doc, STRING_FORMAT(isin), STRING_FORMAT(symbol), STRING_FORMAT(type), STRING_FORMAT(name));
@@ -574,14 +578,17 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     }
 
     // Index EOD stock data
-    time_t start = 0;
-    if (stock_get_time_range(STRING_ARGS(symbol), &start, nullptr, 5.0))
+    if (new_document_added)
     {
-        search_database_index_property(db, doc, STRING_CONST("since"), (double)start);
-    }
-    else
-    {
-        log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch time range for symbol %*.s"), STRING_FORMAT(symbol));
+        time_t start = 0;
+        if (stock_get_time_range(STRING_ARGS(symbol), &start, nullptr, 5.0))
+        {
+            search_database_index_property(db, doc, STRING_CONST("since"), (double)start);
+        }
+        else
+        {
+            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch time range for symbol %*.s"), STRING_FORMAT(symbol));
+        }
     }
 
     search_database_document_update_timestamp(db, doc);

@@ -345,7 +345,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
 
         ImGui::NewLine();
         string_t eod_key = eod_get_key();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length,
             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_Password))
         {

@@ -6,6 +6,8 @@
 #include "version.h"
 #include "settings.h"
 
+#include "alerts.h"
+
 #include <framework/app.h>
 #include <framework/glfw.h>
 #include <framework/imgui.h>
@@ -62,6 +64,8 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
             ImGui::EndMenu();
             
         app_menu_help(window);
+
+        alerts_main_menu_status();
 
         // Update special application menu status.
         // Usually controls are displayed at the far right of the menu.

@@ -66,7 +66,7 @@ void settings_draw()
         ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com"));
 
         ImGui::NextColumn();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length, ImGuiInputTextFlags_Password))
             eod_save_key(eod_key);
         ImGui::NextColumn();
@@ -78,7 +78,7 @@ void settings_draw()
         ImGui::TextURL("Currency", nullptr, STRING_CONST("https://eodhistoricaldata.com/financial-apis/list-supported-forex-currencies/"));
 
         ImGui::NextColumn();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         if (ImGui::InputTextWithHint("##Currency", tr("i.e. USD"), STRING_BUFFER(SETTINGS.preferred_currency), ImGuiInputTextFlags_AutoSelectAll))
         {
         }
@@ -99,7 +99,7 @@ void settings_draw()
 
         ImGui::NextColumn();
         double good_dividends_ratio_100 = SETTINGS.good_dividends_ratio * 100;
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         if (ImGui::InputDouble("##DividendsRatio", &good_dividends_ratio_100, 1.0, 0, "%.3g %%", ImGuiInputTextFlags_AutoSelectAll))
         {
             SETTINGS.good_dividends_ratio = good_dividends_ratio_100 / 100.0;
@@ -147,7 +147,7 @@ void settings_draw()
         ImGui::TextUnformatted(tr("Font scaling"));
 
         ImGui::NextColumn();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         float font_scaling = session_get_float("font_scaling", 1.0f);
         if (ImGui::InputFloat("##FontScaling", &font_scaling, 0.25, 0, "%.2lf", ImGuiInputTextFlags_AutoSelectAll))
         {
@@ -170,7 +170,7 @@ void settings_draw()
 
         ImGui::NextColumn();
         int frame_throttling = session_get_integer("frame_throttling", 16);
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         if (ImGui::SliderInt("##frame_throttling", &frame_throttling, 0, 1000, tr("%d milliseconds"), ImGuiSliderFlags_AlwaysClamp))
             session_set_integer("frame_throttling", frame_throttling);
 

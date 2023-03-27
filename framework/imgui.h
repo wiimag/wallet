@@ -223,6 +223,14 @@ float imgui_get_font_ui_scale(float value = 1.0f);
  */
 void imgui_set_font_ui_scale(float scale);
 
+/*! Define the current window font scale.
+ * 
+ *  @param scale The scale factor.
+ * 
+ *  @return Returns the previous scale.
+ */
+float imgui_set_current_window_scale(float scale);
+
 /*! Returns the rect of the available space for the UI.
  *
  *  @return The rect of the available space for the UI.
@@ -467,5 +475,32 @@ namespace ImGui
         #else
         return MenuItem(label, shortcut, p_selected, enabled);
         #endif
+    }
+
+    /*! Set the next item width to the remaining space in the current line. 
+     * 
+     *  @return The remaining space left and used to set the next item width.
+     */
+    FOUNDATION_FORCEINLINE float ExpandNextItem()
+    {
+        const float space_left = ImGui::GetContentRegionAvail().x;
+        ImGui::SetNextItemWidth(space_left);
+        return space_left;
+    }
+
+    /*! Expand the next item width but keeping a right offset. 
+     * 
+     *  @param right_offset The right offset to keep.
+     *  @param add_spacing  If true, we add the item spacing to the right offset.
+     * 
+     *  @return The remaining space left and used to set the next item width.
+     */
+    FOUNDATION_FORCEINLINE float ExpandNextItem(float right_offset, bool add_spacing = true)
+    {
+        float space_used = ImGui::GetContentRegionAvail().x - right_offset;
+        if (add_spacing)
+            space_used -= ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SetNextItemWidth(space_used);
+        return space_used;
     }
 }

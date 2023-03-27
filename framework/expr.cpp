@@ -8,23 +8,15 @@
 #include "expr.h"
 
 #include <framework/imgui.h>
-#include <framework/common.h>
-#include <framework/session.h>
 #include <framework/service.h>
 #include <framework/profiler.h>
-#include <framework/config.h>
 #include <framework/dispatcher.h>
-#include <framework/string.h>
-#include <framework/array.h>
 
-#include <foundation/time.h>
 #include <foundation/random.h>
-#include <foundation/process.h>
 #include <foundation/system.h>
-
+ 
+#include <numeric> /* for std::accumulate */
 #include <ctype.h> /* for isdigit, isspace */
-
-#include <numeric>
 
 thread_local char EXPR_ERROR_MSG[256];
 thread_local expr_error_code_t EXPR_ERROR_CODE;
@@ -34,8 +26,6 @@ static thread_local expr_var_list_t _global_vars = { 0 };
 static thread_local const expr_result_t** _expr_lists = nullptr;
 static expr_func_t* _expr_user_funcs = nullptr;
 static string_t* _expr_user_funcs_names = nullptr;
-
-static expr_evaluator_t* _evaluators = nullptr;
 
 static struct {
     const expr_string_t token;
@@ -1060,45 +1050,6 @@ FOUNDATION_STATIC string_const_t expr_result_to_string(const expr_result_t& resu
     return result.as_string(fmt);
 }
 
-FOUNDATION_STATIC int expr_eval_format_date_range_label(double value, char* buff, int size, void* user_data)
-{
-    expr_evaluator_t* ev = (expr_evaluator_t*)user_data;
-    if (math_real_is_nan(value))
-        return 0;
-
-    const double diff = (double)ev->last_run_time - (time_t)value;
-    value = diff / time_one_day();
-
-    if (value >= 365)
-    {
-        value = math_round(value / 365);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfY"), value).length;
-    }
-    else if (value >= 30)
-    {
-        value = math_round(value / 30);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfM"), value).length;
-    }
-    else if (value >= 7)
-    {
-        value = math_round(value / 7);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfW"), value).length;
-    }
-    else if (value >= 1)
-    {
-        value = math_round(value);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfD"), value).length;
-    }
-    else if (value >= 0.042)
-    {
-        value = math_round(value * 24);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfH"), value).length;
-    }
-
-    value = math_round(value * 24 * 60);
-    return (int)string_format(buff, size, STRING_CONST("%.3g mins."), value).length;
-}
-
 const char* expr_error_cstr(int error_code)
 {
     switch (error_code)
@@ -1984,327 +1935,6 @@ expr_result_t eval(string_const_t expression)
     return result;
 }
 
-/**
- * Evaluation functions
- */
-
-FOUNDATION_STATIC string_const_t expr_evaluators_file_path()
-{
-    return session_get_user_file_path(STRING_CONST("evaluators.json"));
-}
-
-FOUNDATION_STATIC void eval_load_evaluators(config_handle_t evaluators_data)
-{
-    for (const auto cv : evaluators_data)
-    {
-        expr_evaluator_t e{};
-        string_copy(STRING_BUFFER(e.code), STRING_ARGS(cv["code"].as_string()));
-        string_copy(STRING_BUFFER(e.label), STRING_ARGS(cv["label"].as_string()));
-        string_copy(STRING_BUFFER(e.expression), STRING_ARGS(cv["expression"].as_string()));
-        string_copy(STRING_BUFFER(e.assertion), STRING_ARGS(cv["assertion"].as_string()));
-        e.frequency = cv["frequency"].as_number(60.0);
-
-        for (const auto rcv : cv["records"])
-        {
-            expr_record_t r{};
-            r.time = (time_t)rcv["time"].as_number();
-
-            // Only keep record 5 days old an discard the rest.
-            if (time_elapsed_days(r.time, time_now()) <= 5.0)
-            {
-                r.value = rcv["value"].as_number();
-                r.tag = string_table_encode(rcv["tag"].as_string());
-                r.assertion = rcv["assertion"].as_boolean();
-                array_push(e.records, r);
-            }
-        }
-
-        array_push(_evaluators, e);
-    }
-}
-
-FOUNDATION_STATIC void eval_save_evaluators()
-{
-    config_write_file(expr_evaluators_file_path(), [](config_handle_t evaluators_data)
-    {
-        for (size_t i = 0; i < array_size(_evaluators); ++i)
-        {
-            expr_evaluator_t& e = _evaluators[i];
-
-            config_handle_t ecv = config_array_push(evaluators_data, CONFIG_VALUE_OBJECT);
-            config_set(ecv, "code", e.code, string_length(e.code));
-            config_set(ecv, "label", e.label, string_length(e.label));
-            config_set(ecv, "expression", e.expression, string_length(e.expression));
-            config_set(ecv, "assertion", e.assertion, string_length(e.assertion));
-            config_set(ecv, "frequency", e.frequency);
-
-            config_handle_t records_data = config_set_array(ecv, STRING_CONST("records"));
-
-            for (size_t ri = 0; ri < array_size(e.records); ++ri)
-            {
-                const expr_record_t& r = e.records[ri];
-                auto rcv = config_array_push(records_data, CONFIG_VALUE_OBJECT);
-                config_set(rcv, "time", (double)r.time);
-                config_set(rcv, "value", r.value);
-                config_set(rcv, "tag", string_table_decode_const(r.tag));
-                config_set(rcv, "assertion", r.assertion);
-            }
-
-            array_deallocate(e.records);
-        }
-
-        return true;
-    }, CONFIG_VALUE_ARRAY, CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
-    	CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
-}
-
-FOUNDATION_STATIC void eval_run_evaluators()
-{
-    for (size_t i = 0; i < array_size(_evaluators); ++i)
-    {
-        expr_evaluator_t& e = _evaluators[i];
-
-        if ((time_now() - e.last_run_time) > e.frequency)
-        {
-            e.last_run_time = time_now();
-
-            const size_t expression_length = string_length(e.expression);
-            if (expression_length == 0)
-                continue;
-
-            string_const_t expression = string_const(e.expression, expression_length);
-            expr_result_t result = eval(expression);
-
-            FOUNDATION_ASSERT(result.type != EXPR_RESULT_ARRAY);
-            if (result.type == EXPR_RESULT_NULL)
-                continue;
-
-            expr_record_t new_record{ time_now() };
-            if (result.type == EXPR_RESULT_NUMBER)
-                new_record.value = result.as_number();
-            else if (result.type == EXPR_RESULT_SYMBOL)
-                new_record.tag = (string_table_symbol_t)result.value;
-            else if (result.type == EXPR_RESULT_TRUE)
-                new_record.assertion = true;
-            else if (result.type == EXPR_RESULT_FALSE)
-                new_record.assertion = false;
-
-            const size_t assertion_length = string_length(e.assertion);
-            if (assertion_length > 0)
-            {
-                string_const_t assertion = string_const(e.assertion, assertion_length);
-                string_const_t assertion_build = string_format_static(STRING_CONST("E = %.*s, %.*s"), STRING_FORMAT(expression), STRING_FORMAT(assertion));
-                expr_result_t assertion_result = eval(assertion_build);
-
-                if (assertion_result.type == EXPR_RESULT_TRUE)
-                    new_record.assertion = true;
-                else if (assertion_result.type == EXPR_RESULT_FALSE)
-                    new_record.assertion = false;
-
-                string_format(STRING_BUFFER(e.assembled), STRING_CONST("%.*s > %.*s"), STRING_FORMAT(result.as_string("%.6lf")), STRING_FORMAT(assertion_result.as_string()));
-            }
-
-            array_push(e.records, new_record);
-            e.last_run_time = time_now();
-        }
-    }
-}
-
-void expr_render_evaluators()
-{
-    static bool has_ever_show_evaluators = session_key_exists("show_evaluators");
-    static bool show_evaluators = session_get_bool("show_evaluators", false);
-
-    bool start_show_stock_console = show_evaluators;
-    if (shortcut_executed(ImGuiKey_F9))
-        show_evaluators = !show_evaluators;
-
-    eval_run_evaluators();
-
-    if (!show_evaluators)
-        return;
-
-    if (!has_ever_show_evaluators)
-        ImGui::SetNextWindowSize(ImVec2(1280, 720), ImGuiCond_Once);
-    if (ImGui::Begin("Evaluators##1", &show_evaluators))
-    {
-        if (ImGui::BeginTable("##Evaluators", 5,
-            ImGuiTableFlags_SizingFixedFit |
-            ImGuiTableFlags_Resizable))
-        {
-            ImGui::TableSetupColumn("Label");
-            ImGui::TableSetupColumn("Title");
-            ImGui::TableSetupColumn("Expression");
-            ImGui::TableSetupColumn("Assertion");
-            ImGui::TableSetupColumn("Monitor", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableHeadersRow();
-
-            // New row
-            ImGui::TableNextRow();
-            {
-                static expr_evaluator_t new_entry;
-                bool evaluate_expression = false;
-
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(new_entry.label), ImGuiInputTextFlags_EnterReturnsTrue))
-                        evaluate_expression = true;
-                }
-
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_BUFFER(new_entry.code), ImGuiInputTextFlags_EnterReturnsTrue))
-                        evaluate_expression = true;
-                }
-
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)", STRING_BUFFER(new_entry.expression), ImGuiInputTextFlags_EnterReturnsTrue))
-                        evaluate_expression = true;
-                }
-
-
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                    if (ImGui::InputTextWithHint("##Assertion", "E > 200.0", STRING_BUFFER(new_entry.assertion), ImGuiInputTextFlags_EnterReturnsTrue))
-                        evaluate_expression = true;
-                }
-
-                ImGui::TableNextColumn();
-
-                if (evaluate_expression)
-                {
-                    string_const_t expression = string_const(new_entry.expression, string_length(new_entry.expression));
-                    string_const_t assertion = string_const(new_entry.assertion, string_length(new_entry.assertion));
-                    string_const_t result = eval(expression).as_string("%.6lf");
-
-                    string_const_t assertion_build = string_format_static(STRING_CONST("E = %.*s, %.*s"), STRING_FORMAT(expression), STRING_FORMAT(assertion));
-                    string_const_t assertion_result = eval(assertion_build).as_string();
-
-                    string_format(STRING_BUFFER(new_entry.assembled), STRING_CONST("%.*s > %.*s"), STRING_FORMAT(result), STRING_FORMAT(assertion_result));
-                }
-
-                if (ImGui::SmallButton("Add"))
-                {
-                    array_push(_evaluators, new_entry);
-                    memset(&new_entry, 0, sizeof(expr_evaluator_t));
-                }
-                ImGui::SameLine();
-                ImGui::TextUnformatted(new_entry.assembled);
-            }
-
-            for (size_t i = 0; i < array_size(_evaluators); ++i)
-            {
-                expr_evaluator_t& ev = _evaluators[i];
-                ImGui::TableNextRow(ImGuiTableRowFlags_None, 200.0f);
-                {
-                    bool evaluate_expression = false;
-
-                    ImGui::PushID(&ev);
-
-                    if (ImGui::TableNextColumn())
-                    {
-                        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                        if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(ev.label), ImGuiInputTextFlags_EnterReturnsTrue))
-                            evaluate_expression = true;
-                        ImGui::TrText("%u Records", array_size(ev.records));
-                    }
-
-                    if (ImGui::TableNextColumn())
-                    {
-                        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                        if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_BUFFER(ev.code), ImGuiInputTextFlags_EnterReturnsTrue))
-                            evaluate_expression = true;
-
-                        ImGui::TextWrapped("%.*s", STRING_FORMAT(string_from_time_static(ev.last_run_time * 1000, true)));
-                    }
-
-                    if (ImGui::TableNextColumn())
-                    {
-                        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                        if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)", STRING_BUFFER(ev.expression), ImGuiInputTextFlags_EnterReturnsTrue))
-                            evaluate_expression = true;
-
-                        ImGui::AlignTextToFramePadding();
-                        ImGui::TextUnformatted(ICON_MD_UPDATE);
-                        ImGui::SameLine();
-                        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                        ImGui::InputDouble("##Frequency", &ev.frequency, 60.0, 0, "%.4g s.");
-                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                        {
-                            ImGui::TrTextUnformatted("Number of seconds to wait before re-evaluating these expressions.");
-                            ImGui::EndTooltip();
-                        }
-                    }
-
-                    if (ImGui::TableNextColumn())
-                    {
-                        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
-                        if (ImGui::InputTextWithHint("##Assertion", "E > 200.0", STRING_BUFFER(ev.assertion), ImGuiInputTextFlags_EnterReturnsTrue))
-                            evaluate_expression = true;
-
-                        ImGui::TextWrapped("%s", ev.assembled);
-
-                        if (ImGui::SmallButton(tr("Clear records")))
-                        {
-                            array_deallocate(ev.records);
-                            evaluate_expression = true;
-                        }
-
-                        ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
-                        if (ImGui::SmallButton("Delete"))
-                        {
-                            array_deallocate(ev.records);
-                            array_erase(_evaluators, i--);
-                        }
-                        ImGui::PopStyleColor();
-                    }
-
-                    if (evaluate_expression)
-                        ev.last_run_time = 0;
-
-                    ImGui::TableNextColumn();
-
-                    if (array_size(ev.records) > 2 && ImPlot::BeginPlot("##MonitorGraph"))
-                    {
-                        double max = (double)array_last(ev.records)->time;
-                        double min = (double)ev.records[0].time;
-                        ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
-                        ImPlot::SetupAxisFormat(ImAxis_X1, expr_eval_format_date_range_label, &ev);
-                        ImPlot::SetupAxisTicks(ImAxis_X1, min, max, 6);
-                        ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max + (max - min) * 0.05);
-
-                        ImPlot::PlotLineG("##Values", [](int idx, void* user_data)->ImPlotPoint
-                        {
-                            expr_evaluator_t* c = (expr_evaluator_t*)user_data;
-                            const expr_record_t* r = &c->records[idx];
-
-                            const double x = (double)r->time;
-                            const double y = r->value;
-                            return ImPlotPoint(x, y);
-                        }, & ev, array_size(ev.records), ImPlotLineFlags_SkipNaN);
-                        ImPlot::EndPlot();
-                    }
-
-                    ImGui::PopID();
-                }
-            }
-
-            ImGui::EndTable();
-        }
-    } ImGui::End();
-
-    if (start_show_stock_console != show_evaluators)
-    {
-        session_set_bool("show_evaluators", show_evaluators);
-        start_show_stock_console = show_evaluators;
-    }
-}
-
 void expr_register_function(const char* name, exprfn_t fn, exprfn_cleanup_t cleanup /*= nullptr*/, size_t context_size /*= 0*/)
 {
     FOUNDATION_ASSERT(fn);
@@ -2392,6 +2022,15 @@ bool expr_set_global_var(const char* name, double value)
     return true;
 }
 
+bool expr_set_global_var(const char* name, size_t name_length, const char* str, size_t str_length)
+{
+    expr_var_t* v = expr_get_or_create_global_var(name, name_length);
+    v->value.type = EXPR_RESULT_SYMBOL;
+    v->value.value = (double)string_table_encode(str, str_length);
+    v->value.index = str_length;
+    return true;
+}
+
 void expr_log_evaluation_result(string_const_t expression_string, const expr_result_t& result)
 {
     if (result.type == EXPR_RESULT_ARRAY && result.element_count() > 1 && result.list[0].type == EXPR_RESULT_POINTER)
@@ -2439,13 +2078,6 @@ void expr_log_evaluation_result(string_const_t expression_string, const expr_res
 
 FOUNDATION_STATIC void expr_initialize()
 {
-    const auto json_flags =
-        CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS |
-        CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
-        CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES |
-        CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS |
-        CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS;
-
     // Set functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("MIN"), expr_eval_math_min, NULL, 0 })); // MIN([-1, 0, 1])
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("MAX"), expr_eval_math_max, NULL, 0 })); // MAX([1, 2, 3]) + MAX(4, 5, 6) = 9
@@ -2465,6 +2097,7 @@ FOUNDATION_STATIC void expr_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("CEIL"), expr_eval_ceil, NULL, 0 }));
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("FLOOR"), expr_eval_floor, NULL, 0 }));
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RANDOM"), expr_eval_random, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RAND"), expr_eval_random, NULL, 0 }));
 
     // Vectors and matrices functions
     expr_register_vec_mat_functions(_expr_user_funcs);
@@ -2485,16 +2118,6 @@ FOUNDATION_STATIC void expr_initialize()
     expr_set_global_var("E", DBL_E);
     expr_set_global_var("LOGN2", DBL_LOGN2);
     expr_set_global_var("LOGN10", DBL_LOGN10);
-
-    string_const_t evaluators_file_path = expr_evaluators_file_path();
-    config_handle_t evaluators_data = config_parse_file(STRING_ARGS(evaluators_file_path), json_flags);
-    if (evaluators_data)
-    {
-        eval_load_evaluators(evaluators_data);
-        config_deallocate(evaluators_data);
-    }
-
-    service_register_window(HASH_EXPR, expr_render_evaluators);
 
     string_const_t eval_expression;
     if (environment_command_line_arg("eval", &eval_expression))
@@ -2539,9 +2162,6 @@ FOUNDATION_STATIC void expr_initialize()
 
 FOUNDATION_STATIC void expr_shutdown()
 {
-    eval_save_evaluators();
-    array_deallocate(_evaluators);
-
     for (size_t i = 0; i < array_size(_expr_lists); ++i)
         array_deallocate(_expr_lists[i]);
     array_deallocate(_expr_lists);

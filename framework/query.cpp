@@ -107,6 +107,8 @@ FOUNDATION_STATIC void query_curl_cleanup()
 
 FOUNDATION_STATIC CURL* query_create_curl_request()
 {
+    FOUNDATION_ASSERT(_initialized);
+
     CURL* req = curl_easy_init();
 
     if (req)
@@ -434,6 +436,9 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
 
 bool query_execute_json(const char* query, query_format_t format, string_t body, const query_callback_t& callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
+    if (_initialized == false)
+        return false;
+
     //TIME_TRACKER(500.0, "query_execute_json(%s)", query);
     MEMORY_TRACKER(HASH_QUERY);
 
@@ -550,11 +555,17 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
 
 bool query_execute_json(const char* query, query_format_t format, const query_callback_t& callback, uint64_t invalid_cache_query_after_seconds)
 {
+    if (_initialized == false)
+        return false;
+
     return query_execute_json(query, format, {}, callback, invalid_cache_query_after_seconds);
 }
 
 bool query_execute_async_json(const char* query, const config_handle_t& body, const query_callback_t& callback)
 {
+    if (_initialized == false)
+        return false;
+
     FOUNDATION_ASSERT(string_equal(query, 4, STRING_CONST("http")));
     const size_t query_length = string_length(query);
     log_debugf(HASH_QUERY, STRING_CONST("Queueing POST query [%zu] %.*s"), _fetcher_requests.size(), (int)query_length, query);
@@ -581,6 +592,9 @@ bool query_execute_async_json(const char* query, const config_handle_t& body, co
 
 bool query_execute_async_json(const char* query, query_format_t format, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
+    if (_initialized == false)
+        return false;
+
     FOUNDATION_ASSERT(string_equal(query, 4, STRING_CONST("http")));
     const size_t query_length = string_length(query);
     //log_debugf(HASH_QUERY, STRING_CONST("Queueing GET query [%zu] %.*s"), _fetcher_requests.size(), (int)query_length, query);
@@ -598,6 +612,9 @@ bool query_execute_async_json(const char* query, query_format_t format, const qu
 
 bool query_execute_async_send_file(const char* query, string_t file_path, const query_callback_t& callback)
 {
+    if (_initialized == false)
+        return false;
+
     FOUNDATION_ASSERT(string_equal(query, 4, STRING_CONST("http")));
     const size_t query_length = string_length(query);
     json_query_request_t request;
@@ -629,36 +646,30 @@ FOUNDATION_STATIC void* fetcher_thread_fn(void* arg)
     json_query_request_t req;
     while (!thread_try_wait(1))
     {
-        if (_fetcher_requests.try_pop(req, 16))
+        if (!_fetcher_requests.try_pop(req, 16))
+            continue;
+
+        if (req.format == FORMAT_IN_FILE_OUT_JSON)
         {
-            if (req.format == FORMAT_IN_FILE_OUT_JSON)
+            query_execute_send_file(req.query.str, req.format, req.body, req.callback);
+        }
+        else if (!query_execute_json(req.query.str, req.format, req.body, req.callback, req.invalid_cache_query_after_seconds))
+        {
+            if (req.format != FORMAT_JSON_WITH_ERROR)
             {
-                query_execute_send_file(req.query.str, req.format, req.body, req.callback);
+                log_errorf(HASH_QUERY, ERROR_NETWORK,
+                    STRING_CONST("Failed to execute query %.*s"), STRING_FORMAT(req.query));
             }
-            else if (!query_execute_json(req.query.str, req.format, req.body, req.callback, req.invalid_cache_query_after_seconds))
-            {
-                if (req.format != FORMAT_JSON_WITH_ERROR)
-                {
-                    log_errorf(HASH_QUERY, ERROR_NETWORK,
-                        STRING_CONST("Failed to execute query %.*s"), STRING_FORMAT(req.query));
-                }
-            }
+        }
 
-            string_deallocate(req.body.str);
-            string_deallocate(req.query.str);
-            dispatcher_wakeup_main_thread();
-            
-            signal_thread();
-            progress_set(min(_fetcher_requests.size(), ARRAY_COUNT(_fetcher_threads)), ARRAY_COUNT(_fetcher_threads));
-        }        
-    }
-
-    // Empty jobs before exiting thread (prevent memory leaks)
-    while (_fetcher_requests.try_pop(req))
-    {
         string_deallocate(req.body.str);
         string_deallocate(req.query.str);
+        dispatcher_wakeup_main_thread();
+            
+        signal_thread();
+        progress_set(min(_fetcher_requests.size(), ARRAY_COUNT(_fetcher_threads)), ARRAY_COUNT(_fetcher_threads));
     }
+
     return 0;
 }
 
@@ -778,6 +789,8 @@ void query_initialize()
 {
     if (_initialized)
         return;
+
+    log_infof(HASH_QUERY, STRING_CONST("Initializing query system"));
         
     #if BUILD_ENABLE_MEMORY_TRACKER
     curl_global_init_mem(CURL_GLOBAL_DEFAULT, curl_malloc_cb,
@@ -788,7 +801,7 @@ void query_initialize()
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
     if (res != CURLE_OK)
     {
-        log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("CULR init failed(%d) : %s"), res, curl_easy_strerror(res));
+        log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("CURL init failed(%d) : %s"), res, curl_easy_strerror(res));
         return;
     }
 
@@ -817,6 +830,8 @@ void query_shutdown()
     if (!_initialized)
         return;
 
+    _initialized = false;
+
     #if ENABLE_QUERY_MOCKING
         query_mock_shutdown();
     #endif
@@ -832,6 +847,15 @@ void query_shutdown()
         thread_join(_fetcher_threads[i]);
     }
 
+    // Empty jobs before exiting thread (prevent memory leaks)
+    json_query_request_t req;
+    while (_fetcher_requests.try_pop(req))
+    {
+        string_deallocate(req.body.str);
+        string_deallocate(req.query.str);
+    }
+
+    FOUNDATION_ASSERT(_fetcher_requests.empty());
     _fetcher_requests.destroy();
 
     for (int i = 0; i < thread_count; ++i)

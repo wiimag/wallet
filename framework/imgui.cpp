@@ -33,6 +33,7 @@
 
 static double _time = 0.0;
 static float _global_font_scaling = 0.0f;
+static float _current_window_scale = 1.0f;
 static GLFWcursor* _mouse_cursors[ImGuiMouseCursor_COUNT] = { nullptr };
 
 #if IMGUI_ENABLE_TEST_ENGINE
@@ -459,11 +460,8 @@ void imgui_centered_aligned_label(const char* label, bool same_line /*= false*/)
 float imgui_get_font_ui_scale(float value /*= 1.0f*/)
 {
     if (math_float_is_zero(_global_font_scaling))
-    {
-        float window_scale = glfw_current_window_scale();
-        _global_font_scaling = session_get_float("font_scaling", 1.0f) * window_scale;
-    }
-    return _global_font_scaling * value * ImGui::GetIO().FontGlobalScale;
+        _global_font_scaling = session_get_float("font_scaling", 1.0f);
+    return _global_font_scaling * value * ImGui::GetIO().FontGlobalScale * _current_window_scale;
 }
 
 void imgui_set_font_ui_scale(float scale)
@@ -472,6 +470,13 @@ void imgui_set_font_ui_scale(float scale)
     log_warnf(HASH_IMGUI, WARNING_UI, 
         STRING_CONST("Setting font scaling to %f. You need to restart the application to take effect."), scale);
     session_set_float("font_scaling", scale);
+}
+
+float imgui_set_current_window_scale(float scale)
+{
+    const float old_scale = _current_window_scale;
+    _current_window_scale = scale;
+    return old_scale;
 }
 
 ImRect imgui_get_available_rect()

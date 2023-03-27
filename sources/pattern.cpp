@@ -28,9 +28,6 @@
 
 #define HASH_PATTERN static_hash_string("pattern", 7, 0xf53f39240bdce58aULL)
 
-#define STATS_COLUMN_V1_WIDTH (130.0f)
-#define STATS_COLUMN_V2_WIDTH (120.0f)
-
 #define PATTERN_FLEX_RANGE_COUNT (90U)
 
 constexpr int MAX_LCF_DAY_COUNT = 180;
@@ -435,21 +432,21 @@ FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
 {
     ImGuiTableFlags flags =
         ImGuiTableFlags_NoSavedSettings |
+        //ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable |
         ImGuiTableFlags_NoClip |
         ImGuiTableFlags_NoHostExtendY |
-        ImGuiTableFlags_PreciseWidths |
         ImGuiTableFlags_NoBordersInBody |
         ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoPadInnerX;
 
-    if (!ImGui::BeginTable("Planning", 4, flags))
+    if (!ImGui::BeginTable("Planning##8", 4, flags))
         return 0;
 
     const stock_t* s = pattern->stock;
 
     ImGui::TableSetupColumn("Labels", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("Indices", ImGuiTableColumnFlags_WidthFixed, imgui_calc_text_width("MAX", ImGuiCalcTextFlags::Padding));
-    ImGui::TableSetupColumn("V1", ImGuiTableColumnFlags_WidthFixed, STATS_COLUMN_V1_WIDTH);
-    ImGui::TableSetupColumn("V2", ImGuiTableColumnFlags_WidthFixed, STATS_COLUMN_V2_WIDTH);
+    ImGui::TableSetupColumn("Indices", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(25));
+    ImGui::TableSetupColumn("V1", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(60));
+    ImGui::TableSetupColumn("V2", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(45));
     //ImGui::TableHeadersRow();
 
     pattern_render_planning_line(CTEXT("Today"),
@@ -562,8 +559,8 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         return 0;
 
     ImGui::TableSetupColumn("Labels", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableSetupColumn("V1", ImGuiTableColumnFlags_WidthFixed, STATS_COLUMN_V1_WIDTH);
-    ImGui::TableSetupColumn("V2", ImGuiTableColumnFlags_WidthFixed, STATS_COLUMN_V2_WIDTH);
+    ImGui::TableSetupColumn("V1", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(60));
+    ImGui::TableSetupColumn("V2", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(45));
     //ImGui::TableHeadersRow();
 
     const stock_t* s = pattern->stock;
@@ -2160,14 +2157,15 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
         stock_update(STRING_ARGS(code), pattern->stock, FETCH_ALL, 8.0);
 
     char pattern_id[64];
-    string_format(STRING_BUFFER(pattern_id), STRING_CONST("Pattern###%.*s"), STRING_FORMAT(code));
+    string_format(STRING_BUFFER(pattern_id), STRING_CONST("Pattern###%.*s_7"), STRING_FORMAT(code));
     if (!ImGui::BeginTable(pattern_id, 3, flags))
         return;
 
     pattern_update(pattern);
         
     string_const_t code_str = string_table_decode_const(pattern->code);
-    ImGui::TableSetupColumn(code_str.str, ImGuiTableColumnFlags_WidthFixed, 500.0f, 0U, table_cell_right_aligned_column_label, nullptr);
+    ImGui::TableSetupColumn(code_str.str, ImGuiTableColumnFlags_WidthFixed, 
+        IM_SCALEF(220), 0U, table_cell_right_aligned_column_label, nullptr);
 
     string_const_t graph_column_title = CTEXT("Graph");
     const stock_t* stock_data = pattern->stock;
@@ -2179,7 +2177,7 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     ImGui::TableSetupColumn("Additional Information", 
         ImGuiTableColumnFlags_WidthFixed | 
         ImGuiTableColumnFlags_NoHeaderLabel |
-        ImGuiTableColumnFlags_DefaultHide, 400.0f);
+        ImGuiTableColumnFlags_DefaultHide, IM_SCALEF(200));
 
     if (none(render_flags, PatternRenderFlags::HideTableHeaders))
         ImGui::TableHeadersRow();

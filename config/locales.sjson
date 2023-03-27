@@ -1241,11 +1241,6 @@ Demande: %lg/%lg"
 			fr = " Perte ou (Gain) si les titres avaient \xc3\xa9t\xc3\xa9 conserv\xc3\xa9s plus longtemps avant d'\xc3\xaatre vendus"
 		}
 		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "  Jour \xee\x88\xa7||\xee\x88\xa7 Gain du Jour. "
-		}
-		{
 			hash = "d489ebf80e463996"
 			en = "Sells (Saved)"
 			fr = "Ventes (Gain)"
@@ -1458,9 +1453,49 @@ Demande: %lg/%lg"
 %.*s"
 		}
 		{
+			hash = "ba81ea76cd5c7663"
+			en = "Description"
+			fr = "Description"
+		}
+		{
+			hash = "b82c1ee3ea89a7d1"
+			en = "Expression"
+			fr = "Expression"
+		}
+		{
+			hash = "4a0c0544c588468"
+			en = "Status"
+			fr = "Statut"
+		}
+		{
+			hash = "980fc4e929c2b225"
+			en = "Alerts"
+			fr = "Alertes"
+		}
+		{
 			hash = "5bfe65863d87ef8"
 			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "   Jour \xee\x88\xa7||\xee\x88\xa7 Gain Jour. "
+			fr = "  Jour \xee\x88\xa7||\xee\x88\xa7 Gain Jour. "
+		}
+		{
+			hash = "6a5d47f08263806d"
+			en = "%.4g seconds"
+			fr = "%.4g secondes"
+		}
+		{
+			hash = "86922f631b9c8cbd"
+			en = "Delete the alert `%s`"
+			fr = "Supprimer l'alerte `%s`"
+		}
+		{
+			hash = "1d76dfa5ed01e000"
+			en = "Number of seconds to wait before re-evaluating the expression condition."
+			fr = "Nombre de secondes \xc3\xa0 attendre avant de r\xc3\xa9\xc3\xa9valuer la condition de l'expression."
+		}
+		{
+			hash = "8f833bee11a29a55"
+			en = "Triggered"
+			fr = "D\xc3\xa9clench\xc3\xa9"
 		}
 		{
 			hash = "5bfe65863d87ef8"
@@ -1470,6 +1505,126 @@ Demande: %lg/%lg"
 		{
 			hash = "5bfe65863d87ef8"
 			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "b9d4558729866e1"
+			en = "Last time the expression was evaluated"
+			fr = "@TODO"
+		}
+		{
+			hash = "cdfd53095f146d61"
+			en = "This alert was triggered at the time shown above."
+			fr = "@TODO"
+		}
+		{
+			hash = "80f38af5df80785d"
+			en = "Reset the alert"
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "7ce155268539bde4"
+			en = "Rendement \xee\xa3\xa5"
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "4bda5ea2e500141b"
+			en = "Rendement \xee\xa3\xa3"
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "f1037361bcfed23a"
+			en = "Discarded?"
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "c22bb6c30fc026c8"
+			en = "Show Memory Usages"
+			fr = "@TODO"
+		}
+		{
+			hash = "5bfe65863d87ef8"
+			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			fr = "@TODO"
+		}
+		{
+			hash = "fc7e155741baccdf"
+			en = "[%s] %s %.0lf %s ago"
+			fr = "@TODO"
+		}
+		{
+			hash = "107fc87e4a7872a4"
+			en = "%s%s %.0lf %s ago"
 			fr = "@TODO"
 		}
 		{

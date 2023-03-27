@@ -325,6 +325,8 @@ extern void main_render(GLFWwindow* window, const app_render_handler_t& render, 
         bgfx_new_frame(window, frame_width, frame_height);
         imgui_new_frame(window, frame_width, frame_height);
 
+        imgui_set_current_window_scale(glfw_get_window_scale(window));
+
         if (begin)
             begin(window, frame_width, frame_height);
     }

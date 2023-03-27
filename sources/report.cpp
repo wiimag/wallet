@@ -1298,7 +1298,7 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
         // Name field
         if (ImGui::TableNextColumn())
         {
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::ExpandNextItem();
             if (ImGui::InputText("##Name", c->name, sizeof(c->name), ImGuiInputTextFlags_EnterReturnsTrue))
             {
                 update_table = true;
@@ -1308,7 +1308,7 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
         // Expression field
         if (ImGui::TableNextColumn())
         {
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::ExpandNextItem();
             ImGui::InputText("##Expression", c->expression, sizeof(c->expression));
             if (ImGui::IsMouseDoubleClicked(0) && ImGui::IsItemHovered())
             {
@@ -1319,7 +1319,7 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
         // Format selector
         if (ImGui::TableNextColumn())
         {
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::ExpandNextItem();
             if (ImGui::BeginCombo("##Format", report_expression_column_format_name(c->format)))
             {
                 if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_TEXT), c->format == COLUMN_FORMAT_TEXT, ImGuiSelectableFlags_None))
@@ -1378,14 +1378,14 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
         // Column name
         if (ImGui::TableNextColumn())
         {
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::ExpandNextItem();
             ImGui::InputTextWithHint("##Name", "Column name", name, sizeof(name));
         }
 
         // Expression
         if (ImGui::TableNextColumn())
         {
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::ExpandNextItem();
             if (ImGui::InputTextWithHint("##Expression", "Expression i.e. S(GFL.TO, open)", expression, sizeof(expression), ImGuiInputTextFlags_EnterReturnsTrue))
             {
                 add = true;
@@ -1395,7 +1395,7 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
         // Format selector
         if (ImGui::TableNextColumn())
         {
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+            ImGui::ExpandNextItem();
             if (ImGui::BeginCombo("##Format", report_expression_column_format_name(format)))
             {
                 if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_TEXT), false, ImGuiSelectableFlags_None))
