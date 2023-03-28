@@ -6,19 +6,24 @@
  */
 
 #include "system.h"
+#include "version.h"
+#include "resource.h"
 
 #include <framework/string.h>
 
 #include <foundation/path.h>
 
 #if FOUNDATION_PLATFORM_WINDOWS
-#include <foundation/windows.h>
-#include <Commdlg.h>
+    #include <foundation/windows.h>
+    #include <Commdlg.h>
+    #include <CommCtrl.h>
 
-#include <iostream>
+    #include <iostream>
+
+    #pragma comment( lib, "comctl32.lib" )
+#endif
 
 extern void* _window_handle;
-#endif
 
 #include <stack> 
 
@@ -287,4 +292,101 @@ void system_thread_on_exit(function<void()>&& func)
 {
     static thread_local ThreadExiter exiter;
     exiter.add(std::move(func));
+}
+
+uint32_t system_get_last_error(string_const_t* out_error_string /*= nullptr*/)
+{
+#if FOUNDATION_PLATFORM_WINDOWS
+    DWORD error = ::GetLastError();
+
+    if (out_error_string)
+    {
+        // Get GetLastError error string
+        static thread_local char win32_error_message_buffer[512] = { 0 };
+
+        size_t size = FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, error, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), STRING_BUFFER(win32_error_message_buffer), NULL);
+
+        *out_error_string = string_const(win32_error_message_buffer, size);
+
+        // Trim trailing whitespace
+        *out_error_string = string_remove_trailing_whitespaces(STRING_ARGS(*out_error_string));
+    }
+
+    return error;
+#else
+#error "Not implemented"
+#endif
+}
+
+string_const_t system_get_last_error_message(uint32_t* out_error /*= nullptr*/)
+{
+    string_const_t error_message{};
+    uint32_t error = system_get_last_error(&error_message);
+    if (out_error)
+        *out_error = error;
+    return error_message;
+}
+
+bool system_notification_push(const char* title, size_t title_length, const char* message, size_t message_length)
+{
+#if FOUNDATION_PLATFORM_WINDOWS
+    // Create a new notification.
+    NOTIFYICONDATAA nid = { 0 };
+    nid.cbSize = sizeof(NOTIFYICONDATAA);
+    nid.hWnd = (HWND)system_window_handle();
+    nid.uID = 1;
+    nid.uFlags = NIF_INFO;
+
+    // Generate new GUID
+    GUID guid;
+    CoCreateGuid(&guid);
+    nid.uFlags |= NIF_GUID;
+    nid.guidItem = guid;
+
+    // Set notification state
+    nid.uFlags |= NIF_STATE;
+    nid.dwState = NIS_HIDDEN;
+    nid.dwStateMask = NIS_HIDDEN;
+
+    // Load GLFW_ICON from resources.
+    HINSTANCE hInstance = GetModuleHandle(NULL);
+    LoadIconMetric(hInstance, MAKEINTRESOURCE(GLFW_ICON), LIM_SMALL, &(nid.hIcon));
+    LoadIconMetric(hInstance, MAKEINTRESOURCE(GLFW_ICON), LIM_LARGE, &(nid.hBalloonIcon));
+    nid.uFlags |= NIF_ICON | NIF_SHOWTIP;
+
+    // Keep the notification active in the notification tray
+    nid.uFlags |= NIF_REALTIME;
+    nid.uTimeout = 10000;
+
+    nid.dwInfoFlags = NIIF_RESPECT_QUIET_TIME | NIIF_USER | NIIF_LARGE_ICON;
+    string_copy(nid.szInfoTitle, sizeof(nid.szInfoTitle), title, title_length);
+    string_copy(nid.szInfo, sizeof(nid.szInfo), message, message_length);
+    string_copy(nid.szTip, sizeof(nid.szTip), STRING_CONST(PRODUCT_NAME));
+
+    // Push a notification to the Windows notification tray.
+    BOOL success = Shell_NotifyIconA(NIM_ADD, &nid);
+
+    // Print any errors
+    if (!success)
+    {
+        string_const_t system_error_msg{};
+        DWORD error = system_get_last_error(&system_error_msg);
+        log_errorf(0, ERROR_SYSTEM_CALL_FAIL, 
+            STRING_CONST("Failed to push notification (0x%8X): %.*s\n"), error, STRING_FORMAT(system_error_msg));
+    }
+
+    // Remove the notification icon from the system tray
+    //Shell_NotifyIconA(NIM_DELETE, &nid);
+
+    return success != 0;
+#else
+    log_warnf(0, WARNING_UNSUPPORTED, STRING_CONST("Notification push not supported on this platform"));
+    return false;
+#endif
+}
+
+void* system_window_handle()
+{
+    return _window_handle;
 }

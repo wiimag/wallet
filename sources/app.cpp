@@ -65,7 +65,7 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
             
         app_menu_help(window);
 
-        alerts_main_menu_status();
+        alerts_notification_menu();
 
         // Update special application menu status.
         // Usually controls are displayed at the far right of the menu.
@@ -195,7 +195,5 @@ extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
 
 extern void app_render_3rdparty_libs()
 {
-    // Render fast_obj library
-    //string_const_t fast_obj_version_string = string_format_static(STRING_CONST("fast_obj %d.%d"), FAST_OBJ_VERSION_MAJOR, FAST_OBJ_VERSION_MINOR);
-    //ImGui::TextURL(STRING_RANGE(fast_obj_version_string), STRING_CONST("https://github.com/thisistherk/fast_obj"));
+    ImGui::TextURL("EOD Historical Data API", nullptr, STRING_CONST("https://eodhistoricaldata.com/financial-apis/"));
 }

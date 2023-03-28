@@ -108,3 +108,36 @@ void system_execute_tool(const string_const_t& name, string_const_t* argv, size_
  *  @param func Function to invoke when the application exits.
  */
 void system_thread_on_exit(function<void()>&& func);
+
+/*! Push a system notification.
+ * 
+ *  @param title            Title of the notification
+ *  @param title_length     Length of title
+ *  @param message          Message of the notification
+ *  @param message_length   Length of message
+ *  
+ *  @return True if the notification was pushed successfully, false otherwise.
+ */
+bool system_notification_push(const char* title, size_t title_length, const char* message, size_t message_length);
+
+/*! @brief Returns the system window handle.
+ *
+ *  @return System window handle.
+ */
+void* system_window_handle();
+
+/*! Return the last system error code. 
+ * 
+ *  @param error_string     String to store the error message in.
+ *  
+ *  @return Last system error code.
+ */
+uint32_t system_get_last_error(string_const_t* error_string = nullptr);
+
+/*! Returns the last system error formatted message. 
+ * 
+ *  @param error Pointer to store the error code in.
+ *  
+ *  @return Last system error formatted message.
+ */
+string_const_t system_get_last_error_message(uint32_t* error = nullptr);

@@ -63,7 +63,6 @@ FOUNDATION_STATIC void about_render_dialog()
 
     // Render app 3rd party libs
     app_render_3rdparty_libs();
-	//ImGui::TextURL("EOD Historical Data API", nullptr, STRING_CONST("https://eodhistoricaldata.com/financial-apis/"));
 
     // Print foundation version
     version_t fv = foundation_version();

@@ -546,6 +546,47 @@ FOUNDATION_STATIC void pattern_compute_years_performance_ratios(pattern_t* patte
     array_deallocate(yratios);
 }
 
+FOUNDATION_STATIC const stock_t* pattern_refresh(pattern_t* pattern, FetchLevel minimal_required_levels = FetchLevel::NONE)
+{
+    string_const_t code = SYMBOL_CONST(pattern->code);
+    pattern->stock = stock_request(STRING_ARGS(code), FETCH_ALL);
+    array_deallocate(pattern->flex);
+    for (auto& m : pattern->marks)
+        m.fetched = false;
+
+    if (minimal_required_levels != FetchLevel::NONE)
+    {
+        tick_t timeout = time_current();
+        while (!pattern->stock->has_resolve(minimal_required_levels) && time_elapsed(timeout) < 10)
+            dispatcher_wait_for_wakeup_main_thread();
+    }
+
+    return pattern->stock;
+}
+
+double pattern_get_bid_price(pattern_handle_t pattern_handle)
+{
+    pattern_t* pattern = pattern_get(pattern_handle);
+    if (!pattern)
+        return NAN;
+    const stock_t* s = pattern_refresh(pattern, FetchLevel::EOD | FetchLevel::REALTIME);
+    if (!s)
+        return NAN;
+
+    const double flex_low_p = pattern->flex_low.fetch();
+    const double flex_high_p = pattern->flex_high.fetch();
+    const double today_price = s->current.adjusted_close;
+    
+    double mcp = 0;
+    for (int i = 0; i < 3; ++i)
+        mcp += pattern_mark_change_p(pattern, i);
+    mcp += s->current.change_p / 100.0;
+    mcp /= 4.0;
+
+    double buy_limit = min(today_price + (today_price * (flex_low_p + math_abs(mcp))), today_price - (today_price * pattern->flex_high.fetch()));
+    return buy_limit;
+}
+
 FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
 {
     ImGuiTableFlags flags =
@@ -588,7 +629,7 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         ImGui::PushStyleColor(ImGuiCol_Text, performance_ratio <= 0 || performance_ratio_combined < SETTINGS.good_dividends_ratio * 100.0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
         pattern_render_stats_line(yield_label,
             pattern_format_percentage(yielding),
-            pattern_format_percentage(performance_ratio), true);
+            pattern_format_percentage(performance_ratio), false);
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
         {
@@ -1707,24 +1748,6 @@ FOUNDATION_STATIC void pattern_render_graph_analysis(pattern_t* pattern, pattern
     pattern_render_graph_end(pattern, s, graph);
 }
 
-FOUNDATION_STATIC const stock_t* pattern_refresh(pattern_t* pattern, FetchLevel minimal_required_levels = FetchLevel::NONE)
-{
-    string_const_t code = SYMBOL_CONST(pattern->code);
-    pattern->stock = stock_request(STRING_ARGS(code), FETCH_ALL);
-    array_deallocate(pattern->flex);
-    for (auto& m : pattern->marks)
-        m.fetched = false;
-
-    if (minimal_required_levels != FetchLevel::NONE)
-    {
-        tick_t timeout = time_current();
-        while (!pattern->stock->has_resolve(minimal_required_levels) && time_elapsed(timeout) < 10)
-            dispatcher_wait_for_wakeup_main_thread();
-    }
-
-    return pattern->stock;
-}
-
 FOUNDATION_STATIC void pattern_history_min_max_price(pattern_t* pattern, time_t ref, double& min, double& max)
 {
     min = DBL_MAX;
@@ -2382,6 +2405,9 @@ FOUNDATION_STATIC void pattern_load(const config_handle_t& pattern_data, pattern
     pattern.price_limits.xmax = cv_price_limits["xmax"].as_number();
     pattern.price_limits.ymin = cv_price_limits["ymin"].as_number();
     pattern.price_limits.ymax = cv_price_limits["ymax"].as_number();
+
+    // Make sure this pattern gets saved again.
+    pattern.save = true;
 }
 
 FOUNDATION_STATIC void pattern_save(config_handle_t pattern_data, const pattern_t& pattern)
@@ -2550,7 +2576,8 @@ FOUNDATION_STATIC void pattern_initialize()
     {
         for (auto p : patterns_data)
         {
-            pattern_handle_t pattern_handle = pattern_load(STRING_ARGS(config_name(p)));
+            string_const_t pattern_code = config_name(p);
+            pattern_handle_t pattern_handle = pattern_load(STRING_ARGS(pattern_code));
             pattern_t& pattern = _patterns[pattern_handle];
             pattern_load(p, pattern);			
         }

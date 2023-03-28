@@ -608,3 +608,11 @@ double title_get_sell_gain_rated(const title_t* t)
 {
     return t->sell_total_price_rated - ((t->buy_total_price_rated / t->buy_total_quantity) * t->sell_total_quantity);
 }
+
+double title_get_ask_price(const title_t* title)
+{
+    if (title_sold(title))
+        return title->sell_adjusted_price;
+    
+    return title->ask_price.fetch();
+}

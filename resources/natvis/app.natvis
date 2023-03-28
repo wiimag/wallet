@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
+
+	<Type Name="vec3_t">
+		<DisplayString>{{ {x,4g}, {y,4g}, {z,4g} }}</DisplayString>
+		<Expand>
+			<Item Name="x">x</Item>
+			<Item Name="y">y</Item>
+			<Item Name="z">z</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="vec4_t">
+		<DisplayString>{{ {x,4g}, {y,4g}, {z,4g}, {w,4g} }}</DisplayString>
+		<Expand>
+			<Item Name="x">x</Item>
+			<Item Name="y">y</Item>
+			<Item Name="z">z</Item>
+			<Item Name="w">w</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="mat4_t">
+		<DisplayString>{row1}&#10;{row2}&#10;{row3}&#10;{row4}</DisplayString>
+		<Expand>
+			<Item Name="[0]">row1</Item>
+			<Item Name="[1]">row2</Item>
+			<Item Name="[2]">row3</Item>
+			<Item Name="[3]">row4</Item>
+		</Expand>
+	</Type>
+
+	<Type Name="string_const_t">
+		<DisplayString>({length}) {str,[length]s8}</DisplayString>
+	</Type>
+
+	<Type Name="string_t">
+		<DisplayString>({length}) {str,[length]s8}</DisplayString>
+	</Type>
+</AutoVisualizer>

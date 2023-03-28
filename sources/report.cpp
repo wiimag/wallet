@@ -17,6 +17,7 @@
 #include "timeline.h"
 #include "news.h"
 #include "financials.h"
+#include "alerts.h"
 
 #include <framework/app.h>
 #include <framework/glfw.h>
@@ -57,7 +58,6 @@ typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_EXCHANGE_RATE,
     REPORT_FORMULA_TYPE,
     REPORT_FORMULA_PS,
-    REPORT_FORMULA_ASK,
 } report_column_formula_t;
 
 struct report_expression_column_t
@@ -494,52 +494,68 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
     return cell_t();
 }
 
-FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     const title_t* title = *(const title_t**)element;
 
     ImGui::MoveCursor(8.0f, 4.0f);
-    if (ImGui::MenuItem(tr("Buy")))
-        ((title_t*)title)->show_buy_ui = true;
+    ImGui::BeginGroup();
+    {
+        if (ImGui::MenuItem(tr("Buy")))
+            ((title_t*)title)->show_buy_ui = true;
 
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem(tr("Sell")))
-        ((title_t*)title)->show_sell_ui = true;
+        if (ImGui::MenuItem(tr("Sell")))
+            ((title_t*)title)->show_sell_ui = true;
 
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem(tr("Details")))
-        ((title_t*)title)->show_details_ui = true;
+        if (ImGui::MenuItem(tr("Details")))
+            ((title_t*)title)->show_details_ui = true;
 
-    ImGui::Separator();
+        ImGui::Separator();
 
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (pattern_menu_item(title->code, title->code_length))
-    { 
+        if (pattern_menu_item(title->code, title->code_length))
+        {
+        }
+
+        if (ImGui::TrBeginMenu("Price Alerts"))
+        {
+            ImGui::MoveCursor(8.0f, 4.0f);
+            ImGui::BeginGroup();
+            if (ImGui::TrMenuItem("Add ask price alert"))
+            {
+                const double ask_price = title_get_ask_price(title);
+                alerts_add_price_increase(title->code, title->code_length, ask_price);
+            }
+
+            if (ImGui::TrMenuItem("Add bid price alert"))
+            {
+                pattern_handle_t pattern = pattern_load(title->code, title->code_length);
+                const double bid_price = pattern_get_bid_price(pattern);
+                alerts_add_price_decrease(title->code, title->code_length, bid_price);
+            }
+
+            ImGui::EndGroup();
+            ImGui::EndMenu();
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::TrMenuItem("Read News"))
+            news_open_window(title->code, title->code_length);
+
+        if (ImGui::TrMenuItem("Show Financials"))
+            financials_open_window(title->code, title->code_length);
+
+        #if BUILD_DEVELOPMENT
+        if (ImGui::TrMenuItem("Browse Fundamentals"))
+            system_execute_command(eod_build_url("fundamentals", title->code, FORMAT_JSON).str);
+        #endif
+
+        ImGui::Separator();
+
+        if (ImGui::MenuItem(tr("Remove")))
+            report_title_remove(report_handle, title);
     }
-
-    ImGui::Separator();
-
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem(tr("Read News")))
-        news_open_window(title->code, title->code_length);
-
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem(tr("Show Financials")))
-        financials_open_window(title->code, title->code_length);
-
-    #if BUILD_DEVELOPMENT
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem(tr("Browse Fundamentals")))
-        system_execute_command(eod_build_url("fundamentals", title->code, FORMAT_JSON).str);
-    #endif
-
-    ImGui::Separator();
-
-    ImGui::MoveCursor(8.0f, 2.0f);
-    if (ImGui::MenuItem(tr("Remove")))
-        report_title_remove(report_handle, title);
-
-    ImGui::MoveCursor(0.0f, 2.0f);
+    ImGui::EndGroup();
 }
 
 FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, const column_t* column)
@@ -1169,7 +1185,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
 {
     table_add_column(table, STRING_CONST("Title"),
         report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
-        .set_context_menu_callback(L3(report_column_title_context_menu(report_handle, _1, _2, _3)));
+        .set_context_menu_callback(L3(report_column_contextual_menu(report_handle, _1, _2, _3)));
 
     table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"),
         report_column_get_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
@@ -1468,7 +1484,7 @@ FOUNDATION_STATIC void report_table_context_menu(report_handle_t report_handle, 
     }
     else
     {
-        report_column_title_context_menu(report_handle, element, column, cell);
+        report_column_contextual_menu(report_handle, element, column, cell);
     }
 }
 

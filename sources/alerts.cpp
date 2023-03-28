@@ -15,6 +15,8 @@
 #include <framework/service.h>
 #include <framework/string_table.h>
 #include <framework/localization.h>
+#include <framework/system.h>
+#include <framework/dispatcher.h>
 
 #define HASH_ALERTS static_hash_string("alerts", 5, 0x3a6761b0fb57262bULL)
 
@@ -39,6 +41,8 @@ static struct ALERTS_MODULE {
     bool                show_window{ false };
     bool                has_ever_show_evaluators{ false };
     bool                new_notifications{ false };
+
+    tick_t              last_evaluation{ 0 };
 } *_alerts_module;
 
 FOUNDATION_STATIC string_const_t alerts_config_file_path()
@@ -130,8 +134,33 @@ FOUNDATION_STATIC bool alerts_check_expression_condition_result(const expr_resul
     return false;
 }
 
+FOUNDATION_STATIC void alerts_push_notification(expr_evaluator_t& e)
+{
+    e.discarded = false;
+    e.triggered_time = time_now();
+
+    _alerts_module->new_notifications = true;
+    log_infof(HASH_ALERTS, STRING_CONST("Alert triggered: %s"), e.description);
+
+    string_const_t title = string_const(e.title);
+    string_const_t description = string_const(e.description);
+
+    // Skip UTF-8 characters in the description
+    while (description.length > 0 && ((uint8_t)description.str[0] & 0x80) == 0x80)
+    {
+        description.str++;
+        description.length--;
+    }
+
+    system_notification_push(STRING_ARGS(title), STRING_ARGS(description));
+}
+
 FOUNDATION_STATIC void alerts_run_evaluators()
 {
+    // Skip evaluation if last evaluation occurred less than 5 seconds ago
+    if (time_elapsed(_alerts_module->last_evaluation) < 5)
+        return;
+
     expr_evaluator_t* evaluators = _alerts_module->evaluators;
     for (unsigned i = 0; i < array_size(evaluators); ++i)
     {
@@ -157,18 +186,204 @@ FOUNDATION_STATIC void alerts_run_evaluators()
         expr_set_global_var(STRING_CONST("$TITLE"), e.title, string_length(e.title));
         expr_set_global_var(STRING_CONST("$DESCRIPTION"), e.description, string_length(e.description));
 
+        log_debugf(HASH_ALERTS, STRING_CONST("Evaluating expression: %s"), e.expression);
+
         // Evaluate the expression
         string_const_t expression = string_const(e.expression, expression_length);
         expr_result_t result = eval(expression);
 
         if (alerts_check_expression_condition_result(result))
-        {
-            e.discarded = false;
-            e.triggered_time = time_now();
+            alerts_push_notification(e);
 
-            _alerts_module->new_notifications = true;
-            log_infof(HASH_ALERTS, STRING_CONST("Alert triggered: %s"), e.description);
+        // Evaluate one expression per frame
+        _alerts_module->last_evaluation = time_current();
+        break;
+    }
+}
+
+FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
+{
+    if (ImGui::BeginTable("Alerts##4", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg))
+    {
+        ImGui::TableSetupColumn(tr("Description"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(160));
+        ImGui::TableSetupColumn(tr("Title"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(80));
+        ImGui::TableSetupColumn(tr("Expression"), ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn(tr("Status"),
+            ImGuiTableColumnFlags_WidthFixed |
+            ImGuiTableColumnFlags_NoHeaderLabel |
+            ImGuiTableColumnFlags_NoResize, IM_SCALEF(20));
+        ImGui::TableHeadersRow();
+
+        // New row
+        ImGui::TableNextRow();
+        {
+            bool add_alert = false;
+            static expr_evaluator_t new_entry;
+
+            if (ImGui::TableNextColumn())
+            {
+                ImGui::ExpandNextItem();
+                ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(new_entry.description), ImGuiInputTextFlags_EnterReturnsTrue);
+            }
+
+            if (ImGui::TableNextColumn())
+            {
+                ImGui::ExpandNextItem();
+                ImGui::InputTextWithHint("##Title", "U.US", STRING_BUFFER(new_entry.title), ImGuiInputTextFlags_EnterReturnsTrue);
+            }
+
+            if (ImGui::TableNextColumn())
+            {
+                ImGui::ExpandNextItem();
+                if (ImGui::InputTextWithHint("##Expression", "S($TITLE, price)>45.0", STRING_BUFFER(new_entry.expression), ImGuiInputTextFlags_EnterReturnsTrue))
+                    add_alert = new_entry.expression[0] != 0;
+            }
+
+            if (ImGui::TableNextColumn())
+            {
+                ImGui::BeginDisabled(new_entry.expression[0] == 0);
+                if (ImGui::Button(ICON_MD_ADD) || add_alert)
+                {
+                    array_insert_memcpy_safe(evaluators, 0, &new_entry);
+
+                    // Reset static entry
+                    memset(&new_entry, 0, sizeof(expr_evaluator_t));
+                    new_entry.frequency = 5 * 60.0;
+                }
+                ImGui::EndDisabled();
+            }
         }
+
+        for (int i = 0; i < to_int(array_size(evaluators)); ++i)
+        {
+            expr_evaluator_t& ev = evaluators[i];
+            ImGui::TableNextRow(ImGuiTableRowFlags_None, ImGui::GetFontSize() * 2.0 + IM_SCALEF(10.0f));
+            {
+                bool evaluate_expression = false;
+
+                ImGui::PushID(ev.description);
+
+                if (ImGui::TableNextColumn())
+                {
+                    ImGui::ExpandNextItem();
+                    if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(ev.description), ImGuiInputTextFlags_EnterReturnsTrue))
+                        evaluate_expression = true;
+                }
+
+                if (ImGui::TableNextColumn())
+                {
+                    const bool has_title = ev.title[0] != 0;
+                    static float open_button_width = 10.0f;
+                    ImGui::ExpandNextItem(has_title ? open_button_width : 0.0f, has_title);
+                    if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_BUFFER(ev.title), ImGuiInputTextFlags_EnterReturnsTrue))
+                        evaluate_expression = true;
+
+                    if (has_title)
+                    {
+                        // Open pattern in floating window
+                        ImGui::SameLine();
+                        if (ImGui::Button(ICON_MD_OPEN_IN_NEW))
+                            pattern_open_window(ev.title, string_length(ev.title));
+                        open_button_width = ImGui::GetItemRectSize().x;
+                    }
+                }
+
+                if (ImGui::TableNextColumn())
+                {
+                    ImGui::ExpandNextItem();
+                    if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)<S(APPL.US, open)", STRING_BUFFER(ev.expression), ImGuiInputTextFlags_EnterReturnsTrue))
+                        evaluate_expression = true;
+
+                    ImGui::BeginGroup();
+                    if (ev.triggered_time)
+                    {
+                        ImGui::Checkbox("##Enabled", &ev.discarded);
+                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                        {
+                            ImGui::TrTextUnformatted("Discarded?");
+                            ImGui::EndTooltip();
+                        }
+
+                        // Add button to reset the trigger
+                        ImGui::SameLine();
+                        if (ImGui::Button(ICON_MD_UPDATE))
+                            evaluate_expression = true;
+                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                        {
+                            ImGui::TrTextUnformatted("Reset the alert");
+                            ImGui::EndTooltip();
+                        }
+
+                        string_const_t triggered_time_string = string_from_time_static(ev.triggered_time * 1000, true);
+                        ImGui::SameLine();
+                        ImGui::AlignTextToFramePadding();
+                        ImGui::TextColored(ImVec4(0.0f, 0.9f, 0.0f, 1.0f), ICON_MD_NOTIFICATIONS_ACTIVE " %.*s", STRING_FORMAT(triggered_time_string));
+                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                        {
+                            ImGui::TrTextUnformatted("This alert was triggered at the time shown above.");
+                            ImGui::EndTooltip();
+                        }
+                    }
+                    else
+                    {
+                        ImGui::AlignTextToFramePadding();
+                        string_const_t last_run_time_string = string_from_time_static(ev.last_run_time * 1000, true);
+                        ImGui::TextWrapped("%.*s", STRING_FORMAT(last_run_time_string));
+                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                        {
+                            ImGui::TrTextUnformatted("Last time the expression was evaluated");
+                            ImGui::EndTooltip();
+                        }
+
+                        ImGui::SameLine();
+                        ImGui::TextUnformatted(ICON_MD_UPDATE);
+                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                        {
+                            ImGui::TrTextUnformatted("Number of seconds to wait before re-evaluating the expression condition.");
+                            ImGui::EndTooltip();
+                        }
+                        ImGui::SameLine();
+                        ImGui::ExpandNextItem();
+                        if (ImGui::InputDouble("##Frequency", &ev.frequency, ev.frequency > 60.0 ? 60.0 : 5.0, 0.0, tr("%.4g seconds")))
+                        {
+                            ev.discarded = false;
+                            ev.triggered_time = 0;
+                            ev.frequency = max(0.0, ev.frequency);
+                        }
+
+                    }
+                    ImGui::EndGroup();
+                }
+
+                if (ImGui::TableNextColumn())
+                {
+                    ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
+                    if (ImGui::Button(ICON_MD_DELETE_FOREVER))
+                    {
+                        array_erase_ordered(evaluators, i);
+                        i--;
+                        evaluate_expression = false;
+                    }
+                    else if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                    {
+                        ImGui::TrText("Delete the alert `%s`", ev.description);
+                        ImGui::EndTooltip();
+                    }
+                    ImGui::PopStyleColor();
+                }
+
+                if (evaluate_expression)
+                {
+                    ev.last_run_time = 0;
+                    ev.triggered_time = 0;
+                    ev.discarded = false;
+                }
+
+                ImGui::PopID();
+            }
+        }
+
+        ImGui::EndTable();
     }
 }
 
@@ -192,186 +407,7 @@ FOUNDATION_STATIC void alerts_render_evaluators()
 
     if (ImGui::Begin(tr("Alerts"), &_alerts_module->show_window))
     {
-        if (ImGui::BeginTable("Alerts##4", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg))
-        {
-            ImGui::TableSetupColumn(tr("Description"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(160));
-            ImGui::TableSetupColumn(tr("Title"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(80));
-            ImGui::TableSetupColumn(tr("Expression"), ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn(tr("Status"), 
-                ImGuiTableColumnFlags_WidthFixed | 
-                ImGuiTableColumnFlags_NoHeaderLabel |
-                ImGuiTableColumnFlags_NoResize, IM_SCALEF(20));
-            ImGui::TableHeadersRow();
-
-            // New row
-            ImGui::TableNextRow();
-            {
-                bool add_alert = false;
-                static expr_evaluator_t new_entry;
-
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::ExpandNextItem();
-                    ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(new_entry.description), ImGuiInputTextFlags_EnterReturnsTrue);
-                }
-
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::ExpandNextItem();
-                    ImGui::InputTextWithHint("##Title", "U.US", STRING_BUFFER(new_entry.title), ImGuiInputTextFlags_EnterReturnsTrue);
-                }
-
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::ExpandNextItem();
-                    if (ImGui::InputTextWithHint("##Expression", "S($TITLE, price)>45.0", STRING_BUFFER(new_entry.expression), ImGuiInputTextFlags_EnterReturnsTrue))
-                        add_alert = new_entry.expression[0] != 0;
-                }
-
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::BeginDisabled(new_entry.expression[0] == 0);
-                    if (ImGui::Button(ICON_MD_ADD) || add_alert)
-                    {
-                        array_insert_memcpy_safe(evaluators, 0, &new_entry);
-
-                        // Reset static entry
-                        memset(&new_entry, 0, sizeof(expr_evaluator_t));
-                        new_entry.frequency = 5 * 60.0;
-                    }
-                    ImGui::EndDisabled();
-                }
-            }
-
-            for (unsigned i = 0; i < array_size(evaluators); ++i)
-            {
-                expr_evaluator_t& ev = evaluators[i];
-                ImGui::TableNextRow(ImGuiTableRowFlags_None, ImGui::GetFontSize() * 2.0 + IM_SCALEF(10.0f));
-                {
-                    bool evaluate_expression = false;
-
-                    ImGui::PushID(&ev);
-
-                    if (ImGui::TableNextColumn())
-                    {
-                        ImGui::ExpandNextItem();
-                        if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(ev.description), ImGuiInputTextFlags_EnterReturnsTrue))
-                            evaluate_expression = true;
-                    }
-
-                    if (ImGui::TableNextColumn())
-                    {
-                        const bool has_title = ev.title[0] != 0;
-                        static float open_button_width = 10.0f;
-                        ImGui::ExpandNextItem(has_title ? open_button_width : 0.0f, has_title);
-                        if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_BUFFER(ev.title), ImGuiInputTextFlags_EnterReturnsTrue))
-                            evaluate_expression = true;
-
-                        if (has_title)
-                        {
-                            // Open pattern in floating window
-                            ImGui::SameLine();
-                            if (ImGui::Button(ICON_MD_OPEN_IN_NEW))
-                                pattern_open_window(ev.title, string_length(ev.title));
-                            open_button_width = ImGui::GetItemRectSize().x;
-                        }
-                    }
-
-                    if (ImGui::TableNextColumn())
-                    {
-                        ImGui::ExpandNextItem();
-                        if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)<S(APPL.US, open)", STRING_BUFFER(ev.expression), ImGuiInputTextFlags_EnterReturnsTrue))
-                            evaluate_expression = true;
-
-                        ImGui::BeginGroup();
-                        if (ev.triggered_time)
-                        {
-                            ImGui::Checkbox("##Enabled", &ev.discarded);
-                            if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                            {
-                                ImGui::TrTextUnformatted("Discarded?");
-                                ImGui::EndTooltip();
-                            }
-
-                            // Add button to reset the trigger
-                            ImGui::SameLine();
-                            if (ImGui::Button(ICON_MD_UPDATE))
-                                evaluate_expression = true;
-                            if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                            {
-                                ImGui::TrTextUnformatted("Reset the alert");
-                                ImGui::EndTooltip();
-                            }
-                            
-                            string_const_t triggered_time_string = string_from_time_static(ev.triggered_time * 1000, true);
-                            ImGui::SameLine();
-                            ImGui::AlignTextToFramePadding();
-                            ImGui::TextColored(ImVec4(0.0f, 0.9f, 0.0f, 1.0f), ICON_MD_NOTIFICATIONS_ACTIVE " %.*s", STRING_FORMAT(triggered_time_string));
-                            if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                            {
-                                ImGui::TrTextUnformatted("This alert was triggered at the time shown above.");
-                                ImGui::EndTooltip();
-                            }
-                        }
-                        else
-                        {
-                            ImGui::AlignTextToFramePadding();
-                            string_const_t last_run_time_string = string_from_time_static(ev.last_run_time * 1000, true);
-                            ImGui::TextWrapped("%.*s", STRING_FORMAT(last_run_time_string));
-                            if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                            {
-                                ImGui::TrTextUnformatted("Last time the expression was evaluated");
-                                ImGui::EndTooltip();
-                            }
-
-                            ImGui::SameLine();
-                            ImGui::TextUnformatted(ICON_MD_UPDATE);
-                            if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                            {
-                                ImGui::TrTextUnformatted("Number of seconds to wait before re-evaluating the expression condition.");
-                                ImGui::EndTooltip();
-                            }
-                            ImGui::SameLine();
-                            ImGui::ExpandNextItem();
-                            if (ImGui::InputDouble("##Frequency", &ev.frequency, ev.frequency > 60.0 ? 60.0 : 5.0, 0.0, tr("%.4g seconds")))
-                            {
-                                ev.discarded = false;
-                                ev.triggered_time = 0;
-                                ev.frequency = max(0.0, ev.frequency);
-                            }
-
-                        }
-                        ImGui::EndGroup();
-                    }
-
-                    if (ImGui::TableNextColumn())
-                    {
-                        ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
-                        if (ImGui::Button(ICON_MD_DELETE_FOREVER))
-                        {
-                            array_erase_ordered_safe(evaluators, i--);
-                        }
-                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                        {
-                            ImGui::TrText("Delete the alert `%s`", ev.description);
-                            ImGui::EndTooltip();
-                        }
-                        ImGui::PopStyleColor();
-                    }
-
-                    if (evaluate_expression)
-                    {
-                        ev.last_run_time = 0;
-                        ev.triggered_time = 0;
-                        ev.discarded = false;
-                    }
-
-                    ImGui::PopID();
-                }
-            }
-
-            ImGui::EndTable();
-        }
+        alerts_render_table(evaluators);
     } ImGui::End();
 }
 
@@ -387,6 +423,20 @@ FOUNDATION_STATIC bool alerts_has_any_notifications()
     return false;
 }
 
+FOUNDATION_STATIC int alerts_index_of_expression_starts_with(const char* expression_prefix, size_t expression_prefix_length)
+{
+    string_const_t prefix = string_const(expression_prefix, expression_prefix_length);
+    for (unsigned i = 0, end = array_size(_alerts_module->evaluators); i < end; ++i)
+    {
+        const expr_evaluator_t* e = _alerts_module->evaluators + i;
+        string_const_t expression = string_const(e->expression);
+        if (string_starts_with(STRING_ARGS(expression), STRING_ARGS(prefix)))
+            return i;
+    }
+
+    return -1;
+}
+
 //
 // # PUBLIC API
 //
@@ -396,7 +446,55 @@ void alerts_show_window()
     _alerts_module->show_window = true;
 }
 
-void alerts_main_menu_status()
+bool alerts_add_price_change(const char* title, size_t title_length, double price, const char* icon_md, const char* op_token)
+{
+    expr_evaluator_t new_alert{};
+    string_copy(STRING_BUFFER(new_alert.title), title, title_length);
+
+    // Get title name from symbol
+    auto stock = stock_resolve(title, title_length, FetchLevel::FUNDAMENTALS);
+    if (!stock)
+        return false;
+
+    // Set alert description and localize it
+    string_const_t title_name = SYMBOL_CONST(stock->name);
+    string_const_t fmttr = RTEXT("%s %.*s price reached %.2lf $");
+    string_format(STRING_BUFFER(new_alert.description), STRING_ARGS(fmttr), icon_md, STRING_FORMAT(title_name), price);
+
+    char expression_prefix_buffer[64];
+    string_t expression_prefix = string_format(STRING_BUFFER(expression_prefix_buffer), STRING_CONST("S(\"%.*s\", price)%s"), (int)title_length, title, op_token);
+
+    // Delete current expression if found
+    int found_index = alerts_index_of_expression_starts_with(STRING_ARGS(expression_prefix));
+    if (found_index >= 0)
+    {
+        array_erase_ordered(_alerts_module->evaluators, found_index);
+    }
+
+    // Generate the expression to evaluate
+    string_format(STRING_BUFFER(new_alert.expression), STRING_CONST("%.*s%lf"), STRING_FORMAT(expression_prefix), price);
+
+    new_alert.frequency = 60.0;
+    new_alert.last_run_time = 0.0;
+    new_alert.triggered_time = 0.0;
+    new_alert.discarded = false;
+
+    array_insert_memcpy_safe(_alerts_module->evaluators, 0, &new_alert);
+
+    return true;
+}
+
+bool alerts_add_price_increase(const char* title, size_t title_length, double price)
+{
+    return alerts_add_price_change(title, title_length, price, ICON_MD_TRENDING_UP, ">=");
+}
+
+bool alerts_add_price_decrease(const char* title, size_t title_length, double price)
+{
+    return alerts_add_price_change(title, title_length, price, ICON_MD_TRENDING_DOWN, "<=");
+}
+
+void alerts_notification_menu()
 {
     if (!alerts_has_any_notifications())
         return;
@@ -522,6 +620,7 @@ FOUNDATION_STATIC void alerts_initialize()
 
     _alerts_module = MEM_NEW(HASH_ALERTS, ALERTS_MODULE);
     _alerts_module->show_window = session_get_bool(SHOW_ALERTS_KEY, false);
+    _alerts_module->last_evaluation = time_current();
 
     string_const_t evaluators_file_path = alerts_config_file_path();
     config_handle_t evaluators_data = config_parse_file(STRING_ARGS(evaluators_file_path), json_flags);

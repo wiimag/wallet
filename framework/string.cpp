@@ -2232,3 +2232,19 @@ int string_levenstein_distance(string_const_t str1, string_const_t str2)
 {
     return string_levenstein_distance(str1.str, str1.length, str2.str, str2.length);
 }
+
+string_const_t string_remove_trailing_whitespaces(const char* str, size_t length)
+{
+    // Remove whitespaces at the beginning
+    while (length > 0 && is_whitespace(str[0]))
+    {
+        str++;
+        length--;
+    }
+
+    // Remove whitespaces at the end
+    while (length > 0 && is_whitespace(str[length - 1]))
+        length--;
+
+    return { str, length };
+}

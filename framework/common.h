@@ -346,7 +346,7 @@ struct TimeMarkerScope
         TimeMarkerScope(const char(&name)[N])
         : context(memory_context())
     {
-        string_copy(STRING_BUFFER(label), name, N);
+        string_copy(STRING_BUFFER(label), name, N - 1);
         start_time = time_current();
     }
 

@@ -711,11 +711,6 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 			fr = " Dem. \xef\x81\x8b||\xef\x81\x8b Prix \xc3\xa0 demander"
 		}
 		{
-			hash = "73905916a7af6d77"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "  Jour \xee\x88\xa7||\xee\x88\xa7 Gain journalier. "
-		}
-		{
 			hash = "1ee46f4831f7601a"
 			en = "PS \xee\xa3\xa5||\xee\xa3\xa5 Prediction Sensor"
 			fr = "PS \xee\xa3\xa5||\xee\xa3\xa5 Pr\xc3\xa9diction"
@@ -1291,19 +1286,9 @@ Demande: %lg/%lg"
 			fr = "Rendement %s"
 		}
 		{
-			hash = "bfeda6e623516d9f"
-			en = "Yield \xee\xa3\xa5"
-			fr = "Rendement \xee\xa3\xa5"
-		}
-		{
-			hash = "95fa1dfa8355f211"
-			en = "Yield \xee\xa3\xa3"
-			fr = "Rendement \xee\xa3\xa3"
-		}
-		{
 			hash = "459e7854c9bcb1ec"
 			en = " Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) "
-			fr = "@TODO"
+			fr = " Rendement annuel (Ratio global %.3g %%) (%.0lf derni\xc3\xa8res ann\xc3\xa9es) "
 		}
 		{
 			hash = "cf08357a97ebfb2d"
@@ -1473,11 +1458,6 @@ Demande: %lg/%lg"
 			fr = "Alertes"
 		}
 		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "  Jour \xee\x88\xa7||\xee\x88\xa7 Gain Jour. "
-		}
-		{
 			hash = "6a5d47f08263806d"
 			en = "%.4g seconds"
 			fr = "%.4g secondes"
@@ -1498,124 +1478,79 @@ Demande: %lg/%lg"
 			fr = "D\xc3\xa9clench\xc3\xa9"
 		}
 		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
 			hash = "b9d4558729866e1"
 			en = "Last time the expression was evaluated"
-			fr = "@TODO"
+			fr = "Derni\xc3\xa8re fois que l'expression a \xc3\xa9t\xc3\xa9 \xc3\xa9valu\xc3\xa9e"
 		}
 		{
 			hash = "cdfd53095f146d61"
 			en = "This alert was triggered at the time shown above."
-			fr = "@TODO"
+			fr = "Cette alerte a \xc3\xa9t\xc3\xa9 d\xc3\xa9clench\xc3\xa9e au moment indiqu\xc3\xa9 ci-dessus."
 		}
 		{
 			hash = "80f38af5df80785d"
 			en = "Reset the alert"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "7ce155268539bde4"
-			en = "Rendement \xee\xa3\xa5"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "4bda5ea2e500141b"
-			en = "Rendement \xee\xa3\xa3"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
+			fr = "R\xc3\xa9initialiser l'alerte"
 		}
 		{
 			hash = "f1037361bcfed23a"
 			en = "Discarded?"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
+			fr = "Balay\xc3\xa9e ?"
 		}
 		{
 			hash = "c22bb6c30fc026c8"
 			en = "Show Memory Usages"
-			fr = "@TODO"
+			fr = "Afficher l'Utilisation de la M\xc3\xa9moire"
+		}
+		{
+			hash = "640278d8a55fbf98"
+			en = "Show notifications"
+			fr = "Afficher les notifications"
+		}
+		{
+			hash = "4893a86b3f491236"
+			en = "Discard all"
+			fr = "Tout balayer"
+		}
+		{
+			hash = "a95ab0232a7f1fb9"
+			en = "Open Web Site \xee\xa2\x9e"
+			fr = "Ouvrir le Site Web \xee\xa2\x9e"
+		}
+		{
+			hash = "500c22d8efcc00ed"
+			en = "Load Pattern"
+			fr = "Charger le Mod\xc3\xa8le"
+		}
+		{
+			hash = "cc51d3163285e8a6"
+			en = "Price Alerts"
+			fr = "Alertes de Prix"
+		}
+		{
+			hash = "34dc0724077c30f5"
+			en = "Add ask price alert"
+			fr = "Ajouter une alerte de prix de vente"
+		}
+		{
+			hash = "434c9e58b4a0763d"
+			en = "Add bid price alert"
+			fr = "Ajouter une alerte de prix d'achat"
 		}
 		{
 			hash = "5bfe65863d87ef8"
 			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
+			fr = "  Jour \xee\x88\xa7||\xee\x88\xa7 Gain du Jour. "
+		}
+		{
+			hash = "2985e72a696085f2"
+			en = "%s %.*s price reached %.2lf $"
+			fr = "%s %.*s prix atteint %.2lf $"
+		}
+		{
+			hash = "107fc87e4a7872a4"
+			en = "%s%s %.0lf %s ago"
+			fr = "%s%s %.0lf %s plus t\xc3\xb4t"
 		}
 		{
 			hash = "fc7e155741baccdf"
@@ -1623,58 +1558,38 @@ Demande: %lg/%lg"
 			fr = "@TODO"
 		}
 		{
-			hash = "107fc87e4a7872a4"
-			en = "%s%s %.0lf %s ago"
+			hash = "db7f29cfe3fa3b66"
+			en = "About - %s##8"
 			fr = "@TODO"
 		}
 		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			hash = "6a525d4314aa4b1f"
+			en = "Wallet - Finance 300K"
 			fr = "@TODO"
 		}
 		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			hash = "abfb736e230e26cc"
+			en = "Version %s %.*s (%s)"
 			fr = "@TODO"
 		}
 		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			hash = "4de6c636a936ac13"
+			en = "Copyright (C) 2022-2023 - equals-forty-two.com - All rights reserved"
 			fr = "@TODO"
 		}
 		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			hash = "720a1625a590e4cd"
+			en = "Build %s"
 			fr = "@TODO"
 		}
 		{
-			hash = "640278d8a55fbf98"
-			en = "Show notifications"
+			hash = "69b093d6f69dc568"
+			en = "Commit %s"
 			fr = "@TODO"
 		}
 		{
-			hash = "4893a86b3f491236"
-			en = "Discard all"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
-			fr = "@TODO"
-		}
-		{
-			hash = "a95ab0232a7f1fb9"
-			en = "Open Web Site \xee\xa2\x9e"
-			fr = "@TODO"
-		}
-		{
-			hash = "500c22d8efcc00ed"
-			en = "Load Pattern"
-			fr = "@TODO"
-		}
-		{
-			hash = "5bfe65863d87ef8"
-			en = "   Day \xee\x88\xa7||\xee\x88\xa7 Day Gain. "
+			hash = "3957ecf9afa94c56"
+			en = "Renderer %s"
 			fr = "@TODO"
 		}
 	]
