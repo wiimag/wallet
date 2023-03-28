@@ -23,6 +23,7 @@
 #include <framework/expr.h>
 #include <framework/window.h>
 #include <framework/array.h>
+#include <framework/system.h>
 
 #include <foundation/stream.h>
 #include <foundation/thread.h>
@@ -1255,10 +1256,10 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
 
     #if BUILD_DEVELOPMENT
     if (ImGui::MenuItem(tr("Browse News")))
-        {open_in_shell(eod_build_url("news", nullptr, FORMAT_JSON, "s", symbol.str).str);}
+        system_execute_command(eod_build_url("news", nullptr, FORMAT_JSON, "s", symbol.str).str);
 
     if (ImGui::MenuItem(tr("Browse Fundamentals")))
-        open_in_shell(eod_build_url("fundamentals", symbol.str, FORMAT_JSON).str);
+        system_execute_command(eod_build_url("fundamentals", symbol.str, FORMAT_JSON).str);
     #endif
 
     ImGui::Separator();

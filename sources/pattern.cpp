@@ -23,6 +23,7 @@
 #include <framework/window.h>
 #include <framework/dispatcher.h>
 #include <framework/array.h>
+#include <framework/system.h>
 
 #include <algorithm>
 
@@ -2272,26 +2273,26 @@ FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
 
             #if BUILD_DEVELOPMENT
             if (ImGui::MenuItem(tr("EOD"), nullptr, nullptr, true))
-                open_in_shell(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
+                system_execute_command(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
 
             if (ImGui::MenuItem(tr("Trends"), nullptr, nullptr, true))
-                open_in_shell(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
+                system_execute_command(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
 
             if (ImGui::MenuItem(tr("Earnings"), nullptr, nullptr, true))
             {
                 time_t since_last_year = time_add_days(time_now(), -465);
                 string_const_t date_str = string_from_date(since_last_year);
-                open_in_shell(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
+                system_execute_command(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
             }
 
             if (ImGui::MenuItem(tr("Technical"), nullptr, nullptr, true))
-                open_in_shell(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);
+                system_execute_command(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);
 
             if (ImGui::MenuItem(tr("Fundamentals"), nullptr, nullptr, true))
-                open_in_shell(eod_build_url("fundamentals", code.str, FORMAT_JSON).str);
+                system_execute_command(eod_build_url("fundamentals", code.str, FORMAT_JSON).str);
 
             if (ImGui::MenuItem(tr("Real-time"), nullptr, nullptr, true))
-                open_in_shell(eod_build_url("real-time", code.str, FORMAT_JSON).str);
+                system_execute_command(eod_build_url("real-time", code.str, FORMAT_JSON).str);
             #endif
 
             ImGui::EndMenu();
@@ -2482,11 +2483,13 @@ pattern_handle_t pattern_open_window(const char* code, size_t code_length)
 
 bool pattern_menu_item(const char* symbol, size_t symbol_length)
 {
-    bool load_pattern_tab = false;
+    ImGui::BeginGroup();
+
+    bool item_executed = false;
     ImGui::AlignTextToFramePadding();
-    if (ImGui::Selectable("Load Pattern", false, ImGuiSelectableFlags_AllowItemOverlap))
+    if (ImGui::Selectable(tr("Load Pattern"), false, ImGuiSelectableFlags_AllowItemOverlap))
     {
-        load_pattern_tab = true;
+        item_executed = true;
     }
 
     ImGui::SameLine();
@@ -2494,16 +2497,17 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
     {
         if (pattern_open_window(symbol, symbol_length))
         {
-            load_pattern_tab = true;
+            item_executed = true;
             ImGui::CloseCurrentPopup();
         }
     }
-    else if (load_pattern_tab)
+    else if (item_executed)
     {
         pattern_open(symbol, symbol_length);
     }
 
-    if (ImGui::MenuItem("Open Web Site " ICON_MD_OPEN_IN_NEW))
+    ImGui::AlignTextToFramePadding();
+    if (ImGui::Selectable(tr("Open Web Site " ICON_MD_OPEN_IN_NEW), false, ImGuiSelectableFlags_AllowItemOverlap))
     {
         stock_handle_t stock_handle = stock_request(symbol, symbol_length, FetchLevel::FUNDAMENTALS);
         if (stock_handle)
@@ -2516,8 +2520,7 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
                 const char* url = SYMBOL_CSTR(s->url);
                 if (url)
                 {
-                    open_in_shell(url);
-                    return true;
+                    item_executed = system_execute_command(url);
                 }
                 else
                 {
@@ -2528,7 +2531,8 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
         
     }
 
-    return load_pattern_tab;
+    ImGui::EndGroup();
+    return item_executed;
 }
 
 //

@@ -33,6 +33,7 @@
 #include <framework/string.h>
 #include <framework/array.h>
 #include <framework/localization.h>
+#include <framework/system.h>
 
 #include <foundation/uuid.h>
 #include <foundation/path.h>
@@ -529,7 +530,7 @@ FOUNDATION_STATIC void report_column_title_context_menu(report_handle_t report_h
     #if BUILD_DEVELOPMENT
     ImGui::MoveCursor(8.0f, 2.0f);
     if (ImGui::MenuItem(tr("Browse Fundamentals")))
-        open_in_shell(eod_build_url("fundamentals", title->code, FORMAT_JSON).str);
+        system_execute_command(eod_build_url("fundamentals", title->code, FORMAT_JSON).str);
     #endif
 
     ImGui::Separator();

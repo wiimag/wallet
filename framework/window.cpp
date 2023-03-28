@@ -14,6 +14,7 @@
 #include <framework/dispatcher.h>
 #include <framework/math.h>
 #include <framework/string.h>
+#include <framework/system.h>
 
 #include <foundation/hash.h>
 

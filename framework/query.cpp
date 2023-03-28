@@ -18,6 +18,7 @@
 #include <framework/string_table.h>
 #include <framework/dispatcher.h>
 #include <framework/string.h>
+#include <framework/system.h>
 
 #include <foundation/log.h>
 #include <foundation/hashstrings.h>
@@ -137,7 +138,7 @@ FOUNDATION_STATIC CURL* query_create_curl_request()
         static thread_local bool register_cleanup = true;
         if (register_cleanup)
         {
-            on_thread_exit(query_curl_cleanup);
+            system_thread_on_exit(query_curl_cleanup);
             register_cleanup = false;
         }
     }

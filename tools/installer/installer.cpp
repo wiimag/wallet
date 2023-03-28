@@ -13,6 +13,7 @@
 #include <framework/app.h>
 #include <framework/array.h>
 #include <framework/string.h>
+#include <framework/system.h>
 
 struct installer_version_t
 {

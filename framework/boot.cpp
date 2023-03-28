@@ -12,6 +12,7 @@
 #include <framework/dispatcher.h>
 #include <framework/profiler.h>
 #include <framework/math.h>
+#include <framework/system.h>
 
 // Include modules that might not be used but need to be initialized implicitly
 #include <framework/about.h>
@@ -109,7 +110,7 @@ extern int main_initialize()
         return init_result;
 
     #if FOUNDATION_PLATFORM_WINDOWS
-        log_enable_stdout(process_redirect_io_to_console() || environment_command_line_arg("build-machine"));
+        log_enable_stdout(system_process_redirect_io_to_console() || environment_command_line_arg("build-machine"));
     #endif
     
     #if BUILD_DEVELOPMENT
@@ -456,7 +457,7 @@ extern void main_finalize()
         }
 
         if (log_stdout())
-            process_release_console();
+            system_process_release_console();
     }
 
     if (main_is_graphical_mode())

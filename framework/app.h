@@ -13,6 +13,9 @@ typedef function<void(void*)> app_event_handler_t;
 typedef function<bool(void*)> app_dialog_handler_t;
 typedef function<void(void*)> app_dialog_close_handler_t;
 
+typedef function<void(GLFWwindow* window)> app_update_handler_t;
+typedef function<void(GLFWwindow* window, int frame_width, int frame_height)> app_render_handler_t;
+
 /*! Set of flags used to customize the registration of a new menu item. */
 typedef enum class AppMenuFlags
 {

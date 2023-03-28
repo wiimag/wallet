@@ -315,11 +315,18 @@ float imgui_calc_text_width(const char(&text)[N], imgui_calc_text_flags_t flags 
 void imgui_bullet_text_wrapped(const char* fmt, ...);
 
 /*! Draw a bullet item with a wrapped text label.
-* *
-* *  @param fmt The format string.
-* *  @param args The format arguments.
-* */
+ *
+ *  @param fmt The format string.
+ *  @param args The format arguments.
+ */
 void imgui_bullet_text_wrappedV(const char* fmt, va_list args);
+
+/*! Draw a button that fade in and out over time. 
+ * 
+ *  @param label The label of the button.
+ *  @return True if the button was pressed.
+ */
+bool imgui_fade_in_out_button(const char* label);
 
 namespace ImGui 
 {

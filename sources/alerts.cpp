@@ -18,6 +18,8 @@
 
 #define HASH_ALERTS static_hash_string("alerts", 5, 0x3a6761b0fb57262bULL)
 
+constexpr const char* SHOW_ALERTS_KEY = "show_alerts";
+
 /*! Expression evaluator. */
 struct expr_evaluator_t
 {
@@ -32,7 +34,11 @@ struct expr_evaluator_t
 };
 
 static struct ALERTS_MODULE {
-    expr_evaluator_t* evaluators = nullptr;
+    expr_evaluator_t*   evaluators = nullptr;
+
+    bool                show_window{ false };
+    bool                has_ever_show_evaluators{ false };
+    bool                new_notifications{ false };
 } *_alerts_module;
 
 FOUNDATION_STATIC string_const_t alerts_config_file_path()
@@ -124,8 +130,9 @@ FOUNDATION_STATIC bool alerts_check_expression_condition_result(const expr_resul
     return false;
 }
 
-FOUNDATION_STATIC void alerts_run_evaluators(expr_evaluator_t* evaluators)
+FOUNDATION_STATIC void alerts_run_evaluators()
 {
+    expr_evaluator_t* evaluators = _alerts_module->evaluators;
     for (unsigned i = 0; i < array_size(evaluators); ++i)
     {
         expr_evaluator_t& e = evaluators[i];
@@ -158,32 +165,42 @@ FOUNDATION_STATIC void alerts_run_evaluators(expr_evaluator_t* evaluators)
         {
             e.discarded = false;
             e.triggered_time = time_now();
+
+            _alerts_module->new_notifications = true;
+            log_infof(HASH_ALERTS, STRING_CONST("Alert triggered: %s"), e.description);
         }
     }
 }
 
-FOUNDATION_STATIC void alerts_render_evaluators(expr_evaluator_t*& evaluators)
+FOUNDATION_STATIC void alerts_render_evaluators()
 {
-    static bool has_ever_show_evaluators = session_key_exists("show_evaluators");
-    static bool show_evaluators = session_get_bool("show_evaluators", false);
+    expr_evaluator_t*& evaluators = _alerts_module->evaluators;
 
-    bool start_show_stock_console = show_evaluators;
+    bool start_show_stock_console = _alerts_module->show_window;
     if (shortcut_executed(ImGuiKey_F9))
-        show_evaluators = !show_evaluators;
+        _alerts_module->show_window = !_alerts_module->show_window;
 
-    if (!show_evaluators)
+    if (!_alerts_module->show_window)
         return;
 
-    if (!has_ever_show_evaluators)
+    // Setup initial window size
+    if (!_alerts_module->has_ever_show_evaluators)
+    {
         ImGui::SetNextWindowSize(ImVec2(1280, 720), ImGuiCond_Once);
-    if (ImGui::Begin(tr("Alerts"), &show_evaluators))
+        _alerts_module->has_ever_show_evaluators = true;
+    }
+
+    if (ImGui::Begin(tr("Alerts"), &_alerts_module->show_window))
     {
         if (ImGui::BeginTable("Alerts##4", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg))
         {
             ImGui::TableSetupColumn(tr("Description"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(160));
             ImGui::TableSetupColumn(tr("Title"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(80));
             ImGui::TableSetupColumn(tr("Expression"), ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn(tr("Status"), ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderLabel, IM_SCALEF(20));
+            ImGui::TableSetupColumn(tr("Status"), 
+                ImGuiTableColumnFlags_WidthFixed | 
+                ImGuiTableColumnFlags_NoHeaderLabel |
+                ImGuiTableColumnFlags_NoResize, IM_SCALEF(20));
             ImGui::TableHeadersRow();
 
             // New row
@@ -356,12 +373,6 @@ FOUNDATION_STATIC void alerts_render_evaluators(expr_evaluator_t*& evaluators)
             ImGui::EndTable();
         }
     } ImGui::End();
-
-    if (start_show_stock_console != show_evaluators)
-    {
-        session_set_bool("show_evaluators", show_evaluators);
-        start_show_stock_console = show_evaluators;
-    }
 }
 
 FOUNDATION_STATIC bool alerts_has_any_notifications()
@@ -380,16 +391,33 @@ FOUNDATION_STATIC bool alerts_has_any_notifications()
 // # PUBLIC API
 //
 
+void alerts_show_window()
+{
+    _alerts_module->show_window = true;
+}
+
 void alerts_main_menu_status()
 {
     if (!alerts_has_any_notifications())
         return;
 
+    if (_alerts_module->new_notifications)
+    {
+        ImVec4 txc = ImGui::GetStyleColorVec4(ImGuiCol_Text);
+        txc.w = max(0.1f, 0.5f * (sinf(ImGui::GetTime() * 3.0f) + 1.0f));
+        ImGui::PushStyleColor(ImGuiCol_Text, txc);
+    }
+
     if (ImGui::BeginMenu(ICON_MD_NOTIFICATIONS_ACTIVE))
     {
+        if (_alerts_module->new_notifications)
+        {
+            ImGui::PopStyleColor(1);
+            _alerts_module->new_notifications = false;
+        }
+
         // Add option to discard all
-        ImGui::AlignTextToFramePadding();
-        if (ImGui::Selectable("Discard all", false, ImGuiSelectableFlags_AllowItemOverlap))
+        if (ImGui::TrMenuItem("Discard all"))
         {
             for (unsigned i = 0, end = array_size(_alerts_module->evaluators); i < end; ++i)
             {
@@ -399,6 +427,9 @@ void alerts_main_menu_status()
                 e->discarded = true;
             }
         }
+
+        if (ImGui::TrMenuItem("Show notifications"))
+            alerts_show_window();
 
         ImGui::Separator();
 
@@ -469,6 +500,11 @@ void alerts_main_menu_status()
 
         ImGui::EndMenu();
     }
+    else
+    {
+        if (_alerts_module->new_notifications)
+            ImGui::PopStyleColor(1);
+    }
 }
 
 //
@@ -485,6 +521,7 @@ FOUNDATION_STATIC void alerts_initialize()
         CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS;
 
     _alerts_module = MEM_NEW(HASH_ALERTS, ALERTS_MODULE);
+    _alerts_module->show_window = session_get_bool(SHOW_ALERTS_KEY, false);
 
     string_const_t evaluators_file_path = alerts_config_file_path();
     config_handle_t evaluators_data = config_parse_file(STRING_ARGS(evaluators_file_path), json_flags);
@@ -494,13 +531,15 @@ FOUNDATION_STATIC void alerts_initialize()
         config_deallocate(evaluators_data);
     }
 
-    service_register_update(HASH_ALERTS, L0(alerts_run_evaluators(_alerts_module->evaluators)));
-    service_register_window(HASH_ALERTS, L0(alerts_render_evaluators(_alerts_module->evaluators)));
+    service_register_update(HASH_ALERTS, alerts_run_evaluators);
+    service_register_window(HASH_ALERTS, alerts_render_evaluators);
 }
 
 FOUNDATION_STATIC void alerts_shutdown()
 {
     alerts_save_evaluators(_alerts_module->evaluators);
+
+    session_set_bool(SHOW_ALERTS_KEY, _alerts_module->show_window);
 
     array_deallocate(_alerts_module->evaluators);
     MEM_DELETE(_alerts_module);

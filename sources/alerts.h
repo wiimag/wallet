@@ -6,4 +6,6 @@
  * We use expressions to determine if an alert condition is met.
  */
 
+void alerts_show_window();
+
 void alerts_main_menu_status();

@@ -39,11 +39,6 @@ constexpr double DNAN = __builtin_nan("0");
 template<typename T> FOUNDATION_FORCEINLINE T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
 template<typename T> FOUNDATION_FORCEINLINE T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
 
-typedef struct GLFWwindow GLFWwindow;
-typedef function<void(GLFWwindow* window)> app_update_handler_t;
-typedef function<void(GLFWwindow* window, int frame_width, int frame_height)> app_render_handler_t;
-
-
 template<typename T>
 struct range_view 
 {
@@ -257,48 +252,6 @@ struct ManagedPtr
     FOUNDATION_FORCEINLINE const T* operator->() const { return ptr; }
 };
 
-//
-// ## PROCESS
-//
-
-void open_in_shell(const char* path);
-void execute_tool(const string_const_t& name, string_const_t* argv, size_t argc, const char* working_dir = 0, size_t working_dir_length = 0);
-
-void on_thread_exit(function<void()> func);
-
-/*! Open the the URL on the system. This will open the default browser on the system.
- *
- *  @param url URL to open
- *  @param url_length Length of URL
- */
-void system_browse_to_url(const char* url, size_t url_length);
-
-/*! @bried Open the the file on the system. This will open the default application for the file type.
- * 
- *  We produce a file:/// url
- *
- *  @param path Path to file
- *  @param path_length Length of path
- *  @param dir True if the path is a directory
- */
-void system_browse_to_file(const char* path, size_t path_length, bool dir = false);
-
-/*! @brief Returns the name of the platform the application is running on.
- * 
- *  @return Name of the platform the application is running on.
- */
-const char* system_platform_name(platform_t platform);
-
-//void system_add_menu_item(const char* name);
-
-/*! @brief Returns the path to the application data folder.
- * 
- *  @remark This is the folder where the application can store data that is not user specific.
- * 
- *  @return Path to the application data folder.
- */
-string_const_t system_app_data_local_path();
-
 /*! Get the system application resources path.
  * 
  *  @remark This is the folder where the application can store data that is not user specific.
@@ -353,25 +306,6 @@ extern bool main_is_running_tests();
 
 
 extern double main_tick_elapsed_time_ms();
-
-bool process_release_console();
-bool process_redirect_io_to_console();
-void process_debug_output(const char* output, size_t output_length = 0);
-
-// ## OS
-
-/*! Open a native dialog window to select a file of given type.
- \param dialog_title                        Dialog window title label
- \param extension                               Set of extensions used in the dialog window (i.e. "DICOM (*.dcm)|*.dcm")
- \param current_file_path             Current file path to open the dialog window at.
- \param selected_file_callback  Callback invoked when a file is selected.
- \return Returns true if the dialog window opened successfully.
- */
-extern bool open_file_dialog(
-    const char* dialog_title,
-    const char* extension,
-    const char* current_file_path,
-    function<bool(string_const_t)> selected_file_callback);
 
 bool environment_command_line_arg(const char* name, string_const_t* value = nullptr);
 bool environment_command_line_arg(const char* name, size_t name_length, string_const_t* value = nullptr);

@@ -25,6 +25,7 @@
 #include <framework/tabs.h>
 #include <framework/string.h>
 #include <framework/localization.h>
+#include <framework/system.h>
 
 #include <foundation/hash.h>
 #include <foundation/array.h>
@@ -601,12 +602,12 @@ FOUNDATION_STATIC void symbols_render_menus()
     {
         ImGui::MenuItem(tr("Indexes"), nullptr, &SETTINGS.show_symbols_INDX);
         if (ImGui::MenuItem("La Presse", nullptr, nullptr, true))
-            open_in_shell("https://www.google.com/search?q=bourse+site:lapresse.ca&tbas=0&source=lnt&tbs=qdr:w&sa=X&biw=1920&bih=902&dpr=2");
+            system_execute_command("https://www.google.com/search?q=bourse+site:lapresse.ca&tbas=0&source=lnt&tbs=qdr:w&sa=X&biw=1920&bih=902&dpr=2");
 
         ImGui::Separator();
         #if BUILD_DEVELOPMENT
         if (ImGui::MenuItem(tr("IPOs"), nullptr, nullptr, true))
-            open_in_shell(eod_build_url("calendar", "ipos", FORMAT_JSON).str);
+            system_execute_command(eod_build_url("calendar", "ipos", FORMAT_JSON).str);
         #endif
         ImGui::MenuItem(tr("TO Symbols"), nullptr, &SETTINGS.show_symbols_TO);
         ImGui::MenuItem(tr("CVE Symbols"), nullptr, &SETTINGS.show_symbols_CVE);

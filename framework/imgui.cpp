@@ -13,6 +13,7 @@
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
 #include <framework/array.h>
+#include <framework/system.h>
 
 #include <foundation/memory.h>
 
@@ -176,7 +177,7 @@ namespace ImGui
             if (ImGui::IsMouseClicked(0))
             {
                 if (URL_length > 0)
-                    open_in_shell(URL);
+                    system_execute_command(URL);
                 clicked = true;
             }
             ImGui::AddUnderLine(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
@@ -1089,4 +1090,16 @@ void imgui_bullet_text_wrapped(const char* fmt, ...)
     imgui_bullet_text_wrappedV(fmt, args);
 
     va_end(args);
+}
+
+bool imgui_fade_in_out_button(const char* label)
+{
+    // Compute alpha to have button fade in and out
+    float t = 0.5f * (sinf(ImGui::GetTime() * 6.0f) + 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, t));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.0f, 0.0f, t));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.0f, 0.0f, t));
+    bool pressed = ImGui::Button(label);
+    ImGui::PopStyleColor(3);
+    return pressed;
 }
