@@ -824,6 +824,10 @@ void query_initialize()
     #if ENABLE_QUERY_MOCKING
         query_mock_initialize();
     #endif
+
+    #if !BUILD_DEBUG
+        log_set_suppress(HASH_QUERY, ERRORLEVEL_INFO);
+    #endif
 }
 
 void query_shutdown()

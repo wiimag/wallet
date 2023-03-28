@@ -412,12 +412,7 @@ struct expr_result_t
             return true;
 
         if (type == EXPR_RESULT_NUMBER)
-        {
-            if (math_real_is_nan(value))
-                return true;
-
-            return false;
-        }
+            return !math_real_is_finite(value);
 
         if (type == EXPR_RESULT_SYMBOL)
             return math_trunc(value) == 0;
@@ -678,6 +673,12 @@ struct expr_result_t
     /*! Returns a boolean result if the current value is less than or equal to the other value. */
     expr_result_t operator<=(const expr_result_t& rhs) const
     {
+        if (type == EXPR_RESULT_NULL && rhs.type == EXPR_RESULT_NULL)
+            return true;
+
+        if (type == EXPR_RESULT_NULL || rhs.type == EXPR_RESULT_NULL)
+            return false;
+
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value <= rhs.as_number());
 
@@ -688,6 +689,12 @@ struct expr_result_t
     /*! Returns a boolean result if the current value is greater than or equal to the other value. */
     expr_result_t operator>=(const expr_result_t& rhs) const
     {
+        if (type == EXPR_RESULT_NULL && rhs.type == EXPR_RESULT_NULL)
+            return true;
+
+        if (type == EXPR_RESULT_NULL || rhs.type == EXPR_RESULT_NULL)
+            return false;
+
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value >= rhs.as_number());
 

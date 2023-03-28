@@ -140,7 +140,7 @@ FOUNDATION_STATIC void alerts_push_notification(expr_evaluator_t& e)
     e.triggered_time = time_now();
 
     _alerts_module->new_notifications = true;
-    log_infof(HASH_ALERTS, STRING_CONST("Alert triggered: %s"), e.description);
+    log_infof(HASH_ALERTS, STRING_CONST("Alert triggered: %s\n\t%s"), e.description, e.expression);
 
     string_const_t title = string_const(e.title);
     string_const_t description = string_const(e.description);
