@@ -251,12 +251,15 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     entry.category = string_table_encode_unescape(category);
 
     const json_object_t& hightlights = json["Highlights"];
-    entry.dividends_yield = hightlights["DividendYield"].as_number(0.0);
     entry.pe = hightlights["PERatio"].as_number();
     entry.peg = hightlights["PEGRatio"].as_number();
     entry.ws_target = hightlights["WallStreetTargetPrice"].as_number();
     entry.revenue_per_share_ttm = hightlights["RevenuePerShareTTM"].as_number();
     entry.profit_margin = hightlights["ProfitMargin"].as_number();
+
+    // Get the dividend yielding
+    entry.dividends_yield = hightlights["DividendYield"]
+        .as_number(json["ETF_Data"]["Yield"].as_number(0) / 100.0);
 
     string_const_t updated_at_string = general["UpdatedAt"].as_string();
     string_try_convert_date(STRING_ARGS(updated_at_string), entry.updated_at);

@@ -468,6 +468,11 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
 
     search_database_index_property(db, doc, STRING_CONST("exchange"), STRING_ARGS(exchange), false);
 
+    // Index stock yield
+    const double yielding = json["Highlights"]["DividendYield"]
+        .as_number(json["ETF_Data"]["Yield"].as_number(0) / 100.0) * 100.0;
+    search_database_index_property(db, doc, STRING_CONST("yield"), yielding);
+
     // Index some quarterly financial data properties
     const auto Financials = json["Financials"]["Balance_Sheet"]["quarterly"].get(0ULL);
     if (Financials.is_valid())

@@ -15,8 +15,9 @@
 
 TEST_SUITE("Localization")
 {
-    TEST_CASE("Syntax")
+    TEST_CASE("tr_format")
     {
+        // TODO: We need to add API to create a new localization DB on the fly.
     }
 }
 

@@ -332,7 +332,7 @@ FOUNDATION_STATIC bool pattern_render_stats_value(const stock_t* s, string_const
         if (ImGui::BeginPopupContextItem(value.str))
         {
             ImGui::AlignTextToFramePadding();
-            if (ImGui::Selectable(tr_format_static_cstr(" Add a price alert of %.*s for %.*s ", STRING_FORMAT(value), STRING_FORMAT(symbol))))
+            if (ImGui::Selectable(tr_format(" Add a price alert of %.*s for %.*s ", STRING_FORMAT(value), STRING_FORMAT(symbol))))
             {
                 double price_alert = string_to_real(value.str, dollar_sign_pos);
                 FOUNDATION_ASSERT(price_alert > 0);

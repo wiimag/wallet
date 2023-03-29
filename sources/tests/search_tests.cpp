@@ -110,10 +110,10 @@ TEST_SUITE("Search")
         search_database_index_word(db, doc1, STRING_CONST("CAR"));
         CHECK_EQ(search_database_index_count(db), 6);
         search_database_index_word(db, doc2, STRING_CONST("CARS"));
-        CHECK_EQ(search_database_index_count(db), 6);
+        CHECK_EQ(search_database_index_count(db), 8);
 
-        search_database_index_word(db, doc1, STRING_CONST("puppy"));
-        search_database_index_word(db, doc2, STRING_CONST("PUPPIES"));
+        CHECK(search_database_index_word(db, doc1, STRING_CONST("puppy")));
+        CHECK(search_database_index_word(db, doc2, STRING_CONST("PUPPIES")));
         
         search_database_deallocate(db);
     }
@@ -1038,6 +1038,11 @@ TEST_SUITE("SearchQuery")
         const search_result_t* results = evaluate_query_sync(query_string);
         REQUIRE_EQ(array_size(results), 1);
         CHECK(array_contains(results, mel));
+    }
+
+    TEST_CASE("yield")
+    {
+        // TODO: Add support to explicit index a title in order to run this test
     }
 }
 

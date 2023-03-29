@@ -49,6 +49,30 @@ TEST_SUITE("Configuration")
         config_sjson_deallocate(sjson);
         config_deallocate(cv);
     }
+
+    TEST_CASE("Save Escaped UTF-8 characters")
+    {
+        // Create config
+        config_handle_t cv = config_allocate();
+        CHECK(config_value_type(cv) == CONFIG_VALUE_OBJECT);
+
+        // Add a string with escaped UTF-8 characters
+        config_set_string(cv, STRING_CONST("string"), STRING_CONST("Hello \xE2\x98\xBA World!"));
+
+        // Convert to SJSON
+        config_sjson_const_t sjson = config_sjson(cv, CONFIG_OPTION_WRITE_ESCAPE_UTF8);
+        string_const_t sjson_string = config_sjson_to_string(sjson);
+
+        // Check that the string is escaped
+        // Note that the escaped character are lowercase.
+        REQUIRE_EQ(sjson_string, R"({
+            string = "Hello \xe2\x98\xba World!"
+        })");
+
+        // Deallocate
+        config_sjson_deallocate(sjson);
+        config_deallocate(cv);
+    }
 }
 
 #endif // BUILD_DEVELOPMENT
