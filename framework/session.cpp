@@ -45,7 +45,7 @@ FOUNDATION_STATIC void session_load_config()
         return;
     
     string_const_t session_file_path = session_get_file_path();
-    _session_config = config_parse_file(STRING_ARGS(session_file_path));
+    _session_config = config_parse_file(STRING_ARGS(session_file_path), CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
     if (!_session_config)
         _session_config = config_allocate();
 }
@@ -180,6 +180,7 @@ void session_save()
     
     config_write_file(session_get_file_path(), _session_config,
           CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS |
+          CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
           CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
     
 }

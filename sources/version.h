@@ -54,7 +54,7 @@
 #endif
 
 #define VERSION_MAJOR                   0
-#define VERSION_MINOR                  10   // Latest feature: Alerts notifications
+#define VERSION_MINOR                  11   // Latest feature: Split wallet funds using multiple currencies.
 #define VERSION_PATCH                   1   // Latest bug fix: Add stock ETF yielding display and indexing support
 #define VERSION_BUILD                   GIT_REVCOUNT
 

@@ -1616,5 +1616,10 @@
 			en = "%s Transactions"
 			fr = "Transactions %s"
 		}
+		{
+			hash = "f239149c97fa8256"
+			en = "Add currency"
+			fr = "Nouv. devise"
+		}
 	]
 }
