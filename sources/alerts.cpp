@@ -5,6 +5,7 @@
 
 #include "alerts.h"
 
+#include "logo.h"
 #include "pattern.h"
 
 #include <framework/expr.h>
@@ -203,11 +204,18 @@ FOUNDATION_STATIC void alerts_run_evaluators()
 
 FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
 {
-    if (ImGui::BeginTable("Alerts##4", 4, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg))
+    const ImGuiTableFlags table_display_flags = 
+        ImGuiTableFlags_SizingFixedFit | 
+        ImGuiTableFlags_Resizable | 
+        ImGuiTableFlags_RowBg | 
+        ImGuiTableFlags_Reorderable |
+        ImGuiTableFlags_Hideable;
+    if (ImGui::BeginTable("Alerts##6", 5, table_display_flags))
     {
-        ImGui::TableSetupColumn(tr("Description"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(160));
         ImGui::TableSetupColumn(tr("Title"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(80));
+        ImGui::TableSetupColumn(tr("Description"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(160));
         ImGui::TableSetupColumn(tr("Expression"), ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn(tr("Frequency||Frequency in seconds"), ImGuiTableColumnFlags_DefaultHide);
         ImGui::TableSetupColumn(tr("Status"),
             ImGuiTableColumnFlags_WidthFixed |
             ImGuiTableColumnFlags_NoHeaderLabel |
@@ -223,13 +231,13 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
             if (ImGui::TableNextColumn())
             {
                 ImGui::ExpandNextItem();
-                ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(new_entry.description), ImGuiInputTextFlags_EnterReturnsTrue);
+                ImGui::InputTextWithHint("##Title", "U.US", STRING_BUFFER(new_entry.title), ImGuiInputTextFlags_EnterReturnsTrue);
             }
 
             if (ImGui::TableNextColumn())
             {
                 ImGui::ExpandNextItem();
-                ImGui::InputTextWithHint("##Title", "U.US", STRING_BUFFER(new_entry.title), ImGuiInputTextFlags_EnterReturnsTrue);
+                ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(new_entry.description), ImGuiInputTextFlags_EnterReturnsTrue);
             }
 
             if (ImGui::TableNextColumn())
@@ -237,6 +245,12 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
                 ImGui::ExpandNextItem();
                 if (ImGui::InputTextWithHint("##Expression", "S($TITLE, price)>45.0", STRING_BUFFER(new_entry.expression), ImGuiInputTextFlags_EnterReturnsTrue))
                     add_alert = new_entry.expression[0] != 0;
+            }
+
+            if (ImGui::TableNextColumn())
+            {
+                ImGui::ExpandNextItem();
+                ImGui::InputDouble("##Frequency", &new_entry.frequency, new_entry.frequency > 60.0 ? 60.0 : 5.0, 0.0, tr("%.4g seconds"));
             }
 
             if (ImGui::TableNextColumn())
@@ -257,23 +271,25 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
         for (int i = 0; i < to_int(array_size(evaluators)); ++i)
         {
             expr_evaluator_t& ev = evaluators[i];
-            ImGui::TableNextRow(ImGuiTableRowFlags_None, ImGui::GetFontSize() * 2.0 + IM_SCALEF(10.0f));
+            ImGui::TableNextRow(ImGuiTableRowFlags_None);
             {
                 bool evaluate_expression = false;
 
-                ImGui::PushID(ev.description);
+                ImGui::PushID(&ev);
 
+                // Title
                 if (ImGui::TableNextColumn())
                 {
-                    ImGui::ExpandNextItem();
-                    if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(ev.description), ImGuiInputTextFlags_EnterReturnsTrue))
-                        evaluate_expression = true;
-                }
+                    ImVec2 logo_size{ IM_SCALEF(18), IM_SCALEF(18) };
+                    string_const_t title = string_const(ev.title, string_length(ev.title));
+                    if (logo_render_icon(STRING_ARGS(title), logo_size))
+                    {
+                        ImGui::Dummy(logo_size);
+                        ImGui::SameLine();
+                    }
 
-                if (ImGui::TableNextColumn())
-                {
-                    const bool has_title = ev.title[0] != 0;
                     static float open_button_width = 10.0f;
+                    const bool has_title = ev.title[0] != 0;
                     ImGui::ExpandNextItem(has_title ? open_button_width : 0.0f, has_title);
                     if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_BUFFER(ev.title), ImGuiInputTextFlags_EnterReturnsTrue))
                         evaluate_expression = true;
@@ -288,6 +304,15 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
                     }
                 }
 
+                // Description
+                if (ImGui::TableNextColumn())
+                {
+                    ImGui::ExpandNextItem();
+                    if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(ev.description), ImGuiInputTextFlags_EnterReturnsTrue))
+                        evaluate_expression = true;
+                }
+
+                // Expression
                 if (ImGui::TableNextColumn())
                 {
                     ImGui::ExpandNextItem();
@@ -324,7 +349,7 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
                             ImGui::EndTooltip();
                         }
                     }
-                    else
+                    else if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
                     {
                         ImGui::AlignTextToFramePadding();
                         string_const_t last_run_time_string = string_from_time_static(ev.last_run_time * 1000, true);
@@ -342,19 +367,23 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
                             ImGui::TrTextUnformatted("Number of seconds to wait before re-evaluating the expression condition.");
                             ImGui::EndTooltip();
                         }
-                        ImGui::SameLine();
-                        ImGui::ExpandNextItem();
-                        if (ImGui::InputDouble("##Frequency", &ev.frequency, ev.frequency > 60.0 ? 60.0 : 5.0, 0.0, tr("%.4g seconds")))
-                        {
-                            ev.discarded = false;
-                            ev.triggered_time = 0;
-                            ev.frequency = max(0.0, ev.frequency);
-                        }
-
                     }
                     ImGui::EndGroup();
                 }
 
+                // Frequency
+                if (ImGui::TableNextColumn())
+                {
+                    ImGui::ExpandNextItem();
+                    if (ImGui::InputDouble("##Frequency", &ev.frequency, ev.frequency > 60.0 ? 60.0 : 5.0, 0.0, "%.4g s."))
+                    {
+                        ev.discarded = false;
+                        ev.triggered_time = 0;
+                        ev.frequency = max(0.0, ev.frequency);
+                    }
+                }
+
+                // Action buttons
                 if (ImGui::TableNextColumn())
                 {
                     ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
@@ -401,7 +430,7 @@ FOUNDATION_STATIC void alerts_render_evaluators()
     // Setup initial window size
     if (!_alerts_module->has_ever_show_evaluators)
     {
-        ImGui::SetNextWindowSize(ImVec2(1280, 720), ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(1480, 920), ImGuiCond_Once);
         _alerts_module->has_ever_show_evaluators = true;
     }
 

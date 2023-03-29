@@ -9,6 +9,17 @@
 
 struct logo_t;
 
+/*! Render a squared icon of the symbol. 
+ * 
+ *  @param symbol               The symbol to render.
+ *  @param symbol_length        The length of the symbol.
+ *  @param size                 The size of the logo.
+ *  @param background           If true, the logo will be rendered with a background.
+ *  @param show_tooltip         If true, the symbol will be shown as a tooltip.
+ *  @param fill_rect            If not null, the logo will be rendered inside this rectangle.
+ * 
+ *  @returns Returns true if the logo was rendered.
+ */
 bool logo_render_icon(const char* symbol, size_t symbol_length, ImVec2& size, bool background = false, bool show_tooltip = true, ImRect* fill_rect = nullptr);
 
 /*! Render a symbol logo using IMGUI.

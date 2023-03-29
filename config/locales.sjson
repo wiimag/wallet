@@ -154,16 +154,6 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 			fr = "Fermer"
 		}
 		{
-			hash = "27401988236d16f6"
-			en = "\xef\xa3\xbf Wallet "
-			fr = "\xef\xa3\xbf Portefeuille "
-		}
-		{
-			hash = "5c747c30cd981112"
-			en = "\xef\xa3\xbf Wallet"
-			fr = "\xef\xa3\xbf Portefeuille"
-		}
-		{
 			hash = "5cf2a32132e1f637"
 			en = "Limits"
 			fr = "Limites"
@@ -342,11 +332,6 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 			hash = "4bb994bfcdedfc77"
 			en = "Show Memory Stats"
 			fr = "Statistiques de m\xc3\xa9moire"
-		}
-		{
-			hash = "4ce3491c214c6d9c"
-			en = "About"
-			fr = "A propos"
 		}
 		{
 			hash = "6b148d06922621a5"
@@ -1555,42 +1540,67 @@ Demande: %lg/%lg"
 		{
 			hash = "fc7e155741baccdf"
 			en = "[%s] %s %.0lf %s ago"
-			fr = "@TODO"
+			fr = "[%s] %s %.0lf %s plus t\xc3\xb4t"
 		}
 		{
 			hash = "db7f29cfe3fa3b66"
 			en = "About - %s##8"
-			fr = "@TODO"
+			fr = "A propos - %s##8"
 		}
 		{
 			hash = "6a525d4314aa4b1f"
 			en = "Wallet - Finance 300K"
-			fr = "@TODO"
+			fr = "Portefeuille - Finance 300K"
 		}
 		{
 			hash = "abfb736e230e26cc"
 			en = "Version %s %.*s (%s)"
-			fr = "@TODO"
+			fr = "Version %s %.*s (%s)"
 		}
 		{
 			hash = "4de6c636a936ac13"
 			en = "Copyright (C) 2022-2023 - equals-forty-two.com - All rights reserved"
-			fr = "@TODO"
+			fr = "Copyright (C) 2022-2023 - equals-forty-two.com - Tous droits r\xc3\xa9serv\xc3\xa9s"
 		}
 		{
 			hash = "720a1625a590e4cd"
 			en = "Build %s"
-			fr = "@TODO"
+			fr = "Build %s"
 		}
 		{
 			hash = "69b093d6f69dc568"
 			en = "Commit %s"
-			fr = "@TODO"
+			fr = "Commit %s"
 		}
 		{
 			hash = "3957ecf9afa94c56"
 			en = "Renderer %s"
-			fr = "@TODO"
+			fr = "Renderer %s"
+		}
+		{
+			hash = "20912f655c126b6b"
+			en = "Frequency"
+			fr = "Fr\xc3\xa9quence"
+		}
+		{
+			hash = "8484d68d10b0d409"
+			en = "Frequency||Frequency in seconds"
+			fr = "Fr\xc3\xa9quence||Fr\xc3\xa9quence en secondes"
+		}
+		{
+			hash = "51ed523ec4dab681"
+			en = " Add a price alert of %.*s for %.*s "
+			fr = " Ajouter une alerte de prix de %.*s pour %.*s "
+		}
+		{
+			hash = "27401988236d16f6"
+			en = "\xef\xa3\xbf Wallet "
+			fr = "\xef\xa3\xbf Portefeuille "
+		}
+		{
+			hash = "5c747c30cd981112"
+			en = "\xef\xa3\xbf Wallet"
+			fr = "\xef\xa3\xbf Portefeuille"
 		}
 	]
 }

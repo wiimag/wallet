@@ -10,6 +10,7 @@
 #include "settings.h"
 #include "report.h"
 #include "news.h"
+#include "alerts.h"
 
 #include <framework/jobs.h>
 #include <framework/session.h>
@@ -311,7 +312,48 @@ FOUNDATION_STATIC void pattern_render_planning_line(string_const_t label, const 
     pattern_render_planning_url(label, string_null(), pattern, mark_index, can_skip_if_not_valid, translate);
 }
 
-FOUNDATION_STATIC void pattern_render_stats_line(string_const_t v1, string_const_t v2, string_const_t v3, bool translate = false)
+FOUNDATION_STATIC bool pattern_render_stats_value(const stock_t* s, string_const_t value)
+{
+    ImGui::TableNextColumn();
+    if (string_is_null(value))
+        return false;
+
+    table_cell_right_aligned_label(STRING_ARGS(value));
+
+    if (s == nullptr)
+        return false;
+
+    // Check if the value has a dollar
+    const size_t dollar_sign_pos = string_rfind(STRING_ARGS(value), '$', STRING_NPOS);
+    if (dollar_sign_pos != STRING_NPOS)
+    {
+        // Open contextual menu to add a price alert
+        string_const_t symbol = SYMBOL_CONST(s->code);
+        if (ImGui::BeginPopupContextItem(value.str))
+        {
+            ImGui::AlignTextToFramePadding();
+            if (ImGui::Selectable(tr_format_static_cstr(" Add a price alert of %.*s for %.*s ", STRING_FORMAT(value), STRING_FORMAT(symbol))))
+            {
+                double price_alert = string_to_real(value.str, dollar_sign_pos);
+                FOUNDATION_ASSERT(price_alert > 0);
+
+                if (s->current.price > price_alert)
+                {
+                    alerts_add_price_decrease(STRING_ARGS(symbol), price_alert);
+                }
+                else
+                {
+                    alerts_add_price_increase(STRING_ARGS(symbol), price_alert);
+                }
+            }
+            ImGui::EndPopup();
+        }
+    }
+
+    return true;
+}
+
+FOUNDATION_STATIC void pattern_render_stats_line(const stock_t* s, string_const_t v1, string_const_t v2, string_const_t v3, bool translate = false)
 {
     ImGui::TableNextRow();
 
@@ -321,11 +363,8 @@ FOUNDATION_STATIC void pattern_render_stats_line(string_const_t v1, string_const
     string_const_t trv1 = translate && v1.length > 1 ? tr(STRING_ARGS(v1), false) : v1;
     ImGui::TextWrapped("%.*s", STRING_FORMAT(trv1));
 
-    ImGui::TableNextColumn();
-    if (!string_is_null(v2)) table_cell_right_aligned_label(STRING_ARGS(v2));
-
-    ImGui::TableNextColumn();
-    if (!string_is_null(v3)) table_cell_right_aligned_label(STRING_ARGS(v3));
+    pattern_render_stats_value(s, v2);
+    pattern_render_stats_value(s, v3);
 }
 
 FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const char* text, size_t text_length)
@@ -609,13 +648,13 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
     if (s)
     {
         double share_p = s->current.volume / s->shares_count;
-        pattern_render_stats_line(CTEXT("Volume"), 
+        pattern_render_stats_line(nullptr, CTEXT("Volume"), 
             pattern_format_number(STRING_CONST("%.0lf"), s->current.volume),
             pattern_format_number(STRING_CONST("%.2lf %%"), share_p * 100.0), true);
-        pattern_render_stats_line(CTEXT("High 52"), 
+        pattern_render_stats_line(s, CTEXT("High 52"), 
             pattern_format_currency(s->high_52),
             pattern_format_percentage(s->current.adjusted_close / s->high_52 * 100.0), true);
-        pattern_render_stats_line(CTEXT("Low 52"), 
+        pattern_render_stats_line(s, CTEXT("Low 52"), 
             pattern_format_currency(s->low_52),
             pattern_format_percentage(s->low_52 / s->current.adjusted_close * 100.0), true);
         
@@ -627,7 +666,7 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         string_const_t yield_label = string_format_static(STRING_ARGS(fmttr), 
             pattern->yy_ratio.fetch() >= performance_ratio ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
         ImGui::PushStyleColor(ImGuiCol_Text, performance_ratio <= 0 || performance_ratio_combined < SETTINGS.good_dividends_ratio * 100.0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
-        pattern_render_stats_line(yield_label,
+        pattern_render_stats_line(nullptr, yield_label,
             pattern_format_percentage(yielding),
             pattern_format_percentage(performance_ratio), false);
         ImGui::PopStyleColor();
@@ -637,14 +676,14 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
                 pattern->performance_ratio.fetch(), pattern->years.fetch());
         }
 
-        pattern_render_stats_line(CTEXT("Beta"), 
+        pattern_render_stats_line(nullptr, CTEXT("Beta"), 
             pattern_format_percentage(s->beta * 100.0),
             pattern_format_percentage(s->dma_200 / s->dma_50 * 100.0), true);
 
         const double eps_diff = s->earning_trend_difference.fetch();
         const double eps_percent = s->earning_trend_percent.fetch();
         ImGui::PushStyleColor(ImGuiCol_Text, eps_diff <= 0.1 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
-        pattern_render_stats_line(CTEXT("Earnings"),
+        pattern_render_stats_line(nullptr, CTEXT("Earnings"),
             pattern_format_currency(s->diluted_eps_ttm),
             pattern_format_percentage(eps_percent), true);
         ImGui::PopStyleColor();
@@ -656,7 +695,7 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         
         if (s->pe != 0)
         {
-            pattern_render_stats_line(
+            pattern_render_stats_line(nullptr,
                 pattern_format_number(STRING_CONST("P/E (%.3g)"), s->pe, 0.0),
                 pattern_format_percentage(s->current.change / s->pe * 100.0),
                 pattern_format_percentage(math_average_parallel(&pattern->marks[7].change_p, 5, sizeof(pattern_mark_t)) * 100.0));
@@ -664,10 +703,10 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
 
         double flex_low_p = pattern->flex_low.fetch();
         double flex_high_p = pattern->flex_high.fetch();
-        pattern_render_stats_line(CTEXT("Flex"), 
+        pattern_render_stats_line(s, CTEXT("Flex"), 
             CTEXT("-"),
             pattern_format_percentage(flex_low_p * 100.0), false);
-        pattern_render_stats_line(CTEXT(""), 
+        pattern_render_stats_line(s, CTEXT(""), 
             pattern_format_percentage((flex_high_p - flex_low_p) * 100.0),
             pattern_format_percentage(flex_high_p * 100.0));
         
@@ -678,28 +717,28 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         mcp /= 4.0;
 
         double buy_limit = min(s->current.adjusted_close + (s->current.adjusted_close * (flex_low_p + math_abs(mcp))), s->current.adjusted_close - (s->current.adjusted_close * pattern->flex_high.fetch()));
-        pattern_render_stats_line(CTEXT("Buy Limit"), 
+        pattern_render_stats_line(s, CTEXT("Buy Limit"), 
             pattern_format_percentage((buy_limit / s->current.adjusted_close - 1.0) * 100.0),
             pattern_format_currency(buy_limit), true);
 
         const double flex_price_high = s->current.adjusted_close + (s->current.adjusted_close * (flex_high_p - mcp));
         const double sell_limit_p = (flex_price_high / buy_limit - 1.0) * 100.0;
         ImGui::PushStyleColor(ImGuiCol_Text, sell_limit_p < 0 ? TEXT_BAD_COLOR : (sell_limit_p > 3 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR));
-        pattern_render_stats_line(CTEXT("Sell Limit"), 
+        pattern_render_stats_line(s, CTEXT("Sell Limit"), 
             pattern_format_percentage(sell_limit_p),
             pattern_format_currency(flex_price_high), true);
 
         const double profit_price = s->dma_50;
         const double profit_percentage = (profit_price / flex_price_high - 1) * 100.0;
         ImGui::PushStyleColor(ImGuiCol_Text, profit_percentage < 0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
-        pattern_render_stats_line(CTEXT("Target Limit"),
+        pattern_render_stats_line(s, CTEXT("Target Limit"),
             pattern_format_percentage(profit_percentage),
             pattern_format_currency(profit_price), true);
 
         const double ws_limit = max(s->ws_target, max(s->current.adjusted_close * s->peg, s->dma_200));
         const double ws_limit_percentage = (ws_limit / flex_price_high - 1) * 100.0;
         ImGui::PushStyleColor(ImGuiCol_Text, ws_limit_percentage < 50.0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
-        pattern_render_stats_line(CTEXT(""),
+        pattern_render_stats_line(s, CTEXT(""),
             pattern_format_percentage(ws_limit_percentage),
             pattern_format_currency(ws_limit));
 

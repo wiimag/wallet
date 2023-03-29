@@ -368,15 +368,23 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
                     });
                 }
             }
-            else
+            else if (entry->fetch_errors < 5)
             {
+                entry->fetch_errors++;
                 dispatch([access_level, index]()
                 {
                     SHARED_READ_LOCK(_db_lock);
+                    if (_db_stocks == nullptr)
+                        return;
                     const stock_t* entry = &_db_stocks[index];
                     string_const_t ticker = SYMBOL_CONST(entry->code);
                     stock_request(STRING_ARGS(ticker), access_level);
                 }, postpone_time_ms);
+            }
+            else
+            {
+                entry->fetch_errors++;
+                log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Failed to fetch technical results for %s"), ticker);
             }
         }
     }
