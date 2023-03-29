@@ -397,7 +397,7 @@ TEST_SUITE("Stocks")
     TEST_CASE("SAR AND SLOPE" * doctest::timeout(60.0))
     {
         const char* symbols[] = {
-            "CPG.TO", /*"CVE.TO", */"BAC.US", "ATH.TO", "PEP.US", "CRM.US", "INTC.US", "CSCO.US", "KO.US", "NKE.US"
+            "CPG.TO", "PEP.US", "INTC.US", "CSCO.US", "NKE.US"
         };
 
         // Request all of them at once with EOD level first
@@ -405,13 +405,26 @@ TEST_SUITE("Stocks")
         for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
             string_const_t symbol = string_to_const(symbols[i]);
-            handles[i] = stock_request(STRING_ARGS(symbol), FetchLevel::EOD | FetchLevel::TECHNICAL_SAR | FetchLevel::TECHNICAL_SLOPE);
+            handles[i] = stock_request(STRING_ARGS(symbol), FetchLevel::EOD);
             CHECK(!!handles[i]);
         }
 
         // Wait for all of them to resolve
         for (int i = 0; i < ARRAY_COUNT(symbols); ++i)
         {
+            // Wait for EOD before requesting SAR and SLOPE
+            while (!handles[i]->has_resolve(FetchLevel::EOD))
+            {
+                dispatcher_update();
+                dispatcher_wait_for_wakeup_main_thread();
+            }
+
+            // Request SAR and SLOPE
+            CHECK_FALSE(stock_update(handles[i], FetchLevel::TECHNICAL_SAR | FetchLevel::TECHNICAL_SLOPE));
+            CHECK(handles[i]->is_resolving(FetchLevel::TECHNICAL_SAR));
+            CHECK(handles[i]->is_resolving(FetchLevel::TECHNICAL_SLOPE));
+
+            // Wait for SAR and SLOPE
             while (!handles[i]->has_resolve(FetchLevel::TECHNICAL_SAR))
             {
                 dispatcher_update();

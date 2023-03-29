@@ -160,6 +160,11 @@ config_handle_t config_set(config_handle_t v, const char* key, size_t key_length
 config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, string_const_t string_value);
 config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, const char* string_value, size_t string_length);
 
+FOUNDATION_FORCEINLINE config_handle_t config_set_string(config_handle_t obj, const char* key, size_t key_length, const char* string_value, size_t string_length)
+{
+    return config_set(obj, key, key_length, string_value, string_length);
+}
+
 template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], bool value) { return config_set(v, key, N-1, value); }
 template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], double number) { return config_set(v, key, N -1, number); }
 template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], const void* data) { return config_set(v, key, N -1, data); }
