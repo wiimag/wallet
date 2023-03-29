@@ -84,10 +84,8 @@
 		}
 		{
 			hash = "7c3a4fd11ab3bba7"
-			en = "Time to wait before rendering another frame (ms).
-The higher the number, less resources are used, therefore more battery time!"
-			fr = "Temps d'attente avant de rafra\xc3\xaechir l'\xc3\xa9cran (ms).
-Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9es, donc plus d'autonomie !"
+			en = "Time to wait before rendering another frame (ms).\nThe higher the number, less resources are used, therefore more battery time!"
+			fr = "Temps d'attente avant de rafra\xc3\xaechir l'\xc3\xa9cran (ms).\nPlus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9es, donc plus d'autonomie !"
 		}
 		{
 			hash = "7acd7163c9e895ef"
@@ -585,10 +583,8 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 		}
 		{
 			hash = "9486aaebc4d3a302"
-			en = " Average Rate (USD): %.2lf $ 
- Based on the average acquisition time of every titles (%.0lf). "
-			fr = " Taux moyen (USD): %.2lf $
- Bas\xc3\xa9 sur le temps moyen d'acquisition de chaque titre (%.0lf). "
+			en = " Average Rate (USD): %.2lf $ \n Based on the average acquisition time of every titles (%.0lf). "
+			fr = " Taux moyen (USD): %.2lf $\n Bas\xc3\xa9 sur le temps moyen d'acquisition de chaque titre (%.0lf). "
 		}
 		{
 			hash = "ea0639e8c1f19a5a"
@@ -892,10 +888,8 @@ Plus le nombre est \xc3\xa9lev\xc3\xa9, moins de ressources sont utilis\xc3\xa9e
 		}
 		{
 			hash = "6aa0ab6ff3cdf401"
-			en = "No search results for %.*s
-You can still add the search term as a title by pressing Add."
-			fr = "Aucun r\xc3\xa9sultat pour %.*s
-Vous pouvez toujours ajouter le terme de recherche comme titre en appuyant sur Ajouter."
+			en = "No search results for %.*s\nYou can still add the search term as a title by pressing Add."
+			fr = "Aucun r\xc3\xa9sultat pour %.*s\nVous pouvez toujours ajouter le terme de recherche comme titre en appuyant sur Ajouter."
 		}
 		{
 			hash = "95ba79ab6f6c42eb"
@@ -1199,21 +1193,13 @@ Vous pouvez toujours ajouter le terme de recherche comme titre en appuyant sur A
 		}
 		{
 			hash = "69a7cedeb597d699"
-			en = "Name: %.*s
-Email: %.*s
-Subscription: %.*s
-Request: %lg/%lg"
-			fr = "Nom: %.*s
-Email: %.*s
-Abonnement: %.*s
-Demande: %lg/%lg"
+			en = "Name: %.*s\nEmail: %.*s\nSubscription: %.*s\nRequest: %lg/%lg"
+			fr = "Nom: %.*s\nEmail: %.*s\nAbonnement: %.*s\nDemande: %lg/%lg"
 		}
 		{
 			hash = "eb4f96ff1e5e7a8e"
-			en = " Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain 
-           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
-			fr = " R\xc3\xa9sultats:  1 Ann\xc3\xa9e /  R\xc3\xa9el /  Estim\xc3\xa9 /  Diff.  / Surprise /   Gain 
-		   %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
+			en = " Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
+			fr = " R\xc3\xa9sultats:  1 Ann\xc3\xa9e /  R\xc3\xa9el /  Estim\xc3\xa9 /  Diff.  / Surprise /   Gain \n\t\t   %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
 		}
 		{
 			hash = "eb1fdec0022d23c3"
@@ -1417,10 +1403,8 @@ Demande: %lg/%lg"
 		}
 		{
 			hash = "86e461e5f603e100"
-			en = "Average capitalization movement since 14 days
-%.*s"
-			fr = "Mouvement moyen de la capitalisation depuis 14 jours
-%.*s"
+			en = "Average capitalization movement since 14 days\n%.*s"
+			fr = "Mouvement moyen de la capitalisation depuis 14 jours\n%.*s"
 		}
 		{
 			hash = "ba81ea76cd5c7663"
@@ -1601,6 +1585,36 @@ Demande: %lg/%lg"
 			hash = "5c747c30cd981112"
 			en = "\xef\xa3\xbf Wallet"
 			fr = "\xef\xa3\xbf Portefeuille"
+		}
+		{
+			hash = "fe21759d747e1784"
+			en = "Add bought price alert"
+			fr = "Ajouter une alerte au prix d'achat moyen"
+		}
+		{
+			hash = "c6e1ac60c51d5c08"
+			en = "\xee\x93\xbb %s Transactions"
+			fr = "\xee\x93\xbb Transactions %s"
+		}
+		{
+			hash = "4e35f7a6e9e3f7b8"
+			en = "Transactions"
+			fr = "Transactions"
+		}
+		{
+			hash = "84863dc914a6c6f7"
+			en = "Value"
+			fr = "Valeur"
+		}
+		{
+			hash = "c21c3447435c7ba9"
+			en = "Funds"
+			fr = "Fonds"
+		}
+		{
+			hash = "8d0c4957cffaef8d"
+			en = "Broker"
+			fr = "Courtier"
 		}
 	]
 }

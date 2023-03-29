@@ -24,21 +24,10 @@ static void report_graph_limit(const char* label, double min, double max, double
     ImPlot::PlotLine(label, range, limit, ARRAY_COUNT(limit), ImPlotLineFlags_NoClip);
 }
 
-static void report_graph_timelapse(report_t* report)
-{
-    // Gather all orders and sort them.
-    // Find min and max order dates
-    // Divide date range in months (or use wallet history entries?)
-    // For each month compute:
-    //  - Investment value at this time
-    //  - Total (Owned) value at this time
-    //  - Actual value (total value + accumulated gain)
-}
-
 void report_graph_show_transactions(report_t* report)
 {
-    string_const_t report_transaction_window_title = string_format_static(STRING_CONST(ICON_MD_AUTO_GRAPH " %s Transactions"), string_table_decode(report->name));
-    if (ImGui::Begin(report_transaction_window_title.str, &report->show_order_graph, ImGuiWindowFlags_NoCollapse))
+    const char* window_title = tr_format(ICON_MD_AUTO_GRAPH " %s Transactions", string_table_decode(report->name));
+    if (ImGui::Begin(window_title, &report->show_order_graph, ImGuiWindowFlags_NoCollapse))
     {
         if (shortcut_executed(ImGuiKey_F5) || ImGui::IsWindowAppearing())
         {
@@ -124,7 +113,7 @@ void report_graph_show_transactions(report_t* report)
 
         if (array_size(report->transactions) == 0)
         {
-            ImGui::TextUnformatted("No transaction to display");
+            ImGui::TrTextUnformatted("No transaction to display");
             return ImGui::End();
         }
 
@@ -134,7 +123,7 @@ void report_graph_show_transactions(report_t* report)
         ImPlot::SetNextAxesLimits(min_d, max_d, 0, report->transaction_max_acc * 1.15);
 
         const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
-        if (!ImPlot::BeginPlot("Transactions", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
+        if (!ImPlot::BeginPlot(tr("Transactions"), graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
             return ImGui::End();
 
         struct plot_axis_format_t
@@ -213,11 +202,11 @@ void report_graph_show_transactions(report_t* report)
             bool shown{ false };
         };
 
-        report_graph_limit("Value", min_d, max_d, report->total_value);
-        report_graph_limit("Funds", min_d, max_d, report->wallet->funds);
+        report_graph_limit(tr("Value"), min_d, max_d, report->total_value);
+        report_graph_limit(tr("Funds"), min_d, max_d, report->wallet->funds);
 
         if (array_size(report->wallet->history) > 0)
-            report_graph_limit("Broker", min_d, max_d, array_last(report->wallet->history)->broker_value);
+            report_graph_limit(tr("Broker"), min_d, max_d, array_last(report->wallet->history)->broker_value);
 
         plot_context_t c{ report->transactions };
 
@@ -253,7 +242,7 @@ void report_graph_show_transactions(report_t* report)
         }
 
         ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.0f);
-        ImPlot::PlotLineG("Investments", [](int idx, void* user_data)->ImPlotPoint
+        ImPlot::PlotLineG(tr("Investments"), [](int idx, void* user_data)->ImPlotPoint
         {
             const plot_context_t* c = (plot_context_t*)user_data;
             const report_transaction_t& t = c->transactions[idx];

@@ -119,13 +119,17 @@ FOUNDATION_FORCEINLINE string_const_t tr_format_static(const char* fmt, ...)
 }
 
 /*! Format a string literal and translate it.
+ * 
+ *  @remark This function is limited to 2048 characters.
+ * 
+ *  @important Make sure to use the returned string right away before calling this function again.
  *
  *  @param fmt Format string.
  *  @param ... Format arguments.
  *
  *  @return Translated constant string object.
  */
-FOUNDATION_FORCEINLINE const char* tr_format_static_cstr(const char* fmt, ...)
+FOUNDATION_FORCEINLINE const char* tr_format(const char* fmt, ...)
 {
     va_list args;
     va_start(args, fmt);
@@ -133,7 +137,6 @@ FOUNDATION_FORCEINLINE const char* tr_format_static_cstr(const char* fmt, ...)
     static thread_local char format_buffer[2048];
 
     string_const_t fmttr = tr(fmt, string_length(fmt), false);
-
     string_t formatted_tr_string = string_vformat(STRING_BUFFER(format_buffer), STRING_ARGS(fmttr), args);
 
     va_end(args);

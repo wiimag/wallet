@@ -533,6 +533,12 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
                 alerts_add_price_decrease(title->code, title->code_length, bid_price);
             }
 
+            if (ImGui::TrMenuItem("Add bought price alert"))
+            {
+                const double ask_price = title_get_bought_price(title);
+                alerts_add_price_increase(title->code, title->code_length, ask_price);
+            }
+
             ImGui::EndGroup();
             ImGui::EndMenu();
         }
