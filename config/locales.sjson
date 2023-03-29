@@ -1592,11 +1592,6 @@
 			fr = "Ajouter une alerte au prix d'achat moyen"
 		}
 		{
-			hash = "c6e1ac60c51d5c08"
-			en = "\xee\x93\xbb %s Transactions"
-			fr = "\xee\x93\xbb Transactions %s"
-		}
-		{
 			hash = "4e35f7a6e9e3f7b8"
 			en = "Transactions"
 			fr = "Transactions"
@@ -1615,6 +1610,11 @@
 			hash = "8d0c4957cffaef8d"
 			en = "Broker"
 			fr = "Courtier"
+		}
+		{
+			hash = "df70eea02f487ce8"
+			en = "%s Transactions"
+			fr = "Transactions %s"
 		}
 	]
 }

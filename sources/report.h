@@ -75,7 +75,6 @@ struct report_t
     bool show_sold_title{ false };
     bool show_add_title_ui{ false };
     bool show_rename_ui{ false };
-    bool show_order_graph{ false };
 
     report_expression_column_t* expression_columns{ nullptr };
 };
@@ -206,12 +205,6 @@ bool report_render_dialog_begin(string_const_t name, bool* show_ui, unsigned int
  * @return          True if the dialog is still open, false otherwise.
  */
 bool report_render_dialog_end(bool* show_ui = nullptr);
-
-/*! Render the report graph window.
- *
- * @param report   The report to render the graph for.
- */
-void report_graph_render(report_t* report);
 
 /*! Open the report transaction graph window.
  * 

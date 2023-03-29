@@ -35,6 +35,7 @@
 #include <framework/array.h>
 #include <framework/localization.h>
 #include <framework/system.h>
+#include <framework/window.h>
 
 #include <foundation/uuid.h>
 #include <foundation/path.h>
@@ -2224,17 +2225,25 @@ void report_menu(report_t* report)
             if (ImGui::MenuItem(tr(ICON_MD_TIMELINE " Show Timeline")))
                 timeline_render_graph(report);
 
-            ImGui::MenuItem(tr(ICON_MD_AUTO_GRAPH " Show Transactions"), nullptr, &report->show_order_graph);
+            if (ImGui::MenuItem(tr(ICON_MD_AUTO_GRAPH " Show Transactions")))
+            {
+                const char* window_title = tr_format("%s Transactions", string_table_decode(report->name));
+                window_open("##Transactions", window_title, string_length(window_title), [](window_handle_t win)
+                {
+                    report_t* report = (report_t*)window_get_user_data(win);
+                    report_graph_show_transactions(report);
+                }, nullptr, report);
+            }
                 
             ImGui::Separator();
 
             if (report->save)
             {
-                if (ImGui::MenuItem(tr(ICON_MD_SAVE " Save"), ICON_MD_KEYBOARD_COMMAND "+S"))
+                if (ImGui::TrMenuItem(ICON_MD_SAVE " Save", ICON_MD_KEYBOARD_COMMAND "+S"))
                     report_save(report);
             }
 
-            if (ImGui::MenuItem(tr(ICON_MD_REFRESH " Refresh"), "F5"))
+            if (ImGui::TrMenuItem(ICON_MD_REFRESH " Refresh", "F5"))
                 report_refresh(report);
 
             ImGui::EndMenu();
@@ -2378,7 +2387,6 @@ void report_render(report_t* report)
     }, summary_frame, IMGUI_SPLITTER_HORIZONTAL, 0, (space_left - IM_SCALEF(250.0f)) / space_left);
     
     report_render_dialogs(report);
-    report_graph_render(report);
 }
 
 void report_sort_order()
