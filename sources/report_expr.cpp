@@ -123,11 +123,11 @@ static struct {
 
     //Stock only (Start at index 35 <== !!!UPDATE INDEX #STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
 
-    { "price",      SC2(_2->current.adjusted_close), nullptr, FetchLevel::REALTIME },                       /*35*/
+    { "price",      SC2(_2->current.price), IS_NOT_A_NUMBER, FetchLevel::REALTIME },                       /*35*/
     { "date",       SC2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
     { "gmt",        SC2((double)_2->current.gmtoffset), nullptr, FetchLevel::REALTIME },
-    { "open",       SC2(_2->current.open), nullptr, FetchLevel::REALTIME },
-    { "close",      SC2(_2->current.adjusted_close), nullptr, FetchLevel::REALTIME },
+    { "open",       SC2(_2->current.open), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "close",      SC2(_2->current.adjusted_close), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
     { "yesterday",  SC2(_2->current.previous_close), nullptr, FetchLevel::REALTIME },
     { "low",        SC2(_2->current.low), nullptr, FetchLevel::REALTIME },
     { "high",       SC2(_2->current.high), nullptr, FetchLevel::REALTIME },

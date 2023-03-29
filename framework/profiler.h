@@ -23,7 +23,7 @@ struct TrackerScope
 
     template <size_t N> FOUNDATION_FORCEINLINE
     TrackerScope(const char(&name)[N])
-        :TrackerScope(name, N)
+        :TrackerScope(name, N-1)
     {
     }
 

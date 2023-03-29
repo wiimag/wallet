@@ -164,7 +164,7 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
         SHARED_READ_LOCK(_db_lock);
         stock_t* entry = &_db_stocks[index];
         entry->fetch_errors++;
-        entry->mark_resolved(FetchLevel::REALTIME);
+        entry->mark_resolved(FetchLevel::REALTIME, true);
         return false;
     }
     
@@ -368,15 +368,23 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
                     });
                 }
             }
-            else
+            else if (entry->fetch_errors < 5)
             {
+                entry->fetch_errors++;
                 dispatch([access_level, index]()
                 {
                     SHARED_READ_LOCK(_db_lock);
+                    if (_db_stocks == nullptr)
+                        return;
                     const stock_t* entry = &_db_stocks[index];
                     string_const_t ticker = SYMBOL_CONST(entry->code);
                     stock_request(STRING_ARGS(ticker), access_level);
                 }, postpone_time_ms);
+            }
+            else
+            {
+                entry->fetch_errors++;
+                log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Failed to fetch technical results for %s"), ticker);
             }
         }
     }
@@ -469,6 +477,38 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
 //
 // # PUBLIC API
 //
+
+stock_handle_t stock_resolve(const char* _symbol, size_t symbol_length, fetch_level_t fetch_levels, double timeout /*= 5.0f*/)
+{
+    // Get title name from symbol
+    string_const_t symbol = string_const(_symbol, symbol_length);
+    stock_handle_t stock = stock_request(STRING_ARGS(symbol), fetch_levels);
+    if (!stock)
+        return {};
+
+    // Wait for handle to resolve
+    tick_t timeout_ticks = time_current();
+    while (!stock->has_resolve(fetch_levels) )
+    {
+        dispatcher_wait_for_wakeup_main_thread(math_trunc(timeout * 100));
+
+        if (time_elapsed(timeout_ticks) > timeout)
+        {
+            error_report(ERRORLEVEL_WARNING, ERROR_EXCEPTION);
+            log_warnf(HASH_STOCK, WARNING_TIMEOUT, STRING_CONST("Stock resolve timed out for %.*s"), STRING_FORMAT(symbol));
+            return {};
+        }
+    }
+
+    if (stock->fetch_errors > 0)
+    {
+        error_report(ERRORLEVEL_WARNING, ERROR_EXCEPTION);
+        log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Stock resolve failed for %.*s"), STRING_FORMAT(symbol));
+        return {};
+    }
+
+    return stock;
+}
 
 status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 {

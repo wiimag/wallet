@@ -131,3 +131,5 @@ bool title_has_transactions(const title_t* title);
 double title_get_bought_price(const title_t* title);
 
 double title_get_sell_gain_rated(const title_t* title);
+
+double title_get_ask_price(const title_t* title);

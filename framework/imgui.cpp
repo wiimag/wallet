@@ -13,6 +13,7 @@
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
 #include <framework/array.h>
+#include <framework/system.h>
 
 #include <foundation/memory.h>
 
@@ -33,6 +34,7 @@
 
 static double _time = 0.0;
 static float _global_font_scaling = 0.0f;
+static float _current_window_scale = 1.0f;
 static GLFWcursor* _mouse_cursors[ImGuiMouseCursor_COUNT] = { nullptr };
 
 #if IMGUI_ENABLE_TEST_ENGINE
@@ -175,7 +177,7 @@ namespace ImGui
             if (ImGui::IsMouseClicked(0))
             {
                 if (URL_length > 0)
-                    open_in_shell(URL);
+                    system_execute_command(URL);
                 clicked = true;
             }
             ImGui::AddUnderLine(ImGui::GetStyle().Colors[ImGuiCol_ButtonHovered]);
@@ -459,11 +461,8 @@ void imgui_centered_aligned_label(const char* label, bool same_line /*= false*/)
 float imgui_get_font_ui_scale(float value /*= 1.0f*/)
 {
     if (math_float_is_zero(_global_font_scaling))
-    {
-        float window_scale = glfw_current_window_scale();
-        _global_font_scaling = session_get_float("font_scaling", 1.0f) * window_scale;
-    }
-    return _global_font_scaling * value * ImGui::GetIO().FontGlobalScale;
+        _global_font_scaling = session_get_float("font_scaling", 1.0f);
+    return _global_font_scaling * value * ImGui::GetIO().FontGlobalScale * _current_window_scale;
 }
 
 void imgui_set_font_ui_scale(float scale)
@@ -472,6 +471,13 @@ void imgui_set_font_ui_scale(float scale)
     log_warnf(HASH_IMGUI, WARNING_UI, 
         STRING_CONST("Setting font scaling to %f. You need to restart the application to take effect."), scale);
     session_set_float("font_scaling", scale);
+}
+
+float imgui_set_current_window_scale(float scale)
+{
+    const float old_scale = _current_window_scale;
+    _current_window_scale = scale;
+    return old_scale;
 }
 
 ImRect imgui_get_available_rect()
@@ -1084,4 +1090,16 @@ void imgui_bullet_text_wrapped(const char* fmt, ...)
     imgui_bullet_text_wrappedV(fmt, args);
 
     va_end(args);
+}
+
+bool imgui_fade_in_out_button(const char* label)
+{
+    // Compute alpha to have button fade in and out
+    float t = 0.5f * (sinf(ImGui::GetTime() * 6.0f) + 1.0f);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, t));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.0f, 0.0f, 0.0f, t));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.0f, 0.0f, 0.0f, t));
+    bool pressed = ImGui::Button(label);
+    ImGui::PopStyleColor(3);
+    return pressed;
 }

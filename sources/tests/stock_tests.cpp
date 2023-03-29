@@ -636,6 +636,18 @@ TEST_SUITE("Stocks")
         CHECK_EQ(SYMBOL_CONST(s->sector), CTEXT("Industrials"));
         CHECK_EQ(SYMBOL_CONST(s->industry), CTEXT("Airlines"));
     }
+
+    TEST_CASE("stock_resolve")
+    {
+        // Resolve existing stock
+        stock_handle_t stock = stock_resolve(STRING_CONST("AAPL.US"), FetchLevel::REALTIME);
+        REQUIRE(stock);
+        CHECK_FALSE(math_real_is_nan(stock->current.price));
+
+        // Resolve non-existing stock
+        stock = stock_resolve(STRING_CONST("NONEXISTING.STOCK"), FetchLevel::FUNDAMENTALS);
+        REQUIRE_FALSE(stock);
+    }
 }
 
 #endif // BUILD_DEVELOPMENT

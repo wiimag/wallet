@@ -77,7 +77,7 @@ struct pattern_t
     stock_handle_t stock;
 
     time_t date { 0 };
-    bool save{ true };
+    bool save{ false };
     bool autofit{ false };
 
     // Computed values
@@ -125,3 +125,5 @@ pattern_handle_t pattern_open(const char* symbol, size_t symbol_length);
 pattern_handle_t pattern_open_window(const char* symbol, size_t symbol_length);
 
 bool pattern_menu_item(const char* symbol, size_t symbol_length);
+
+double pattern_get_bid_price(pattern_handle_t pattern_handle);

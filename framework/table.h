@@ -509,7 +509,7 @@ column_t& table_add_column(table_t* table,
     column_format_t format = COLUMN_FORMAT_TEXT,
     column_flags_t flags = COLUMN_OPTIONS_NONE)
 {
-    return table_add_column(table, name, N, fetch_value_handler, format, flags);
+    return table_add_column(table, name, N - 1, fetch_value_handler, format, flags);
 }
 
 /*! Add a new column to the table. 
@@ -531,7 +531,7 @@ column_t& table_add_column(table_t* table,
     column_format_t format = COLUMN_FORMAT_TEXT,
     column_flags_t flags = COLUMN_OPTIONS_NONE)
 {
-    return table_add_column(table, name, N-1, fetch_value_handler, format, flags);
+    return table_add_column(table, name, N - 1, fetch_value_handler, format, flags);
 }
 
 /*! Clear all columns from the table. 

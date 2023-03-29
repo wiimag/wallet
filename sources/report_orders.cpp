@@ -192,7 +192,7 @@ FOUNDATION_STATIC cell_t report_order_column_date(table_element_ptr_t element, c
 
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true))
         {
             odate = mktime(&tm_date);
@@ -213,7 +213,7 @@ FOUNDATION_STATIC cell_t report_order_column_quantity(table_element_ptr_t elemen
 
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         if (ImGui::InputDouble("##Quantity", &quantity, 10.0f, 100.0f, "%.0lf", ImGuiInputTextFlags_None))
         {
             config_set(order->data, STRING_CONST("qty"), quantity);
@@ -298,7 +298,7 @@ FOUNDATION_STATIC cell_t report_order_column_price(table_element_ptr_t element, 
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         double price_scale = price / 10.0f;
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         if (ImGui::InputDouble("##Price", &price, price < 0.5 ? 0.005 : 0.1, price < 0.5 ? 0.01 : 0.5,
             math_real_is_nan(price) ? "-" : (price < 0.5 ? "%.4lg $" : "%.2lf $"), ImGuiInputTextFlags_None))
         {
@@ -320,7 +320,7 @@ FOUNDATION_STATIC cell_t report_order_column_ask_price(table_element_ptr_t eleme
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         double price_scale = price / 10.0f;
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
+        ImGui::ExpandNextItem();
         if (ImGui::InputDouble("##Ask", &price, price_scale, price_scale * 2.0f,
             math_real_is_nan(price) ? "-" : (price < 0.5 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None))
         {

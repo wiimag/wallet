@@ -412,12 +412,7 @@ struct expr_result_t
             return true;
 
         if (type == EXPR_RESULT_NUMBER)
-        {
-            if (math_real_is_nan(value))
-                return true;
-
-            return false;
-        }
+            return !math_real_is_finite(value);
 
         if (type == EXPR_RESULT_SYMBOL)
             return math_trunc(value) == 0;
@@ -678,6 +673,12 @@ struct expr_result_t
     /*! Returns a boolean result if the current value is less than or equal to the other value. */
     expr_result_t operator<=(const expr_result_t& rhs) const
     {
+        if (type == EXPR_RESULT_NULL && rhs.type == EXPR_RESULT_NULL)
+            return true;
+
+        if (type == EXPR_RESULT_NULL || rhs.type == EXPR_RESULT_NULL)
+            return false;
+
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value <= rhs.as_number());
 
@@ -688,6 +689,12 @@ struct expr_result_t
     /*! Returns a boolean result if the current value is greater than or equal to the other value. */
     expr_result_t operator>=(const expr_result_t& rhs) const
     {
+        if (type == EXPR_RESULT_NULL && rhs.type == EXPR_RESULT_NULL)
+            return true;
+
+        if (type == EXPR_RESULT_NULL || rhs.type == EXPR_RESULT_NULL)
+            return false;
+
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value >= rhs.as_number());
 
@@ -980,28 +987,6 @@ struct expr_macro_t
     vec_expr_t body;
 };
 
-struct expr_record_t
-{
-    time_t time{ 0 };
-    bool assertion{ false };
-    string_table_symbol_t tag{ 0 };
-    double value{ NAN };
-};
-
-/*! Expression evaluator. */
-struct expr_evaluator_t
-{
-    char code[32]{ '\0' };
-    char label[64]{ '\0' };
-    char expression[1024]{ '\0' };
-    char assertion[256]{ '\0' };
-    char assembled[ARRAY_COUNT(expression) + ARRAY_COUNT(assertion)]{ '\0' };
-    double frequency{ 60.0 * 5 }; // 5 minutes
-
-    expr_record_t* records{ nullptr };
-    time_t last_run_time{ 0 };
-};
-
 /*! Evaluate an expression node.
  *
  *  @param e Expression node to evaluate.
@@ -1045,6 +1030,14 @@ const expr_result_t* expr_eval_list(const expr_result_t* list);
  *  @param size Size of the variable data payload, or 0 if unknown.
  */
 bool expr_set_global_var(const char* name, void* ptr, size_t size = 0);
+
+/*! Set the global variable to a given string value. 
+ * 
+ *  @param name Name of the variable.
+ *  @param str  String value to set.
+ *  @param str_length Length of the string, or -1 if null terminated.
+ */
+bool expr_set_global_var(const char* name, size_t name_length, const char* str, size_t str_length);
 
 /*! Register a function with the expression system.
  *

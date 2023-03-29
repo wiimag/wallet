@@ -65,7 +65,11 @@ FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
     uint8_t gmtoffset{ 0 };
 
     double open{ NAN };
-    double close{ NAN };
+
+    union {
+        double close{ NAN };
+        double price;
+    };
     double adjusted_close{ NAN };
     double previous_close{ NAN };
     double price_factor{ NAN };
@@ -181,12 +185,13 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
 
     //! @brief Mark the stock as resolved for a given level.
     //! @param resolved_level The level of resolution that has being resolved.
-    FOUNDATION_FORCEINLINE void mark_resolved(fetch_level_t resolved_level)
+    FOUNDATION_FORCEINLINE void mark_resolved(fetch_level_t resolved_level, bool keep_errors = false)
     {
         this->resolved_level |= resolved_level;
         this->fetch_level &= ~this->resolved_level;
         this->last_update_time = time_current();
-        this->fetch_errors = 0;
+        if (!keep_errors)
+            this->fetch_errors = 0;
     }
 };
 
@@ -271,6 +276,17 @@ status_t stock_initialize(const char* code, size_t code_length, stock_handle_t* 
  *  @return True if the stock was resolved, false otherwise.
  */
 status_t stock_resolve(stock_handle_t& stock_handle, fetch_level_t fetch_levels);
+
+/*! Attempt to resolve a stock at a given fetch level. 
+ * 
+ *  @param symbol The stock symbol.
+ *  @param symbol_length The length of the stock symbol.
+ *  @param fetch_levels The fetch level to resolve.
+ *  @param timeout The timeout in seconds to wait for the stock to be resolved.
+ * 
+ *  @return True if the stock was resolved, false otherwise.
+ */
+stock_handle_t stock_resolve(const char* symbol, size_t symbol_length, fetch_level_t fetch_levels, double timeout = 5.0f);
 
 /*! Request and resolve a stock symbol. 
  *  This function will attempt to resolve the stock at the given fetch level.

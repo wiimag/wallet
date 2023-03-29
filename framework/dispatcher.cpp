@@ -333,8 +333,6 @@ bool dispatcher_wait_for_wakeup_main_thread(int timeout_ms)
     return _main_thread_wake_up_event.wait(timeout_ms) == 0;
 }
 
-
-
 FOUNDATION_STATIC void dispatch_execute_thread_completed(void* obj)
 {
     dispatcher_thread_t* dt = (dispatcher_thread_t*)obj;

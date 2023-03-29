@@ -574,3 +574,12 @@ int string_levenstein_distance(const char* str1, size_t length1, const char* str
  * @return The levenstein distance.
  */
 int string_levenstein_distance(string_const_t str1, string_const_t str2);
+
+/*! Remove string trailing whitespaces.
+ *
+ * @param str The string.
+ * @param length The length of the string.
+ * 
+ * @return The string without trailing whitespaces.
+ */
+string_const_t string_remove_trailing_whitespaces(const char* str, size_t length);

@@ -77,7 +77,7 @@ FOUNDATION_STATIC void profiler_tracker(void* buffer, size_t size)
     {
         //char profile_msg_buffer[128];
         //string_t profile_msg = string_format(STRING_BUFFER(profile_msg_buffer), S("====== FRAME %llu ======\n"), b->end);
-        //process_debug_output(STRING_ARGS(profile_msg));
+        //system_process_debug_output(STRING_ARGS(profile_msg));
     }
     else
     {
@@ -91,7 +91,7 @@ FOUNDATION_STATIC void profiler_tracker(void* buffer, size_t size)
             #if 0
             char profile_msg_buffer[128];
             string_t profile_msg = string_format(STRING_BUFFER_msg_buffer), S("[%d:%d] %.*s(%llu) -> %.4lg ms\n"), b->id, b->parentid, (int)string_length(b->name), b->name, key, diff_ms);
-            process_debug_output(STRING_ARGS(profile_msg));
+            system_process_debug_output(STRING_ARGS(profile_msg));
             #endif
 
             auto bs_compare = [](const void* _a, const void* _b)
@@ -149,7 +149,7 @@ FOUNDATION_STATIC void profiler_tracker(void* buffer, size_t size)
         {
             //char profile_msg[128];
             //string_format(STRING_BUFFER(profile_msg), S("====== EVENT (%s:%llu) %d ======\n"), b->name, b->end, b->id);
-            //process_debug_output(profile_msg);
+            //system_process_debug_output(profile_msg);
         }
     }
     if (_profile_stream)

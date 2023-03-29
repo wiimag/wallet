@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include <framework/app.h>
 #include <framework/math.h>
 #include <framework/config.h>
 #include <framework/common.h>

@@ -1,18 +1,21 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
-#include "common.h"
+#include "system.h"
+
+#if FOUNDATION_PLATFORM_MACOS
 
 #include <framework/string.h>
+#include <framework/common.h>
 
-#include <foundation/foundation.h>
 #include <foundation/apple.h>
+#include <foundation/foundation.h>
 
 extern void* _window_handle;
 
-bool open_file_dialog(const char* dialog_title,
+bool system_open_file_dialog(const char* dialog_title,
                                 const char* extension,
                                 const char* current_file_path,
                                 function<bool(string_const_t)> selected_file_callback)
@@ -30,8 +33,8 @@ bool open_file_dialog(const char* dialog_title,
             STRING_CONST("/"), STRING_CONST("\\"), true);
     }
     
-    @autoreleasepool {
-        
+    @autoreleasepool 
+    {    
         NSOpenPanel* openPanel = [NSOpenPanel openPanel];
         
         openPanel.title = [NSString stringWithUTF8String:dialog_title];
@@ -114,4 +117,6 @@ void system_add_menu_item(const char* name)
     }
 
 }
+#endif
+
 #endif

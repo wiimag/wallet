@@ -23,6 +23,7 @@
 #include <framework/expr.h>
 #include <framework/window.h>
 #include <framework/array.h>
+#include <framework/system.h>
 
 #include <foundation/stream.h>
 #include <foundation/thread.h>
@@ -435,9 +436,13 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     string_const_t category = General["Category"].as_string();
     string_const_t home_category = General["HomeCategory"].as_string();
         
+    bool new_document_added = false;
     search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
     if (doc == SEARCH_DOCUMENT_INVALID_ID)
+    {
+        new_document_added = true;
         doc = search_database_add_document(db, STRING_ARGS(symbol));
+    }
 
     TIME_TRACKER(2.0, HASH_SEARCH, "[%u] Indexing [%12.*s] %-7.*s -> %.*s -> %.*s",
         doc, STRING_FORMAT(isin), STRING_FORMAT(symbol), STRING_FORMAT(type), STRING_FORMAT(name));
@@ -574,14 +579,17 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     }
 
     // Index EOD stock data
-    time_t start = 0;
-    if (stock_get_time_range(STRING_ARGS(symbol), &start, nullptr, 5.0))
+    if (new_document_added)
     {
-        search_database_index_property(db, doc, STRING_CONST("since"), (double)start);
-    }
-    else
-    {
-        log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch time range for symbol %*.s"), STRING_FORMAT(symbol));
+        time_t start = 0;
+        if (stock_get_time_range(STRING_ARGS(symbol), &start, nullptr, 5.0))
+        {
+            search_database_index_property(db, doc, STRING_CONST("since"), (double)start);
+        }
+        else
+        {
+            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch time range for symbol %*.s"), STRING_FORMAT(symbol));
+        }
     }
 
     search_database_document_update_timestamp(db, doc);
@@ -606,7 +614,7 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
 
     for(auto e : data)
     {   
-        if (thread_try_wait(10))
+        if (thread_try_wait(500))
         {
             *stop_indexing = true;
             break;
@@ -920,9 +928,9 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
     }
 }
 
-FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry_t* entry, const column_t* column)
+FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry_t* entry, const column_t* column, fetch_level_t fetch_levels)
 {
-    if (entry->stock.initialized())
+    if (entry->stock.initialized() && entry->stock->has_resolve(fetch_levels))
         return entry->stock.resolve();
 
     const bool sorting = (column->flags & COLUMN_SORTING_ELEMENT) != 0;
@@ -932,12 +940,21 @@ FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry
         if (!sorting)
             return nullptr;
     }
-    else if (time_elapsed(entry->uptime) < (!sorting ? 1.25 : 0.25))
+    
+    // Return if we haven't been visible for at least 1 second
+    if (time_elapsed(entry->uptime) < 1.0)
         return nullptr;
 
-    string_const_t symbol = search_database_document_name(entry->db, entry->doc);
-    entry->stock = stock_request(STRING_ARGS(symbol), FetchLevel::REALTIME | FetchLevel::FUNDAMENTALS | FetchLevel::EOD);
-    entry->viewed = pattern_find(STRING_ARGS(symbol)) >= 0;
+    if (!entry->stock.initialized())
+    {
+        string_const_t symbol = search_database_document_name(entry->db, entry->doc);
+        entry->stock = stock_request(STRING_ARGS(symbol), fetch_levels);
+        entry->viewed = pattern_find(STRING_ARGS(symbol)) >= 0;
+    }
+    else if (!entry->stock->has_resolve(fetch_levels))
+    {
+        stock_update(entry->stock, fetch_levels);
+    }    
 
     return entry->stock.resolve();
 }
@@ -947,7 +964,7 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
     search_result_entry_t* entry = (search_result_entry_t*)element;
     FOUNDATION_ASSERT(entry);
 
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::NONE);
     if (s)
     {
         string_const_t code = SYMBOL_CONST(s->code);
@@ -984,7 +1001,7 @@ FOUNDATION_STATIC cell_t search_table_column_name(table_element_ptr_t element, c
     search_result_entry_t* entry = (search_result_entry_t*)element;
     FOUNDATION_ASSERT(entry);
 
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
 
@@ -994,7 +1011,7 @@ FOUNDATION_STATIC cell_t search_table_column_name(table_element_ptr_t element, c
 FOUNDATION_STATIC cell_t search_table_column_country(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
     return s->country;
@@ -1003,7 +1020,7 @@ FOUNDATION_STATIC cell_t search_table_column_country(table_element_ptr_t element
 FOUNDATION_STATIC cell_t search_table_column_exchange(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
     return s->exchange;
@@ -1012,7 +1029,7 @@ FOUNDATION_STATIC cell_t search_table_column_exchange(table_element_ptr_t elemen
 FOUNDATION_STATIC cell_t search_table_column_currency(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
     return s->currency;
@@ -1021,7 +1038,7 @@ FOUNDATION_STATIC cell_t search_table_column_currency(table_element_ptr_t elemen
 FOUNDATION_STATIC cell_t search_table_column_type(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
     return s->type;
@@ -1030,7 +1047,7 @@ FOUNDATION_STATIC cell_t search_table_column_type(table_element_ptr_t element, c
 FOUNDATION_STATIC cell_t search_table_column_sector(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
     if (s->sector)
@@ -1043,7 +1060,7 @@ FOUNDATION_STATIC cell_t search_table_column_sector(table_element_ptr_t element,
 FOUNDATION_STATIC cell_t search_table_column_industry(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
     return s->industry;
@@ -1052,7 +1069,7 @@ FOUNDATION_STATIC cell_t search_table_column_industry(table_element_ptr_t elemen
 FOUNDATION_STATIC cell_t search_table_column_category(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
     return s->category;
@@ -1061,7 +1078,7 @@ FOUNDATION_STATIC cell_t search_table_column_category(table_element_ptr_t elemen
 FOUNDATION_STATIC cell_t search_table_column_isin(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
     return s->isin;
@@ -1070,7 +1087,7 @@ FOUNDATION_STATIC cell_t search_table_column_isin(table_element_ptr_t element, c
 FOUNDATION_STATIC cell_t search_table_column_change_p(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME);
     if (s == nullptr)
         return NAN;
     return s->current.change_p;
@@ -1079,7 +1096,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_p(table_element_ptr_t elemen
 FOUNDATION_STATIC cell_t search_table_column_change_week(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
     if (s == nullptr)
         return NAN;
 
@@ -1092,7 +1109,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_week(table_element_ptr_t ele
 FOUNDATION_STATIC cell_t search_table_column_change_month(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
     if (s == nullptr)
         return NAN;
 
@@ -1105,7 +1122,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_month(table_element_ptr_t el
 FOUNDATION_STATIC cell_t search_table_column_change_year(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
     if (s == nullptr)
         return NAN;
 
@@ -1118,7 +1135,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_year(table_element_ptr_t ele
 FOUNDATION_STATIC cell_t search_table_column_change_max(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
     if (s == nullptr)
         return NAN;
 
@@ -1131,7 +1148,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_max(table_element_ptr_t elem
 FOUNDATION_STATIC cell_t search_table_column_return_rate(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return nullptr;
     return s->dividends_yield.fetch() * 100.0;
@@ -1140,7 +1157,7 @@ FOUNDATION_STATIC cell_t search_table_column_return_rate(table_element_ptr_t ele
 FOUNDATION_STATIC cell_t search_table_column_price(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME);
     if (s == nullptr)
         return nullptr;
     return s->current.close;
@@ -1149,7 +1166,7 @@ FOUNDATION_STATIC cell_t search_table_column_price(table_element_ptr_t element, 
 FOUNDATION_STATIC cell_t search_table_column_since(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::EOD);
     if (s == nullptr)
         return nullptr;
 
@@ -1162,7 +1179,7 @@ FOUNDATION_STATIC cell_t search_table_column_since(table_element_ptr_t element, 
 FOUNDATION_STATIC cell_t search_table_column_percentage_per_year(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
     if (s == nullptr)
         return nullptr;
 
@@ -1182,7 +1199,7 @@ FOUNDATION_STATIC void search_table_column_dividends_formatter(table_element_ptr
     search_result_entry_t* entry = (search_result_entry_t*)element;
     FOUNDATION_ASSERT(entry);
     
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return;
 
@@ -1205,7 +1222,7 @@ FOUNDATION_STATIC void search_table_column_change_p_formatter(table_element_ptr_
 FOUNDATION_STATIC void search_table_column_description_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
     if (s == nullptr)
         return;
     string_table_symbol_t tooltip_symbol = s->description.fetch();
@@ -1221,7 +1238,7 @@ FOUNDATION_STATIC void search_table_column_description_tooltip(table_element_ptr
 FOUNDATION_STATIC void search_table_column_code_color(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::NONE);
     if (s != nullptr && entry->viewed)
     {
         style.types |= COLUMN_COLOR_TEXT;
@@ -1232,7 +1249,7 @@ FOUNDATION_STATIC void search_table_column_code_color(table_element_ptr_const_t 
 FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
-    const stock_t* s = search_result_resolve_stock(entry, column);
+    const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::NONE);
     string_const_t symbol = search_database_document_name(entry->db, entry->doc);
 
     if (s == nullptr && string_is_null(symbol))
@@ -1248,10 +1265,10 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
 
     #if BUILD_DEVELOPMENT
     if (ImGui::MenuItem(tr("Browse News")))
-        {open_in_shell(eod_build_url("news", nullptr, FORMAT_JSON, "s", symbol.str).str);}
+        system_execute_command(eod_build_url("news", nullptr, FORMAT_JSON, "s", symbol.str).str);
 
     if (ImGui::MenuItem(tr("Browse Fundamentals")))
-        open_in_shell(eod_build_url("fundamentals", symbol.str, FORMAT_JSON).str);
+        system_execute_command(eod_build_url("fundamentals", symbol.str, FORMAT_JSON).str);
     #endif
 
     ImGui::Separator();
