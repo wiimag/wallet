@@ -354,35 +354,26 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
         }
         else if (eod_availalble())
         {
-            const uint32_t postpone_time_ms = min((uint32_t)(1000.0 - time_elapsed(entry->last_update_time) * 1000.0), 1000U);
-            log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Missing EOD data to fetch technical results %d for %s (%u)"), 
-                access_level, ticker, postpone_time_ms);
-
             if (!entry->is_resolving(FetchLevel::EOD, 0))
             {
-                const auto eod_stock_handle_request = stock_request(ticker, string_length(ticker), FetchLevel::EOD);
+                log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("Missing EOD data to fetch technical results %d for %s"), access_level, ticker);
+
+                // Request EOD, then mark access level to be resolved by EOD when finished
+                auto eod_stock_handle_request = stock_request(ticker, string_length(ticker), FetchLevel::EOD);
                 if (eod_stock_handle_request)
                 {
                     status = STATUS_RESOLVING;
-                    dispatch([access_level, eod_stock_handle_request]()
-                    {
-                        string_const_t ticker = SYMBOL_CONST(eod_stock_handle_request.code);
-                        stock_request(STRING_ARGS(ticker), access_level);
-                    });
+                    eod_stock_handle_request->mark_fetched(access_level);
                 }
             }
-            else if (entry->fetch_errors < 5)
+            else if (entry->fetch_errors < 10)
             {
+                log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Still missing EOD data to fetch technical results %d for %s"),
+                    entry->fetch_errors, access_level, ticker);
+
                 entry->fetch_errors++;
-                dispatch([access_level, index]()
-                {
-                    SHARED_READ_LOCK(_db_lock);
-                    if (_db_stocks == nullptr)
-                        return;
-                    const stock_t* entry = &_db_stocks[index];
-                    string_const_t ticker = SYMBOL_CONST(entry->code);
-                    stock_request(STRING_ARGS(ticker), access_level);
-                }, postpone_time_ms);
+                status = STATUS_RESOLVING;
+                entry->mark_fetched(access_level);
             }
             else
             {
@@ -474,6 +465,23 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
             entry.current.price_factor = first_price_factor;
 
         entry.mark_resolved(FetchLevel::EOD);
+
+        // Check if we need to fetch any awaiting technical results 
+        // since now we have EOD stock data
+        const fetch_level_t cfetch_level = entry.fetch_level & TECHINICAL_CHARTS;
+        if (cfetch_level != 0)
+        {
+            // Remove technical fetch levels so we make sure the request is not
+            // reissued if the stock is already resolved
+            entry.fetch_level &= ~TECHINICAL_CHARTS;
+
+            string_table_symbol_t ccode = entry.code;
+            dispatch([ccode, cfetch_level]()
+            {
+                string_const_t symbol = SYMBOL_CONST(ccode);
+                stock_request(STRING_ARGS(symbol), cfetch_level);
+            });
+        }
     }
 }
 
@@ -638,7 +646,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         }
     }
 
-    if ((fetch_levels & FetchLevel::TECHINICAL_CHARTS) != 0)
+    if ((fetch_levels & TECHINICAL_CHARTS) != 0)
     {
         stock_fetch_technical_results(FetchLevel::TECHNICAL_EMA, status, fetch_levels, ticker, index, "ema", "ema", offsetof(day_result_t, ema));
         stock_fetch_technical_results(FetchLevel::TECHNICAL_SMA, status, fetch_levels, ticker, index, "sma", "sma", offsetof(day_result_t, sma));

@@ -666,8 +666,6 @@ FOUNDATION_STATIC void* fetcher_thread_fn(void* arg)
         string_deallocate(req.body.str);
         string_deallocate(req.query.str);
         dispatcher_wakeup_main_thread();
-            
-        signal_thread();
         progress_set(min(_fetcher_requests.size(), ARRAY_COUNT(_fetcher_threads)), ARRAY_COUNT(_fetcher_threads));
     }
 
@@ -790,8 +788,6 @@ void query_initialize()
 {
     if (_initialized)
         return;
-
-    log_infof(HASH_QUERY, STRING_CONST("Initializing query system"));
         
     #if BUILD_ENABLE_MEMORY_TRACKER
     curl_global_init_mem(CURL_GLOBAL_DEFAULT, curl_malloc_cb,
@@ -814,6 +810,8 @@ void query_initialize()
 
     const size_t thread_count = sizeof(_fetcher_threads) / sizeof(_fetcher_threads[0]);
     _fetcher_requests.create();
+
+    log_infof(HASH_QUERY, STRING_CONST("Initializing query system with %" PRIsize " threads"), thread_count);
 
     for (int i = 0; i < thread_count; ++i)
         _fetcher_threads[i] = thread_allocate(fetcher_thread_fn, nullptr, STRING_CONST("CURL HTTP Fetcher"), THREAD_PRIORITY_NORMAL, 0);

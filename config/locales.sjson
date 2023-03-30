@@ -1621,5 +1621,10 @@
 			en = "Add currency"
 			fr = "Nouv. devise"
 		}
+		{
+			hash = "4ce3491c214c6d9c"
+			en = "About"
+			fr = "A propos"
+		}
 	]
 }
