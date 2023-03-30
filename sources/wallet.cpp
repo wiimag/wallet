@@ -8,6 +8,7 @@
 #include "eod.h"
 #include "report.h"
 #include "settings.h"
+#include "stock.h"
 
 #include <framework/imgui.h>
 #include <framework/table.h>
@@ -101,15 +102,101 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::TableNextRow();
         ImGui::TableNextColumn();
 
-        ImGui::AlignTextToFramePadding();
-        ImGui::TrTextUnformatted("Fund");
-        last_item_size = ImGui::GetItemRectSize().x;
+        string_const_t funds_string = string_from_currency(wallet_get_total_funds(wallet), STRING_CONST("9 999 999.99 $"));
+        if (ImGui::TreeNode(tr("Funds")))
+        {
+            ImGui::SetWindowFontScale(0.9f);
+            ImGui::TableNextColumn();
+            table_cell_right_aligned_label(STRING_ARGS(funds_string));
 
-        const float control_width = IM_SCALEF(96.0f);
-        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputDouble("##Fund", &wallet->funds, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
-            updated |= true;
+            foreach(f, wallet->funds)
+            {
+                char currency_code[8];
+                string_copy(STRING_BUFFER(currency_code), STRING_ARGS(f->currency));
+
+                ImGui::PushID(f);
+                ImGui::TableNextColumn();
+
+                ImGui::ExpandNextItem();
+                if (ImGui::InputTextWithHint("##Currency", "USD", STRING_BUFFER(currency_code), ImGuiInputTextFlags_AutoSelectAll))
+                {
+                    updated |= true;
+                    string_deallocate(f->currency.str);
+                    f->currency = string_clone(currency_code, string_length(currency_code));
+                }
+
+                ImGui::TableNextColumn();
+                ImGui::ExpandNextItem();
+                if (ImGui::InputDouble("##Amount", &f->amount, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+                    updated |= true;
+
+                ImGui::PopID();
+            }
+
+            static bool add_new = false;
+
+            if (add_new)
+            {
+                ImGui::PushID("new fund");
+                bool added = false;
+                static double new_fund_amount = 0.0;
+                static char new_fund_currency[8] = { 0 };
+                ImGui::TableNextColumn();
+
+                ImGui::ExpandNextItem();
+                if (ImGui::InputTextWithHint("##Currency", "USD", STRING_BUFFER(new_fund_currency), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+                    added = true;
+
+                ImGui::TableNextColumn();
+                ImGui::ExpandNextItem();
+                if (ImGui::InputDouble("##Amount", &new_fund_amount, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+                    added = true;
+
+                const size_t currency_length = string_length(new_fund_currency);
+                if (added && currency_length > 1)
+                {
+                    wallet_fund_t fund{};
+                    fund.amount = new_fund_amount;
+                    fund.currency = string_clone(new_fund_currency, currency_length);
+                    array_push_memcpy(wallet->funds, &fund);
+
+                    new_fund_amount = 0.0;
+                    new_fund_currency[0] = 0;
+
+                    updated |= true;
+                    add_new = false;
+                }
+                ImGui::PopID();
+
+                ImGui::TableNextColumn();
+                ImGui::TableNextColumn();
+                ImGui::ExpandNextItem();
+                if (ImGui::SmallButton(tr("Cancel")))
+                {
+                    add_new = false;
+                    new_fund_amount = 0.0;
+                    new_fund_currency[0] = 0;
+                }
+            }
+            else
+            {
+                ImGui::TableNextColumn();
+                ImGui::TableNextColumn();
+                ImGui::ExpandNextItem();
+                if (ImGui::SmallButton(tr("Add currency")))
+                {
+                    add_new = true;
+                }
+            }
+
+            ImGui::SetWindowFontScale(1.0f);
+            ImGui::TreePop();
+        }
+        else
+        {
+            ImGui::TableNextColumn();
+            table_cell_right_aligned_label(STRING_ARGS(funds_string));
+        }
     }
 
     return updated;
@@ -136,7 +223,7 @@ FOUNDATION_STATIC bool wallet_history_update_entry(report_t* report, wallet_t* w
     entry.date = time_now();
     entry.source = wallet;
     entry.show_edit_ui = true;
-    entry.funds = wallet->funds;
+    entry.funds = wallet_get_total_funds(wallet);
     entry.investments = report->total_investment;
     entry.total_value = report->total_value;
     entry.gain = report->wallet->sell_total_gain;
@@ -787,11 +874,31 @@ wallet_t* wallet_allocate(config_handle_t wallet_data)
     *wallet = wallet_t{};
     wallet->history = nullptr;
     wallet->history_table = nullptr;
-    wallet->funds = wallet_data["funds"].as_number(0.0);
     wallet->main_target = wallet_data["main_target"].as_number(0.25);
     wallet->show_extra_charts = wallet_data["show_extra_charts"].as_boolean();
     wallet->preferred_currency = string_clone_string(wallet_data["currency"].as_string(STRING_ARGS(string_const(SETTINGS.preferred_currency))));
     wallet->track_history = wallet_data["track_history"].as_boolean();
+
+    // Read funds and support old format where fund was only a number.
+    config_handle_t funds_cv = wallet_data["funds"];
+    if (config_value_type(funds_cv) == CONFIG_VALUE_NUMBER)
+    {
+        wallet_fund_t fund{};
+        fund.amount = funds_cv.as_number(0.0);
+        fund.currency = string_clone(STRING_ARGS(wallet->preferred_currency));
+        array_push_memcpy(wallet->funds, &fund);
+    }
+    else
+    {
+        for (auto f : funds_cv)
+        {
+            wallet_fund_t fund{};
+            string_const_t currency = f["currency"].as_string();
+            fund.currency = string_clone(STRING_ARGS(currency));
+            fund.amount = f["amount"].as_number(0.0);
+            array_push_memcpy(wallet->funds, &fund);
+        }
+    }
 
     for (const auto c : wallet_data["history"])
     {
@@ -816,11 +923,20 @@ wallet_t* wallet_allocate(config_handle_t wallet_data)
 
 void wallet_save(wallet_t* wallet, config_handle_t wallet_data)
 {
-    config_set(wallet_data, "funds", wallet->funds);
     config_set(wallet_data, "main_target", wallet->main_target);
     config_set(wallet_data, "show_extra_charts", wallet->show_extra_charts);
     config_set(wallet_data, "currency", string_to_const(wallet->preferred_currency));	
     config_set(wallet_data, "track_history", wallet->track_history);
+
+    // Save funds
+    auto funds_cv = config_set_array(wallet_data, STRING_CONST("funds"));
+    config_clear(funds_cv);
+    foreach(f, wallet->funds)
+    {
+        auto c = config_array_push(funds_cv, CONFIG_VALUE_OBJECT);
+        config_set(c, "currency", string_to_const(f->currency));
+        config_set(c, "amount", f->amount);
+    }
 
     config_remove(wallet_data, wallet_data["history"]);
     config_handle_t history_data = config_set_array(wallet_data, STRING_CONST("history"));
@@ -847,6 +963,28 @@ void wallet_deallocate(wallet_t* wallet)
     }
     array_deallocate(wallet->history);
     array_deallocate(wallet->history_dates);
+
+    foreach(f, wallet->funds)
+        string_deallocate(f->currency);
+    array_deallocate(wallet->funds);
     string_deallocate(wallet->preferred_currency.str);
     memory_deallocate(wallet);
+}
+
+double wallet_get_total_funds(wallet_t* wallet)
+{
+    double total = 0.0;
+    foreach(f, wallet->funds)
+    {
+        if (string_equal(STRING_ARGS(f->currency), STRING_ARGS(wallet->preferred_currency)))
+        {
+            total += f->amount;
+        }
+        else
+        {
+            total += f->amount * stock_exchange_rate(STRING_ARGS(f->currency), STRING_ARGS(wallet->preferred_currency));
+        }
+    }
+
+    return total;
 }

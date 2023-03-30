@@ -422,10 +422,11 @@ string_const_t config_value_as_string(config_handle_t h, const char* fmt)
 
 config_value_type_t config_value_type(config_handle_t h)
 {
+    if (h.config == nullptr)
+        return CONFIG_VALUE_UNDEFINED;
     const config_value_t& v = h.config->values[h.index];
     return v.type;
 }
-
 
 config_handle_t config_add(config_handle_t obj_handle, const char* key, size_t key_length)
 {

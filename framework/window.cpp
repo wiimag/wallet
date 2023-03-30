@@ -1247,7 +1247,7 @@ FOUNDATION_STATIC void window_initialize()
     _window_module = MEM_NEW(HASH_WINDOW, WINDOW_MODULE);
 
     string_const_t window_config_file_path = session_get_user_file_path(STRING_CONST("windows.json"));
-    _window_module->configs = config_parse_file(STRING_ARGS(window_config_file_path));
+    _window_module->configs = config_parse_file(STRING_ARGS(window_config_file_path), CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
     if (_window_module->configs == nullptr)
         _window_module->configs = config_allocate(CONFIG_VALUE_OBJECT);
     

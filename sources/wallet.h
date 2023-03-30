@@ -32,9 +32,15 @@ struct history_t
     wallet_t* source{ nullptr };
 };
 
+struct wallet_fund_t
+{
+    double amount{ 0 };
+    string_t currency{};
+};
+
 struct wallet_t
 {
-    double funds{ 0 };
+    wallet_fund_t* funds{ nullptr };
 
     double main_target{ 0.50 };
     double target_ask{ 0.25 };
@@ -62,30 +68,45 @@ struct wallet_t
     double* history_dates{ nullptr };
 };
 
-/// <summary>
-/// Draw the wallet table summary.
-/// </summary>
-/// <param name="wallet">Wallet object</param>
-/// <param name="available_space">Available space to draw the summary table.</param>
-/// <returns>Returns true if the wallet summary data has changed.</returns>
+/*! Draw the wallet table summary. 
+ * 
+ *  @param[in] wallet The wallet to draw.
+ *  @param[in] available_space The available space to draw in.
+ * 
+ *  @return True if the wallet was drawn, false otherwise.
+ */
 bool wallet_draw(wallet_t* wallet, float available_space);
 
-/// <summary>   
-/// Draw the wallet history table.
-/// </summary>
+/*! Draw the wallet history table. */
 void wallet_history_draw();
 
-/// <summary>
-/// Save the wallet data to the config file.
-/// </summary>
+/*! Save the wallet data to the config file. 
+ * 
+ *  @param[in] wallet The wallet to save.
+ *  @param[in] wallet_data The config file to save to.
+ */
 void wallet_save(wallet_t* wallet, config_handle_t wallet_data);
 
-/// <summary>
-/// Allocate a new wallet object.
-/// </summary>
+/*! Allocate a new wallet object. 
+ * 
+ *  @param[in] wallet_data The config file to load from.
+ * 
+ *  @return The allocated wallet object.
+ */
 wallet_t* wallet_allocate(config_handle_t wallet_data);
 
-/// <summary>
-/// Deallocate a wallet object.
-/// </summary>
+/*! Deallocate a wallet object. 
+ * 
+ *  @param[in] wallet The wallet to deallocate.
+ */
 void wallet_deallocate(wallet_t* wallet);
+
+/*! Get the total funds in the wallet. 
+ * 
+ *  We convert all fund to the preferred currency and sum them up.
+ * 
+ *  @param[in] wallet The wallet to get the total funds from.
+ * 
+ *  @return The total funds in the wallet.
+ */
+double wallet_get_total_funds(wallet_t* wallet);

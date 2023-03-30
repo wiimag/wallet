@@ -101,6 +101,9 @@ add_compile_options("$<$<CONFIG:DEBUG>:-D_DEBUG>")
 # Set common BUILD_* flags
 #
 
+# Set 16 threads to fetch queries using MAX_QUERY_THREADS=16
+add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DMAX_QUERY_THREADS=16>")
+
 add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_DEBUG=1>")
 add_compile_options("$<$<CONFIG:RELEASE>:-DBUILD_RELEASE=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEVELOPMENT=0>")

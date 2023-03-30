@@ -105,7 +105,7 @@ void report_graph_show_transactions(report_t* report)
         }
 
         report->transaction_max_acc = max(report->transaction_max_acc, report->total_value);
-        report->transaction_max_acc = max(report->transaction_max_acc, report->wallet->funds);
+        report->transaction_max_acc = max(report->transaction_max_acc, wallet_get_total_funds(report->wallet));
     }
 
     if (array_size(report->transactions) == 0)
@@ -200,7 +200,7 @@ void report_graph_show_transactions(report_t* report)
     };
 
     report_graph_limit(tr("Value"), min_d, max_d, report->total_value);
-    report_graph_limit(tr("Funds"), min_d, max_d, report->wallet->funds);
+    report_graph_limit(tr("Funds"), min_d, max_d, wallet_get_total_funds(report->wallet));
 
     if (array_size(report->wallet->history) > 0)
         report_graph_limit(tr("Broker"), min_d, max_d, array_last(report->wallet->history)->broker_value);

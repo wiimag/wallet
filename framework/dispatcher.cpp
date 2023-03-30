@@ -51,8 +51,8 @@ typedef enum DispatcherEventId : int32_t {
 
 struct dispatcher_handler_t
 {
-    function<void()> handler{ nullptr };
-    tick_t trigger_at{ 0 };
+    tick_t              trigger_at{ 0 };
+    function<void()>    handler{ nullptr };
 };
 
 static int _wait_frame_throttling = 0;
@@ -150,10 +150,8 @@ void dispatcher_poll(GLFWwindow* window)
 
 bool dispatch(const function<void()>& callback, uint32_t delay_milliseconds /*= 0*/)
 {
-    const tick_t ticks_per_milliseconds = time_ticks_per_second() / 1000LL;
+    static const tick_t ticks_per_milliseconds = time_ticks_per_second() / 1000LL;
 
-    signal_thread();
-    dispatcher_wakeup_main_thread();
     if (!mutex_lock(_dispatcher_lock))
     {
         log_errorf(0, ERROR_SYSTEM_CALL_FAIL, STRING_CONST("Failed to lock dispatcher mutex"));
@@ -164,9 +162,8 @@ bool dispatch(const function<void()>& callback, uint32_t delay_milliseconds /*= 
     d.handler = callback;
     d.trigger_at = time_current() + ticks_per_milliseconds * delay_milliseconds;
     array_push_memcpy(_dispatcher_actions, &d);
+    dispatcher_wakeup_main_thread();
     return mutex_unlock(_dispatcher_lock);
-    
-    return false;
 }
 
 void dispatcher_update()
@@ -174,8 +171,8 @@ void dispatcher_update()
     PERFORMANCE_TRACKER("dispatcher_update");
     if (!mutex_try_lock(_dispatcher_lock))
         return;
-    unsigned count = array_size(_dispatcher_actions);
     const tick_t now = time_current();
+    const unsigned count = array_size(_dispatcher_actions);
     for (unsigned i = 0; i < count; ++i)
     {
         if (_dispatcher_actions[i].trigger_at <= now)
@@ -188,6 +185,9 @@ void dispatcher_update()
             array_push_memcpy(_dispatcher_actions, &_dispatcher_actions[i]);
         }
     }
+
+    // Delete all the actions that were executed this frame, 
+    // those that were postponed were copied at the end of the array.
     array_erase_ordered_range_safe(_dispatcher_actions, 0, count);
     mutex_unlock(_dispatcher_lock);
 }
@@ -325,6 +325,7 @@ bool dispatcher_unregister_event_listener(
 static event_handle _main_thread_wake_up_event;
 void dispatcher_wakeup_main_thread()
 {
+    signal_thread();
     _main_thread_wake_up_event.signal();
 }
 

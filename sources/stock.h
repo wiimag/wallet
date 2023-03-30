@@ -32,10 +32,17 @@ typedef enum class FetchLevel {
     TECHNICAL_SAR			= 1 << 8, // Cost 5 call
     TECHNICAL_SLOPE			= 1 << 9, // Cost 5 call
     TECHNICAL_CCI			= 1 << 10, // Cost 5 call
-
-    TECHINICAL_CHARTS = TECHNICAL_SMA | TECHNICAL_EMA | TECHNICAL_WMA | TECHNICAL_BBANDS | TECHNICAL_SAR | TECHNICAL_SLOPE | TECHNICAL_CCI
 } fetch_level_t;
 DEFINE_ENUM_FLAGS(FetchLevel);
+
+constexpr FetchLevel TECHINICAL_CHARTS = 
+    FetchLevel::TECHNICAL_SMA | 
+    FetchLevel::TECHNICAL_EMA | 
+    FetchLevel::TECHNICAL_WMA | 
+    FetchLevel::TECHNICAL_BBANDS | 
+    FetchLevel::TECHNICAL_SAR | 
+    FetchLevel::TECHNICAL_SLOPE | 
+    FetchLevel::TECHNICAL_CCI;
 
 /*! Represents a single realtime data snapshot. */
 FOUNDATION_ALIGNED_STRUCT(stock_realtime_record_t, 8)

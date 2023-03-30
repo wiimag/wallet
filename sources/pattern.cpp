@@ -2610,7 +2610,7 @@ FOUNDATION_STATIC void pattern_initialize()
         array_reserve(_patterns, 8);
 
     string_const_t patterns_file_path = pattern_get_user_file_path();
-    config_handle_t patterns_data = config_parse_file(STRING_ARGS(patterns_file_path));
+    config_handle_t patterns_data = config_parse_file(STRING_ARGS(patterns_file_path), CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
     if (patterns_data)
     {
         for (auto p : patterns_data)

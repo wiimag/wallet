@@ -1635,12 +1635,14 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     report_render_summary_info(report, tr("Day Gain"), report->total_day_gain, currency_fmt, true);
     ImGui::PopStyleColor(1);
 
+    const double total_funds = wallet_get_total_funds(report->wallet);
+
     ImGui::TableNextRow();
-    const double capital = max(0.0, report->wallet->funds - report->total_investment);
+    const double capital = max(0.0, total_funds - report->total_investment);
     report_render_summary_info(report, tr("Dividends"), report->wallet->total_dividends, currency_fmt);
 
-    if (report->wallet->funds > 0)
-        report_render_summary_info(report, tr("Capital"), max(0.0, report->wallet->funds - report->total_investment + report->wallet->sell_total_gain), currency_fmt);
+    if (total_funds > 0)
+        report_render_summary_info(report, tr("Capital"), max(0.0, total_funds - report->total_investment + report->wallet->sell_total_gain), currency_fmt);
 
     const double total_gain_with_sells = report->total_gain + report->wallet->sell_total_gain;
 
