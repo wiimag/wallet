@@ -583,3 +583,13 @@ int string_levenstein_distance(string_const_t str1, string_const_t str2);
  * @return The string without trailing whitespaces.
  */
 string_const_t string_remove_trailing_whitespaces(const char* str, size_t length);
+
+/*! Escape all characters in the string that are not allowed in a url.
+ *
+ * @param buffer The buffer to write the escaped string to.
+ * @param capacity The capacity of the buffer.
+ * @param url The url to escape.
+ * @param url_length The length of the url.
+ * @return The escaped url.
+ */
+string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_t url_length);

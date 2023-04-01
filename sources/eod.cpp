@@ -341,7 +341,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
         ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com"));
         ImGui::TextWrapped(tr("EOD API Key is required to use this application."));
         ImGui::NewLine();
-        ImGui::TextWrapped(tr("You can get a free API key by registering at the link above. Please enter your API key below and press Continue"));
+        ImGui::TrTextWrapped("You can get a free API key by registering at the link above. Please enter your API key below and press Continue");
 
         ImGui::NewLine();
         string_t eod_key = eod_get_key();
@@ -352,9 +352,9 @@ FOUNDATION_STATIC void eod_show_login_dialog()
             eod_save_key(eod_key);
         }
 
-        static float continue_button_width = 100;
+        static float continue_button_width = IM_SCALEF(100);
         ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - continue_button_width, 0);
-        if (ImGui::Button(tr("Continue"), {100, imgui_get_font_ui_scale(30)}))
+        if (ImGui::Button(tr("Continue"), {IM_SCALEF(100), IM_SCALEF(30)}))
         {
             eod_refresh();
             return false;
@@ -362,7 +362,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
         continue_button_width = ImGui::GetItemRectSize().x;
 
         return true;
-    }, 400, imgui_get_font_ui_scale(250), false, nullptr, nullptr);
+    }, IM_SCALEF(300), IM_SCALEF(250), false, nullptr, nullptr);
 }
 
 FOUNDATION_STATIC void eod_update_status(const json_object_t& json)

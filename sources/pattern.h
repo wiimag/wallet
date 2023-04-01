@@ -6,6 +6,7 @@
 #pragma once
 
 #include "stock.h"
+#include "openai.h"
 
 struct bulk_t;
 
@@ -114,6 +115,9 @@ struct pattern_t
         time_t beg, end;
         double change_p;
     } *yy{ nullptr };
+
+    string_t*                   analysis_summary{};
+    openai_completion_options_t analysis_options{};
 };
 
 pattern_handle_t pattern_find(const char* symbol, size_t symbol_length);

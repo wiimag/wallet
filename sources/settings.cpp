@@ -8,6 +8,8 @@
 #include "eod.h"
 #include "stock.h"
 #include "logo.h"
+#include "openai.h"
+#include "news.h"
 
 #include <framework/imgui.h>
 #include <framework/common.h>
@@ -69,6 +71,50 @@ void settings_draw()
         ImGui::ExpandNextItem();
         if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length, ImGuiInputTextFlags_Password))
             eod_save_key(eod_key);
+        ImGui::NextColumn();
+    }
+
+    {
+        ImGui::NextColumn();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextURL(tr("Google API Key"), nullptr, STRING_CONST("https://developers.google.com/webmaster-tools/search-console-api/v1/configure?hl=fr"));
+
+        string_t google_search_api_key = news_google_search_api_key();
+
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        if (ImGui::InputTextWithHint("##GoogleAPIKey", "", google_search_api_key.str, google_search_api_key.length-1, ImGuiInputTextFlags_Password))
+            news_set_google_search_api_key(google_search_api_key.str);
+        ImGui::NextColumn();
+    }
+
+    {
+        ImGui::NextColumn();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextURL(tr("Open AI API Key"), nullptr, STRING_CONST("https://platform.openai.com/account/api-keys"));
+
+        string_t openai_key = openai_get_api_key();
+        size_t openai_key_capacity = openai_get_api_key_capacity();
+
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        if (ImGui::InputTextWithHint("##OpenAIKey", "demo", openai_key.str, openai_key_capacity, ImGuiInputTextFlags_Password))
+            openai_set_api_key(openai_key.str);
+        ImGui::NextColumn();
+    }
+
+    {
+        ImGui::NextColumn();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextURL(tr("Open AI Organization"), nullptr, STRING_CONST("https://platform.openai.com/account/org-settings"));
+
+        string_t openai_org = openai_get_organization();
+        size_t openai_org_capacity = openai_get_organization_capacity();
+
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        if (ImGui::InputTextWithHint("##OpenAIOrg", "", openai_org.str, openai_org_capacity, ImGuiInputTextFlags_Password))
+            openai_set_organization(openai_org.str);
         ImGui::NextColumn();
     }
 

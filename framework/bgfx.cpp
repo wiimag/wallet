@@ -183,6 +183,14 @@ FOUNDATION_STATIC bool bgfx_create_fonts_texture(GLFWwindow* window)
         io.Fonts->AddFontDefault(&config);
     }
 
+//    // Load emoji font if never done
+//    static ImWchar ranges[] = { 0x1, (ImWchar)0x1FFFF, 0 };
+//    static ImFontConfig cfg;
+//    cfg.OversampleH = cfg.OversampleV = 1;
+//    cfg.MergeMode = true;
+//    //cfg.FontBuilderFlags |= ImGuiFreeTypeBuilderFlags_LoadColor;
+//    ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\work\\wallet\\resources\\seguiemj.ttf", 16.0f, &cfg, ranges);
+
     // Build texture atlas
     int width, height;
     unsigned char* pixels;

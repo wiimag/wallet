@@ -39,6 +39,8 @@ constexpr double DNAN = __builtin_nan("0");
 template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
 template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
 
+#define SIZE_C(val) (size_t)(UINT64_C(val))
+
 template<typename T>
 struct range_view 
 {

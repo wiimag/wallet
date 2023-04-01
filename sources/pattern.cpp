@@ -11,7 +11,9 @@
 #include "report.h"
 #include "news.h"
 #include "alerts.h"
+#include "openai.h"
 
+#include <framework/app.h>
 #include <framework/jobs.h>
 #include <framework/session.h>
 #include <framework/table.h>
@@ -2204,6 +2206,81 @@ FOUNDATION_STATIC void pattern_update(pattern_t* pattern)
     pattern_compute_years_performance_ratios(pattern);
 }
 
+FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, bool& focus_notes)
+{
+    openai_completion_options_t& options = pattern->analysis_options;
+
+    ImGui::TrText("Notes");
+    ImVec2 notes_widget_size = ImVec2(-1, IM_SCALEF(70));
+    if (pattern->analysis_summary == nullptr && openai_available())
+    {
+        string_const_t code = string_table_decode_const(pattern->code);
+        pattern->analysis_summary = openai_generate_summary_sentiment(STRING_ARGS(code), STRING_LENGTH(pattern->notes), options);
+        FOUNDATION_ASSERT(pattern->analysis_summary);
+    }
+    else if (pattern->analysis_summary == nullptr)
+    {
+        notes_widget_size = ImGui::GetContentRegionAvail();
+    }
+
+    if (focus_notes)
+    {
+        ImGui::SetKeyboardFocusHere();
+        focus_notes = false;
+    }
+    ImGui::InputTextMultiline("##Notes", STRING_BUFFER(pattern->notes), notes_widget_size, ImGuiInputTextFlags_None);
+
+    if (pattern->analysis_summary)
+    {
+        if (ImGui::BeginCombo("##Options", tr("Analysis (AI)")/*, ImGuiComboFlags_NoPreview*/))
+        {
+            float top_p_100 = options.top_p * 100.0f;
+            float temperature_100 = options.temperature * 100.0f;
+            float presence_penalty_100 = options.presence_penalty * 50.0f;
+            float frequency_penalty_100 = options.frequency_penalty * 50.0f;
+            if (ImGui::SliderFloat(tr("Diversity"), &top_p_100, 0.0f, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
+                options.top_p = top_p_100 / 100.0f;
+            if (ImGui::SliderFloat(tr("Opportunity"), &temperature_100, 0.0f, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
+                options.temperature = temperature_100 / 100.0f;
+            if (ImGui::SliderFloat(tr("Openness"), &presence_penalty_100, 0.0f, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
+                options.presence_penalty = presence_penalty_100 / 50.0f;
+            if (ImGui::SliderFloat(tr("Variety"), &frequency_penalty_100, 0.0f, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
+                options.frequency_penalty = frequency_penalty_100 / 50.0f;
+            ImGui::SliderInt(tr("Verbosity"), &options.max_tokens, 1, 4096, "%d tokens", ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SliderInt(tr("Possibilities"), &options.best_of, 1, 10, "%d", ImGuiSliderFlags_AlwaysClamp);
+            if (ImGui::IsItemHovered())
+            {
+                ImGui::SetTooltip(tr(" Number of different completions to try. \n"
+                    " The more you produce, the more it cost in term generated tokens, so watch out! "));
+            }
+            ImGui::EndCombo();
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Generate"), { -1, 0 }))
+        {
+            if (pattern->analysis_summary)
+            {
+                string_deallocate(pattern->analysis_summary->str);
+                memory_deallocate(pattern->analysis_summary);
+                pattern->analysis_summary = nullptr;
+            }
+
+            string_const_t code = string_table_decode_const(pattern->code);
+            pattern->analysis_summary = openai_generate_summary_sentiment(STRING_ARGS(code), STRING_LENGTH(pattern->notes), options);
+        }
+
+        ImGui::Separator();
+        if (ImGui::BeginChild("##Summary", ImGui::GetContentRegionAvail()))
+        {
+            if (pattern->analysis_summary && pattern->analysis_summary->length)
+                ImGui::TextWrapped("%.*s", STRING_FORMAT(*pattern->analysis_summary));
+            else
+                ImGui::TextWrapped(tr("No analysis available"));
+        } ImGui::EndChild();
+    }
+}
+
 FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_flags_t render_flags = PatternRenderFlags::None)
 {
     const ImGuiTableFlags flags =
@@ -2212,6 +2289,7 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
         ImGuiTableFlags_Reorderable |
         ImGuiTableFlags_NoBordersInBodyUntilResize |
         ImGuiTableFlags_SizingStretchProp | 
+        ImGuiTableFlags_NoHostExtendY |
         ImGuiTableFlags_PadOuterX;
 
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
@@ -2221,7 +2299,7 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
 
     char pattern_id[64];
     string_format(STRING_BUFFER(pattern_id), STRING_CONST("Pattern###%.*s_7"), STRING_FORMAT(code));
-    if (!ImGui::BeginTable(pattern_id, 3, flags))
+    if (!ImGui::BeginTable(pattern_id, 3, flags, ImGui::GetContentRegionAvail()))
         return;
 
     pattern_update(pattern);
@@ -2275,15 +2353,10 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
         ImGui::TableSetColumnEnabled(2, !(ImGui::TableGetColumnFlags(2) & ImGuiTableColumnFlags_IsEnabled));
         focus_notes = true;
     }
+
     if (ImGui::TableNextColumn())
     {
-        ImGui::TrText("Notes");
-        if (focus_notes)
-        {
-            ImGui::SetKeyboardFocusHere();
-            focus_notes = false;
-        }
-        ImGui::InputTextMultiline("##Notes", pattern->notes, ARRAY_COUNT(pattern->notes), ImVec2(-1, -1), ImGuiInputTextFlags_None);
+        pattern_render_notes_and_analysis(pattern, focus_notes);
     }
 
     ImGui::EndTable();	
@@ -2305,6 +2378,16 @@ FOUNDATION_STATIC void pattern_open_floating_window(pattern_handle_t handle)
     string_const_t pattern_code = SYMBOL_CONST(pattern->code);
     const char* pattern_window_title = string_format_static_const("%.*s (%.*s)", STRING_FORMAT(pattern_name), STRING_FORMAT(pattern_code));
     window_open(pattern_window_title, L1(pattern_render(handle, PatternRenderFlags::HideTableHeaders)), WindowFlags::InitialProportionalSize);
+}
+
+FOUNDATION_STATIC bool pattern_render_summarized_news_dialog(void* context)
+{
+    const openai_response_t* response = (const openai_response_t*)context;
+    if (response->output.length)
+        ImGui::TextWrapped("%.*s", STRING_FORMAT(response->output));
+    else
+        ImGui::TrTextWrapped("Please wait, reading the news for you...");
+    return true;
 }
 
 FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
@@ -2355,6 +2438,72 @@ FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
 
             if (ImGui::MenuItem(tr("Real-time"), nullptr, nullptr, true))
                 system_execute_command(eod_build_url("real-time", code.str, FORMAT_JSON).str);
+
+            if (openai_available())
+            {
+                ImGui::Separator();
+                if (ImGui::TrMenuItem("Generate OpenAI Summary Prompt"))
+                {
+                    string_const_t prompt = openai_generate_summary_prompt(STRING_ARGS(code));
+                    ImGui::SetClipboardText(prompt.str);
+                }
+
+                const char* title_summarize_news = tr("Summarize news URL for me...");
+                if (ImGui::MenuItem(title_summarize_news))
+                {
+                    struct pattern_news_dialog_t
+                    {
+                        char url[2048] = { 0 };
+                        pattern_t* pattern{ nullptr };
+                        const openai_response_t* response{ nullptr };
+                    };
+
+                    pattern_news_dialog_t* dialog = (pattern_news_dialog_t*)memory_allocate(HASH_PATTERN, sizeof(pattern_news_dialog_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+                    dialog->pattern = (pattern_t*)pattern_get(handle);
+                    dialog->response = nullptr;
+                    dialog->url[0] = 0;
+
+                    app_open_dialog(title_summarize_news, [](void* context)
+                    {
+                        
+                        pattern_news_dialog_t* dialog = (pattern_news_dialog_t*)context;
+
+                        ImGui::ExpandNextItem();
+                        ImGui::InputTextWithHint("##URL", tr("Enter the URL of news to summarize for you..."), STRING_BUFFER(dialog->url));
+
+                        ImGui::Spacing();
+                        ImGui::Spacing();
+
+                        if (dialog->response)
+                        {
+                            if (dialog->response->output.length)
+                                ImGui::TextWrapped("%.*s", STRING_FORMAT(dialog->response->output));
+                            else
+                                ImGui::TrTextWrapped("Please wait, reading the news for you...");
+                        }
+                        else
+                        {
+                            ImGui::Dummy(ImVec2(0.0f, 0.0f));
+                            ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(94.0f));
+                            if (ImGui::Button(tr("Summarize"), { IM_SCALEF(100.0f), 0.0f }))
+                            {
+                                openai_completion_options_t options{};
+                                options.best_of = 3;
+                                options.max_tokens = 1000;
+                                string_const_t code = string_table_decode_const(dialog->pattern->code);
+                                dialog->response = openai_generate_news_sentiment(STRING_ARGS(code), time_now(), STRING_LENGTH(dialog->url), options);
+                            }
+                        }
+
+                        return true;
+                    }, IM_SCALEF(400), IM_SCALEF(500), true, dialog, [](void* context)
+                    {
+                        pattern_news_dialog_t* dialog = (pattern_news_dialog_t*)context;
+                        memory_deallocate(dialog);
+                    });
+                }
+            }
+
             #endif
 
             ImGui::EndMenu();
@@ -2445,6 +2594,28 @@ FOUNDATION_STATIC void pattern_load(const config_handle_t& pattern_data, pattern
     pattern.price_limits.ymin = cv_price_limits["ymin"].as_number();
     pattern.price_limits.ymax = cv_price_limits["ymax"].as_number();
 
+    // Load AI analysis options
+    auto cv_ai = pattern_data["analysis"];
+    pattern.analysis_options.best_of = cv_ai["best_of"].as_integer(3);
+    pattern.analysis_options.max_tokens = cv_ai["max_tokens"].as_integer(2496);
+    pattern.analysis_options.temperature = cv_ai["temperature"].as_number(0.7f);
+    pattern.analysis_options.top_p = cv_ai["top_p"].as_number(0.9f);
+    pattern.analysis_options.presence_penalty = cv_ai["presence_penalty"].as_number(1.50);
+    pattern.analysis_options.frequency_penalty = cv_ai["frequency_penalty"].as_number(0.4);
+
+    string_const_t saved_analysis = cv_ai["summary"].as_string();
+    if (saved_analysis.length)
+    {
+        if (pattern.analysis_summary)
+        {
+            string_deallocate(pattern.analysis_summary->str);
+            memory_deallocate(pattern.analysis_summary);
+        }
+
+        pattern.analysis_summary = (string_t*)memory_allocate(HASH_PATTERN, sizeof(string_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+        *pattern.analysis_summary = string_clone(STRING_ARGS(saved_analysis));
+    }
+
     // Make sure this pattern gets saved again.
     pattern.save = true;
 }
@@ -2464,6 +2635,18 @@ FOUNDATION_STATIC void pattern_save(config_handle_t pattern_data, const pattern_
     config_set(cv_price_limits, STRING_CONST("xmax"), pattern.price_limits.xmax);
     config_set(cv_price_limits, STRING_CONST("ymin"), pattern.price_limits.ymin);
     config_set(cv_price_limits, STRING_CONST("ymax"), pattern.price_limits.ymax);
+
+    // Save AI analysis options
+    auto cv_ai = config_set_object(pattern_data, STRING_CONST("analysis"));
+    config_set(cv_ai, STRING_CONST("best_of"), (double)pattern.analysis_options.best_of);
+    config_set(cv_ai, STRING_CONST("max_tokens"), (double)pattern.analysis_options.max_tokens);
+    config_set(cv_ai, STRING_CONST("temperature"), pattern.analysis_options.temperature);
+    config_set(cv_ai, STRING_CONST("top_p"), pattern.analysis_options.top_p);
+    config_set(cv_ai, STRING_CONST("presence_penalty"), pattern.analysis_options.presence_penalty);
+    config_set(cv_ai, STRING_CONST("frequency_penalty"), pattern.analysis_options.frequency_penalty);
+    
+    if (pattern.analysis_summary && pattern.analysis_summary->length)
+        config_set(cv_ai, STRING_CONST("summary"), STRING_ARGS(*pattern.analysis_summary));
 
     config_handle_t checks_data = config_set_array(pattern_data, STRING_CONST("checks"));
     for (size_t i = 0; i < ARRAY_COUNT(pattern.checks); ++i)
@@ -2641,6 +2824,13 @@ FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
 
     array_deallocate(pattern->flex);
     array_deallocate(pattern->yy);
+
+    if (pattern->analysis_summary)
+    {
+        string_deallocate(pattern->analysis_summary->str);
+        memory_deallocate(pattern->analysis_summary);
+        pattern->analysis_summary = nullptr;
+    }
 }
 
 FOUNDATION_STATIC void pattern_shutdown()

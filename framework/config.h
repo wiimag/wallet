@@ -118,7 +118,7 @@ struct config_handle_t
     bool as_boolean(bool default_value = false) const;
     double as_number(double default_value = NAN) const;
     string_const_t as_string(const char* default_string = nullptr, size_t default_string_length = 0, const char* fmt = nullptr) const;
-    template<typename T = int> T as_integer() const { return (T)math_trunc(as_number()); }
+    template<typename T = int> T as_integer(int default_value = 0) const { return (T)math_trunc(as_number((double)default_value)); }
 };
 
 config_handle_t config_null();

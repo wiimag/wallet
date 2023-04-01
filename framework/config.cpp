@@ -1054,9 +1054,34 @@ static void config_sjson_write_string(config_sjson_t& sjson, string_const_t valu
         char c = *s;
         if (c == '"' || c == '\\')
             config_sjson_add_char(sjson, '\\');
-
+        
         // Check if we need to escape the UTF-8 character
-        if (escape_utf8)
+        if (c == '\n')
+        {
+            config_sjson_add_char(sjson, '\\');
+            config_sjson_add_char(sjson, 'n');
+        }
+        else if (c == '\r')
+        {
+            config_sjson_add_char(sjson, '\\');
+            config_sjson_add_char(sjson, 'r');
+        }
+        else if (c == '\t')
+        {
+            config_sjson_add_char(sjson, '\\');
+            config_sjson_add_char(sjson, 't');
+        }
+        else if (c == '\b')
+        {
+            config_sjson_add_char(sjson, '\\');
+            config_sjson_add_char(sjson, 'b');
+        }
+        else if (c == '\f')
+        {
+            config_sjson_add_char(sjson, '\\');
+            config_sjson_add_char(sjson, 'f');
+        }
+        else if (escape_utf8)
         {
             if ((uint8_t)c >= 0x80)
             {
@@ -1065,31 +1090,6 @@ static void config_sjson_write_string(config_sjson_t& sjson, string_const_t valu
                 config_sjson_add_char(sjson, 'x');
                 config_sjson_add_char(sjson, hexchar[(uint8_t)c >> 4]);
                 config_sjson_add_char(sjson, hexchar[(uint8_t)c & 0x0F]);
-            }
-            else if (c == '\n')
-            {
-                config_sjson_add_char(sjson, '\\');
-                config_sjson_add_char(sjson, 'n');
-            }
-            else if (c == '\r')
-            {
-                config_sjson_add_char(sjson, '\\');
-                config_sjson_add_char(sjson, 'r');
-            }
-            else if (c == '\t')
-            {
-                config_sjson_add_char(sjson, '\\');
-                config_sjson_add_char(sjson, 't');
-            }
-            else if (c == '\b')
-            {
-                config_sjson_add_char(sjson, '\\');
-                config_sjson_add_char(sjson, 'b');
-            }
-            else if (c == '\f')
-            {
-                config_sjson_add_char(sjson, '\\');
-                config_sjson_add_char(sjson, 'f');
             }
             else
             {

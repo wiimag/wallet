@@ -9,6 +9,12 @@
 
 #include <stdio.h>
 #include <mnyfmt.h>
+#include <ctype.h>
+
+FOUNDATION_FORCEINLINE char hex_digit(int value)
+{
+    return (char)(value < 10 ? '0' + value : 'a' + value - 10);
+}
 
 size_t string_occurence(const char* str, size_t len, char c)
 {
@@ -2247,4 +2253,55 @@ string_const_t string_remove_trailing_whitespaces(const char* str, size_t length
         length--;
 
     return { str, length };
+}
+
+string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_t url_length)
+{
+    const char* pstr = url;
+    const char* const end = url + url_length;
+
+    bool parsing_params = false;
+
+    for (size_t i = 0; i < capacity && pstr < end; ++i)
+    {
+        const char c = *pstr++;
+        if (c == ' ')
+        {
+            buffer[i] = '+';
+        }
+        else if (c == '?' && !parsing_params)
+        {
+            buffer[i] = c;
+            parsing_params = true;
+        }
+        else if (c == '&' && parsing_params)
+        {
+            buffer[i] = c;
+        }
+        else if (c == '=' && parsing_params)
+        {
+            buffer[i] = c;
+        }
+        else if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~' || c == '/' || c == ':')
+        {
+            buffer[i] = c;
+        }
+        else if (c == '\0')
+        {
+            break;
+        }
+        else
+        {
+            if (i + 2 >= capacity)
+                break;
+            buffer[i] = '%';
+            buffer[++i] = hex_digit(c >> 4);
+            buffer[++i] = hex_digit(c & 0xf);
+        }
+    }
+
+    const size_t size = pstr - url;
+    buffer[size] = '\0';
+
+    return { buffer, size };
 }

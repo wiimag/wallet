@@ -740,8 +740,9 @@ FOUNDATION_STATIC void window_capture_framebuffer_to_png(window_t* win)
 
     // Append the current date
     string_const_t today_string = string_from_date(time_now());
-    name = string_concat(STRING_BUFFER(name_buffer), STRING_ARGS(name), STRING_CONST("_"));
+    name = string_concat(STRING_BUFFER(name_buffer), STRING_ARGS(name), STRING_CONST(" ["));
     name = string_concat(STRING_BUFFER(name_buffer), STRING_ARGS(name), STRING_ARGS(today_string));
+    name = string_concat(STRING_BUFFER(name_buffer), STRING_ARGS(name), STRING_CONST("]"));
 
     string_const_t window_imgui_save_path = session_get_user_file_path(
         STRING_ARGS(name),

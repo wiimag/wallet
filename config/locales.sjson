@@ -1626,5 +1626,260 @@
 			en = "About"
 			fr = "A propos"
 		}
+		{
+			hash = "ddd7f5b631f37a03"
+			en = "Open AI API Key"
+			fr = "@TODO"
+		}
+		{
+			hash = "ca6b7cb5e9f9ed67"
+			en = "Open AI Organization"
+			fr = "@TODO"
+		}
+		{
+			hash = "3a88dfde49983d9f"
+			en = "\xee\xa9\x8a OpenAI"
+			fr = "\xee\xa9\x8a OpenAI"
+		}
+		{
+			hash = "b9803a04fae7adfe"
+			en = "Models"
+			fr = "Mod\xc3\xa8les"
+		}
+		{
+			hash = "3835ddf17cd10439"
+			en = "None"
+			fr = "Aucun"
+		}
+		{
+			hash = "795326e022cf76f6"
+			en = "(Fine-tuning)"
+			fr = "(Entra\xc3\xaenement)"
+		}
+		{
+			hash = "8b9f5e3df5f7e92e"
+			en = "Generate OpenAI Summary Prompt"
+			fr = "G\xc3\xa9n\xc3\xa9rer le prompt de r\xc3\xa9sum\xc3\xa9 OpenAI"
+		}
+		{
+			hash = "2b1f18da1ee6b8a0"
+			en = "Here's a company description, sector and industry:"
+			fr = "Voici une description de l'entreprise, son secteur et son industrie:"
+		}
+		{
+			hash = "6212b7a16ff92c26"
+			en = "> Sector: "
+			fr = "> Secteur:"
+		}
+		{
+			hash = "bb138d6445a29f8d"
+			en = "> Industry: "
+			fr = "> Industrie:"
+		}
+		{
+			hash = "3e722140ae257b06"
+			en = "> "
+			fr = "> "
+		}
+		{
+			hash = "6b1449cb0395e24e"
+			en = "Please provide guidance from the company highlights, valuation and technical data below using these instructions:\n"
+			fr = "Veuillez fournir des indications sur les points forts de l'entreprise, la valorisation et les donn\xc3\xa9es techniques ci-dessous en utilisant ces instructions:\n"
+		}
+		{
+			hash = "b5a1481ca47e73ea"
+			en = "- explain if the financial results in the last quarter are better than the previous one,\n"
+			fr = "- expliquer si les r\xc3\xa9sultats financiers du dernier trimestre sont meilleurs que le pr\xc3\xa9c\xc3\xa9dent,\n"
+		}
+		{
+			hash = "9d03cf25a746a009"
+			en = "- compare these results to other companies in the same sector and industry and provide comparisons,\n"
+			fr = "- comparer ces r\xc3\xa9sultats \xc3\xa0 d'autres entreprises du m\xc3\xaame secteur et de la m\xc3\xaame industrie et fournir des comparaisons,\n"
+		}
+		{
+			hash = "b2f025cafd48bec8"
+			en = "- raise any data point that could be of a concern for an investor,\n"
+			fr = "- soulever tout point de donn\xc3\xa9e qui pourrait \xc3\xaatre une inqui\xc3\xa9tude pour un investisseur,\n"
+		}
+		{
+			hash = "173efbe4daa8a739"
+			en = "- provide any prediction if possible or link to recent news or event affecting the stock price,\n"
+			fr = "- fournir toute pr\xc3\xa9diction si possible ou lier \xc3\xa0 des nouvelles ou \xc3\xa9v\xc3\xa9nements r\xc3\xa9cents affectant le prix de l'action,\n"
+		}
+		{
+			hash = "82c716b25495a241"
+			en = "- and popularize as much as possible to reflecting the investor sentiment against that company."
+			fr = "- et vugarilez autant que possible pour refl\xc3\xa9ter l'opinion des investisseurs contre cette entreprise."
+		}
+		{
+			hash = "b625bfd5767cd39"
+			en = "## Highlights"
+			fr = "## Points forts"
+		}
+		{
+			hash = "ba9d97f89218f374"
+			en = "## Technicals"
+			fr = "## Techniques"
+		}
+		{
+			hash = "6a3cbcc744641969"
+			en = "## Financials results of last two quarters"
+			fr = "## R\xc3\xa9sultats financiers des deux derniers trimestres"
+		}
+		{
+			hash = "d9835b98779c0fc3"
+			en = "Sentiment"
+			fr = "Sentiment"
+		}
+		{
+			hash = "e241e7028ac9410b"
+			en = "Loading..."
+			fr = "Chargement..."
+		}
+		{
+			hash = "dd9178d1ec3bbb8a"
+			en = "Analysis (AI)"
+			fr = "Analyse (IA)"
+		}
+		{
+			hash = "e306cb4b8031b089"
+			en = "Options..."
+			fr = "Options..."
+		}
+		{
+			hash = "17ab3ff3f8635567"
+			en = "Temperature"
+			fr = "Temp\xc3\xa9rature"
+		}
+		{
+			hash = "1e4066292881ae1a"
+			en = "Top P"
+			fr = "Top P"
+		}
+		{
+			hash = "447bd400b4b3b512"
+			en = "Max Tokens"
+			fr = "Nombre de jetons max"
+		}
+		{
+			hash = "a4dbbe178169a937"
+			en = "Presence Penalty"
+			fr = "@TODO"
+		}
+		{
+			hash = "45affe2d5900ba5c"
+			en = "Frequency Penalty"
+			fr = "Fr\xc3\xa9quence de p\xc3\xa9nalit\xc3\xa9"
+		}
+		{
+			hash = "4a28748d203b6495"
+			en = "Best Of"
+			fr = "Meilleur de"
+		}
+		{
+			hash = "16c9bb68d3b09f4e"
+			en = "Generate"
+			fr = "G\xc3\xa9n\xc3\xa9rer"
+		}
+		{
+			hash = "4f38751ba0335a3d"
+			en = "Create New"
+			fr = "Nouveau"
+		}
+		{
+			hash = "f427818aca531657"
+			en = "No search query"
+			fr = "Aucune requ\xc3\xaate de recherche"
+		}
+		{
+			hash = "98ae3fc0c40c3c66"
+			en = "Diversity"
+			fr = "Diversit\xc3\xa9"
+		}
+		{
+			hash = "1510d59bbb559ab7"
+			en = "Opportunity"
+			fr = "Opportunit\xc3\xa9"
+		}
+		{
+			hash = "9cd14477983fa96a"
+			en = "Openness"
+			fr = "Ouverture"
+		}
+		{
+			hash = "df71f346a124cdcf"
+			en = "Variety"
+			fr = "Vari\xc3\xa9t\xc3\xa9"
+		}
+		{
+			hash = "8c3de2a2cd1d291c"
+			en = "Verbosity"
+			fr = "Verbosit\xc3\xa9"
+		}
+		{
+			hash = "d29906619437bd64"
+			en = "Possibilities"
+			fr = "Possibilit\xc3\xa9s"
+		}
+		{
+			hash = "be5f689afefc298"
+			en = " Number of different completions to try. \n The more you produce, the more it cost in term generated tokens, so watch out! "
+			fr = " Nombre de compl\xc3\xa9tions diff\xc3\xa9rentes \xc3\xa0 essayer. \n Plus vous en produisez, plus cela co\xc3\xbbte en jetons g\xc3\xa9n\xc3\xa9r\xc3\xa9s, donc faites attention! "
+		}
+		{
+			hash = "7b5cd604d87ab5c4"
+			en = "## Additional notes and comments to consider in the stock evaluation\n"
+			fr = "## Notes et commentaires suppl\xc3\xa9mentaires \xc3\xa0 prendre en compte dans l'\xc3\xa9valuation de l'action\n"
+		}
+		{
+			hash = "83b57369eb75a030"
+			en = "News %.*s"
+			fr = "Actualit\xc3\xa9s %.*s"
+		}
+		{
+			hash = "f98cb87abe8d3563"
+			en = "more..."
+			fr = "plus..."
+		}
+		{
+			hash = "1d585cf42cdaa5f3"
+			en = "Resume the following article %.*s and share any sentiment an investor could have regarding this event.\n\n---\n"
+			fr = "R\xc3\xa9sume l'article suivant %.*s et partage tout sentiment qu'un investisseur pourrait avoir \xc3\xa0 propos de cet \xc3\xa9v\xc3\xa9nement.\n\n---\n"
+		}
+		{
+			hash = "6813ecd1dece3ddb"
+			en = "Please wait, reading the news for you..."
+			fr = "Veuillez patienter, je lis les actualit\xc3\xa9s pour vous..."
+		}
+		{
+			hash = "6e1017f2ddc2921f"
+			en = "Summarize for me..."
+			fr = "R\xc3\xa9sume pour moi..."
+		}
+		{
+			hash = "6a64b33488f91264"
+			en = "Resume the following article %.*s ; explain why it is related to %.*s and share any sentiment regarding the price change of %.3g%% an investor could have regarding this event.\n\n---\n"
+			fr = "R\xc3\xa9sume l'article suivant %.*s ; explique pourquoi il est li\xc3\xa9 \xc3\xa0 %.*s et partage tout sentiment qu'un investisseur pourrait avoir \xc3\xa0 propos de cet \xc3\xa9v\xc3\xa9nement et le prix du stock qui a fluctu\xc3\xa9 de %.3g%%.\n\n---\n"
+		}
+		{
+			hash = "459ecfaa7dec3408"
+			en = "Summarize news URL for me..."
+			fr = "@TODO"
+		}
+		{
+			hash = "19f7ad81dc22d932"
+			en = "Enter the URL of news to summarize for you..."
+			fr = "@TODO"
+		}
+		{
+			hash = "925e5e369715af3d"
+			en = "Summarize"
+			fr = "@TODO"
+		}
+		{
+			hash = "89682582a7c80b55"
+			en = "Google API Key"
+			fr = "@TODO"
+		}
 	]
 }
