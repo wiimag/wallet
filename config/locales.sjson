@@ -1629,12 +1629,12 @@
 		{
 			hash = "ddd7f5b631f37a03"
 			en = "Open AI API Key"
-			fr = "@TODO"
+			fr = "Cl\xc3\xa9 API Open AI"
 		}
 		{
 			hash = "ca6b7cb5e9f9ed67"
 			en = "Open AI Organization"
-			fr = "@TODO"
+			fr = "Organisation Open AI"
 		}
 		{
 			hash = "3a88dfde49983d9f"
@@ -1764,7 +1764,7 @@
 		{
 			hash = "a4dbbe178169a937"
 			en = "Presence Penalty"
-			fr = "@TODO"
+			fr = "P\xc3\xa9nalit\xc3\xa9 de pr\xc3\xa9sence"
 		}
 		{
 			hash = "45affe2d5900ba5c"
@@ -1864,22 +1864,22 @@
 		{
 			hash = "459ecfaa7dec3408"
 			en = "Summarize news URL for me..."
-			fr = "@TODO"
+			fr = "R\xc3\xa9sume les actualit\xc3\xa9s pour moi..."
 		}
 		{
 			hash = "19f7ad81dc22d932"
 			en = "Enter the URL of news to summarize for you..."
-			fr = "@TODO"
+			fr = "Entrez l'URL des actualit\xc3\xa9s \xc3\xa0 r\xc3\xa9sumer pour vous..."
 		}
 		{
 			hash = "925e5e369715af3d"
 			en = "Summarize"
-			fr = "@TODO"
+			fr = "R\xc3\xa9sumer"
 		}
 		{
 			hash = "89682582a7c80b55"
 			en = "Google API Key"
-			fr = "@TODO"
+			fr = "Cl\xc3\xa9 API Google"
 		}
 	]
 }
