@@ -135,8 +135,8 @@ target_include_directories(framework PUBLIC ${ROOT_DIR}/external)
 
 if (WIN32)
   
-    # Enable openmp support
-    target_compile_definitions(framework PUBLIC _OPENMP)
+    # Enable OpenMP compiler support /openmp
+    target_compile_options(framework PUBLIC /openmp)
 
     # Enable /Qpar support
     target_compile_options(framework PUBLIC /Qpar)

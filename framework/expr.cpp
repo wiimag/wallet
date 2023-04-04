@@ -2013,13 +2013,18 @@ bool expr_set_global_var(const char* name, void* ptr, size_t size /*= 0*/)
     return true;
 }
 
-bool expr_set_global_var(const char* name, double value)
+bool expr_set_global_var(const char* name, size_t name_length, double value)
 {
-    expr_var_t* v = expr_get_or_create_global_var(name);
+    expr_var_t* v = expr_get_or_create_global_var(name, name_length);
     v->value.type = EXPR_RESULT_NUMBER;
     v->value.value = value;
     v->value.index = NO_INDEX;
     return true;
+}
+
+bool expr_set_global_var(const char* name, double value)
+{
+    return expr_set_global_var(name, string_length(name), value);
 }
 
 bool expr_set_global_var(const char* name, size_t name_length, const char* str, size_t str_length)

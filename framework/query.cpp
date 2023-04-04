@@ -106,6 +106,23 @@ FOUNDATION_STATIC void query_curl_cleanup()
     }
 }
 
+FOUNDATION_STATIC curl_slist* query_create_user_agent_header_list()
+{
+    char user_agent_header[256];
+    const application_t* app = environment_application();
+    string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
+        STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
+    curl_slist* header_chunk = curl_slist_append(nullptr, user_agent_header);
+    return header_chunk;
+}
+
+FOUNDATION_STATIC curl_slist* query_create_common_header_list()
+{
+    curl_slist* header_chunk = query_create_user_agent_header_list();
+    header_chunk = curl_slist_append(header_chunk, "Content-Type: application/json");
+    return header_chunk;
+}
+
 FOUNDATION_STATIC CURL* query_create_curl_request()
 {
     FOUNDATION_ASSERT(_initialized);
@@ -126,14 +143,7 @@ FOUNDATION_STATIC CURL* query_create_curl_request()
         #endif
 
         if (_req_json_header_chunk == nullptr)
-        {
-            static thread_local char user_agent_header[256];
-            const application_t* app = environment_application();
-            string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
-                STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
-            _req_json_header_chunk = curl_slist_append(_req_json_header_chunk, user_agent_header);
-            _req_json_header_chunk = curl_slist_append(_req_json_header_chunk, "Content-Type: application/json");
-        }
+            _req_json_header_chunk = query_create_common_header_list();
 
         static thread_local bool register_cleanup = true;
         if (register_cleanup)
@@ -214,10 +224,11 @@ public:
 
 struct JSONRequest : public CURLRequest
 {
-    JSONRequest()
+    JSONRequest(struct curl_slist* header_chunk = nullptr)
+        : CURLRequest()
     {
         curl_easy_setopt(req, CURLOPT_WRITEDATA, &json);
-        curl_easy_setopt(req, CURLOPT_HTTPHEADER, _req_json_header_chunk);
+        curl_easy_setopt(req, CURLOPT_HTTPHEADER, header_chunk ? header_chunk : _req_json_header_chunk);
         curl_easy_setopt(req, CURLOPT_WRITEFUNCTION, read_http_json_callback_func);
     }
 
@@ -319,6 +330,62 @@ bool query_execute_json(const char* query, query_format_t format, void(*json_cal
     }, invalid_cache_query_after_seconds);
 }
 
+bool query_execute_json(const char* query, string_t* headers, config_handle_t data, const query_callback_t& callback)
+{
+    FOUNDATION_ASSERT(query);
+    FOUNDATION_ASSERT(callback);
+
+    if (_initialized == false)
+        return false;
+
+    MEMORY_TRACKER(HASH_QUERY);
+
+    curl_slist* header_chunk = query_create_common_header_list();
+    foreach(h, headers)
+        header_chunk = curl_slist_append(header_chunk, (const char*)h->str);
+
+    const bool post_query = !config_is_null(data);
+
+    bool query_success = false;
+    JSONRequest req(header_chunk);
+
+    if (post_query)
+    {
+        log_infof(HASH_QUERY, STRING_CONST("Post query %s"), query);
+        query_success = req.post(query, data);
+    }
+    else
+    {
+        log_infof(HASH_QUERY, STRING_CONST("Executing query %s"), query);
+        query_success = req.execute(query);
+    } 
+
+    json_object_t json = json_parse(req.json);
+    json.query = string_to_const(query);
+    json.status_code = req.response_code;
+    json.error_code = req.status > 0 ? req.status : (json.status_code >= 400 ? CURL_LAST : CURLE_OK);
+
+    try
+    {
+        callback(json);
+        signal_thread();
+    }
+    catch (...)
+    {
+        log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("Failed to execute JSON callback for %s [%.*s...]"), query, 64, json.buffer);
+        curl_slist_free_all(header_chunk);
+        return false;
+    }
+    
+    curl_slist_free_all(header_chunk);
+    return req.status == CURLE_OK && req.response_code < 400;
+}
+
+bool query_execute_json(const char* query, string_t* headers, const query_callback_t& callback)
+{
+    return query_execute_json(query, headers, config_null(), callback);
+}
+
 FOUNDATION_STATIC bool query_is_cache_file_valid(const char* query, query_format_t format, uint64_t invalid_cache_query_after_seconds, string_const_t& cache_file_path)
 {
     cache_file_path = string_const_t{ nullptr, 0 };
@@ -382,11 +449,7 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
         CURLFORM_CONTENTTYPE, "application/octet-stream",
         CURLFORM_END);
 
-    char user_agent_header[256];
-    const application_t* app = environment_application();
-    string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
-        STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
-    curl_slist* headerlist = curl_slist_append(NULL, user_agent_header);
+    curl_slist* headerlist = query_create_user_agent_header_list();
     headerlist = curl_slist_append(headerlist, "Expect:");
 
     curl_easy_setopt(req, CURLOPT_HTTPHEADER, headerlist);
@@ -440,7 +503,6 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
     if (_initialized == false)
         return false;
 
-    //TIME_TRACKER(500.0, "query_execute_json(%s)", query);
     MEMORY_TRACKER(HASH_QUERY);
 
     static thread_local char query_copy_buffer[2048];

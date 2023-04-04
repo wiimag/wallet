@@ -330,11 +330,8 @@ FOUNDATION_STATIC void console_render_evaluator()
 
     if (ImGui::IsWindowAppearing())
     {
-        if (!_console_expression_explicitly_set && _saved_expressions.size())
-        {
-            const string_t last_expression = _saved_expressions.current();
-            string_copy(STRING_BUFFER(_console_expression_buffer), STRING_ARGS(last_expression));
-        }
+        if (!_console_expression_explicitly_set)
+            session_get_string("console_expression", STRING_BUFFER(_console_expression_buffer), "");
         _console_expression_explicitly_set = false;
     }
 
@@ -386,6 +383,8 @@ FOUNDATION_STATIC void console_render_evaluator()
         string_const_t expression_string = string_const(_console_expression_buffer, string_length(_console_expression_buffer));
         if (!_saved_expressions.includes<string_const_t>(L2(string_equal_ignore_whitespace(STRING_ARGS(_1), STRING_ARGS(_2))), expression_string))
             _saved_expressions.push(string_clone(STRING_ARGS(expression_string)));
+
+        session_set_string("console_expression", STRING_ARGS(expression_string));        
 
         expr_result_t result = eval(expression_string);
         if (EXPR_ERROR_CODE == 0)

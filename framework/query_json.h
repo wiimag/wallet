@@ -257,6 +257,16 @@ struct json_object_t
         return json_read_number(buffer, tokens, root, default_value);
     }
 
+    FOUNDATION_FORCEINLINE int as_integer(int default_value = 0) const
+    {
+        return math_trunc(json_read_number(buffer, tokens, root, (double)default_value));
+    }
+
+    FOUNDATION_FORCEINLINE int as_time(time_t default_value = 0) const
+    {
+        return (time_t)json_read_number(buffer, tokens, root, (double)default_value);
+    }
+
     FOUNDATION_FORCEINLINE double as_boolean(bool default_value = false) const
     {
         if (root == nullptr || buffer == nullptr)
@@ -285,6 +295,12 @@ struct json_object_t
         if (root->type == JSON_PRIMITIVE && string_equal(STRING_ARGS(value), STRING_CONST("null")))
             return string_null();
         return value;
+    }
+
+    FOUNDATION_FORCEINLINE string_t as_string_clone() const
+    {
+        string_const_t value = as_string();
+        return string_clone(STRING_ARGS(value));
     }
 
     FOUNDATION_FORCEINLINE bool operator!=(const json_object_t& other) const

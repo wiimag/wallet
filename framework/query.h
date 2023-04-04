@@ -88,6 +88,29 @@ bool query_execute_send_file(const char* query, query_format_t format, string_t 
 /// <returns></returns>
 bool query_execute_json(const char* query, query_format_t format, void(*callback)(const char* json, const json_token_t* tokens), uint64_t invalid_cache_query_after_seconds = 0);
 
+/*! Execute a query and retrieve the JSON response. 
+ *  The user code is called back in the main thread.
+ * 
+ *  @param[in] query        GET URL
+ *  @param[in] callback     Callback executed when the server returns the response.
+ *  @param[in] headers      Headers to send with the query.
+ *  @returns                True if the query was executed, false otherwise.
+ */
+bool query_execute_json(const char* query, string_t* headers, const query_callback_t& callback);
+
+/*! Execute a query and retrieve the JSON response. 
+ *  The user code is called back in the main thread.
+ * 
+ *  @param[in] query        GET URL
+ *  @param[in] headers      Headers to send with the query.
+ *  @param[in] data         Data to send with the query.
+ *                          The config data gets deallocated by the query system.
+ *  @param[in] callback     Callback executed when the server returns the response.
+ * 
+ *  @returns                True if the query was executed, false otherwise.
+ */
+bool query_execute_json(const char* query, string_t* headers, config_handle_t data, const query_callback_t& callback);
+
 /// <summary>
 /// Queues an HTTP query. The query is executed in another thread and 
 /// the user callback is resolved in that thread later on.

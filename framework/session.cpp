@@ -282,6 +282,37 @@ string_const_t session_get_string(const char* keyname, char* buf, size_t size, c
     return string_to_const(str);
 }
 
+bool session_set_string_list(const char* keyname, string_t* strings)
+{
+    config_handle_t list = config_set_array(_session_config, keyname, string_length(keyname));
+
+    // Clear the array in case
+    config_array_clear(list);
+
+    for (unsigned i = 0, n = array_size(strings); i < n; ++i)
+        config_array_push(list, strings[i].str, strings[i].length);
+
+    return config_size(list) > 0;
+}
+
+string_t* session_get_string_list(const char* keyname)
+{
+    string_t* strings = nullptr;
+    config_handle_t list = _session_config[keyname];
+
+    if (config_value_type(list) == CONFIG_VALUE_ARRAY)
+    {
+        for (auto e : list)
+        {
+            string_const_t str = e.as_string();
+            if (str.length > 0)
+                array_push(strings, string_clone(STRING_ARGS(str)));
+        }
+    }
+
+    return strings;
+}
+
 bool session_set_bool(const char* keyname, bool value)
 {
     return session_set_integer(keyname, value ? 1 : 0);

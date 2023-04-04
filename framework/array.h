@@ -11,6 +11,7 @@
 #include <framework/function.h>
 
 #include <foundation/array.h>
+#include <foundation/random.h>
 
  /*! @def foreach 
   * 
@@ -237,9 +238,9 @@ template<typename T, typename Comparer>
 T* array_qsort(T* arr, unsigned element_count, const Comparer& comparer, void* context)
 {
     #if FOUNDATION_PLATFORM_WINDOWS
-    qsort_s(arr, array_size(arr), sizeof(T), comparer, context);
+    qsort_s(arr, element_count, sizeof(T), comparer, context);
     #else
-    qsort_r(arr, array_size(arr), sizeof(T), context, comparer);
+    qsort_r(arr, element_count, sizeof(T), context, comparer);
     #endif
     return arr;
 }
@@ -443,4 +444,101 @@ int array_binary_search_compare(const T array, const V& _key, Comparer compare)
     }
 
     return ~offset;
+}
+
+/*! Return the end boundary of an array.
+ *
+ *  @template T             The type of the array elements.
+ *
+ *  @param arr              The array.
+ *
+ *  @return The end boundary of the array.
+ *
+ *  @note The array must be a pointer to a contiguous block of memory.
+ *
+ *  @example
+ *      int numbers[] = { 1, 2, 3, 4, 5 };
+ *      FOUNDATION_ASSERT(array_end(numbers) == numbers + 5);
+ */
+template<typename T>
+T* array_end(T* arr)
+{
+    return arr + array_size(arr);
+}
+
+/*! Swap two array elements.
+ *
+ *  @template T             The type of the array elements.
+ *
+ *  @param arr              The array.
+ *  @param i                The index of the first element.
+ *  @param j                The index of the second element.
+ *
+ *  @note The array must be a pointer to a contiguous block of memory.
+ *
+ *  @example
+ *      int numbers[] = { 1, 2, 3, 4, 5 };
+ *      array_swap(numbers, 0, 4);
+ *      FOUNDATION_ASSERT(numbers[0] == 5);
+ *      FOUNDATION_ASSERT(numbers[4] == 1);
+ */
+template<typename T>
+void array_swap(T* arr, uint32_t i, uint32_t j)
+{
+    FOUNDATION_ASSERT(i < array_size(arr));
+    FOUNDATION_ASSERT(j < array_size(arr));
+
+    T tmp = arr[i];
+    arr[i] = arr[j];
+    arr[j] = tmp;
+}
+
+/*! Swap two array elements using #memcpy. 
+ *  
+ *  @template T             The type of the array elements.
+ * 
+ *  @param arr              The array.
+ *  @param i                The index of the first element.
+ *  @param j                The index of the second element.
+ */
+template<typename T>
+void array_swap_memcpy(T* arr, uint32_t i, uint32_t j)
+{
+    FOUNDATION_ASSERT(i < array_size(arr));
+    FOUNDATION_ASSERT(j < array_size(arr));
+
+    T tmp;
+    memcpy(&tmp, &arr[i], sizeof(T));
+    memcpy(&arr[i], &arr[j], sizeof(T));
+    memcpy(&arr[j], &tmp, sizeof(T));
+}
+
+/*! Shuffle array elements. 
+ *  
+ *  @template T             The type of the array elements.
+ *
+ *  @param arr              The dynamic array (@see <foundation/array.h>)
+ * 
+ *  @return The number of swaps performed.
+ *
+ *  @example
+ *      int numbers[] = { 1, 2, 3, 4, 5 };
+ *      array_shuffle(numbers, 5);
+ */
+template<typename T>
+uint32_t array_shuffle(T* arr)
+{
+    uint32_t swap_count = 0;
+    const uint32_t size = array_size(arr);
+    for (uint32_t i = 0; i < size; ++i)
+    {
+        const uint32_t j = random32_range(i, size);
+        if (i != j)
+        {
+            array_swap_memcpy(arr, i, j);
+            swap_count++;
+        }
+    }
+
+    return swap_count;
 }

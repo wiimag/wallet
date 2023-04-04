@@ -276,14 +276,6 @@ FOUNDATION_FORCEINLINE double math_ifneg(const double n, const double default_va
 */
 double math_average(const double* pn, size_t count, size_t stride = sizeof(double));
 
-/*! @brief Returns the average of the given values using OpenMP parallelization.
- *  @param pn Pointer to the first value.
- *  @param count Number of values.
- *  @param stride Stride between values.
- *  @return The average of the given values.
-*/
-double math_average_parallel(const double* pn, size_t count, size_t stride = sizeof(double));
-
 /*! @brief Returns the median and average of the given values.
  *  @param values Pointer to the first value.
  *  @param median The median of the given values.

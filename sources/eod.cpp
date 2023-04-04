@@ -320,9 +320,17 @@ FOUNDATION_STATIC void eod_update_window_title()
     string_const_t license_name = EOD->CONNECTED && EOD->USER_NAME[0] != 0 ? string_to_const(EOD->USER_NAME) : RTEXT("disconnected");
     string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
 
-    static char title[128] = PRODUCT_NAME;
-    string_format(STRING_BUFFER(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
-        app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
+    char title[128] = PRODUCT_NAME;
+    if (license_name.length)
+    {
+        string_format(STRING_BUFFER(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
+            app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
+    }
+    else
+    {
+        string_format(STRING_BUFFER(title), STRING_CONST("%s [%.*s] v.%.*s"),
+            app_title(), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
+    }
 
     glfwSetWindowTitle(window, title);
 }
@@ -341,7 +349,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
         ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com"));
         ImGui::TextWrapped(tr("EOD API Key is required to use this application."));
         ImGui::NewLine();
-        ImGui::TextWrapped(tr("You can get a free API key by registering at the link above. Please enter your API key below and press Continue"));
+        ImGui::TrTextWrapped("You can get a free API key by registering at the link above. Please enter your API key below and press Continue");
 
         ImGui::NewLine();
         string_t eod_key = eod_get_key();
@@ -352,9 +360,9 @@ FOUNDATION_STATIC void eod_show_login_dialog()
             eod_save_key(eod_key);
         }
 
-        static float continue_button_width = 100;
+        static float continue_button_width = IM_SCALEF(100);
         ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - continue_button_width, 0);
-        if (ImGui::Button(tr("Continue"), {100, imgui_get_font_ui_scale(30)}))
+        if (ImGui::Button(tr("Continue"), {IM_SCALEF(100), IM_SCALEF(30)}))
         {
             eod_refresh();
             return false;
@@ -362,7 +370,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
         continue_button_width = ImGui::GetItemRectSize().x;
 
         return true;
-    }, 400, imgui_get_font_ui_scale(250), false, nullptr, nullptr);
+    }, IM_SCALEF(300), IM_SCALEF(250), false, nullptr, nullptr);
 }
 
 FOUNDATION_STATIC void eod_update_status(const json_object_t& json)

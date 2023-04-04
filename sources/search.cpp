@@ -12,6 +12,7 @@
 #include "pattern.h"
 #include "logo.h"
 #include "news.h"
+#include "imwallet.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -29,6 +30,8 @@
 #include <foundation/thread.h>
 
 #define HASH_SEARCH static_hash_string("search", 6, 0xc9d4e54fbae76425ULL)
+
+constexpr const char* SEARCH_EXCHANGES_SESSION_KEY = "search_exchanges";
 
 constexpr string_const_t COMMON_STOCK_WORDS[] = {
     CTEXT("the"), CTEXT("and"), CTEXT("inc"), CTEXT("this"), CTEXT("that"), CTEXT("not"), CTEXT("are"),
@@ -139,6 +142,9 @@ static struct SEARCH_MODULE {
     dispatcher_thread_handle_t  indexing_thread{};
     string_t*                   saved_queries{ nullptr };
 
+    /*! Stock exchanges to index. */
+    string_t*                   exchanges{ nullptr };
+
 } *_search;
 
 //
@@ -168,7 +174,7 @@ FOUNDATION_STATIC bool search_database_index_text_skip_common_words(
 
     string_const_t expression, r = string_trim(string_trim(string_const(_text, text_length)), '.');
 
-    if (r.length <= 16)
+    if (r.length <= 18)
     {
         search_database_index_word(db, doc, STRING_ARGS(r), false);
     }
@@ -223,7 +229,7 @@ FOUNDATION_STATIC bool search_database_index_property_skip_common_words(
 
     string_const_t expression, r = string_trim(string_trim(string_const(_value, _value_length)), '.');
 
-    if (r.length <= 16)
+    if (r.length <= 18)
     {
         search_database_index_property(db, doc, name, name_length, STRING_ARGS(r), false);
     }
@@ -699,7 +705,10 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
     if (search_db_stream)
     {
         if (thread_try_wait(0))
+        {
+            stream_deallocate(search_db_stream);
             return 0;
+        }
             
         TIME_TRACKER("Loading search database");
         search_database_load(_search->db, search_db_stream);
@@ -723,16 +732,9 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
         return 0;
     }
     
-    string_const_t stock_markets[] = {
-        CTEXT("TO"),
-        CTEXT("NEO"),
-        CTEXT("V"),
-        CTEXT("US")
-    };
-    
     // Fetch all titles from stock exchange market
     bool stop_indexing = false;
-    for (auto market : stock_markets)
+    foreach (market, _search->exchanges)
     {
         if (stop_indexing)
             break;
@@ -740,13 +742,13 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
         if (thread_try_wait(1000))
             break;
             
-        auto fetch_fn = [market, &stop_indexing](const json_object_t& data) { search_index_exchange_symbols(data, STRING_ARGS(market), &stop_indexing); };
-        if (!eod_fetch("exchange-symbol-list", market.str, FORMAT_JSON_CACHE, fetch_fn, 30 * 24 * 60 * 60ULL))
+        auto fetch_fn = [market, &stop_indexing](const json_object_t& data) { search_index_exchange_symbols(data, STRING_ARGS(*market), &stop_indexing); };
+        if (!eod_fetch("exchange-symbol-list", market->str, FORMAT_JSON_CACHE, fetch_fn, 30 * 24 * 60 * 60ULL))
         {
-            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s symbols"), STRING_FORMAT(market));
+            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s symbols"), STRING_FORMAT(*market));
         }
 
-        log_infof(HASH_SEARCH, STRING_CONST("Search indexing completed for the market %.*s"), STRING_FORMAT(market));
+        log_infof(HASH_SEARCH, STRING_CONST("Search indexing completed for the market %.*s"), STRING_FORMAT(*market));
     }    
 
     return 0;
@@ -1556,6 +1558,60 @@ FOUNDATION_STATIC void search_save_queries(string_t* queries, const char* filena
     stream_deallocate(queries_stream);
 }
 
+FOUNDATION_STATIC void search_start_indexing()
+{
+    FOUNDATION_ASSERT_MSG(!dispatcher_thread_is_running(_search->indexing_thread), "Stop indexing thread before starting it again");
+
+    if (_search->exchanges)
+        string_array_deallocate(_search->exchanges);
+
+    if (session_key_exists(SEARCH_EXCHANGES_SESSION_KEY))
+    {
+        _search->exchanges = session_get_string_list(SEARCH_EXCHANGES_SESSION_KEY);
+    }
+    else
+    {
+        array_push(_search->exchanges, string_clone(STRING_CONST("TO")));
+        array_push(_search->exchanges, string_clone(STRING_CONST("US")));
+    }
+
+    // Start indexing thread that query a stock exchange market and then 
+    // for each title query its fundamental values to build a search database.
+    _search->indexing_thread = dispatch_thread("Search Indexer", search_indexing_thread_fn);
+    FOUNDATION_ASSERT(_search->indexing_thread);
+}
+
+FOUNDATION_STATIC bool search_stop_indexing(bool save_db)
+{
+    if (!dispatcher_thread_stop(_search->indexing_thread))
+        return false;
+    _search->indexing_thread = 0;
+
+    if (save_db && search_database_is_dirty(_search->db))
+    {
+        if (main_is_interactive_mode())
+        {
+            // Save search database on disk
+            string_const_t search_db_path = session_get_user_file_path(STRING_CONST("search.db"));
+            stream_t* search_db_stream = fs_open_file(STRING_ARGS(search_db_path), STREAM_CREATE | STREAM_OUT | STREAM_BINARY | STREAM_TRUNCATE);
+            if (search_db_stream)
+            {
+                TIME_TRACKER("Saving search database");
+                search_database_save(_search->db, search_db_stream);
+                stream_deallocate(search_db_stream);
+            }
+        }
+        else
+        {
+            log_warnf(HASH_SEARCH, WARNING_SUSPICIOUS, STRING_CONST("Search database not saved, running in non-interactive mode"));
+        }
+    }
+
+    search_database_deallocate(_search->db);
+
+    return true;
+}
+
 //
 // # PUBLIC API
 //
@@ -1563,6 +1619,37 @@ FOUNDATION_STATIC void search_save_queries(string_t* queries, const char* filena
 bool search_available()
 {
     return _search && _search->db;
+}
+
+bool search_render_settings()
+{
+    bool updated = false;
+
+    ImGui::NextColumn();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TrTextWrapped("Search stock exchange to index");
+
+    ImGui::NextColumn();
+    ImGui::ExpandNextItem();
+    if (ImWallet::Exchanges(_search->exchanges))
+    {
+        if (session_set_string_list(SEARCH_EXCHANGES_SESSION_KEY, _search->exchanges))
+        {
+            // Stop indexing thread and restart it.
+            if (search_stop_indexing(false))
+            {
+                search_start_indexing();
+                updated = true;
+            }
+        }
+
+    }
+
+    ImGui::NextColumn();
+    ImGui::TrTextWrapped("Changing that settings will restart the indexing process but if will not delete already indexed stock from removed exchanges. "
+        "Indexing a new stock exchange can take between 1 to 3 hours.");
+
+    return updated;
 }
 
 //
@@ -1573,10 +1660,7 @@ FOUNDATION_STATIC void search_initialize()
 {
     _search = MEM_NEW(HASH_SEARCH, SEARCH_MODULE);
 
-    // Start indexing thread that query a stock exchange market and then 
-    // for each title query its fundamental values to build a search database.
-    _search->indexing_thread = dispatch_thread("Search Indexer", search_indexing_thread_fn);
-    FOUNDATION_ASSERT(_search->indexing_thread);
+    search_start_indexing();
 
     _search->saved_queries = search_load_queries(STRING_CONST("queries.txt"));
     session_get_string("search_query", STRING_BUFFER(_search->query), "");
@@ -1591,35 +1675,15 @@ FOUNDATION_STATIC void search_initialize()
 
 FOUNDATION_STATIC void search_shutdown()
 {   
-    dispatcher_thread_stop(_search->indexing_thread);
-
     session_set_string("search_query", _search->query, string_length(_search->query));
-    
-    if (search_database_is_dirty(_search->db))
-    {
-        if (main_is_interactive_mode())
-        {
-            // Save search database on disk
-            string_const_t search_db_path = session_get_user_file_path(STRING_CONST("search.db"));
-            stream_t* search_db_stream = fs_open_file(STRING_ARGS(search_db_path), STREAM_CREATE | STREAM_OUT | STREAM_BINARY | STREAM_TRUNCATE);
-            if (search_db_stream)
-            {
-                TIME_TRACKER("Saving search database");
-                search_database_save(_search->db, search_db_stream);
-                stream_deallocate(search_db_stream); 
-            }
-        }
-        else
-        {
-            log_warnf(HASH_SEARCH, WARNING_SUSPICIOUS, STRING_CONST("Search database not saved, running in non-interactive mode"));
-        }
-    }
-    
-    search_database_deallocate(_search->db);
 
     // Save queries to queries.json
     search_save_queries(_search->saved_queries, STRING_CONST("queries.txt"));
     string_array_deallocate(_search->saved_queries);
+
+    search_stop_indexing(true);
+
+    string_array_deallocate(_search->exchanges);
 
     MEM_DELETE(_search);
 }

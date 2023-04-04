@@ -1039,6 +1039,13 @@ bool expr_set_global_var(const char* name, void* ptr, size_t size = 0);
  */
 bool expr_set_global_var(const char* name, size_t name_length, const char* str, size_t str_length);
 
+/*! Set the global variable to a given number value. 
+ * 
+ *  @param name Name of the variable.
+ *  @param value Number value to set.
+ */
+bool expr_set_global_var(const char* name, size_t name_length, double value);
+
 /*! Register a function with the expression system.
  *
  *  @param name         Name of the function.
