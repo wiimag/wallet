@@ -700,7 +700,7 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
             pattern_render_stats_line(nullptr,
                 pattern_format_number(STRING_CONST("P/E (%.3g)"), s->pe, 0.0),
                 pattern_format_percentage(s->current.change / s->pe * 100.0),
-                pattern_format_percentage(math_average_parallel(&pattern->marks[7].change_p, 5, sizeof(pattern_mark_t)) * 100.0));
+                pattern_format_percentage(math_average(&pattern->marks[7].change_p, 5, sizeof(pattern_mark_t)) * 100.0));
         }
 
         double flex_low_p = pattern->flex_low.fetch();
@@ -2162,6 +2162,12 @@ FOUNDATION_STATIC bool pattern_handle_shortcuts(pattern_t* pattern)
         return true;
     }
 
+    if (shortcut_executed('N'))
+    {
+        pattern->notes_opened = true;
+        return true;
+    }
+
     return false;
 }
 
@@ -2297,18 +2303,6 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     if (!pattern->stock->is_resolving(FETCH_ALL))
         stock_update(STRING_ARGS(code), pattern->stock, FETCH_ALL, 8.0);
 
-
-    if (shortcut_executed('N'))
-    {
-        app_open_dialog(string_format_static_const("%.*s Notes", STRING_FORMAT(code)), [](void* context)
-        {
-            static bool focus_notes = false;
-            pattern_t* pattern = (pattern_t*)context;
-            pattern_render_notes_and_analysis(pattern, focus_notes);
-            return true;
-        }, IM_SCALEF(440), IM_SCALEF(550), true, pattern, nullptr);
-    }
-
     char pattern_id[64];
     string_format(STRING_BUFFER(pattern_id), STRING_CONST("Pattern###%.*s_7"), STRING_FORMAT(code));
     if (!ImGui::BeginTable(pattern_id, 2, flags, ImGui::GetContentRegionAvail()))
@@ -2357,6 +2351,17 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     ImGui::EndTable();	
 
     pattern_handle_shortcuts(pattern);
+
+    if (pattern->notes_opened)
+    {
+        const char* title = string_format_static_const("%.*s Notes", STRING_FORMAT(code));
+        ImGui::SetNextWindowSize({IM_SCALEF(400), IM_SCALEF(500)}, ImGuiCond_Appearing);
+        if (ImGui::Begin(title, &pattern->notes_opened))
+        {
+            static bool focus_notes = false;
+            pattern_render_notes_and_analysis(pattern, focus_notes);
+        } ImGui::End();
+    }
 }
 
 FOUNDATION_STATIC void pattern_open_floating_window(pattern_handle_t handle)

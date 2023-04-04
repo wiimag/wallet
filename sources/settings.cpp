@@ -10,6 +10,7 @@
 #include "logo.h"
 #include "openai.h"
 #include "news.h"
+#include "search.h"
 
 #include <framework/imgui.h>
 #include <framework/common.h>
@@ -59,6 +60,7 @@ void settings_draw()
     }
     #endif
 
+    // EOD API KEY
     {
         #if BUILD_ENABLE_LOCALIZATION
         ImGui::NextColumn();
@@ -74,6 +76,7 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
+    // Google API KEY
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
@@ -87,6 +90,7 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
+    // Open AI API KEY
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
@@ -102,6 +106,7 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
+    // Open AI Organization
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
@@ -117,6 +122,7 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
+    // Default currency for reports
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
@@ -137,6 +143,7 @@ void settings_draw()
         }
     }
 
+    // Dividend yielding preferred ratio using to colorize the preferred stocks
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
@@ -153,6 +160,10 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
+    // Search settings
+    search_render_settings();
+
+    // Logo settings
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
@@ -184,8 +195,10 @@ void settings_draw()
         }
     }
 
-    ImGui::MoveCursor(0, 30.0f);
+    // Font scaling
     {
+        ImGui::MoveCursor(0, 30.0f);
+
         static bool restart_to_apply_effect = false;
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
@@ -208,6 +221,7 @@ void settings_draw()
         }
     }
 
+    // Frame throttling
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();

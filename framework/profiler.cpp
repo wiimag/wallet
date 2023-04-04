@@ -289,7 +289,7 @@ void profiler_menu_timer()
         static unsigned index = 0;
         static double elapsed_times[16] = { 0.0 };
         elapsed_times[index++ % ARRAY_COUNT(elapsed_times)] = time_ticks_to_milliseconds(elapsed_ticks);
-        const double smooth_elapsed_time = math_average_parallel(elapsed_times, ARRAY_COUNT(elapsed_times));
+        const double smooth_elapsed_time = math_average(elapsed_times, ARRAY_COUNT(elapsed_times));
         const double tick_elapsed_time = main_tick_elapsed_time_ms();
 
         if (tick_elapsed_time > 4)

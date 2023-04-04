@@ -1906,5 +1906,25 @@
 			en = "%5d symbols"
 			fr = "%5d symboles"
 		}
+		{
+			hash = "e4ac316984c1505a"
+			en = "Search stock exchange to index"
+			fr = "@TODO"
+		}
+		{
+			hash = "bf4426bca2853455"
+			en = "Changing that settings will restart the indexing process. Indexing a new stock exchange can take between 1 to 3 hours."
+			fr = "@TODO"
+		}
+		{
+			hash = "2bc8823efd9df97"
+			en = "Changing that settings will restart the indexing process but if will not delete already indexed stock from removed exchanges. Indexing a new stock exchange can take between 1 to 3 hours."
+			fr = "@TODO"
+		}
+		{
+			hash = "c24a9b29c17fab15"
+			en = " Y./Y. %.2lf %% (%.0lf years) "
+			fr = "@TODO"
+		}
 	]
 }
