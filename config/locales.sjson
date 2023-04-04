@@ -67,12 +67,6 @@
 			fr = "Taille de la police de caract\xc3\xa8res"
 		}
 		{
-			hash = "ed7f7b6b299c9462"
-			en = "Changing that settings requires restarting the application."
-			fr = "Le changement de cette option requiert le red\xc3\xa9marrage de l'application."
-			it = "La modifica delle impostazioni richiede il riavvio dell'applicazione."
-		}
-		{
 			hash = "86f60888f62f3e63"
 			en = "Frame Throttling"
 			fr = "Limitation des images par seconde"
@@ -1912,16 +1906,6 @@
 			fr = "March\xc3\xa9s boursiers \xc3\xa0 indexer"
 		}
 		{
-			hash = "bf4426bca2853455"
-			en = "Changing that setting will restart the indexing process. Indexing a new stock exchange can take between 1 to 3 hours."
-			fr = "Changer ce param\xc3\xa8tre red\xc3\xa9marrera le processus d'indexation. L'indexation d'un nouveau march\xc3\xa9 boursier peut prendre entre 1 et 3 heures."
-		}
-		{
-			hash = "2bc8823efd9df97"
-			en = "Changing that setting will restart the indexing process but if will not delete already indexed stock from removed exchanges. Indexing a new stock exchange can take between 1 to 3 hours."
-			fr = "Changer ce param\xc3\xa8tre red\xc3\xa9marrera le processus d'indexation mais ne supprimera pas les actions d\xc3\xa9j\xc3\xa0 index\xc3\xa9es des march\xc3\xa9s boursiers supprim\xc3\xa9s. L'indexation d'un nouveau march\xc3\xa9 boursier peut prendre entre 1 et 3 heures."
-		}
-		{
 			hash = "c24a9b29c17fab15"
 			en = " Y./Y. %.2lf %% (%.0lf years) "
 			fr = " Y./Y. %.2lf %% (%.0lf ans) "
@@ -1934,12 +1918,12 @@
 		{
 			hash = "2bc8823efd9df97"
 			en = "Changing that settings will restart the indexing process but if will not delete already indexed stock from removed exchanges. Indexing a new stock exchange can take between 1 to 3 hours."
-			fr = "@TODO"
+			fr = "Changer ce param\xc3\xa8tre red\xc3\xa9marrera le processus d'indexation mais ne supprimera pas les titres d\xc3\xa9j\xc3\xa0 index\xc3\xa9s des march\xc3\xa9s boursiers supprim\xc3\xa9s. L'indexation d'un nouveau march\xc3\xa9 boursier peut prendre entre 1 et 3 heures."
 		}
 		{
 			hash = "c31995e558728cd3"
 			en = "Changing that setting requires restarting the application."
-			fr = "@TODO"
+			fr = "Changer ce param\xc3\xa8tre requiert de red\xc3\xa9marrer l'application."
 		}
 	]
 }

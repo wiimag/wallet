@@ -133,6 +133,7 @@ LANGUAGE LANG_FRENCH, SUBLANG_FRENCH_CANADIAN
 
 IDR_MAIN_FONT           FONT                    "../resources/JetBrainsMono-ExtraLight.ttf"
 IDR_MD_FONT             RCDATA DISCARDABLE      "../resources/MaterialIcons-Regular.ttf"
+IDR_LOCALES_SJSON       RCDATA DISCARDABLE      "../config/locales.sjson"
 
 #endif    // Français (Canada) resources
 /////////////////////////////////////////////////////////////////////////////

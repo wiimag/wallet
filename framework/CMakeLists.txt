@@ -130,20 +130,24 @@ target_include_directories(framework PUBLIC ${ROOT_DIR}/external)
 target_compile_definitions(framework PUBLIC BUILD_SERVICE=0)
 target_compile_definitions(framework PUBLIC BUILD_APPLICATION=1)
 
-# Framework service lib variante (for the service.exe executable)
-add_library(service-framework STATIC 
-    ${FRAMEWORK_SOURCES} 
-    ${EXTERNAL_SOURCES} 
-    ${STB_SOURCES})
+if (BUILD_SERVICE_EXE)
 
-target_link_libraries(service-framework PUBLIC foundation bx imgui)
-set_target_properties(service-framework PROPERTIES FOLDER "service/")
+    # Framework service lib variante (for the service.exe executable)
+    add_library(service-framework STATIC 
+        ${FRAMEWORK_SOURCES} 
+        ${EXTERNAL_SOURCES} 
+        ${STB_SOURCES})
 
-# Add BUILD_SERVICE preprocessor definition
-target_compile_definitions(service-framework PUBLIC BUILD_SERVICE=1)
-target_compile_definitions(service-framework PUBLIC BUILD_APPLICATION=0)
-target_include_directories(service-framework PUBLIC ${ROOT_DIR})
-target_include_directories(service-framework PUBLIC ${ROOT_DIR}/external)
+    target_link_libraries(service-framework PUBLIC foundation bx imgui)
+    set_target_properties(service-framework PROPERTIES FOLDER "service/")
+
+    # Add BUILD_SERVICE preprocessor definition
+    target_compile_definitions(service-framework PUBLIC BUILD_SERVICE=1)
+    target_compile_definitions(service-framework PUBLIC BUILD_APPLICATION=0)
+    target_include_directories(service-framework PUBLIC ${ROOT_DIR})
+    target_include_directories(service-framework PUBLIC ${ROOT_DIR}/external)
+
+endif()
 
 #
 # Set framework and dependencies options
@@ -170,13 +174,19 @@ endif()
 #
 
 target_include_directories(framework PUBLIC ${ROOT_DIR}/external/glfw/include)
-target_include_directories(service-framework PUBLIC ${ROOT_DIR}/external/glfw/include)
+
+if (BUILD_SERVICE_EXE)
+    target_include_directories(service-framework PUBLIC ${ROOT_DIR}/external/glfw/include)
+endif()
 
 if (WIN32)
     
     # On Windows we use a #pragma comment(lib, "glfw3.lib") in the source code
     target_link_directories(framework PUBLIC ${ROOT_DIR}/external/glfw/lib-vc2022-64)
-    target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/glfw/lib-vc2022-64)
+
+    if (BUILD_SERVICE_EXE)
+        target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/glfw/lib-vc2022-64)
+    endif()
 
 elseif(APPLE)
 
@@ -194,14 +204,19 @@ endif()
 target_compile_definitions(framework PUBLIC CURL_STATICLIB)
 target_include_directories(framework PUBLIC ${ROOT_DIR}/external/libcurl/include)
 
-target_compile_definitions(service-framework PUBLIC CURL_STATICLIB)
-target_include_directories(service-framework PUBLIC ${ROOT_DIR}/external/libcurl/include)
+if (BUILD_SERVICE_EXE)
+    target_compile_definitions(service-framework PUBLIC CURL_STATICLIB)
+    target_include_directories(service-framework PUBLIC ${ROOT_DIR}/external/libcurl/include)
+endif()
 
 if (MSVC)
 
     # On Windows we use a #pragma comment(lib, "libcurl_a*.lib") in the source code
     target_link_directories(framework PUBLIC ${ROOT_DIR}/external/libcurl/lib)
-    target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/libcurl/lib)
+
+    if (BUILD_SERVICE_EXE)
+        target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/libcurl/lib)
+    endif()
 
 elseif(APPLE)
 

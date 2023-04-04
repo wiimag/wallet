@@ -141,3 +141,12 @@ uint32_t system_get_last_error(string_const_t* error_string = nullptr);
  *  @return Last system error formatted message.
  */
 string_const_t system_get_last_error_message(uint32_t* error = nullptr);
+
+/*! Extract a resource from the system executable and write it to a file.
+ * 
+ *  @param resource_name    Name of the resource to extract
+ *  @param resource_type    Type of the resource to extract
+ *  
+ *  @return Path to the extracted resource file.
+ */
+string_const_t system_executable_resource_to_file(const char* resource_name, const char* resource_type);

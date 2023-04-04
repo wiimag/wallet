@@ -1648,7 +1648,7 @@ bool search_render_settings()
     }
 
     ImGui::NextColumn();
-    ImGui::TrTextWrapped("Changing that settings will restart the indexing process but if will not delete already indexed stock from removed exchanges. "
+    ImGui::TrTextWrapped("Changing that setting will restart the indexing process but if will not delete already indexed stock from removed exchanges. "
         "Indexing a new stock exchange can take between 1 to 3 hours.");
 
     return updated;

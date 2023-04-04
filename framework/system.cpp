@@ -11,7 +11,9 @@
 
 #include <framework/string.h>
 
+#include <foundation/fs.h>
 #include <foundation/path.h>
+#include <foundation/stream.h>
 
 #if FOUNDATION_PLATFORM_WINDOWS
     #include <foundation/windows.h>
@@ -326,6 +328,57 @@ string_const_t system_get_last_error_message(uint32_t* out_error /*= nullptr*/)
     if (out_error)
         *out_error = error;
     return error_message;
+}
+
+string_const_t system_executable_resource_to_file(const char* resource_name, const char* resource_type)
+{
+#if FOUNDATION_PLATFORM_WINDOWS
+
+    HMODULE hModule = GetModuleHandle(NULL);
+    HRSRC hResource = FindResourceA(hModule, resource_name, resource_type);
+    if (!hResource)
+    {
+        FOUNDATION_ASSERT_FAIL("Failed to find resource");
+        return string_null();
+    }
+    HGLOBAL hMemory = LoadResource(hModule, hResource);
+    if (hMemory == 0)
+    {
+        FOUNDATION_ASSERT_FAIL("Failed to load resource");
+        return string_null();
+    }
+        
+    DWORD dwSize = SizeofResource(hModule, hResource);
+    LPVOID lpAddress = LockResource(hMemory);
+    FOUNDATION_ASSERT(lpAddress);
+
+    stream_t* resource_stream = fs_temporary_file();
+    if (resource_stream == nullptr)
+    {
+        UnlockResource(hMemory);
+        return string_null();
+    }
+
+    stream_write(resource_stream, lpAddress, dwSize);
+        
+    UnlockResource(hMemory);
+
+    static thread_local char resource_path_buffer[BUILD_MAX_PATHLEN] = {0};
+    string_const_t resource_stream_path = stream_path(resource_stream);
+
+    string_t resource_paths_str = string_copy(STRING_BUFFER(resource_path_buffer), STRING_ARGS(resource_stream_path));
+    stream_deallocate(resource_stream);
+
+    // Strip protocol
+    string_const_t resource_path = path_strip_protocol(STRING_ARGS(resource_paths_str));
+
+    return resource_path;
+
+#else
+
+    return CTEXT("Not supported");
+
+#endif    
 }
 
 bool system_notification_push(const char* title, size_t title_length, const char* message, size_t message_length)

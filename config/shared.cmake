@@ -67,12 +67,6 @@ function(target_set_framework_output_dirs AppId ROOT_DIR)
         set_target_properties(${AppId} PROPERTIES PDB_OUTPUT_DIRECTORY_RELEASE ${ROOT_DIR}/build/.)
         set_target_properties(${AppId} PROPERTIES PDB_OUTPUT_DIRECTORY_DEPLOY ${ROOT_DIR}/build/.)
 
-        # Make sure we have the map in the same folder.
-        set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY ${ROOT_DIR}/build/.)
-        set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY_DEBUG ${ROOT_DIR}/build/.)
-        set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY_RELEASE ${ROOT_DIR}/build/.)
-        set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY_DEPLOY ${ROOT_DIR}/build/.)
-
     elseif(APPLE)
 
     endif()
