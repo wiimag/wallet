@@ -11,7 +11,7 @@
 #include <framework/imgui.h>
 #include <framework/common.h>
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/database.h>
 #include <framework/query.h>
 #include <framework/dispatcher.h>
@@ -594,8 +594,8 @@ FOUNDATION_STATIC void indicators_initialize()
     _indicators->max_d = time_now();
     indicators_load_settings();
 
-    service_register_tabs(HASH_INDICATORS, indicators_render_tabs);
-    service_register_menu(HASH_INDICATORS, indicators_render_menus);
+    module_register_tabs(HASH_INDICATORS, indicators_render_tabs);
+    module_register_menu(HASH_INDICATORS, indicators_render_menus);
 }
 
 FOUNDATION_STATIC void indicators_shutdown()
@@ -613,4 +613,4 @@ FOUNDATION_STATIC void indicators_shutdown()
     MEM_DELETE(_indicators);
 }
 
-DEFINE_SERVICE(INDICATORS, indicators_initialize, indicators_shutdown, SERVICE_PRIORITY_LOW);
+DEFINE_MODULE(INDICATORS, indicators_initialize, indicators_shutdown, MODULE_PRIORITY_LOW);

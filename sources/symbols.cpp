@@ -21,7 +21,7 @@
 #include <framework/generics.h>
 #include <framework/scoped_mutex.h>
 #include <framework/table.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/tabs.h>
 #include <framework/string.h>
 #include <framework/localization.h>
@@ -643,8 +643,8 @@ FOUNDATION_STATIC void symbols_initialize()
     _symbols_lock = mutex_allocate(STRING_CONST("Symbols"));
     array_reserve(_markets, 1);
 
-    service_register_tabs(HASH_SYMBOLS, symbols_render_tabs);
-    service_register_menu(HASH_SYMBOLS, symbols_render_menus);
+    module_register_tabs(HASH_SYMBOLS, symbols_render_tabs);
+    module_register_menu(HASH_SYMBOLS, symbols_render_menus);
 }
 
 FOUNDATION_STATIC void symbols_shutdown()
@@ -659,4 +659,4 @@ FOUNDATION_STATIC void symbols_shutdown()
     _symbols_lock = nullptr;
 }
 
-DEFINE_SERVICE(SYMBOLS, symbols_initialize, symbols_shutdown, SERVICE_PRIORITY_MODULE);
+DEFINE_MODULE(SYMBOLS, symbols_initialize, symbols_shutdown, MODULE_PRIORITY_MODULE);

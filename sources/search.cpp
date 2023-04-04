@@ -16,7 +16,7 @@
 
 #include <framework/imgui.h>
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/dispatcher.h>
 #include <framework/search_database.h>
 #include <framework/profiler.h>
@@ -1670,7 +1670,7 @@ FOUNDATION_STATIC void search_initialize()
     expr_register_function("SEARCH_INDEX", search_expr_index_document, nullptr, 0);
     expr_register_function("SEARCH_STATS", search_expr_stats, nullptr, 0);
 
-    service_register_menu(HASH_SEARCH, search_menu);
+    module_register_menu(HASH_SEARCH, search_menu);
 }
 
 FOUNDATION_STATIC void search_shutdown()
@@ -1688,4 +1688,4 @@ FOUNDATION_STATIC void search_shutdown()
     MEM_DELETE(_search);
 }
 
-DEFINE_SERVICE(SEARCH, search_initialize, search_shutdown, SERVICE_PRIORITY_MODULE);
+DEFINE_MODULE(SEARCH, search_initialize, search_shutdown, MODULE_PRIORITY_MODULE);

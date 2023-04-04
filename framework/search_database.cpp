@@ -7,7 +7,7 @@
 
 #include <framework/imgui.h>
 #include <framework/common.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/database.h>
 #include <framework/dispatcher.h>
 #include <framework/string_table.h>

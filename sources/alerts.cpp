@@ -13,7 +13,7 @@
 #include <framework/array.h>
 #include <framework/config.h>
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/string_table.h>
 #include <framework/localization.h>
 #include <framework/system.h>
@@ -659,8 +659,8 @@ FOUNDATION_STATIC void alerts_initialize()
         config_deallocate(evaluators_data);
     }
 
-    service_register_update(HASH_ALERTS, alerts_run_evaluators);
-    service_register_window(HASH_ALERTS, alerts_render_evaluators);
+    module_register_update(HASH_ALERTS, alerts_run_evaluators);
+    module_register_window(HASH_ALERTS, alerts_render_evaluators);
 }
 
 FOUNDATION_STATIC void alerts_shutdown()
@@ -673,4 +673,4 @@ FOUNDATION_STATIC void alerts_shutdown()
     MEM_DELETE(_alerts_module);
 }
 
-DEFINE_SERVICE(ALERTS, alerts_initialize, alerts_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_MODULE(ALERTS, alerts_initialize, alerts_shutdown, MODULE_PRIORITY_UI);

@@ -9,7 +9,7 @@
 
 #include "eod.h"
 
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/string_table.h>
 
 #define HASH_IMWALLET static_hash_string("imwallet", 8, 0xd34e6a763c92e4d2ULL)
@@ -197,4 +197,4 @@ FOUNDATION_STATIC void imwallet_shutdown()
     MEM_DELETE(_imwallet_module);
 }
 
-DEFINE_SERVICE(IMWALLET, imwallet_initialize, imwallet_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_MODULE(IMWALLET, imwallet_initialize, imwallet_shutdown, MODULE_PRIORITY_UI);

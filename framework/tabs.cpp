@@ -9,7 +9,7 @@
 #include <framework/array.h>
 #include <framework/common.h>
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 
 struct tabbar_t 
 {
@@ -176,7 +176,7 @@ void tabs_draw_all()
     
     if (tabs_begin("Tabs", _tab_current, tabs_init_flags, nullptr))
     {
-        service_foreach_tabs();
+        module_foreach_tabs();
 
         tabbar_t* tb = array_last(_tabbars);
         if (tb)

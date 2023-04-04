@@ -14,7 +14,7 @@
 #include <framework/string.h>
 #include <framework/common.h>
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/database.h>
 #include <framework/dispatcher.h>
 #include <framework/string_table.h>
@@ -506,4 +506,4 @@ FOUNDATION_STATIC void news_shutdown()
     
 }
 
-DEFINE_SERVICE(NEWS, news_initialize, news_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_MODULE(NEWS, news_initialize, news_shutdown, MODULE_PRIORITY_UI);

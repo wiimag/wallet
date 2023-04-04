@@ -9,7 +9,7 @@
 #include <framework/expr.h>
 #include <framework/common.h>
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/imgui.h>
 #include <framework/scoped_mutex.h>
 #include <framework/generics.h>
@@ -501,7 +501,7 @@ FOUNDATION_STATIC void console_initialize()
     {
         log_set_handler(logger);
         _console_window_opened = environment_command_line_arg("console") || session_get_bool("show_console", _console_window_opened);
-        service_register_menu(HASH_CONSOLE, console_menu);
+        module_register_menu(HASH_CONSOLE, console_menu);
 
         app_register_menu(HASH_CONSOLE, 
             STRING_CONST("Windows/" ICON_MD_LOGO_DEV " Console"), STRING_CONST("F10"), AppMenuFlags::Append, [](void*)
@@ -542,4 +542,4 @@ FOUNDATION_STATIC void console_shutdown()
     string_array_deallocate(_console_secret_keys);
 }
 
-DEFINE_SERVICE(CONSOLE, console_initialize, console_shutdown, SERVICE_PRIORITY_UI_HEADLESS);
+DEFINE_MODULE(CONSOLE, console_initialize, console_shutdown, MODULE_PRIORITY_UI_HEADLESS);

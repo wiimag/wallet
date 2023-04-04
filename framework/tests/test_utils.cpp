@@ -11,7 +11,7 @@
 
 #include <framework/glfw.h>
 #include <framework/imgui.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/dispatcher.h>
 #include <framework/array.h>
 
@@ -129,6 +129,6 @@ FOUNDATION_STATIC void test_utils_shutdown()
     TEST_CLEAR_FRAME();
 }
 
-DEFINE_SERVICE(TEST, test_utils_initialize, test_utils_shutdown, SERVICE_PRIORITY_TESTS-1);
+DEFINE_MODULE(TEST, test_utils_initialize, test_utils_shutdown, MODULE_PRIORITY_TESTS-1);
 
 #endif

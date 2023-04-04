@@ -17,7 +17,7 @@
 #include <framework/jobs.h>
 #include <framework/session.h>
 #include <framework/table.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/tabs.h>
 #include <framework/math.h>
 #include <framework/config.h>
@@ -2807,7 +2807,7 @@ FOUNDATION_STATIC void pattern_initialize()
         config_deallocate(patterns_data);
     }
 
-    service_register_tabs(HASH_PATTERN, pattern_render_tabs);
+    module_register_tabs(HASH_PATTERN, pattern_render_tabs);
 }
 
 FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
@@ -2866,4 +2866,4 @@ FOUNDATION_STATIC void pattern_shutdown()
     _patterns = nullptr;
 }
 
-DEFINE_SERVICE(PATTERN, pattern_initialize, pattern_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_MODULE(PATTERN, pattern_initialize, pattern_shutdown, MODULE_PRIORITY_UI);

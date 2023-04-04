@@ -8,7 +8,7 @@
 #include "expr.h"
 
 #include <framework/imgui.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
 
@@ -2177,4 +2177,4 @@ FOUNDATION_STATIC void expr_shutdown()
     expr_destroy(nullptr, &_global_vars);
 }
 
-DEFINE_SERVICE(EXPR, expr_initialize, expr_shutdown, SERVICE_PRIORITY_SYSTEM);
+DEFINE_MODULE(EXPR, expr_initialize, expr_shutdown, MODULE_PRIORITY_SYSTEM);

@@ -12,7 +12,7 @@
 #include <framework/common.h>
 #include <framework/jobs.h>
 #include <framework/query.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/shared_mutex.h>
 #include <framework/handle.h>
 #include <framework/session.h>
@@ -925,4 +925,4 @@ FOUNDATION_STATIC void logo_shutdown()
     array_deallocate(_logos);
 }
 
-DEFINE_SERVICE(LOGO, logo_initialize, logo_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_MODULE(LOGO, logo_initialize, logo_shutdown, MODULE_PRIORITY_UI);

@@ -28,5 +28,5 @@
 //
 // Framework
 //
-#define DEFINE_SERVICE(NAME, initialize_fn, shutdown_fn, priority)
+#define DEFINE_MODULE(NAME, initialize_fn, shutdown_fn, priority)
 #define FOUNDATION_LINKER_INCLUDE(func_name)

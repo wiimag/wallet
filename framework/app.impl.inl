@@ -14,7 +14,7 @@
 #include <framework/jobs.h>
 #include <framework/query.h>
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/progress.h>
 #include <framework/dispatcher.h>
 #include <framework/tabs.h>
@@ -55,7 +55,7 @@ extern int app_initialize(GLFWwindow* window)
     session_setup(nullptr);
 
     // App systems;
-    service_initialize();
+    module_initialize();
 
     #if defined(FRAMEWORK_APP_EXTENDED_INITIALIZE)
     extern void FRAMEWORK_APP_EXTENDED_INITIALIZE(GLFWwindow * window);
@@ -83,7 +83,7 @@ extern void app_shutdown()
     query_shutdown();
 
     // Framework systems
-    service_shutdown();
+    module_shutdown();
     progress_finalize();
     session_shutdown();
     string_table_shutdown();
@@ -91,7 +91,7 @@ extern void app_shutdown()
 
 extern void app_update(GLFWwindow* window)
 {
-    service_update();
+    module_update();
 }
 
 #if !defined(FRAMEWORK_APP_CUSTOM_RENDER_IMPLEMENTATION)
@@ -108,7 +108,7 @@ extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
         ImGuiWindowFlags_NoTitleBar))
     {
         dispatcher_update();
-        service_foreach_window();
+        module_foreach_window();
     } ImGui::End();
 }
 #endif

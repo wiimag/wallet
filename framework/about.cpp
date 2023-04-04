@@ -11,7 +11,7 @@
 #include <framework/bgfx.h>
 #include <framework/glfw.h>
 #include <framework/imgui.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/string.h>
 
 #include <foundation/foundation.h>
@@ -113,4 +113,4 @@ void about_initialize()
         STRING_CONST("F1"), AppMenuFlags::Append, about_menu_open_dialog);
 }
 
-DEFINE_SERVICE(ABOUT, about_initialize, nullptr, SERVICE_PRIORITY_UI);
+DEFINE_MODULE(ABOUT, about_initialize, nullptr, MODULE_PRIORITY_UI);

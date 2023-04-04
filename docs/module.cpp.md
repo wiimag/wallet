@@ -92,7 +92,7 @@ bool tic_tac_toe_open_window(const char* title, int width, int height, GLFWwindo
 #include <framework/math.h>
 #include <framework/imgui.h>
 #include <framework/common.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/imgui_utils.h>
 #include <framework/tabs.h>
 
@@ -151,7 +151,7 @@ void render_pad_shutdown()
 
 /* =======> MODULE SERVICE DEFINITION (IF ANY) <======== */
 
-DEFINE_SERVICE(RENDER_PAD, render_pad_initialize, render_pad_shutdown, SERVICE_PRIORITY_MODULE);
+DEFINE_MODULE(RENDER_PAD, render_pad_initialize, render_pad_shutdown, SERVICE_PRIORITY_MODULE);
 
 //
 // # ANY PRIVATE TESTS (or use a separate test module under ./tests/render_pad_tests.cpp)

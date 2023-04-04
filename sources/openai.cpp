@@ -12,7 +12,7 @@
 #include <framework/imgui.h>
 #include <framework/query.h>
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/window.h>
 #include <framework/array.h>
 #include <framework/config.h>
@@ -1111,4 +1111,4 @@ FOUNDATION_STATIC void openai_shutdown()
     MEM_DELETE(_openai_module);
 }
 
-DEFINE_SERVICE(OPENAI, openai_initialize, openai_shutdown, SERVICE_PRIORITY_UI_HEADLESS);
+DEFINE_MODULE(OPENAI, openai_initialize, openai_shutdown, MODULE_PRIORITY_UI_HEADLESS);

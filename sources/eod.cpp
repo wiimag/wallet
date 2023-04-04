@@ -12,7 +12,7 @@
 #include <framework/common.h>
 #include <framework/session.h>
 #include <framework/scoped_string.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/dispatcher.h>
 #include <framework/string.h>
 #include <framework/console.h>
@@ -486,10 +486,10 @@ FOUNDATION_STATIC void eod_initialize()
     if (key_length)
         console_add_secret_key_token(key, key_length);
     
-    service_register_update(HASH_EOD, eod_update);
+    module_register_update(HASH_EOD, eod_update);
 
     if (main_is_interactive_mode())
-        service_register_menu_status(HASH_EOD, eod_main_menu_status);
+        module_register_menu_status(HASH_EOD, eod_main_menu_status);
 
     eod_update_window_title();
 }
@@ -499,4 +499,4 @@ FOUNDATION_STATIC void eod_shutdown()
     MEM_DELETE(EOD);
 }
 
-DEFINE_SERVICE(EOD, eod_initialize, eod_shutdown, SERVICE_PRIORITY_BASE);
+DEFINE_MODULE(EOD, eod_initialize, eod_shutdown, MODULE_PRIORITY_BASE);

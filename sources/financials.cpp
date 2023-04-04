@@ -12,7 +12,7 @@
 #include <framework/string.h>
 #include <framework/common.h>
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/dispatcher.h>
 #include <framework/string_table.h>
 #include <framework/profiler.h>
@@ -1003,4 +1003,4 @@ void financials_open_window(const char* symbol, size_t symbol_length)
 // # SYSTEM
 //
 
-DEFINE_SERVICE(FINANCIALS, [](){}, nullptr, SERVICE_PRIORITY_UI);
+DEFINE_MODULE(FINANCIALS, [](){}, nullptr, MODULE_PRIORITY_UI);

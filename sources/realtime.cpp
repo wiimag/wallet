@@ -12,7 +12,7 @@
 #include "pattern.h"
 
 #include <framework/session.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/dispatcher.h>
 #include <framework/database.h>
 #include <framework/query.h>
@@ -762,8 +762,8 @@ FOUNDATION_STATIC void realtime_initialize()
 
     dispatcher_register_event_listener(EVENT_STOCK_REQUESTED, realtime_register_new_stock);
 
-    service_register_menu(HASH_REALTIME, realtime_menu);
-    service_register_window(HASH_REALTIME, realtime_render_window);
+    module_register_menu(HASH_REALTIME, realtime_menu);
+    module_register_window(HASH_REALTIME, realtime_render_window);
 }
 
 FOUNDATION_STATIC void realtime_shutdown()
@@ -793,4 +793,4 @@ FOUNDATION_STATIC void realtime_shutdown()
     MEM_DELETE(_realtime_module);
 }
 
-DEFINE_SERVICE(REALTIME, realtime_initialize, realtime_shutdown, SERVICE_PRIORITY_UI_HEADLESS);
+DEFINE_MODULE(REALTIME, realtime_initialize, realtime_shutdown, MODULE_PRIORITY_UI_HEADLESS);

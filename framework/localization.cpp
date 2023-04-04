@@ -5,7 +5,7 @@
 
 #include "localization.h"
 
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/dispatcher.h>
 #include <framework/string_table.h>
 #include <framework/config.h>
@@ -440,6 +440,6 @@ FOUNDATION_STATIC void localization_shutdown()
     MEM_DELETE(_localization_module);
 }
 
-DEFINE_SERVICE(LOCALIZATION, localization_initialize, localization_shutdown, SERVICE_PRIORITY_BASE);
+DEFINE_MODULE(LOCALIZATION, localization_initialize, localization_shutdown, MODULE_PRIORITY_BASE);
 
 #endif

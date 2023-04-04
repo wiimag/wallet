@@ -198,7 +198,7 @@ void example()
 
 ```
 
-### [service.h/cpp](service.h)
+### [module.h/cpp](module.h)
 
 The service module contains the code to manage the application services.
 
@@ -207,7 +207,7 @@ Here's an example to define a new service module in your application:
 ```cpp
 
 #include <framework/common.h>
-#include <framework/service.h>
+#include <framework/module.h>
 
 #define HASH_LOBBY static_string_hash("lobby", 5, 0x0ULL /*TODO update this key*/)
 
@@ -229,7 +229,7 @@ FOUNDATION_STATIC void lobby_initialize(void)
     // Fetch the data from the server
     _lobby_module->clients = lobby_get_clients();
 
-    // Register various service application callbacks (see service.h)
+    // Register various service application callbacks (see module.h)
     service_register_window(HASH_LOBBY, lobby_render_window);
 }
 
@@ -239,7 +239,7 @@ FOUNDATION_STATIC void lobby_finalize(void)
     MEM_DELETE(_lobby_module);
 }
 
-DEFINE_SERVICE(LOBBY, lobby_initialize, lobby_finalize, SERVICE_PRIORITY_MODULE);
+DEFINE_MODULE(LOBBY, lobby_initialize, lobby_finalize, SERVICE_PRIORITY_MODULE);
 
 ```
 

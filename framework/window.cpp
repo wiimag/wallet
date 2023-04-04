@@ -9,7 +9,7 @@
 #include <framework/bgfx.h>
 #include <framework/imgui.h>
 #include <framework/common.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/session.h>
 #include <framework/dispatcher.h>
 #include <framework/math.h>
@@ -1252,7 +1252,7 @@ FOUNDATION_STATIC void window_initialize()
     if (_window_module->configs == nullptr)
         _window_module->configs = config_allocate(CONFIG_VALUE_OBJECT);
     
-    service_register_update(HASH_WINDOW, window_update);
+    module_register_update(HASH_WINDOW, window_update);
 }
 
 FOUNDATION_STATIC void window_shutdown()
@@ -1276,4 +1276,4 @@ FOUNDATION_STATIC void window_shutdown()
     MEM_DELETE(_window_module);
 }
 
-DEFINE_SERVICE(WINDOW, window_initialize, window_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_MODULE(WINDOW, window_initialize, window_shutdown, MODULE_PRIORITY_UI);

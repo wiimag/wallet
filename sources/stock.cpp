@@ -11,7 +11,7 @@
 
 #include <framework/query.h>
 #include <framework/shared_mutex.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
 #include <framework/math.h>
@@ -1081,4 +1081,4 @@ FOUNDATION_STATIC void stock_shutdown()
     }
 }
 
-DEFINE_SERVICE(STOCK, stock_initialize, stock_shutdown, SERVICE_PRIORITY_BASE);
+DEFINE_MODULE(STOCK, stock_initialize, stock_shutdown, MODULE_PRIORITY_BASE);

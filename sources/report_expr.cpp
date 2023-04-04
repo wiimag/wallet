@@ -11,7 +11,7 @@
 
 #include <framework/app.h>
 #include <framework/expr.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/table.h>
 #include <framework/dispatcher.h>
 #include <framework/string.h>
@@ -838,4 +838,4 @@ FOUNDATION_STATIC void report_expr_shutdown()
     
 }
 
-DEFINE_SERVICE(REPORT_EXPRESSION, report_expr_initialize, report_expr_shutdown, SERVICE_PRIORITY_MODULE);
+DEFINE_MODULE(REPORT_EXPRESSION, report_expr_initialize, report_expr_shutdown, MODULE_PRIORITY_MODULE);

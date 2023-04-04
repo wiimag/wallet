@@ -11,7 +11,7 @@
 #include <framework/app.h>
 #include <framework/glfw.h>
 #include <framework/imgui.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/profiler.h>
 #include <framework/tabs.h>
 #include <framework/string_table.h>
@@ -56,7 +56,7 @@ FOUNDATION_STATIC void app_main_menu_begin(GLFWwindow* window)
 
 FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
 {    
-    service_foreach_menu();
+    module_foreach_menu();
 
     if (ImGui::BeginMenuBar())
     {
@@ -70,7 +70,7 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
         // Update special application menu status.
         // Usually controls are displayed at the far right of the menu.
         profiler_menu_timer();
-        service_foreach_menu_status();
+        module_foreach_menu_status();
 
         ImGui::EndMenuBar();
     }
@@ -92,7 +92,7 @@ FOUNDATION_STATIC void app_tabs()
 
     if (tabs_begin("Tabs", SETTINGS.current_tab, tabs_init_flags, app_tabs_content_filter))
     {
-        service_foreach_tabs();
+        module_foreach_tabs();
 
         tab_set_color(TAB_COLOR_SETTINGS);
         tab_draw(tr(ICON_MD_SETTINGS " Settings ##Settings"), nullptr, 
@@ -139,7 +139,7 @@ extern int app_initialize(GLFWwindow* window)
     
     // App systems
     settings_initialize();
-    service_initialize();
+    module_initialize();
 
     return 0;
 }
@@ -155,7 +155,7 @@ extern void app_shutdown()
     query_shutdown();
     
     // App systems
-    service_shutdown();
+    module_shutdown();
     settings_shutdown();
     
     // Framework systems
@@ -167,7 +167,7 @@ extern void app_shutdown()
 
 extern void app_update(GLFWwindow* window)
 {
-    service_update();
+    module_update();
 }
 
 extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
@@ -184,12 +184,11 @@ extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
         ImGuiWindowFlags_MenuBar))
     {
         app_main_menu_begin(window);
-        //dispatcher_update();
 
         app_tabs();
         app_main_menu_end(window);
 
-        service_foreach_window();
+        module_foreach_window();
     } ImGui::End();
 }
 

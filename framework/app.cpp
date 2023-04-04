@@ -17,7 +17,7 @@
 #include <version.h>
 
 #include <framework/imgui.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/string.h>
 #include <framework/console.h>
 #include <framework/profiler.h>
@@ -551,7 +551,7 @@ FOUNDATION_STATIC void app_framework_initialize()
 {
     //system_add_menu_item("test");
 
-    service_register_window(HASH_APP, app_dialogs_render);
+    module_register_window(HASH_APP, app_dialogs_render);
 }
 
 FOUNDATION_STATIC void app_framework_shutdown()
@@ -560,4 +560,4 @@ FOUNDATION_STATIC void app_framework_shutdown()
     app_dialogs_shutdown();
 }
 
-DEFINE_SERVICE(APP, app_framework_initialize, app_framework_shutdown, SERVICE_PRIORITY_SYSTEM);
+DEFINE_MODULE(APP, app_framework_initialize, app_framework_shutdown, MODULE_PRIORITY_SYSTEM);

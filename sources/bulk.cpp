@@ -12,7 +12,7 @@
 #include <framework/session.h>
 #include <framework/scoped_mutex.h>
 #include <framework/table.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/config.h>
 #include <framework/window.h>
 
@@ -547,7 +547,7 @@ FOUNDATION_STATIC void bulk_initialize()
 
     _bulk_module->lock = mutex_allocate(STRING_CONST("BulkLock"));
 
-    service_register_menu(HASH_BULK, bulk_menu);
+    module_register_menu(HASH_BULK, bulk_menu);
 }
 
 FOUNDATION_STATIC void bulk_shutdown()
@@ -575,4 +575,4 @@ FOUNDATION_STATIC void bulk_shutdown()
     MEM_DELETE(_bulk_module);
 }
 
-DEFINE_SERVICE(BULK, bulk_initialize, bulk_shutdown, SERVICE_PRIORITY_UI);
+DEFINE_MODULE(BULK, bulk_initialize, bulk_shutdown, MODULE_PRIORITY_UI);

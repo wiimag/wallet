@@ -4,7 +4,7 @@
  */
 
 #include <framework/common.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/session.h>
 #include <framework/table.h>
 #include <framework/imgui.h>
@@ -331,7 +331,7 @@ FOUNDATION_STATIC void test_runner_initialize()
     _test_runner_window_opened = session_get_bool("test_runner_window_opened", _test_runner_window_opened);
     string_const_t test_runner_search_filter = session_get_string("test_runner_search_filter", "");
     string_copy(STRING_BUFFER(_test_runner_search_filter), STRING_ARGS(test_runner_search_filter));
-    service_register_menu(HASH_TEST_RUNNER, test_runner_menu);
+    module_register_menu(HASH_TEST_RUNNER, test_runner_menu);
 }
 
 FOUNDATION_STATIC void test_runner_shutdown()
@@ -346,6 +346,6 @@ FOUNDATION_STATIC void test_runner_shutdown()
 }
 
 REGISTER_REPORTER("test_runner", 2, TestRunnerReporter);
-DEFINE_SERVICE(TEST_RUNNER, test_runner_initialize, test_runner_shutdown, SERVICE_PRIORITY_TESTS);
+DEFINE_MODULE(TEST_RUNNER, test_runner_initialize, test_runner_shutdown, MODULE_PRIORITY_TESTS);
 
 #endif

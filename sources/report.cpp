@@ -24,7 +24,7 @@
 #include <framework/imgui.h>
 #include <framework/session.h>
 #include <framework/table.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/tabs.h>
 #include <framework/dispatcher.h>
 #include <framework/math.h>
@@ -2554,9 +2554,9 @@ FOUNDATION_STATIC void report_initialize()
 
     report_sort_order();
 
-    service_register_tabs(HASH_REPORT, report_render_tabs);
-    service_register_menu(HASH_REPORT, report_render_menus);
-    service_register_window(HASH_REPORT, report_render_windows);
+    module_register_tabs(HASH_REPORT, report_render_tabs);
+    module_register_menu(HASH_REPORT, report_render_menus);
+    module_register_window(HASH_REPORT, report_render_windows);
 
     _report_expression_cache = MEM_NEW(HASH_REPORT, std::remove_pointer<decltype(_report_expression_cache)>::type);
 }
@@ -2585,4 +2585,4 @@ FOUNDATION_STATIC void report_shutdown()
     _reports = nullptr;
 }
 
-DEFINE_SERVICE(REPORT, report_initialize, report_shutdown, SERVICE_PRIORITY_HIGH);
+DEFINE_MODULE(REPORT, report_initialize, report_shutdown, MODULE_PRIORITY_HIGH);

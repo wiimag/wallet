@@ -9,7 +9,7 @@
 
 #include <framework/imgui.h>
 #include <framework/common.h>
-#include <framework/service.h>
+#include <framework/module.h>
 #include <framework/session.h>
 #include <framework/shared_mutex.h>
 #include <framework/table.h>
@@ -347,7 +347,7 @@ FOUNDATION_STATIC void profiler_initialize()
     profile_set_output(profiler_tracker);
     _profiler_initialized = true;
 
-    service_register_menu(HASH_PROFILER, profiler_menu);
+    module_register_menu(HASH_PROFILER, profiler_menu);
 }
 
 FOUNDATION_STATIC void profiler_shutdown()
@@ -370,6 +370,6 @@ FOUNDATION_STATIC void profiler_shutdown()
     array_deallocate(_trackers);
 }
 
-DEFINE_SERVICE(PROFILER, profiler_initialize, profiler_shutdown, SERVICE_PRIORITY_UI_HEADLESS);
+DEFINE_MODULE(PROFILER, profiler_initialize, profiler_shutdown, MODULE_PRIORITY_UI_HEADLESS);
 
 #endif
