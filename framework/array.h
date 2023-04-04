@@ -238,9 +238,9 @@ template<typename T, typename Comparer>
 T* array_qsort(T* arr, unsigned element_count, const Comparer& comparer, void* context)
 {
     #if FOUNDATION_PLATFORM_WINDOWS
-    qsort_s(arr, array_size(arr), sizeof(T), comparer, context);
+    qsort_s(arr, element_count, sizeof(T), comparer, context);
     #else
-    qsort_r(arr, array_size(arr), sizeof(T), context, comparer);
+    qsort_r(arr, element_count, sizeof(T), context, comparer);
     #endif
     return arr;
 }

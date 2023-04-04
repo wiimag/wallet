@@ -1896,5 +1896,15 @@
 			en = "\xee\x97\x8d Close"
 			fr = "\xee\x97\x8d Fermer"
 		}
+		{
+			hash = "f16b6da88f2d5bf6"
+			en = "Filter symbols..."
+			fr = "Filtrer les symboles..."
+		}
+		{
+			hash = "2df6ee4c465aa6d9"
+			en = "%5d symbols"
+			fr = "%5d symboles"
+		}
 	]
 }

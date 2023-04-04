@@ -32,6 +32,8 @@ static struct BULK_MODULE
     bool fetch_volume_zero{ false };
     bool fetch_negative_beta{ false };
 
+    char search_filter[64]{ 0 };
+
 } *_bulk_module;
 
 //
@@ -445,7 +447,7 @@ FOUNDATION_STATIC bool bulk_render_exchange_selector()
 
     ImGui::SameLine();
     ImGui::MoveCursor(0, -2);
-    ImGui::SetNextItemWidth(400.0f);
+    ImGui::SetNextItemWidth(IM_SCALEF(200));
     if (ImWallet::Exchanges(_bulk_module->exchanges))
         updated = true;
 
@@ -462,7 +464,7 @@ FOUNDATION_STATIC void bulk_render()
     bool exchanges_updated = bulk_render_exchange_selector();
 
     ImGui::MoveCursor(0, -2, true);
-    ImGui::SetNextItemWidth(300.0f);
+    ImGui::SetNextItemWidth(IM_SCALEF(150));
     if (ImGui::DateChooser("##Date", _bulk_module->fetch_date_tm, "%Y-%m-%d", true))
     {
         _bulk_module->fetch_date = mktime(&_bulk_module->fetch_date_tm);
@@ -486,14 +488,19 @@ FOUNDATION_STATIC void bulk_render()
 
     if (_bulk_module->table)
     {
+        // Render search filter input text
+        ImGui::MoveCursor(IM_SCALEF(8), -2, true);
+        ImGui::SetNextItemWidth(IM_SCALEF(200));
+        if (ImGui::InputTextWithHint("##Search", tr("Filter symbols..."), STRING_BUFFER(_bulk_module->search_filter)) || exchanges_updated)
+            table_set_search_filter(_bulk_module->table, STRING_LENGTH(_bulk_module->search_filter));
+
         int symbol_count = array_size(_bulk_module->symbols);
         ImGui::MoveCursor(0, -2, true);
-        ImGui::TrText("       %d symbols", symbol_count);
+        ImGui::TrText("%5d symbols", symbol_count);
         ImGui::EndGroup();
 
         if (auto lock = scoped_mutex_t(_bulk_module->lock))
         {
-            //_bulk_module->table->search_filter = string_to_const(SETTINGS.search_filter);
             table_render(_bulk_module->table, _bulk_module->symbols, symbol_count, sizeof(bulk_t), 0.0f, 0.0f);
         }
     }
