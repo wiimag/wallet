@@ -26,7 +26,7 @@ double math_average_parallel(const double* pn, size_t count, size_t stride /*= s
 {
     double total = 0;
     #pragma omp parallel for reduction(+:total)
-    for (size_t i = 0; i < count; ++i)
+    for (int64_t i = 0; i < (int64_t)count; ++i)
     {
         total += math_ifnan(*pn, 0.0);
         pn = (double*)(((uint8_t*)pn) + stride);

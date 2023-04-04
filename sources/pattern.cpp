@@ -2297,9 +2297,21 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     if (!pattern->stock->is_resolving(FETCH_ALL))
         stock_update(STRING_ARGS(code), pattern->stock, FETCH_ALL, 8.0);
 
+
+    if (shortcut_executed('N'))
+    {
+        app_open_dialog(string_format_static_const("%.*s Notes", STRING_FORMAT(code)), [](void* context)
+        {
+            static bool focus_notes = false;
+            pattern_t* pattern = (pattern_t*)context;
+            pattern_render_notes_and_analysis(pattern, focus_notes);
+            return true;
+        }, IM_SCALEF(440), IM_SCALEF(550), true, pattern, nullptr);
+    }
+
     char pattern_id[64];
     string_format(STRING_BUFFER(pattern_id), STRING_CONST("Pattern###%.*s_7"), STRING_FORMAT(code));
-    if (!ImGui::BeginTable(pattern_id, 3, flags, ImGui::GetContentRegionAvail()))
+    if (!ImGui::BeginTable(pattern_id, 2, flags, ImGui::GetContentRegionAvail()))
         return;
 
     pattern_update(pattern);
@@ -2314,11 +2326,6 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     if (show_graph_title)
         graph_column_title = string_table_decode_const(stock_data->name);
     ImGui::TableSetupColumn(graph_column_title.str, (show_graph_title ? 0 : ImGuiTableColumnFlags_NoHeaderLabel) | ImGuiTableColumnFlags_NoClip);
-
-    ImGui::TableSetupColumn("Additional Information", 
-        ImGuiTableColumnFlags_WidthFixed | 
-        ImGuiTableColumnFlags_NoHeaderLabel |
-        ImGuiTableColumnFlags_DefaultHide, IM_SCALEF(200));
 
     if (none(render_flags, PatternRenderFlags::HideTableHeaders))
         ImGui::TableHeadersRow();
@@ -2345,18 +2352,6 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     if (ImGui::TableNextColumn())
     {
         pattern_render_graphs(pattern);
-    }
-
-    static bool focus_notes = false;
-    if (shortcut_executed('N'))
-    {
-        ImGui::TableSetColumnEnabled(2, !(ImGui::TableGetColumnFlags(2) & ImGuiTableColumnFlags_IsEnabled));
-        focus_notes = true;
-    }
-
-    if (ImGui::TableNextColumn())
-    {
-        pattern_render_notes_and_analysis(pattern, focus_notes);
     }
 
     ImGui::EndTable();	

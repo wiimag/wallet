@@ -1881,5 +1881,15 @@
 			en = "Google API Key"
 			fr = "Cl\xc3\xa9 API Google"
 		}
+		{
+			hash = "43d9d04ea4694266"
+			en = "Please provide guidance from the company data below using these instructions:\n"
+			fr = "Veuillez fournir des informations sur les donn\xc3\xa9es de l'entreprise ci-dessous en utilisant ces instructions:\n"
+		}
+		{
+			hash = "d5532528a082d407"
+			en = "- state if this company could part of a paradigm market shift,\n"
+			fr = "- indiquez si cette entreprise pourrait faire partie d'un changement de paradigme du march\xc3\xa9,\n"
+		}
 	]
 }

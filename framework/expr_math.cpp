@@ -7,8 +7,13 @@
 
 #include <framework/math.h>
 #include <framework/string.h>
+#include <framework/array.h>
+#include <framework/handle.h>
+#include <framework/progress.h>
 
-#include <foundation/array.h>
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 
 typedef enum VecMatType : uint32_t {
     VECMAT_NIL = 0,
@@ -489,6 +494,211 @@ FOUNDATION_STATIC expr_result_t expr_eval_vecmat_transpose(const expr_func_t* f,
     return expr_eval_vecmat_push_result(context, r);
 }
 
+struct expr_solve_int_variable_t
+{
+    string_const_t name;
+    int min;
+    int max;
+
+    /*! Testing value */
+    int index;
+    int value;
+};
+
+struct expr_solve_equation_t
+{
+    expr_t* expr;
+    int failure;
+};
+
+FOUNDATION_STATIC expr_result_t expr_eval_solve_int(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Get how may expression to solve
+    unsigned equations = math_trunc(expr_eval(args->get(0)).as_number(0));
+    if (equations == 0)
+        return NIL;
+
+    // Get expressions to evaluates
+    expr_solve_equation_t* expressions = nullptr;
+    for (unsigned i = 0; i < equations; ++i)
+    {
+        expr_solve_equation_t e{};
+        e.expr = args->get(i + 1);
+        e.failure = 0;
+        array_push(expressions, e);
+    }
+
+    // Then for all remaining arguments, consider them to be the variables to solve: NAME, [MIN_INT_VALUE, MAX_INT_VALUE]
+    size_t max_evaluation_count = 0;
+    expr_solve_int_variable_t* variables = nullptr;
+    for (int i = equations + 1, var_index = 0; i + 2 < args->len; i += 3, ++var_index)
+    {
+        expr_solve_int_variable_t var{};
+
+        var.index = var_index;
+        var.name = args->get(i)->token;
+        //var.name = expr_eval(args->get(i + 1)).as_string();
+        var.min = math_trunc(expr_eval(args->get(i + 1)).as_number(0));
+        var.max = math_trunc(expr_eval(args->get(i + 2)).as_number(0));
+
+        // If min is greater than max, swap them
+        if (max_evaluation_count == 0)
+            max_evaluation_count = var.max - var.min + 1;
+        else
+            max_evaluation_count *= var.max - var.min + 1;
+
+        array_push(variables, var);
+    }
+
+    const unsigned variable_count = array_size(variables);
+    if (variable_count == 0)
+        return NIL;
+
+    #if !BUILD_DEBUG
+    // Shuffle variables in order to try different combinations
+    array_shuffle(variables);
+    #endif
+
+    // For all equation, brute force and try all possible values for all variables
+    // If all equations are true, then we found a solution
+    bool found_solution = false;
+
+    // Lets initialize all variables to their min value
+    for (unsigned i = 0; i < variable_count; ++i)
+        variables[i].value = variables[i].min;
+
+    tick_t start = time_current();
+    atom32 evaluation_count = 0;
+
+    size_t progress = 0;
+    size_t steps = max_evaluation_count / 100;
+    size_t next_step_report = steps;
+
+    // Log what we are about to solve
+    log_infof(HASH_EXPR, 
+        STRING_CONST("Solving %d equations with %d variables for a total of %u possibilities"), 
+        equations, variable_count, max_evaluation_count);
+
+    // For all variables, try all possible values
+    expr_solve_int_variable_t* bit = variables;
+    const expr_solve_int_variable_t* end = array_end(variables);
+    while (bit < end)
+    {
+        if (++progress >= next_step_report)
+        {
+            next_step_report += steps;
+            log_debugf(HASH_EXPR, STRING_CONST("Progress: %d%%"), (int)(progress * 100ULL / max_evaluation_count));
+            progress_set(progress, max_evaluation_count);
+        }
+
+        // Set all variables to their current value
+        for (unsigned i = 0; i < variable_count; ++i)
+            expr_set_global_var(STRING_ARGS(variables[i].name), (double)variables[i].value);
+
+        // Evaluate all equations with the current values
+        {
+            bool all_true = true;
+
+            for (unsigned i = 0, endi = array_size(expressions); i < endi; ++i)
+            {
+                expr_solve_equation_t* eq = expressions + i;
+
+                // Increment evaluation count
+                ++evaluation_count;
+
+                expr_t* e = eq->expr;
+                expr_result_t assertion = expr_eval(e);
+                if (assertion.type == EXPR_RESULT_SYMBOL)
+                    continue; // Assume it is a comment and continue...
+
+                if (assertion.type != EXPR_RESULT_TRUE)
+                {
+                    eq->failure++;
+                    all_true = false;
+
+                    // Sort equation with most failure first
+                    if (i > 0 && expressions[i-1].failure < eq->failure)
+                        array_sort(expressions, LC2(_2.failure - _1.failure));
+
+                    // If one equation is false, then we can stop
+                    break;
+                }
+            }
+
+            if (all_true)
+            {
+                // We found a solution
+                found_solution = true;
+                break;
+            }
+        }
+
+        // Increment the current variable
+        if (bit->value == bit->max)
+        {
+            // If we reached the max value, reset it to min and increment the next variable
+            bit->value = bit->min;
+
+            // Otherwise, increment the next variable
+            while (++bit < end && ++bit->value > bit->max)
+            {
+                bit->value = bit->min;
+            }
+
+            // If we reached the end, we are done
+            if (bit >= end)
+                break;
+
+            // And reset the bit to the first variable
+            bit = variables;
+        }
+        else
+        {
+            // Otherwise, just increment the current variable
+            ++bit->value;
+        }
+    }
+
+    #if !BUILD_DEBUG
+    // Re-order
+    array_sort(variables, [](const auto& a, const auto& b) { return a.index - b.index; });
+    #endif
+
+    log_infof(HASH_EXPR, STRING_CONST("Solved %u equations with %u variables in %.2lf seconds by evaluating %d expressions."), 
+        equations, variable_count, time_elapsed(start), evaluation_count.load());
+
+    // Log the solution
+    if (found_solution)
+    {
+        log_infof(HASH_EXPR, STRING_CONST("Solution:"));
+        for (unsigned i = 0; i < variable_count; ++i)
+            log_infof(HASH_EXPR, STRING_CONST("  %.*s = %d"), STRING_FORMAT(variables[i].name), variables[i].value);
+    }
+    else
+    {
+        log_infof(HASH_EXPR, STRING_CONST("No solution found"));
+    }
+
+    array_deallocate(expressions);
+
+    if (!found_solution)
+    {
+        array_deallocate(variables);
+        return NIL;
+    }
+    
+    // Return the solution
+    expr_result_t* results = nullptr;
+    foreach(v, variables)
+    {
+        expr_result_t kvp = expr_eval_pair(expr_result_t(v->name), (double)v->value);
+        array_push(results, kvp);
+    }
+
+    array_deallocate(variables);
+    return results;
+}
+
 void expr_register_vec_mat_functions(expr_func_t*& funcs)
 {
     const size_t VECMAT_CONTEXT_SIZE = 0;//sizeof(vecmat_context_t); NOT USED YET
@@ -542,4 +752,22 @@ void expr_register_vec_mat_functions(expr_func_t*& funcs)
 
     array_push(funcs, (expr_func_t{ STRING_CONST("RAD2DEG"), expr_eval_vecmat_rad_to_deg, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("DEG2RAD"), expr_eval_vecmat_deg_to_rad, NULL, VECMAT_CONTEXT_SIZE }));
+
+    /*
+     * SOLVE_INT(2,
+     *  (6 * $A) + (2 * $B) + (1 * $C) + (3 * $D) + (4 * $E) + (2 * $F) + (2 * $G) + (2 * $H) + (2 * $I) + (1 * $J) + (1 * $K) == 258,
+     *  $A + $B + $C + $D + $E + $F + $G + $H + $I + $J + $K == 100,
+     *  A, 10, 15,
+     *  B, 6, 12,
+     *  C, 4, 8,
+     *  D, 9, 10,
+     *  E, 9, 10,
+     *  F, 7, 10,
+     *  G, 5, 15,
+     *  H, 5, 15,
+     *  I, 6, 13,
+     *  J, 6, 13,
+     *  K, 5, 15)
+     */
+     array_push(funcs, (expr_func_t{ STRING_CONST("SOLVE_INT"), expr_eval_solve_int, NULL, 0 }));
 }

@@ -794,16 +794,12 @@ string_const_t openai_generate_summary_prompt(
         string_builder_append_new_line(sb);
 
         string_builder_append_new_line(sb);
-        string_builder_append(sb, tr(STRING_CONST("Please provide guidance from the company highlights, valuation and technical data below using these instructions:\n")));
+        string_builder_append(sb, tr(STRING_CONST("Please provide guidance from the company data below using these instructions:\n")));
         string_builder_append(sb, tr(STRING_CONST("- explain if the financial results in the last quarter are better than the previous one,\n")));
         string_builder_append(sb, tr(STRING_CONST("- compare these results to other companies in the same sector and industry and provide comparisons,\n")));
-        //string_builder_append(sb, STRING_CONST("- shorten the currency amounts,\n"));
-        //string_builder_append(sb, STRING_CONST("- report any currency amounts using large number abbreviations with a dollar $,\n"));
-        //string_builder_append(sb, STRING_CONST("- report any percentage amounts using a percent %,\n"));
+        string_builder_append(sb, tr(STRING_CONST("- state if this company could part of a paradigm market shift,\n")));
         string_builder_append(sb, tr(STRING_CONST("- raise any data point that could be of a concern for an investor,\n")));
         string_builder_append(sb, tr(STRING_CONST("- provide any prediction if possible or link to recent news or event affecting the stock price,\n")));
-        //string_builder_append(sb, STRING_CONST("- use as few abbreviation or acronyms as possible,\n"));
-        //string_builder_append(sb, STRING_CONST("- and be as verbose as possible and finish with an emoji reflecting the investor sentiment against that company."));
         string_builder_append(sb, tr(STRING_CONST("- and popularize as much as possible to reflecting the investor sentiment against that company.")));
         string_builder_append_new_line(sb);
 

@@ -2282,7 +2282,7 @@ string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_
         {
             buffer[i] = c;
         }
-        else if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~' || c == '/' || c == ':')
+        else if ((c > 0 && isalnum(c)) || c == '-' || c == '_' || c == '.' || c == '~' || c == '/' || c == ':')
         {
             buffer[i] = c;
         }
