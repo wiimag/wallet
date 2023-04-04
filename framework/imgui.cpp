@@ -28,13 +28,13 @@
 
 #endif
 
-#include <GLFW/glfw3native.h>
-
 #define HASH_IMGUI static_hash_string("imgui", 5, 0x9803803300f77bbfULL)
 
 static double _time = 0.0;
 static float _global_font_scaling = 0.0f;
 static float _current_window_scale = 1.0f;
+
+#include <GLFW/glfw3native.h>
 static GLFWcursor* _mouse_cursors[ImGuiMouseCursor_COUNT] = { nullptr };
 
 #if IMGUI_ENABLE_TEST_ENGINE

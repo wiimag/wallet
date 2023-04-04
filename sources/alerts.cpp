@@ -3,6 +3,8 @@
  * License: https://equals-forty-two.com/LICENSE
  */
 
+#if BUILD_APPLICATION
+
 #include "alerts.h"
 
 #include "logo.h"
@@ -674,3 +676,5 @@ FOUNDATION_STATIC void alerts_shutdown()
 }
 
 DEFINE_MODULE(ALERTS, alerts_initialize, alerts_shutdown, MODULE_PRIORITY_UI);
+
+#endif // BUILD_APPLICATION

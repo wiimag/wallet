@@ -15,6 +15,7 @@
 #define IDR_MAINFRAME                   128
 #define IDR_MAIN_FONT                   130
 #define IDR_MD_FONT                     133
+#define IDR_LOCALES_SJSON               134
 #define IDC_STATIC                      -1
 
 // Next default values for new objects

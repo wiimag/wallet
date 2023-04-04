@@ -61,6 +61,18 @@ struct news_window_t
 // # PRIVATE
 //
 
+FOUNDATION_STATIC double news_fetch_change_p(const char* symbol, size_t symbol_length, time_t date)
+{
+    if (time_same_day(time_now(), date))
+    {
+        auto stock = stock_resolve(symbol, symbol_length, FetchLevel::REALTIME);
+        if (stock)
+            return stock->current.change_p;
+    }
+    
+    return stock_get_eod(symbol, symbol_length, date).change_p;
+}
+
 FOUNDATION_STATIC void news_fetch_data(news_window_t* news_window, const json_object_t& json)
 {
     MEMORY_TRACKER(HASH_NEWS);
@@ -90,9 +102,7 @@ FOUNDATION_STATIC void news_fetch_data(news_window_t* news_window, const json_ob
         news.headline = string_utf8_unescape(STRING_ARGS(title));
         news.url = string_utf8_unescape(STRING_ARGS(link));
         news.summary = string_utf8_unescape(STRING_ARGS(content));
-
-        const day_result_t ed = stock_get_eod(STRING_LENGTH(news_window->symbol), date);
-        news.change_p = ed.change_p;
+        news.change_p = news_fetch_change_p(STRING_LENGTH(news_window->symbol), date);
 
         for (auto s : n["symbols"])
         {
@@ -279,8 +289,7 @@ FOUNDATION_STATIC news_window_t* news_window_allocate(const char* symbol, size_t
                     t.related = nullptr;
                     t.openai_response = nullptr;
 
-                    const day_result_t ed = stock_get_eod(STRING_LENGTH(news_window->symbol), t.date);
-                    t.change_p = ed.change_p;
+                    t.change_p = news_fetch_change_p(STRING_LENGTH(news_window->symbol), t.date);
 
                     SHARED_WRITE_LOCK(news_window->news_mutex);
                     int insert_at = array_binary_search_compare(news_window->news, t.date, LC2(_2 - _1.date));
@@ -344,12 +353,15 @@ FOUNDATION_STATIC bool news_window_render(void* obj)
             ImGui::Separator();
 
         ImGui::SetWindowFontScale(0.75f);
-        // Render sentiment information using a single line
-        if (news->sentiment_positive > news->sentiment_negative)
-            ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "%.2f", news->sentiment_polarity);
-        else
-            ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%.2f", news->sentiment_polarity);
-        ImGui::SameLine();
+        if (news->sentiment_neutral != 1.0f)
+        {
+            // Render sentiment information using a single line
+            if (news->sentiment_positive > news->sentiment_negative)
+                ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "%.2f", news->sentiment_polarity);
+            else
+                ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "%.2f", news->sentiment_polarity);
+            ImGui::SameLine();
+        }
         ImGui::SetWindowFontScale(1.0f);
         ImGui::TextURL(STRING_RANGE(news->headline), STRING_ARGS(news->url));
 

@@ -163,18 +163,22 @@ FOUNDATION_STATIC void report_filter_out_titles(report_t* report)
 {
     report->active_titles = array_size(report->titles);
 
-    if (!report->show_sold_title)
+    if (report->show_sold_title && report->show_no_transaction_title)
+        return;
+
+    for (unsigned i = 0; i < report->active_titles; ++i)
     {
-        for (int i = 0; i < report->active_titles; ++i)
+        const title_t* title = report->titles[i];
+
+        const bool discard_if_sold = !report->show_sold_title && title_sold(title);
+        const bool discard_if_no_transaction = !report->show_no_transaction_title && title->buy_total_count == 0;
+        
+        if (discard_if_sold || discard_if_no_transaction)
         {
-            title_t* title = report->titles[i];
-            if (title_sold(title))
-            {
-                title_t* b = report->titles[report->active_titles - 1];
-                report->titles[report->active_titles - 1] = title;
-                report->titles[i--] = b;
-                report->active_titles--;
-            }
+            // Hide titles that are sold or those with no transactions
+            array_swap<title_t*>(report->titles, i, report->active_titles - 1);
+            i--;
+            report->active_titles--;
         }
     }
 }
@@ -497,6 +501,7 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
 
 FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
+    #if BUILD_APPLICATION
     const title_t* title = *(const title_t**)element;
 
     ImGui::MoveCursor(8.0f, 4.0f);
@@ -563,12 +568,14 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
             report_title_remove(report_handle, title);
     }
     ImGui::EndGroup();
+    #endif
 }
 
 FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, const column_t* column)
 {
     title_t* title = *(title_t**)element;
 
+    #if BUILD_APPLICATION
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         const char* formatted_code = title->code;
@@ -713,6 +720,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         
         ImGui::PopStyleCompact();
     }
+    #endif
 
     return title->code;
 }
@@ -1909,6 +1917,7 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
     report->save_index = data["order"].as_integer();
     report->show_summary = data["show_summary"].as_boolean();
     report->show_sold_title = data["show_sold_title"].as_boolean();
+    report->show_no_transaction_title = data["show_no_transaction_title"].as_boolean();
     report->opened = data["opened"].as_boolean(true);
 
     for (auto e : data["columns"])
@@ -2172,14 +2181,20 @@ bool report_refresh(report_t* report)
     for (size_t i = 0; i < title_count; ++i)
     {
         title_t* t = report->titles[i];
-        if (report->show_sold_title || !title_sold(t))
-        {
-            t->stock->fetch_errors = 0;
-            t->stock->resolved_level &= ~FetchLevel::REALTIME;
-            if (!stock_resolve(t->stock, FetchLevel::REALTIME))
-                dispatcher_wait_for_wakeup_main_thread(50);
-            report->fully_resolved = 0;
-        }
+
+        // If the title is sold, we don't need to refresh it.
+        if (!report->show_sold_title && title_sold(t))
+            continue;
+
+        // If the title has no transaction
+        if (!report->show_no_transaction_title && t->buy_total_count == 0)
+            continue;
+
+        t->stock->fetch_errors = 0;
+        t->stock->resolved_level &= ~FetchLevel::REALTIME;
+        if (!stock_resolve(t->stock, FetchLevel::REALTIME))
+            dispatcher_wait_for_wakeup_main_thread(50);
+        report->fully_resolved = 0;
     }
 
     _report_expression_cache->clear();
@@ -2219,15 +2234,19 @@ void report_menu(report_t* report)
 
             ImGui::Separator();
 
-            if (ImGui::MenuItem(tr(ICON_MD_SELL " Show Sold"), nullptr, &report->show_sold_title))
+            if (ImGui::TrMenuItem(ICON_MD_SELL " Show Sold", nullptr, &report->show_sold_title))
                 report_filter_out_titles(report);
-            if (ImGui::MenuItem(tr(ICON_MD_SUMMARIZE " Show Summary"), "F4", &report->show_summary))
+
+            if (ImGui::TrMenuItem(ICON_MD_NO_ENCRYPTION " Show Titles With No Transaction", nullptr, &report->show_no_transaction_title))
+                report_filter_out_titles(report);
+
+            if (ImGui::TrMenuItem(ICON_MD_SUMMARIZE " Show Summary", "F4", &report->show_summary))
                 report_summary_update(report);
 
-            if (ImGui::MenuItem(tr(ICON_MD_TIMELINE " Show Timeline")))
+            if (ImGui::TrMenuItem(ICON_MD_TIMELINE " Show Timeline"))
                 timeline_render_graph(report);
 
-            if (ImGui::MenuItem(tr(ICON_MD_AUTO_GRAPH " Show Transactions")))
+            if (ImGui::TrMenuItem(ICON_MD_AUTO_GRAPH " Show Transactions"))
             {
                 const char* window_title = tr_format("%s Transactions", string_table_decode(report->name));
                 window_open("##Transactions", window_title, string_length(window_title), [](window_handle_t win)
@@ -2334,6 +2353,7 @@ void report_save(report_t* report)
     config_set(report->data, "order", (double)report->save_index);
     config_set(report->data, "show_summary", report->show_summary);
     config_set(report->data, "show_sold_title", report->show_sold_title);
+    config_set(report->data, "show_no_transaction_title", report->show_no_transaction_title);
     config_set(report->data, "opened", report->opened);
 
     auto cv_columns = config_set_array(report->data, STRING_CONST("columns"));

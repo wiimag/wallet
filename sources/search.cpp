@@ -986,9 +986,11 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
             if (entry->viewed)
                 ImGui::PopStyleColor();
 
+            #if BUILD_APPLICATION
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - font_size, 0.0f);
             ImVec2 logo_size{ font_size, font_size };
             logo_render_icon(STRING_ARGS(code), logo_size, false, true, nullptr);
+            #endif
         }
         
         return code;
@@ -1646,7 +1648,7 @@ bool search_render_settings()
     }
 
     ImGui::NextColumn();
-    ImGui::TrTextWrapped("Changing that settings will restart the indexing process but if will not delete already indexed stock from removed exchanges. "
+    ImGui::TrTextWrapped("Changing that setting will restart the indexing process but if will not delete already indexed stock from removed exchanges. "
         "Indexing a new stock exchange can take between 1 to 3 hours.");
 
     return updated;

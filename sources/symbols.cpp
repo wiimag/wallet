@@ -185,13 +185,15 @@ FOUNDATION_STATIC void symbols_search(symbol_t** symbols, string_const_t search_
 FOUNDATION_STATIC cell_t symbol_get_code(void* element, const column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
-
     string_const_t code = string_table_decode_const(symbol->code);
+
+    #if BUILD_APPLICATION
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         const ImRect& cell_rect = table_current_cell_rect();
         logo_render_banner(STRING_ARGS(code), cell_rect, nullptr);
     }
+    #endif
 
     return code;
 }

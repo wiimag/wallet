@@ -471,6 +471,7 @@ FOUNDATION_STATIC cell_t realtime_table_draw_title(table_element_ptr_t element, 
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
 
+    #if BUILD_APPLICATION
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         ImRect logo_rect;
@@ -487,6 +488,7 @@ FOUNDATION_STATIC cell_t realtime_table_draw_title(table_element_ptr_t element, 
             }
         }
     }
+    #endif
 
     return s->code;
 }

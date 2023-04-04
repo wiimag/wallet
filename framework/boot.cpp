@@ -4,6 +4,7 @@
  */
 
 #include <framework/app.h>
+
 #include <framework/glfw.h>
 #include <framework/bgfx.h>
 #include <framework/imgui.h>
@@ -109,7 +110,7 @@ extern int main_initialize()
     if (init_result)
         return init_result;
 
-    #if FOUNDATION_PLATFORM_WINDOWS
+    #if BUILD_APPLICATION && FOUNDATION_PLATFORM_WINDOWS
         log_enable_stdout(system_process_redirect_io_to_console() || environment_command_line_arg("build-machine"));
     #endif
     
@@ -146,6 +147,7 @@ extern int main_initialize()
     main_handle_debug_break();
 
     GLFWwindow* window = nullptr;
+    #if BUILD_APPLICATION
     if (main_is_graphical_mode())
     {
         // This should create the main window not visible, 
@@ -160,8 +162,10 @@ extern int main_initialize()
         bgfx_initialize(window);
         imgui_initiaize(window);
     }
+    #endif
 
     init_result = app_initialize(window);
+    #if BUILD_APPLICATION
     if (main_is_interactive_mode() && window)
     {
         // Show and focus the window once the main initialization is over.
@@ -169,6 +173,7 @@ extern int main_initialize()
         glfwShowWindow(window);
         glfwFocusWindow(window);
     }
+    #endif
 
     return init_result;
 }
@@ -179,7 +184,11 @@ extern int main_initialize()
  */
 extern bool main_is_batch_mode()
 {
-    return _batch_mode;
+    #if BUILD_SERVICE
+        return true;
+    #else
+        return _batch_mode;
+    #endif
 }
 
 /*! Checks if the application is running in daemon mode.
@@ -188,7 +197,11 @@ extern bool main_is_batch_mode()
  */
 extern bool main_is_daemon_mode()
 {
-    return _batch_mode || main_is_running_tests();
+    #if BUILD_SERVICE
+        return true;
+    #else
+        return _batch_mode || main_is_running_tests();
+    #endif
 }
 
 /*! Checks if the application is running in graphical mode.
@@ -199,7 +212,11 @@ extern bool main_is_daemon_mode()
  */
 extern bool main_is_graphical_mode()
 {
-    return !_batch_mode;
+    #if BUILD_APPLICATION
+        return !_batch_mode;
+    #else
+        return false;
+    #endif
 }
 
 /*! Checks if the application is running in interactive mode.
@@ -212,15 +229,19 @@ extern bool main_is_graphical_mode()
  */
 extern bool main_is_interactive_mode(bool exclude_debugger /*= false*/)
 {
-    if (_batch_mode)
-        return false;
-    #if BUILD_DEVELOPMENT
-    if (_run_tests)
+    #if BUILD_APPLICATION
+        if (_batch_mode)
+            return false;
+        #if BUILD_DEVELOPMENT
+            if (_run_tests)
+                return false;
+        #endif
+        if (exclude_debugger && system_debugger_attached())
+            return false;
+        return true;
+    #else
         return false;
     #endif
-    if (exclude_debugger && system_debugger_attached())
-        return false;
-    return true;
 }
 
 /*! Checks if the application is running in test mode.
@@ -272,8 +293,10 @@ FOUNDATION_STATIC void main_process_system_events(GLFWwindow* window)
 
         case FOUNDATIONEVENT_TERMINATE:
             _process_should_exit = true;
+            #if BUILD_APPLICATION
             if (window)
                 glfwSetWindowShouldClose(window, 1);
+            #endif
             break;
 
         case FOUNDATIONEVENT_FOCUS_GAIN:
@@ -304,6 +327,7 @@ extern void main_update(GLFWwindow* window, const app_update_handler_t& update)
         update(window);
 }
 
+#if BUILD_APPLICATION
 /*! Main application render loop.
  *
  *  @param window The main window.
@@ -363,6 +387,7 @@ extern void main_render(GLFWwindow* window, const app_render_handler_t& render, 
         bgfx::frame();
     }
 }
+#endif
 
 /*! Main application loop.
  *
@@ -374,8 +399,10 @@ extern void main_tick(GLFWwindow* window)
 
     main_update(window, app_update);
 
+    #if BUILD_APPLICATION
     if (window)
         main_render(window, app_render, nullptr, nullptr);
+    #endif
 }
 
 /*! Poll any windowing and dispatcher events that occurred since last tick.
@@ -388,11 +415,17 @@ extern bool main_poll(GLFWwindow* window)
 {
     PERFORMANCE_TRACKER("main_poll");
 
+    #if BUILD_APPLICATION
     if (window)
         glfwPollEvents();
+    #endif
     dispatcher_poll(window);
 
+    #if BUILD_APPLICATION
     return window == nullptr || !glfwWindowShouldClose(window);
+    #else
+    return !_process_should_exit;
+    #endif
 }
 
 /*! Main application entry point invoked by the foundation platform.
@@ -405,7 +438,7 @@ extern int main_run(void* context)
 {
     GLFWwindow* current_window = glfw_main_window();
 
-    #if BUILD_DEVELOPMENT
+    #if BUILD_APPLICATION && BUILD_DEVELOPMENT
     extern int main_tests(void* context, GLFWwindow* window);
     if (_run_tests)
         return main_tests(context, current_window);
@@ -416,14 +449,16 @@ extern int main_run(void* context)
     uint64_t frame_counter = 1;
     while (main_poll(current_window))
     {
+        #if BUILD_APPLICATION && BUILD_ENABLE_PROFILE
         tick_t start_tick = time_current();
+        #endif
+
         main_tick(current_window);
 
-        tick_t elapsed_ticks = time_diff(start_tick, time_current());
-
-        #if BUILD_ENABLE_PROFILE
+        #if BUILD_APPLICATION && BUILD_ENABLE_PROFILE
         static unsigned index = 0;
         static double elapsed_times[60] = { 0.0 };
+        tick_t elapsed_ticks = time_diff(start_tick, time_current());
         elapsed_times[index++ % ARRAY_COUNT(elapsed_times)] = time_ticks_to_milliseconds(elapsed_ticks);
         _smooth_elapsed_time_ms = math_average(elapsed_times, ARRAY_COUNT(elapsed_times));
         #endif
@@ -441,15 +476,18 @@ extern int main_run(void* context)
 extern void main_finalize()
 {    
     {
+        #if BUILD_APPLICATION
         WAIT_CURSOR;
 
         GLFWwindow* main_window = glfw_main_window();
         if (main_window && main_is_interactive_mode())
             glfw_save_window_geometry(main_window);
+        #endif
 
         app_shutdown();
         dispatcher_shutdown();
 
+        #if BUILD_APPLICATION
         if (main_is_graphical_mode())
         {
             bgfx_shutdown();
@@ -458,10 +496,13 @@ extern void main_finalize()
 
         if (log_stdout())
             system_process_release_console();
+        #endif
     }
 
+    #if BUILD_APPLICATION
     if (main_is_graphical_mode())
         glfw_shutdown();
+    #endif
 
     foundation_finalize();
 }

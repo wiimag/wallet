@@ -316,6 +316,7 @@ FOUNDATION_STATIC void pattern_render_planning_line(string_const_t label, const 
 
 FOUNDATION_STATIC bool pattern_render_stats_value(const stock_t* s, string_const_t value)
 {
+    #if BUILD_APPLICATION
     ImGui::TableNextColumn();
     if (string_is_null(value))
         return false;
@@ -351,6 +352,7 @@ FOUNDATION_STATIC bool pattern_render_stats_value(const stock_t* s, string_const
             ImGui::EndPopup();
         }
     }
+    #endif
 
     return true;
 }

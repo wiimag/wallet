@@ -5,6 +5,8 @@
 
 #include "logo.h"
 
+#if BUILD_APPLICATION
+
 #include "eod.h"
 #include "stock.h"
 #include "settings.h"
@@ -19,6 +21,7 @@
 #include <framework/profiler.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/bgfx.h>
 
 #include <foundation/fs.h>
 #include <foundation/path.h>
@@ -26,8 +29,6 @@
 #include <foundation/memory.h>
 
 #include <stb/stb_image.h>
-
-#include <bgfx/bgfx.h>
 
 #define HASH_LOGO static_hash_string("logo", 4, 0x66e3b93837662c88ULL)
 
@@ -926,3 +927,5 @@ FOUNDATION_STATIC void logo_shutdown()
 }
 
 DEFINE_MODULE(LOGO, logo_initialize, logo_shutdown, MODULE_PRIORITY_UI);
+
+#endif // BUILD_APPLICATION

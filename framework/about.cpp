@@ -3,6 +3,8 @@
  * License: https://equals-forty-two.com/LICENSE
  */
 
+#if BUILD_APPLICATION
+
 #include "about.h"
 
 #include <version.h>
@@ -114,3 +116,5 @@ void about_initialize()
 }
 
 DEFINE_MODULE(ABOUT, about_initialize, nullptr, MODULE_PRIORITY_UI);
+
+#endif // BUILD_APPLICATION

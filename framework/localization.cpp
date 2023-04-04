@@ -13,9 +13,15 @@
 #include <framework/array.h>
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
+#include <framework/system.h>
 
 #include <foundation/path.h>
 #include <foundation/environment.h>
+
+#if FOUNDATION_PLATFORM_WINDOWS
+#include <resource.h>
+#include <foundation/windows.h>
+#endif
 
 #define HASH_LOCALIZATION static_hash_string("localization", 12, 0xf40f9a08f45a6556ULL)
 
@@ -192,6 +198,8 @@ FOUNDATION_STATIC string_locale_t* localization_sort_locales(string_locale_t* lo
 
 FOUNDATION_STATIC string_t localization_build_locales_path()
 {
+    if (environment_command_line_arg("skip-dev-locales"))
+        return {};
     #if BUILD_DEVELOPMENT
     // Get the locales.sjson path
     // Look if we can find the locales.sjson in the devs repo
@@ -212,14 +220,17 @@ FOUNDATION_STATIC string_const_t localization_system_locales_path()
     string_t locales_json_path = localization_build_locales_path();
     if (!fs_is_file(STRING_ARGS(locales_json_path)))
     {
+        #if FOUNDATION_PLATFORM_WINDOWS
+        return system_executable_resource_to_file(MAKEINTRESOURCEA(IDR_LOCALES_SJSON), MAKEINTRESOURCEA(10));
+        #else
         static thread_local char locales_json_path_buffer[BUILD_MAX_PATHLEN];
-
         string_const_t resources_path = environment_get_resources_path();
         
         // Look if we can find the locales.sjson in the same dir as the exe
         locales_json_path = string_copy(STRING_BUFFER(locales_json_path_buffer), STRING_ARGS(resources_path));
         locales_json_path = path_append(STRING_ARGS(locales_json_path), BUILD_MAX_PATHLEN, STRING_CONST("locales.sjson"));
         locales_json_path = path_clean(STRING_ARGS(locales_json_path), BUILD_MAX_PATHLEN);
+        #endif
     }
 
     return string_to_const(locales_json_path);

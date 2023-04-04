@@ -5,6 +5,8 @@
 
 #pragma once
 
+#if BUILD_APPLICATION
+
 #include <framework/imgui.h>
 
 struct logo_t;
@@ -66,3 +68,4 @@ bool logo_has_banner(
     int& banner_width, int& banner_height, int& banner_channels, 
     ImU32& image_bg_color, ImU32& fill_color);
  
+#endif // BUILD_APPLICATION

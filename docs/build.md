@@ -54,3 +54,29 @@ If enabled, the `tr(...)` function will return the localized string for the pass
 You can find the `locales.sjson` which contains the localized strings at `config/locales.sjson` directory. If you use the command line argument `--build-locales` when using the build flags `BUILD_DEVELOPMENT` any non localized strings will be added to the `locales.sjson` file with a `@TODO` value so you can easily find them and add the localized string.
 
 When build with `BUILD_DEPLOY`, the `locales.sjson` file will be copied to the `build` directory.
+
+### `-DBUILD_SERVICE_EXE=ON|OFF`
+
+**Default: `OFF`**
+
+If enabled, the project will be built with the service executable. If turned off, the project will be built without the service executable.
+
+The service executable is used to run the project as a service on Windows or on the command line on Windows.
+
+In example, you can run the following command to build and generate the service executable:
+
+```bash
+./run build release generate -DBUILD_SERVICE_EXE=ON
+```
+
+Then you can run the following command to run the service executable and get the version as an output:
+
+```bash
+./build/service.exe --version
+```
+
+**Note:** The build options are cached. If you want to change the build options, you will need to run the following command:
+
+```bash
+./run build release generate -DBUILD_SERVICE_EXE=OFF
+```

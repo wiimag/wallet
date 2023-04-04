@@ -402,11 +402,13 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
 
     EOD->UPDATE_TICK = time_current();
 
+    #if BUILD_APPLICATION
     dispatch(eod_update_window_title);
 
     // If we are still disconnected and no valid key is set, show the login dialog
     if (!EOD->PROMPT_EOD_API_KEY && (!EOD->CONNECTED || string_equal(EOD->KEY, string_length(EOD->KEY), STRING_CONST("demo"))))
         eod_show_login_dialog();
+    #endif
 }
 
 FOUNDATION_STATIC void eod_update()
@@ -490,6 +492,7 @@ FOUNDATION_STATIC void eod_initialize()
 
     if (main_is_interactive_mode())
         module_register_menu_status(HASH_EOD, eod_main_menu_status);
+
 
     eod_update_window_title();
 }
