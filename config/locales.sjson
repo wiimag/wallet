@@ -1891,5 +1891,10 @@
 			en = "- state if this company could part of a paradigm market shift,\n"
 			fr = "- indiquez si cette entreprise pourrait faire partie d'un changement de paradigme du march\xc3\xa9,\n"
 		}
+		{
+			hash = "ac285848835c4f18"
+			en = "\xee\x97\x8d Close"
+			fr = "\xee\x97\x8d Fermer"
+		}
 	]
 }

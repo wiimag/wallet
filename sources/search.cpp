@@ -168,7 +168,7 @@ FOUNDATION_STATIC bool search_database_index_text_skip_common_words(
 
     string_const_t expression, r = string_trim(string_trim(string_const(_text, text_length)), '.');
 
-    if (r.length <= 16)
+    if (r.length <= 18)
     {
         search_database_index_word(db, doc, STRING_ARGS(r), false);
     }
@@ -223,7 +223,7 @@ FOUNDATION_STATIC bool search_database_index_property_skip_common_words(
 
     string_const_t expression, r = string_trim(string_trim(string_const(_value, _value_length)), '.');
 
-    if (r.length <= 16)
+    if (r.length <= 18)
     {
         search_database_index_property(db, doc, name, name_length, STRING_ARGS(r), false);
     }

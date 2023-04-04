@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 equals-forty-two.com All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
  
@@ -8,14 +8,6 @@
 #include "stock.h"
 
 #include "framework/string_table.h"
-
-struct exchange_t
-{
-    string_table_symbol_t name;
-    string_table_symbol_t code;
-    string_table_symbol_t country;
-    string_table_symbol_t currency;
-};
 
 struct bulk_t
 {

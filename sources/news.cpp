@@ -26,6 +26,8 @@
 
 #define HASH_NEWS static_hash_string("news", 4, 0xc804eb289c3e1658ULL)
 
+static char NEWS_GOOGLE_SEARCH_API_KEY[64] = { 0 };
+
 struct news_t
 {
     time_t date;
@@ -54,8 +56,6 @@ struct news_window_t
     news_t* news{ nullptr };
     shared_mutex news_mutex;
 };
-
-char NEWS_GOOGLE_SEARCH_API_KEY[64] = { 0 };
 
 //
 // # PRIVATE
@@ -489,6 +489,11 @@ FOUNDATION_STATIC void news_initialize()
             string_copy(STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY), STRING_ARGS(key));
             string_deallocate(key.str);
             stream_deallocate(key_stream);
+        }
+        else
+        {
+            // Clear key
+            NEWS_GOOGLE_SEARCH_API_KEY[0] = 0;
         }
     }
 

@@ -320,9 +320,17 @@ FOUNDATION_STATIC void eod_update_window_title()
     string_const_t license_name = EOD->CONNECTED && EOD->USER_NAME[0] != 0 ? string_to_const(EOD->USER_NAME) : RTEXT("disconnected");
     string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
 
-    static char title[128] = PRODUCT_NAME;
-    string_format(STRING_BUFFER(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
-        app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
+    char title[128] = PRODUCT_NAME;
+    if (license_name.length)
+    {
+        string_format(STRING_BUFFER(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
+            app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
+    }
+    else
+    {
+        string_format(STRING_BUFFER(title), STRING_CONST("%s [%.*s] v.%.*s"),
+            app_title(), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
+    }
 
     glfwSetWindowTitle(window, title);
 }

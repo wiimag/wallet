@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 equals-forty-two.com All rights reserved.
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
@@ -7,70 +7,45 @@
 
 #include "eod.h"
 #include "pattern.h"
-#include "settings.h"
-#include "logo.h"
+#include "imwallet.h"
 
 #include <framework/session.h>
 #include <framework/scoped_mutex.h>
 #include <framework/table.h>
 #include <framework/service.h>
-#include <framework/tabs.h>
 #include <framework/config.h>
-#include <framework/string.h>
 #include <framework/window.h>
 
 #define HASH_BULK static_hash_string("bulk", 4, 0x9a6818bbbd28c09eULL)
 
-static exchange_t* _exchanges = nullptr;
-static const exchange_t** _selected_exchanges = nullptr;
-static time_t _fetch_date = time_work_day(time_now(), -0.7);
-static tm _fetch_date_tm = *localtime(&_fetch_date);
-
-static mutex_t* _symbols_lock;
-static bulk_t* _symbols = nullptr;
-static table_t* _symbols_table = nullptr;
-
-static bool _fetch_cap_zero{ false };
-static bool _fetch_volume_zero{ false };
-static bool _fetch_negative_beta{ false };
-
-FOUNDATION_STATIC void bulk_fetch_exchange_list(const json_object_t& json)
+static struct BULK_MODULE
 {
-    size_t exchange_count = json.root->value_length;
+    time_t fetch_date = time_work_day(time_now(), -0.7);
+    tm fetch_date_tm = *localtime(&fetch_date);
 
-    if (exchange_count == 0)
-    {
-        array_reserve(_exchanges, 1);
-        return;
-    }
+    mutex_t* lock{ nullptr };
+    bulk_t* symbols{ nullptr };
+    table_t* table{ nullptr };
+    string_t* exchanges{ nullptr };
 
-    exchange_t* exchanges = nullptr;
-    for (int i = 0; i < exchange_count; ++i)
-    {
-        exchange_t ex{};
-        json_object_t ex_data = json[i];
+    bool fetch_cap_zero{ false };
+    bool fetch_volume_zero{ false };
+    bool fetch_negative_beta{ false };
 
-        ex.code = string_table_encode(ex_data["Code"].as_string());
-        ex.name = string_table_encode(ex_data["Name"].as_string());
-        ex.country = string_table_encode(ex_data["Country"].as_string());
-        ex.currency = string_table_encode(ex_data["Currency"].as_string());
+} *_bulk_module;
 
-        exchanges = array_push(exchanges, ex);
-    }
-
-    if (_exchanges)
-        array_deallocate(_exchanges);
-    _exchanges = exchanges;
-}
+//
+// # IMPLEMENTATION
+//
 
 FOUNDATION_STATIC bool bulk_add_symbols(const bulk_t* batch)
 {
-    if (auto lock = scoped_mutex_t(_symbols_lock))
+    if (auto lock = scoped_mutex_t(_bulk_module->lock))
     {
         size_t bz = array_size(batch);
-        size_t cz = array_size(_symbols);
-        array_resize(_symbols, cz + bz);
-        memcpy(_symbols + cz, batch, sizeof(bulk_t) * bz);
+        size_t cz = array_size(_bulk_module->symbols);
+        array_resize(_bulk_module->symbols, cz + bz);
+        memcpy(_bulk_module->symbols + cz, batch, sizeof(bulk_t) * bz);
         return true;
     }
     return false;
@@ -87,16 +62,16 @@ FOUNDATION_STATIC void bulk_fetch_exchange_symbols(const json_object_t& json)
         json_object_t e = json[i];
         bulk_t s{};
         s.market_capitalization = e["MarketCapitalization"].as_number();
-        if (s.market_capitalization == 0 && !_fetch_cap_zero)
+        if (s.market_capitalization == 0 && !_bulk_module->fetch_cap_zero)
             continue;
 
         s.volume = e["volume"].as_number();
         s.avgvol_200d = e["avgvol_200d"].as_number();
-        if (s.avgvol_200d == 0 && s.volume == 0 && !_fetch_volume_zero)
+        if (s.avgvol_200d == 0 && s.volume == 0 && !_bulk_module->fetch_volume_zero)
             continue;
 
         s.beta = e["Beta"].as_number();
-        if (s.beta < 0.01 && !_fetch_negative_beta)
+        if (s.beta < 0.01 && !_bulk_module->fetch_negative_beta)
             continue;
 
         s.avgvol_14d = e["avgvol_14d"].as_number();
@@ -138,15 +113,14 @@ FOUNDATION_STATIC void bulk_fetch_exchange_symbols(const json_object_t& json)
 
 FOUNDATION_STATIC void bulk_load_symbols()
 {
-    if (auto lock = scoped_mutex_t(_symbols_lock))
-        array_clear(_symbols);
+    if (auto lock = scoped_mutex_t(_bulk_module->lock))
+        array_clear(_bulk_module->symbols);
 
-    for (int i = 0, end = array_size(_selected_exchanges); i != end; ++i)
+    for (int i = 0, end = array_size(_bulk_module->exchanges); i != end; ++i)
     {
-        const exchange_t* ex = _selected_exchanges[i];
-        const char* code = string_table_decode(ex->code);
-        if (!eod_fetch_async("eod-bulk-last-day", code, FORMAT_JSON_CACHE,
-            "date", string_from_date(_fetch_date).str,
+        const string_t& code = _bulk_module->exchanges[i];
+        if (!eod_fetch_async("eod-bulk-last-day", code.str, FORMAT_JSON_CACHE,
+            "date", string_from_date(_bulk_module->fetch_date).str,
             "filter", "extended", bulk_fetch_exchange_symbols, 4 * 60 * 60ULL))
         {
             log_errorf(0, ERROR_ACCESS_DENIED, STRING_CONST("Failed to fetch %s bulk data"), code);
@@ -390,57 +364,55 @@ FOUNDATION_STATIC bool bulk_table_search(table_element_ptr_const_t element, cons
 
 FOUNDATION_STATIC void bulk_create_symbols_table()
 {
-    if (_symbols_table)
-        table_deallocate(_symbols_table);
+    if (_bulk_module->table)
+        table_deallocate(_bulk_module->table);
 
-    _symbols_table = table_allocate("Bulk##_2", TABLE_HIGHLIGHT_HOVERED_ROW | TABLE_LOCALIZATION_CONTENT);
-    _symbols_table->context_menu = bulk_table_context_menu;
-    _symbols_table->search = bulk_table_search;
+    _bulk_module->table = table_allocate("Bulk##_2", TABLE_HIGHLIGHT_HOVERED_ROW | TABLE_LOCALIZATION_CONTENT);
+    _bulk_module->table->context_menu = bulk_table_context_menu;
+    _bulk_module->table->search = bulk_table_search;
 
-    table_add_column(_symbols_table, STRING_CONST("Title"), bulk_column_symbol_code, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING)
+    table_add_column(_bulk_module->table, STRING_CONST("Title"), bulk_column_symbol_code, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING)
         .set_selected_callback(bulk_column_title_selected);
 
-    table_add_column(_symbols_table, STRING_CONST("Name"), 
+    table_add_column(_bulk_module->table, STRING_CONST("Name"), 
         bulk_column_symbol_name, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT)
         .set_selected_callback(bulk_column_title_selected)
         .set_style_formatter(bulk_draw_symbol_code_color);
 
-    table_add_column(_symbols_table, STRING_CONST("Date"), bulk_column_symbol_date, COLUMN_FORMAT_DATE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-    table_add_column(_symbols_table, STRING_CONST("Type"), bulk_column_symbol_type, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE);
-    table_add_column(_symbols_table, STRING_CONST("Ex.||Exchange"), bulk_column_symbol_exchange, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_MIDDLE_ALIGN);
+    table_add_column(_bulk_module->table, STRING_CONST("Type"), bulk_column_symbol_type, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE);
+    table_add_column(_bulk_module->table, STRING_CONST("Ex.||Exchange"), bulk_column_symbol_exchange, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_MIDDLE_ALIGN);
 
-    table_add_column(_symbols_table, STRING_CONST(ICON_MD_EXPAND " Cap.||Moving Capitalization"), bulk_column_today_cap, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION | COLUMN_HIDE_DEFAULT)
+    table_add_column(_bulk_module->table, STRING_CONST(ICON_MD_EXPAND " Cap.||Moving Capitalization"), bulk_column_today_cap, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION | COLUMN_HIDE_DEFAULT)
         .set_tooltip_callback(bulk_column_today_cap_tooltip);
 
-    table_add_column(_symbols_table, STRING_CONST("  Cap.||Capitalization"), bulk_column_symbol_cap, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION);
-    table_add_column(_symbols_table, STRING_CONST("Lost Cap.||Lost Capitalization"), bulk_draw_symbol_lost_cap, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION | COLUMN_HIDE_DEFAULT);
+    table_add_column(_bulk_module->table, STRING_CONST("  Cap.||Capitalization"), bulk_column_symbol_cap, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION);
+    table_add_column(_bulk_module->table, STRING_CONST("Lost Cap.||Lost Capitalization"), bulk_draw_symbol_lost_cap, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION | COLUMN_HIDE_DEFAULT);
 
-    table_add_column(_symbols_table, STRING_CONST("  Beta||Beta"), bulk_draw_symbol_beta, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
+    table_add_column(_bulk_module->table, STRING_CONST("  Beta||Beta"), bulk_draw_symbol_beta, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE)
         .set_style_formatter(bulk_set_beta_styling);
 
-    table_add_column(_symbols_table, STRING_CONST("    Open||Open"), bulk_draw_symbol_open, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE);
-    table_add_column(_symbols_table, STRING_CONST("   Close||Close"), bulk_draw_symbol_close, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE);
-    table_add_column(_symbols_table, STRING_CONST("     Low||Low"), bulk_draw_symbol_low, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE);
-    table_add_column(_symbols_table, STRING_CONST("    High||High"), bulk_draw_symbol_high, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE);
+    table_add_column(_bulk_module->table, STRING_CONST("    Open||Open"), bulk_draw_symbol_open, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE);
+    table_add_column(_bulk_module->table, STRING_CONST("   Close||Close"), bulk_draw_symbol_close, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE);
+    table_add_column(_bulk_module->table, STRING_CONST("     Low||Low"), bulk_draw_symbol_low, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE);
+    table_add_column(_bulk_module->table, STRING_CONST("    High||High"), bulk_draw_symbol_high, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE);
 
-    table_add_column(_symbols_table, STRING_CONST("    %||Day Change"), bulk_draw_symbol_change_p, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE);
-    table_add_column(_symbols_table, STRING_CONST("EMA %||Exponential Moving Averages Gain"), bulk_draw_symbol_ema_p, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE);
+    table_add_column(_bulk_module->table, STRING_CONST("    %||Day Change"), bulk_draw_symbol_change_p, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE);
+    table_add_column(_bulk_module->table, STRING_CONST("EMA %||Exponential Moving Averages Gain"), bulk_draw_symbol_ema_p, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE);
 
-    table_add_column(_symbols_table, STRING_CONST("EMA 50d||Exponential Moving Averages (50 days)"), bulk_draw_symbol_ema_50d, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-    table_add_column(_symbols_table, STRING_CONST("EMA 200d||Exponential Moving Averages (200 days)"), bulk_draw_symbol_ema_200d, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-    table_add_column(_symbols_table, STRING_CONST(" L. 250d||Low 250 days"), bulk_draw_symbol_lo_250d, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
-    table_add_column(_symbols_table, STRING_CONST(" H. 250d||High 250 days"), bulk_draw_symbol_hi_250d, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(_bulk_module->table, STRING_CONST("EMA 50d||Exponential Moving Averages (50 days)"), bulk_draw_symbol_ema_50d, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(_bulk_module->table, STRING_CONST("EMA 200d||Exponential Moving Averages (200 days)"), bulk_draw_symbol_ema_200d, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(_bulk_module->table, STRING_CONST(" L. 250d||Low 250 days"), bulk_draw_symbol_lo_250d, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
+    table_add_column(_bulk_module->table, STRING_CONST(" H. 250d||High 250 days"), bulk_draw_symbol_hi_250d, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT);
 
-    table_add_column(_symbols_table, STRING_CONST("Volume"), bulk_draw_symbol_volume, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION);
-    table_add_column(_symbols_table, STRING_CONST("V. 14d||Average Volume 14 days"), bulk_draw_symbol_avgvol_14d, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_NUMBER_ABBREVIATION);
-    table_add_column(_symbols_table, STRING_CONST("V. 50d||Average Volume 50 days"), bulk_draw_symbol_avgvol_50d, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_NUMBER_ABBREVIATION | COLUMN_HIDE_DEFAULT);
-    table_add_column(_symbols_table, STRING_CONST("V. 200d||Average Volume 200 days"), bulk_draw_symbol_avgvol_200d, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_NUMBER_ABBREVIATION | COLUMN_HIDE_DEFAULT);
+    table_add_column(_bulk_module->table, STRING_CONST("Volume"), bulk_draw_symbol_volume, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION);
+    table_add_column(_bulk_module->table, STRING_CONST("V. 14d||Average Volume 14 days"), bulk_draw_symbol_avgvol_14d, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_NUMBER_ABBREVIATION);
+    table_add_column(_bulk_module->table, STRING_CONST("V. 50d||Average Volume 50 days"), bulk_draw_symbol_avgvol_50d, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_NUMBER_ABBREVIATION | COLUMN_HIDE_DEFAULT);
+    table_add_column(_bulk_module->table, STRING_CONST("V. 200d||Average Volume 200 days"), bulk_draw_symbol_avgvol_200d, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_NUMBER_ABBREVIATION | COLUMN_HIDE_DEFAULT);
 }
 
 FOUNDATION_STATIC void bulk_initialize_exchanges()
 {
-    if (!eod_fetch("exchanges-list", nullptr, FORMAT_JSON_CACHE, bulk_fetch_exchange_list))
-        return;
+    array_reserve(_bulk_module->exchanges, 8);
 
     string_const_t selected_exchanges_file_path = session_get_user_file_path(STRING_CONST("exchanges.json"));
     if (fs_is_file(STRING_ARGS(selected_exchanges_file_path)))
@@ -449,107 +421,39 @@ FOUNDATION_STATIC void bulk_initialize_exchanges()
         config_handle_t selected_exchanges_data = config_parse_file(STRING_ARGS(selected_exchanges_file_path));
         for (auto p : selected_exchanges_data)
         {
-            string_table_symbol_t code_symbol = string_table_encode(p.as_string());
-            for (int i = 0, end = array_size(_exchanges); i != end; ++i)
-            {
-                if (code_symbol == _exchanges[i].code)
-                    _selected_exchanges = array_push(_selected_exchanges, &_exchanges[i]);
-            }
+            string_const_t code = p.as_string();
+            string_t selected_code = string_clone(STRING_ARGS(code));
+            array_push(_bulk_module->exchanges, selected_code);
         }
 
         config_deallocate(selected_exchanges_data);
     }
 
-    if (_symbols == nullptr)
+    if (_bulk_module->symbols == nullptr)
         bulk_load_symbols();
 
-    if (_symbols_table == nullptr)
+    if (_bulk_module->table == nullptr)
         bulk_create_symbols_table();
-}
-
-FOUNDATION_STATIC bool bulk_exchange_is_selected(const exchange_t* ex)
-{
-    for (int i = 0, end = array_size(_selected_exchanges); i != end; ++i)
-    {
-        if (ex == _selected_exchanges[i])
-            return true;
-    }
-
-    return false;
 }
 
 FOUNDATION_STATIC bool bulk_render_exchange_selector()
 {
     bool updated = false;
-    char preview_buffer[64]{ '\0' };
-    string_t preview{ preview_buffer, 0 };
 
-    size_t selected_exchanges_count = array_size(_selected_exchanges);
-    if (selected_exchanges_count == 0)
-    {
-        string_copy(STRING_BUFFER(preview_buffer), STRING_CONST("None"));
-    }
-    else
-    {
-        for (int i = 0, end = array_size(_selected_exchanges); i != end; ++i)
-        {
-            if (i > 0)
-            {
-                preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
-            }
-            string_const_t ex_code = string_table_decode_const(_selected_exchanges[i]->code);
-            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(ex_code));
-        }
-    }
+    if (_bulk_module->exchanges == nullptr)
+        bulk_initialize_exchanges();
 
     ImGui::SameLine();
     ImGui::MoveCursor(0, -2);
     ImGui::SetNextItemWidth(400.0f);
-    if (ImGui::BeginCombo("##Exchange", preview.str, ImGuiComboFlags_None))
-    {
-        bool focused = false;
-        for (int i = 0, end = array_size(_exchanges); i != end; ++i)
-        {
-            const exchange_t& ex = _exchanges[i];
-
-            bool selected = bulk_exchange_is_selected(&ex);
-            string_const_t ex_id = string_format_static(STRING_CONST("%s (%s)"), string_table_decode(ex.code), string_table_decode(ex.name));
-            if (ImGui::Checkbox(ex_id.str, &selected))
-            {
-                if (selected)
-                    _selected_exchanges = array_push(_selected_exchanges, &ex);
-                else
-                {
-                    for (int i = 0, end = array_size(_selected_exchanges); i != end; ++i)
-                    {
-                        if (&ex == _selected_exchanges[i])
-                        {
-                            array_erase(_selected_exchanges, i);
-                            break;
-                        }
-                    }
-                }
-
-                updated = true;
-            }
-
-            if (!focused && selected)
-            {
-                ImGui::SetItemDefaultFocus();
-                focused = true;
-            }
-        }
-        ImGui::EndCombo();
-    }
+    if (ImWallet::Exchanges(_bulk_module->exchanges))
+        updated = true;
 
     return updated;
 }
 
 FOUNDATION_STATIC void bulk_render()
 {
-    if (_exchanges == nullptr)
-        bulk_initialize_exchanges();
-
     ImGui::MoveCursor(8, 8);
     ImGui::BeginGroup();
     ImGui::MoveCursor(0, -2);
@@ -559,38 +463,38 @@ FOUNDATION_STATIC void bulk_render()
 
     ImGui::MoveCursor(0, -2, true);
     ImGui::SetNextItemWidth(300.0f);
-    if (ImGui::DateChooser("##Date", _fetch_date_tm, "%Y-%m-%d", true))
+    if (ImGui::DateChooser("##Date", _bulk_module->fetch_date_tm, "%Y-%m-%d", true))
     {
-        _fetch_date = mktime(&_fetch_date_tm);
+        _bulk_module->fetch_date = mktime(&_bulk_module->fetch_date_tm);
         exchanges_updated = true;
     }
 
     ImGui::MoveCursor(0, -2, true);
-    if (ImGui::Checkbox(tr("No capitalization"), &_fetch_cap_zero))
+    if (ImGui::Checkbox(tr("No capitalization"), &_bulk_module->fetch_cap_zero))
         exchanges_updated = true;
 
     ImGui::MoveCursor(0, -2, true);
-    if (ImGui::Checkbox(tr("No Volume"), &_fetch_volume_zero))
+    if (ImGui::Checkbox(tr("No Volume"), &_bulk_module->fetch_volume_zero))
         exchanges_updated = true;
 
     ImGui::MoveCursor(0, -2, true);
-    if (ImGui::Checkbox(tr("No Beta"), &_fetch_negative_beta))
+    if (ImGui::Checkbox(tr("No Beta"), &_bulk_module->fetch_negative_beta))
         exchanges_updated = true;
 
     if (exchanges_updated)
         bulk_load_symbols();
 
-    if (_symbols_table)
+    if (_bulk_module->table)
     {
-        int symbol_count = array_size(_symbols);
+        int symbol_count = array_size(_bulk_module->symbols);
         ImGui::MoveCursor(0, -2, true);
         ImGui::TrText("       %d symbols", symbol_count);
         ImGui::EndGroup();
 
-        if (auto lock = scoped_mutex_t(_symbols_lock))
+        if (auto lock = scoped_mutex_t(_bulk_module->lock))
         {
-            _symbols_table->search_filter = string_to_const(SETTINGS.search_filter);
-            table_render(_symbols_table, _symbols, symbol_count, sizeof(bulk_t), 0.0f, 0.0f);
+            //_bulk_module->table->search_filter = string_to_const(SETTINGS.search_filter);
+            table_render(_bulk_module->table, _bulk_module->symbols, symbol_count, sizeof(bulk_t), 0.0f, 0.0f);
         }
     }
 }
@@ -632,35 +536,36 @@ FOUNDATION_STATIC void bulk_menu()
 
 FOUNDATION_STATIC void bulk_initialize()
 {
-    _symbols_lock = mutex_allocate(STRING_CONST("BulkLock"));
+    _bulk_module = MEM_NEW(HASH_BULK, BULK_MODULE);
+
+    _bulk_module->lock = mutex_allocate(STRING_CONST("BulkLock"));
 
     service_register_menu(HASH_BULK, bulk_menu);
 }
 
 FOUNDATION_STATIC void bulk_shutdown()
 {
-    if (_selected_exchanges)
+    if (_bulk_module->exchanges)
     {
         string_const_t selected_exchanges_file_path = session_get_user_file_path(STRING_CONST("exchanges.json"));
         config_write_file(selected_exchanges_file_path, [](config_handle_t selected_exchange_data)
         {
-            const size_t selected_exchange_count = array_size(_selected_exchanges);
+            const size_t selected_exchange_count = array_size(_bulk_module->exchanges);
             for (int i = 0; i < selected_exchange_count; ++i)
             {
-                const exchange_t* ex = _selected_exchanges[i];
-                config_array_push(selected_exchange_data, STRING_ARGS(string_table_decode_const(ex->code)));
+                const string_t& ex = _bulk_module->exchanges[i];
+                config_array_push(selected_exchange_data, STRING_ARGS(ex));
             }
             return true;
         }, CONFIG_VALUE_ARRAY);
     }
 
-    table_deallocate(_symbols_table);
-    array_deallocate(_selected_exchanges);
-    array_deallocate(_exchanges);
-    array_deallocate(_symbols);
+    table_deallocate(_bulk_module->table);
+    string_array_deallocate(_bulk_module->exchanges);
+    array_deallocate(_bulk_module->symbols);
+    mutex_deallocate(_bulk_module->lock);
 
-    mutex_deallocate(_symbols_lock);
-    _symbols_lock = nullptr;
+    MEM_DELETE(_bulk_module);
 }
 
 DEFINE_SERVICE(BULK, bulk_initialize, bulk_shutdown, SERVICE_PRIORITY_UI);
