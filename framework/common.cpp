@@ -301,6 +301,14 @@ bool path_equals(const char* a, size_t a_length, const char* b, size_t b_length)
     return true;
 }
 
+bool time_same_day(time_t d1, time_t d2)
+{
+    tm tm1, tm2;
+    if (!time_to_local(d1, &tm1) || !time_to_local(d2, &tm2))
+        return false;
+    return (tm1.tm_year == tm2.tm_year) && (tm1.tm_mon == tm2.tm_mon) && (tm1.tm_mday == tm2.tm_mday);
+}
+
 time_t time_make(int year, int month, int day, int hour, int minute, int second, int millisecond)
 {
     struct tm t;

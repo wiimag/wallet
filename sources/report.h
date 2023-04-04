@@ -52,7 +52,7 @@ struct report_t
     bool opened{ true };
 
     // Title information
-    size_t active_titles{ 0 };
+    unsigned active_titles{ 0 };
     title_t** titles{ nullptr };
     report_transaction_t* transactions{ nullptr };
     double transaction_max_acc{ 0 };
@@ -73,6 +73,7 @@ struct report_t
     table_t* table;
     bool show_summary{ false };
     bool show_sold_title{ false };
+    bool show_no_transaction_title{ false };
     bool show_add_title_ui{ false };
     bool show_rename_ui{ false };
 

@@ -1926,5 +1926,20 @@
 			en = " Y./Y. %.2lf %% (%.0lf years) "
 			fr = " Y./Y. %.2lf %% (%.0lf ans) "
 		}
+		{
+			hash = "f79bbb3a0b19618f"
+			en = "\xee\x99\x81 Show Titles With No Transaction"
+			fr = "\xee\x99\x81 Afficher les titres sans transaction"
+		}
+		{
+			hash = "2bc8823efd9df97"
+			en = "Changing that settings will restart the indexing process but if will not delete already indexed stock from removed exchanges. Indexing a new stock exchange can take between 1 to 3 hours."
+			fr = "@TODO"
+		}
+		{
+			hash = "c31995e558728cd3"
+			en = "Changing that setting requires restarting the application."
+			fr = "@TODO"
+		}
 	]
 }

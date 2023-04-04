@@ -229,6 +229,9 @@ if (MSVC)
     # Set executable file name to `service.exe`
     set_target_properties(service-exe PROPERTIES OUTPUT_NAME "service")
 
+    # Optimize for size at compile time
+    set_target_properties(service-exe PROPERTIES COMPILE_FLAGS "/Os")
+
 elseif(APPLE)
 
     # Set ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;

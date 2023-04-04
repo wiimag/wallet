@@ -483,6 +483,7 @@ void console_set_expression(const char* expression, size_t expression_length)
 
 void console_add_secret_key_token(const char* key, size_t key_length)
 {
+    scoped_mutex_t lock(_message_lock);
     string_t secret_key = string_clone(key, key_length);
     array_push(_console_secret_keys, secret_key);
 }
