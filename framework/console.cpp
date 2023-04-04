@@ -35,21 +35,27 @@ struct log_message_t
     hash_t context;
 };
 
-static bool _console_window_opened = false;
-static bool _logger_focus_last_message = false;
-static char _log_search_filter[256]{ 0 };
-static int _filtered_message_count = -1;
-static size_t _next_log_message_id = 1;
-static string_t _selected_msg;
-static generics::fixed_loop < string_t, 20, [](string_t& s) { string_deallocate(s.str); } > _saved_expressions;
-static string_table_t* _console_string_table = nullptr;
-static bool _console_concat_messages = false;
-static char _console_expression_buffer[4096]{ "" };
-static bool _console_expression_explicitly_set = false;
-static mutex_t* _message_lock = nullptr;
-static log_message_t* _messages = nullptr;
-static size_t _console_max_context_name_length = 0;
-static string_t* _console_secret_keys = nullptr;
+static struct CONSOLE_MODULE
+{
+    mutex_t* lock = nullptr;
+
+    bool opened = false;
+    bool focus_last_message = false;
+    char search_filter[256]{ 0 };
+    int filtered_message_count = -1;
+    size_t next_log_message_id = 1;
+    string_t selected_msg;
+    string_table_t* strings = nullptr;
+    bool concat_messages = false;
+    char expression_buffer[4096]{ "" };
+    bool expression_explicitly_set = false;
+    log_message_t* messages{ nullptr };
+    size_t max_context_name_length = 0;
+    string_t* secret_keys{ nullptr };
+
+    generics::fixed_loop < string_t, 20, [](string_t& s) { string_deallocate(s.str); } > saved_expressions;
+
+} *_console_module;
 
 FOUNDATION_STATIC string_table_symbol_t console_string_encode(const char* s, size_t length /* = 0*/)
 {
@@ -62,17 +68,17 @@ FOUNDATION_STATIC string_table_symbol_t console_string_encode(const char* s, siz
     string_t str = string_clone(s, length);
 
     // Remove secret key tokens
-    for (size_t i = 0; i < array_size(_console_secret_keys); ++i)
+    for (size_t i = 0; i < array_size(_console_module->secret_keys); ++i)
     {
-        string_t key = _console_secret_keys[i];
+        string_t key = _console_module->secret_keys[i];
         str = string_replace(STRING_ARGS_CAPACITY(str), STRING_ARGS(key), STRING_CONST("***"), true);
     }
 
-    string_table_symbol_t symbol = string_table_to_symbol(_console_string_table, STRING_ARGS(str));
+    string_table_symbol_t symbol = string_table_to_symbol(_console_module->strings, STRING_ARGS(str));
     while (symbol == STRING_TABLE_FULL)
     {
-        string_table_grow(&_console_string_table, (int)(_console_string_table->allocated_bytes * 2.0f));
-        symbol = string_table_to_symbol(_console_string_table, STRING_ARGS(str));
+        string_table_grow(&_console_module->strings, (int)(_console_module->strings->allocated_bytes * 2.0f));
+        symbol = string_table_to_symbol(_console_module->strings, STRING_ARGS(str));
     }
 
     string_deallocate(str.str);
@@ -89,13 +95,13 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
 
     memory_context_push(HASH_CONSOLE);
 
-    if (_console_concat_messages)
+    if (_console_module->concat_messages)
     {
-        scoped_mutex_t lock(_message_lock);
-        log_message_t* last_message = array_last(_messages);
+        scoped_mutex_t lock(_console_module->lock);
+        log_message_t* last_message = array_last(_console_module->messages);
         if (last_message)
         {
-            string_const_t prev = string_table_to_string_const(_console_string_table, last_message->msg_symbol);
+            string_const_t prev = string_table_to_string_const(_console_module->strings, last_message->msg_symbol);
             string_t new_msg = string_allocate_concat(STRING_ARGS(prev), msg, length);
             last_message->msg_symbol = console_string_encode(new_msg.str, new_msg.length);
             string_deallocate(new_msg.str);
@@ -104,7 +110,7 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
     }
 
     {
-        log_message_t m{ _next_log_message_id++, string_hash(msg, length), severity };
+        log_message_t m{ _console_module->next_log_message_id++, string_hash(msg, length), severity };
         m.context = context;
         m.prefix = log_is_prefix_enabled();
 
@@ -114,13 +120,13 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
         const size_t hash_code_start = string_find(msg, length, '<', 12);
         const size_t hash_code_end = string_find(msg, length, '>', hash_code_start);
 
-        scoped_mutex_t lock(_message_lock);
+        scoped_mutex_t lock(_console_module->lock);
         if (context_name.length != 0 && hash_code_start != STRING_NPOS && hash_code_end != STRING_NPOS)
         {
-            _console_max_context_name_length = max(_console_max_context_name_length, context_name.length);
+            _console_module->max_context_name_length = max(_console_module->max_context_name_length, context_name.length);
             string_t formatted_msg = string_allocate_format(STRING_CONST("%.*s %-*.*s : %.*s"), 
                 (int)hash_code_start - 1, msg,
-                (int)_console_max_context_name_length, STRING_FORMAT(context_name),
+                (int)_console_module->max_context_name_length, STRING_FORMAT(context_name),
                 (int)(length - hash_code_end - 1), msg + hash_code_end + 2);
 
             m.msg_symbol = console_string_encode(formatted_msg.str, formatted_msg.length);
@@ -133,21 +139,21 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
         }
 
         char preview_buffer[256];
-        string_const_t log_msg = string_table_to_string_const(_console_string_table, m.msg_symbol);
+        string_const_t log_msg = string_table_to_string_const(_console_module->strings, m.msg_symbol);
         string_const_t preview = string_remove_line_returns(STRING_BUFFER(preview_buffer), STRING_ARGS(log_msg));
 
         m.preview_symbol = console_string_encode(STRING_ARGS(preview));
-        array_push_memcpy(_messages, &m);
+        array_push_memcpy(_console_module->messages, &m);
     }
 
-    _logger_focus_last_message = true;
+    _console_module->focus_last_message = true;
     memory_context_pop();
 }
 
 FOUNDATION_STATIC string_const_t console_get_log_trimmed_text(const log_message_t& log)
 {
     // Find the first : character and truncate the text length
-    string_const_t tooltip_log_message = string_table_to_string_const(_console_string_table, log.msg_symbol);
+    string_const_t tooltip_log_message = string_table_to_string_const(_console_module->strings, log.msg_symbol);
     if (!log.prefix)
         return tooltip_log_message;
     
@@ -164,8 +170,8 @@ FOUNDATION_STATIC string_const_t console_get_log_trimmed_text(const log_message_
 
 FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
 {
-    const size_t log_count = array_size(_messages);
-    const int loop_count = _filtered_message_count <= 0 ? (int)log_count : _filtered_message_count;
+    const size_t log_count = array_size(_console_module->messages);
+    const int loop_count = _console_module->filtered_message_count <= 0 ? (int)log_count : _console_module->filtered_message_count;
     ImGuiListClipper clipper;
     clipper.Begin(loop_count);
     while (clipper.Step())
@@ -173,13 +179,13 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
         if (clipper.DisplayStart >= clipper.DisplayEnd)
             continue;
 
-        if (mutex_lock(_message_lock))
+        if (mutex_lock(_console_module->lock))
         {
             const float window_width = ImGui::GetWindowWidth();
             const float item_available_width = ImGui::GetContentRegionAvail().x;
-            for (size_t i = clipper.DisplayStart; i < min(clipper.DisplayEnd, (int)array_size(_messages)); ++i)
+            for (size_t i = clipper.DisplayStart; i < min(clipper.DisplayEnd, (int)array_size(_console_module->messages)); ++i)
             {
-                log_message_t& log = _messages[i];
+                log_message_t& log = _console_module->messages[i];
 
                 if (log.severity == ERRORLEVEL_ERROR)
                     ImGui::PushStyleColor(ImGuiCol_Text, TEXT_BAD_COLOR);
@@ -188,15 +194,15 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
 
                 ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.0f, 0.0f));
                 string_const_t msg_str = log.preview_symbol != STRING_TABLE_NULL_SYMBOL ? 
-                    string_table_to_string_const(_console_string_table,log.preview_symbol) :
-                    string_table_to_string_const(_console_string_table, log.msg_symbol);
+                    string_table_to_string_const(_console_module->strings,log.preview_symbol) :
+                    string_table_to_string_const(_console_module->strings, log.msg_symbol);
 
                 if (ImGui::Selectable(msg_str.str, &log.selectable, ImGuiSelectableFlags_DontClosePopups, {0, 0}))
                 {
-                    string_deallocate(_selected_msg.str);
+                    string_deallocate(_console_module->selected_msg.str);
                     string_const_t csmm = console_get_log_trimmed_text(log);
-                    _selected_msg = string_clone(STRING_ARGS(csmm));
-                    ImGui::SetClipboardText(_selected_msg.str);
+                    _console_module->selected_msg = string_clone(STRING_ARGS(csmm));
+                    ImGui::SetClipboardText(_console_module->selected_msg.str);
                 }
                 ImGui::PopStyleVar();
 
@@ -217,11 +223,11 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
                 if (log.severity == ERRORLEVEL_ERROR || log.severity == ERRORLEVEL_WARNING)
                     ImGui::PopStyleColor(1);
             }
-            mutex_unlock(_message_lock);
+            mutex_unlock(_console_module->lock);
         }
     }
 
-    if (_logger_focus_last_message)
+    if (_console_module->focus_last_message)
     {
         // First check if the view is already scrolled up?
         const float sm = ImGui::GetScrollMaxY();
@@ -234,16 +240,16 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
             ImGui::SetItemDefaultFocus();
         }
 
-        _logger_focus_last_message = false;
+        _console_module->focus_last_message = false;
     }
 }
 
 FOUNDATION_STATIC void console_render_selected_log(const ImRect& rect)
 {
-    if (_selected_msg.length == 0)
+    if (_console_module->selected_msg.length == 0)
         return;
     const ImVec2 asize = ImGui::GetContentRegionAvail();
-    ImGui::InputTextMultiline("##SelectedTex", _selected_msg.str, _selected_msg.length,
+    ImGui::InputTextMultiline("##SelectedTex", _console_module->selected_msg.str, _console_module->selected_msg.length,
         asize, ImGuiInputTextFlags_ReadOnly);
 }
 
@@ -252,7 +258,7 @@ FOUNDATION_STATIC void console_render_messages()
     ImGui::SetWindowFontScale(0.9f);
 
     imgui_frame_render_callback_t selected_log_frame = nullptr;
-    if (_selected_msg.length)
+    if (_console_module->selected_msg.length)
         selected_log_frame = console_render_selected_log;
 
     imgui_draw_splitter("Messages", 
@@ -265,22 +271,22 @@ FOUNDATION_STATIC void console_render_messages()
 
 FOUNDATION_STATIC void console_clear_all()
 {
-    string_deallocate(_selected_msg.str);
-    _selected_msg = {};
+    string_deallocate(_console_module->selected_msg.str);
+    _console_module->selected_msg = {};
     
-    if (!mutex_lock(_message_lock))
+    if (!mutex_lock(_console_module->lock))
         return;
 
-    _filtered_message_count = -1;
-    _log_search_filter[0] = '\0';
-    array_deallocate(_messages);
+    _console_module->filtered_message_count = -1;
+    _console_module->search_filter[0] = '\0';
+    array_deallocate(_console_module->messages);
 
-    int new_size = to_int(_console_string_table->allocated_bytes);
-    string_table_deallocate(_console_string_table);
-    _console_string_table = string_table_allocate(new_size, 64);
-    _console_max_context_name_length = 0;
+    int new_size = to_int(_console_module->strings->allocated_bytes);
+    string_table_deallocate(_console_module->strings);
+    _console_module->strings = string_table_allocate(new_size, 64);
+    _console_module->max_context_name_length = 0;
     
-    mutex_unlock(_message_lock);
+    mutex_unlock(_console_module->lock);
 }
 
 FOUNDATION_STATIC void console_render_toolbar()
@@ -289,31 +295,31 @@ FOUNDATION_STATIC void console_render_toolbar()
     static const float button_frame_padding = IM_SCALEF(8.0f);
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - clear_button_width - button_frame_padding);
-    if (ImGui::InputTextWithHint("##SearchLog", "Search logs...", STRING_BUFFER(_log_search_filter)))
+    if (ImGui::InputTextWithHint("##SearchLog", "Search logs...", STRING_BUFFER(_console_module->search_filter)))
     {
-        _filtered_message_count = 0;
-        const size_t filter_length = string_length(_log_search_filter);
+        _console_module->filtered_message_count = 0;
+        const size_t filter_length = string_length(_console_module->search_filter);
         if (filter_length > 0)
         {
-            size_t log_count = array_size(_messages);
-            for (_filtered_message_count = 0; _filtered_message_count < log_count;)
+            size_t log_count = array_size(_console_module->messages);
+            for (_console_module->filtered_message_count = 0; _console_module->filtered_message_count < log_count;)
             {
-                const log_message_t& log = _messages[_filtered_message_count];
-                string_const_t log_msg = string_table_to_string_const(_console_string_table, log.msg_symbol);
-                if (string_contains_nocase(STRING_ARGS(log_msg), _log_search_filter, filter_length))
+                const log_message_t& log = _console_module->messages[_console_module->filtered_message_count];
+                string_const_t log_msg = string_table_to_string_const(_console_module->strings, log.msg_symbol);
+                if (string_contains_nocase(STRING_ARGS(log_msg), _console_module->search_filter, filter_length))
                 {
-                    _filtered_message_count++;
+                    _console_module->filtered_message_count++;
                 }
                 else
                 {
-                    std::swap(_messages[_filtered_message_count], _messages[log_count - 1]);
+                    std::swap(_console_module->messages[_console_module->filtered_message_count], _console_module->messages[log_count - 1]);
                     log_count--;
                 }
             }
         }
         else
         {
-            array_sort(_messages, ARRAY_LESS_BY(id));
+            array_sort(_console_module->messages, ARRAY_LESS_BY(id));
         }
     }
 
@@ -330,25 +336,25 @@ FOUNDATION_STATIC void console_render_evaluator()
 
     if (ImGui::IsWindowAppearing())
     {
-        if (!_console_expression_explicitly_set)
-            session_get_string("console_expression", STRING_BUFFER(_console_expression_buffer), "");
-        _console_expression_explicitly_set = false;
+        if (!_console_module->expression_explicitly_set)
+            session_get_string("console_expression", STRING_BUFFER(_console_module->expression_buffer), "");
+        _console_module->expression_explicitly_set = false;
     }
 
     static char input_id[32] = "##Expression";
-    if (_saved_expressions.size() > 2 && ImGui::IsWindowFocused())
+    if (_console_module->saved_expressions.size() > 2 && ImGui::IsWindowFocused())
     {
         if (ImGui::Shortcut(ImGuiKey_UpArrow | ImGuiMod_Alt))
         {
-            const string_t& last_expression = _saved_expressions.move(-1);
-            string_t ec = string_copy(STRING_BUFFER(_console_expression_buffer), STRING_ARGS(last_expression));
+            const string_t& last_expression = _console_module->saved_expressions.move(-1);
+            string_t ec = string_copy(STRING_BUFFER(_console_module->expression_buffer), STRING_ARGS(last_expression));
             string_format(STRING_BUFFER(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
             focus_text_field = true;
         }
         else if (ImGui::Shortcut(ImGuiKey_DownArrow | ImGuiMod_Alt))
         {
-            const string_t& last_expression = _saved_expressions.move(+1);
-            string_t ec = string_copy(STRING_BUFFER(_console_expression_buffer), STRING_ARGS(last_expression));
+            const string_t& last_expression = _console_module->saved_expressions.move(+1);
+            string_t ec = string_copy(STRING_BUFFER(_console_module->expression_buffer), STRING_ARGS(last_expression));
             string_format(STRING_BUFFER(input_id), STRING_CONST("##%" PRIhash), string_hash(ec.str, ec.length));
             focus_text_field = true;
         }
@@ -360,7 +366,7 @@ FOUNDATION_STATIC void console_render_evaluator()
     }
     
     bool evaluate = false;
-    if (ImGui::InputTextMultiline(input_id, STRING_BUFFER(_console_expression_buffer),
+    if (ImGui::InputTextMultiline(input_id, STRING_BUFFER(_console_module->expression_buffer),
         ImVec2(IM_SCALEF(-98.0f), -1), 
         ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine | ImGuiInputTextFlags_AllowTabInput |
         (focus_text_field ? ImGuiInputTextFlags_AutoSelectAll : ImGuiInputTextFlags_None)))
@@ -380,9 +386,9 @@ FOUNDATION_STATIC void console_render_evaluator()
 
     if (evaluate)
     {
-        string_const_t expression_string = string_const(_console_expression_buffer, string_length(_console_expression_buffer));
-        if (!_saved_expressions.includes<string_const_t>(L2(string_equal_ignore_whitespace(STRING_ARGS(_1), STRING_ARGS(_2))), expression_string))
-            _saved_expressions.push(string_clone(STRING_ARGS(expression_string)));
+        string_const_t expression_string = string_const(_console_module->expression_buffer, string_length(_console_module->expression_buffer));
+        if (!_console_module->saved_expressions.includes<string_const_t>(L2(string_equal_ignore_whitespace(STRING_ARGS(_1), STRING_ARGS(_2))), expression_string))
+            _console_module->saved_expressions.push(string_clone(STRING_ARGS(expression_string)));
 
         session_set_string("console_expression", STRING_ARGS(expression_string));        
 
@@ -412,7 +418,7 @@ FOUNDATION_STATIC void console_render_window()
         window_opened_once = true;
     }
 
-    if (ImGui::Begin("Console##5", &_console_window_opened,
+    if (ImGui::Begin("Console##5", &_console_module->opened,
         ImGuiWindowFlags_AlwaysUseWindowPadding))
     {
         console_render_toolbar();
@@ -437,22 +443,17 @@ FOUNDATION_STATIC void console_render_window()
 
 FOUNDATION_STATIC void console_menu()
 {
-//     if (shortcut_executed(ImGuiKey_F10))
-//         _console_window_opened = true;
-// 
-//     if (ImGui::BeginMenuBar())
-//     {
-//         if (ImGui::TrBeginMenu("Windows"))
-//         {
-//             ImGui::MenuItem(ICON_MD_LOGO_DEV " Console", "F10", &_console_window_opened);
-//             ImGui::EndMenu();
-//         }
-// 
-//         ImGui::EndMenuBar();
-//     }
-
-    if (_console_window_opened)
+    if (_console_module->opened)
         console_render_window();
+}
+
+FOUNDATION_STATIC void console_module_ensure_initialized()
+{
+    if (_console_module == nullptr)
+    {
+        _console_module = MEM_NEW(HASH_CONSOLE, CONSOLE_MODULE);
+        _console_module->lock = mutex_allocate(STRING_CONST("console_lock"));
+    }
 }
 
 //
@@ -466,26 +467,27 @@ void console_clear()
 
 void console_show()
 {
-    _console_window_opened = true;
+    _console_module->opened = true;
 }
 
 void console_hide()
 {
-    _console_window_opened = false;
+    _console_module->opened = false;
 }
 
 void console_set_expression(const char* expression, size_t expression_length)
 {
-    string_copy(STRING_BUFFER(_console_expression_buffer), expression, expression_length);
-    _console_expression_explicitly_set = true;
+    string_copy(STRING_BUFFER(_console_module->expression_buffer), expression, expression_length);
+    _console_module->expression_explicitly_set = true;
     console_show();
 }
 
 void console_add_secret_key_token(const char* key, size_t key_length)
 {
-    scoped_mutex_t lock(_message_lock);
+    console_module_ensure_initialized();
+    scoped_mutex_t lock(_console_module->lock);
     string_t secret_key = string_clone(key, key_length);
-    array_push(_console_secret_keys, secret_key);
+    array_push(_console_module->secret_keys, secret_key);
 }
 
 //
@@ -494,19 +496,19 @@ void console_add_secret_key_token(const char* key, size_t key_length)
 
 FOUNDATION_STATIC void console_initialize()
 {
-    _message_lock = mutex_allocate(STRING_CONST("console_lock"));
+    console_module_ensure_initialized();
 
-    _console_string_table = string_table_allocate(64 * 1024, 64);
+    _console_module->strings = string_table_allocate(64 * 1024, 64);
 
     if (BUILD_APPLICATION && !main_is_running_tests())
     {
         log_set_handler(logger);
-        _console_window_opened = environment_command_line_arg("console") || session_get_bool("show_console", _console_window_opened);
+        _console_module->opened = environment_command_line_arg("console") || session_get_bool("show_console", _console_module->opened);
         module_register_menu(HASH_CONSOLE, console_menu);
 
         app_register_menu(HASH_CONSOLE,  STRING_CONST("Windows/" ICON_MD_LOGO_DEV " Console"), STRING_CONST("F10"), AppMenuFlags::Append, [](void*)
         {
-            _console_window_opened = !_console_window_opened;
+            _console_module->opened = !_console_module->opened;
         });
     }
 
@@ -518,7 +520,7 @@ FOUNDATION_STATIC void console_initialize()
         {
             string_split(STRING_ARGS(r), STRING_CONST(";;"), &expression, &r, false);
             if (expression.length)
-                _saved_expressions.push(string_clone(STRING_ARGS(expression)));
+                _console_module->saved_expressions.push(string_clone(STRING_ARGS(expression)));
         } while (r.length > 0); 
     }
 }
@@ -526,24 +528,26 @@ FOUNDATION_STATIC void console_initialize()
 FOUNDATION_STATIC void console_shutdown()
 {
     {
-        scoped_mutex_t lock(_message_lock);
+        scoped_mutex_t lock(_console_module->lock);
         log_set_handler(nullptr);
     }
 
     console_clear_all();
-    mutex_deallocate(_message_lock);
-    session_set_bool("show_console", _console_window_opened);
-    string_deallocate(_selected_msg.str);
+    mutex_deallocate(_console_module->lock);
+    session_set_bool("show_console", _console_module->opened);
+    string_deallocate(_console_module->selected_msg.str);
 
-    if (_saved_expressions.size() > 0)
+    if (_console_module->saved_expressions.size() > 0)
     {
-        string_const_t joined_expressions = string_join(_saved_expressions.begin(), _saved_expressions.end(), LC1(string_to_const(_1)), CTEXT(";;"));
+        string_const_t joined_expressions = string_join(_console_module->saved_expressions.begin(), _console_module->saved_expressions.end(), LC1(string_to_const(_1)), CTEXT(";;"));
         session_set_string("console_expressions", STRING_ARGS(joined_expressions));
-        _saved_expressions.clear();
+        _console_module->saved_expressions.clear();
     }
 
-    string_table_deallocate(_console_string_table);
-    string_array_deallocate(_console_secret_keys);
+    string_table_deallocate(_console_module->strings);
+    string_array_deallocate(_console_module->secret_keys);
+
+    MEM_DELETE(_console_module);
 }
 
 DEFINE_MODULE(CONSOLE, console_initialize, console_shutdown, MODULE_PRIORITY_UI_HEADLESS);
