@@ -54,7 +54,7 @@
 #endif
 
 #define VERSION_MAJOR                   0
-#define VERSION_MINOR                  12   // Latest feature: Use OpenAI to generate stock market predictions
+#define VERSION_MINOR                  13   // Latest feature: Add service.exe to execute commands from the command line
 #define VERSION_PATCH                   2   // Latest patch/fix: Rename service to module
 #define VERSION_BUILD                   GIT_REVCOUNT
 

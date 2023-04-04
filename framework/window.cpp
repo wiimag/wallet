@@ -5,6 +5,8 @@
 
 #include "window.h"
 
+#if BUILD_APPLICATION
+
 #include <framework/glfw.h>
 #include <framework/bgfx.h>
 #include <framework/imgui.h>
@@ -1277,3 +1279,41 @@ FOUNDATION_STATIC void window_shutdown()
 }
 
 DEFINE_MODULE(WINDOW, window_initialize, window_shutdown, MODULE_PRIORITY_UI);
+
+#else
+
+window_handle_t window_open(
+    const char* FOUNDATION_RESTRICT _window_id,
+    const char* title, size_t title_length,
+    const window_event_handler_t& render_callback,
+    const window_event_handler_t& close_callback,
+    void* user_data /*= nullptr*/, window_flags_t flags /*= WindowFlags::None*/)
+{
+    FOUNDATION_ASSERT_FAIL("No window support");
+    return 0;
+}
+
+window_handle_t window_open(const char* window_title, const window_event_handler_t& render_callback, window_flags_t flags /*= WindowFlags::None*/)
+{
+    FOUNDATION_ASSERT_FAIL("No window support");
+    return 0;
+}
+
+window_handle_t window_open(
+    hash_t context,
+    const char* title, size_t title_length,
+    const window_event_handler_t& render_callback,
+    const window_event_handler_t& close_callback,
+    void* user_data /*= nullptr*/, window_flags_t flags /*= WindowFlags::None*/)
+{
+    FOUNDATION_ASSERT_FAIL("No window support");
+    return 0;
+}
+
+void* window_get_user_data(window_handle_t window_handle)
+{
+    FOUNDATION_ASSERT_FAIL("No window support");
+    return 0;
+}
+
+#endif // BUILD_APPLICATION

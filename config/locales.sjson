@@ -1909,22 +1909,22 @@
 		{
 			hash = "e4ac316984c1505a"
 			en = "Search stock exchange to index"
-			fr = "@TODO"
+			fr = "March\xc3\xa9s boursiers \xc3\xa0 indexer"
 		}
 		{
 			hash = "bf4426bca2853455"
-			en = "Changing that settings will restart the indexing process. Indexing a new stock exchange can take between 1 to 3 hours."
-			fr = "@TODO"
+			en = "Changing that setting will restart the indexing process. Indexing a new stock exchange can take between 1 to 3 hours."
+			fr = "Changer ce param\xc3\xa8tre red\xc3\xa9marrera le processus d'indexation. L'indexation d'un nouveau march\xc3\xa9 boursier peut prendre entre 1 et 3 heures."
 		}
 		{
 			hash = "2bc8823efd9df97"
-			en = "Changing that settings will restart the indexing process but if will not delete already indexed stock from removed exchanges. Indexing a new stock exchange can take between 1 to 3 hours."
-			fr = "@TODO"
+			en = "Changing that setting will restart the indexing process but if will not delete already indexed stock from removed exchanges. Indexing a new stock exchange can take between 1 to 3 hours."
+			fr = "Changer ce param\xc3\xa8tre red\xc3\xa9marrera le processus d'indexation mais ne supprimera pas les actions d\xc3\xa9j\xc3\xa0 index\xc3\xa9es des march\xc3\xa9s boursiers supprim\xc3\xa9s. L'indexation d'un nouveau march\xc3\xa9 boursier peut prendre entre 1 et 3 heures."
 		}
 		{
 			hash = "c24a9b29c17fab15"
 			en = " Y./Y. %.2lf %% (%.0lf years) "
-			fr = "@TODO"
+			fr = " Y./Y. %.2lf %% (%.0lf ans) "
 		}
 	]
 }

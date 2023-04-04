@@ -9,6 +9,8 @@
 
 #include <foundation/platform.h>
 
+#if BUILD_APPLICATION
+
 /*! Initialize about module.
  *
  *  We use #FOUNDATION_LINKER_INCLUDE in order to force the linker to include the #about module.
@@ -17,3 +19,5 @@ FOUNDATION_EXTERN void FOUNDATION_LINKER_INCLUDE(about_initialize)();
 
 /*! Opens the about dialog. */
 void about_open_window();
+
+#endif // BUILD_APPLICATION

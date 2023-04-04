@@ -5,6 +5,8 @@
 
 #include "bulk.h"
 
+#if BUILD_APPLICATION
+
 #include "eod.h"
 #include "pattern.h"
 #include "imwallet.h"
@@ -576,3 +578,5 @@ FOUNDATION_STATIC void bulk_shutdown()
 }
 
 DEFINE_MODULE(BULK, bulk_initialize, bulk_shutdown, MODULE_PRIORITY_UI);
+
+#endif // BUILD_APPLICATION

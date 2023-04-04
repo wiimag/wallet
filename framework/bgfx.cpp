@@ -3,6 +3,8 @@
  * License: https://equals-forty-two.com/LICENSE
  */
 
+#if BUILD_APPLICATION
+
 #include "bgfx.h"
 
 #include <framework/glfw.h>
@@ -415,3 +417,5 @@ void bgfx_initialize(GLFWwindow* window)
 
     bgfx_init_view(1);
 }
+
+#endif // BUILD_APPLICATION

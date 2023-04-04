@@ -55,7 +55,8 @@ FOUNDATION_STATIC void app_main_menu_begin(GLFWwindow* window)
 }
 
 FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
-{    
+{
+    #if BUILD_APPLICATION
     module_foreach_menu();
 
     if (ImGui::BeginMenuBar())
@@ -76,6 +77,7 @@ FOUNDATION_STATIC void app_main_menu_end(GLFWwindow* window)
     }
 
     app_menu_end(window);
+    #endif // BUILD_APPLICATION
 }
 
 FOUNDATION_STATIC void app_tabs_content_filter()
@@ -88,6 +90,7 @@ FOUNDATION_STATIC void app_tabs_content_filter()
 
 FOUNDATION_STATIC void app_tabs()
 {   
+    #if BUILD_APPLICATION
     static ImGuiTabBarFlags tabs_init_flags = ImGuiTabBarFlags_Reorderable;
 
     if (tabs_begin("Tabs", SETTINGS.current_tab, tabs_init_flags, app_tabs_content_filter))
@@ -103,6 +106,7 @@ FOUNDATION_STATIC void app_tabs()
 
     if ((tabs_init_flags & ImGuiTabBarFlags_AutoSelectNewTabs) == 0)
         tabs_init_flags |= ImGuiTabBarFlags_AutoSelectNewTabs;
+    #endif
 }
 
 extern const char* app_title()
@@ -120,11 +124,16 @@ extern void app_exception_handler(const char* dump_file, size_t length)
 
 extern void app_configure(foundation_config_t& config, application_t& application)
 {
+    #if BUILD_APPLICATION
+    application.flags = APPLICATION_GUI;
+    #else
+    application.flags = APPLICATION_DAEMON;
+    #endif
+
     application.name = string_const(PRODUCT_NAME, string_length(PRODUCT_NAME));
     application.short_name = string_const(PRODUCT_CODE_NAME, string_length(PRODUCT_CODE_NAME));
     application.company = string_const(STRING_CONST(PRODUCT_COMPANY));
     application.version = version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0);
-    application.flags = APPLICATION_GUI;
     application.exception_handler = app_exception_handler;
 }
 
@@ -172,6 +181,7 @@ extern void app_update(GLFWwindow* window)
 
 extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
 {
+    #if BUILD_APPLICATION
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2((float)frame_width, (float)frame_height));
 
@@ -190,6 +200,7 @@ extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
 
         module_foreach_window();
     } ImGui::End();
+    #endif
 }
 
 extern void app_render_3rdparty_libs()

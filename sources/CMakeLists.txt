@@ -186,12 +186,10 @@ if (MSVC)
         ${RESOURCES_SOURCES}
         ${SHADERS_SOURCES}
         ${TEST_SOURCES}
-        ${EXTERNAL_SOURCES}
     )
 
     # Copy the config/*.sjson files to the build directory
     file(COPY ${CONFIG_FILES} DESTINATION ${ROOT_DIR}/build)
-
 
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${ROOT_DIR}/build/.)
@@ -209,6 +207,27 @@ if (MSVC)
     set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY_DEBUG ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY_RELEASE ${ROOT_DIR}/build/.)
     set_target_properties(${AppId} PROPERTIES MAP_OUTPUT_DIRECTORY_DEPLOY ${ROOT_DIR}/build/.)
+
+    # Create service.exe target to provide a way to run the app from the command line
+    add_executable(service-exe WIN32
+        ${APP_SOURCES}
+        ${RESOURCES_SOURCES}
+    )
+
+    set_target_properties(service-exe PROPERTIES FOLDER "service/")
+
+    # Build subsystem is console
+    set_target_properties(service-exe PROPERTIES LINK_FLAGS "/SUBSYSTEM:CONSOLE")
+
+    set_target_properties(service-exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ROOT_DIR}/build/.)
+    set_target_properties(service-exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEBUG ${ROOT_DIR}/build/.)
+    set_target_properties(service-exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE ${ROOT_DIR}/build/.)
+    set_target_properties(service-exe PROPERTIES RUNTIME_OUTPUT_DIRECTORY_DEPLOY ${ROOT_DIR}/build/.)
+
+    target_link_libraries(service-exe service-framework)
+
+    # Set executable file name to `service.exe`
+    set_target_properties(service-exe PROPERTIES OUTPUT_NAME "service")
 
 elseif(APPLE)
 
@@ -228,7 +247,6 @@ elseif(APPLE)
         ${RESOURCES_SOURCES}
         ${SHADERS_SOURCES}
         ${TEST_SOURCES}
-        ${EXTERNAL_SOURCES}
         ${CONFIG_FILES} 
         ${ROOT_DIR}/resources/App.icns
     )

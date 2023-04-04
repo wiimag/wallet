@@ -135,8 +135,10 @@ void dispatcher_poll(GLFWwindow* window)
 
     if (!dispatcher_process_events())
     {
+        #if BUILD_APPLICATION
         const bool fully_active = window == nullptr || (glfw_is_window_focused(window) && glfw_is_any_mouse_button_down(window));
         if (!fully_active)
+        #endif
         {
             // Throttle the rendering in order render less frequently and preserve more battery.
             _wait_frame_throttling = min(_wait_frame_throttling + 1, startup_frame_throttling);

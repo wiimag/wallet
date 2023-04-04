@@ -497,6 +497,7 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
 
 FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
+    #if BUILD_APPLICATION
     const title_t* title = *(const title_t**)element;
 
     ImGui::MoveCursor(8.0f, 4.0f);
@@ -563,12 +564,14 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
             report_title_remove(report_handle, title);
     }
     ImGui::EndGroup();
+    #endif
 }
 
 FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, const column_t* column)
 {
     title_t* title = *(title_t**)element;
 
+    #if BUILD_APPLICATION
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         const char* formatted_code = title->code;
@@ -713,6 +716,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         
         ImGui::PopStyleCompact();
     }
+    #endif
 
     return title->code;
 }

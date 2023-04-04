@@ -986,9 +986,11 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
             if (entry->viewed)
                 ImGui::PopStyleColor();
 
+            #if BUILD_APPLICATION
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - font_size, 0.0f);
             ImVec2 logo_size{ font_size, font_size };
             logo_render_icon(STRING_ARGS(code), logo_size, false, true, nullptr);
+            #endif
         }
         
         return code;

@@ -7,6 +7,8 @@
 
 #include <foundation/platform.h>
 
+#if BUILD_APPLICATION
+
 #if FOUNDATION_COMPILER_MSVC
  // Disable C26495 and C26498 warnings for this file
  // https://docs.microsoft.com/en-us/cpp/code-quality/c26495?view=msvc-160
@@ -60,3 +62,5 @@ bgfx::CallbackI* bgfx_system_callback_handler();
 #if FOUNDATION_COMPILER_MSVC
 #pragma warning(pop)
 #endif
+
+#endif // BUILD_APPLICATION

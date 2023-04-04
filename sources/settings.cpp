@@ -24,6 +24,8 @@
 
 settings_t SETTINGS{};
 
+#if BUILD_APPLICATION
+
 void settings_draw()
 {
     ImGui::Columns(3, nullptr, false);
@@ -217,7 +219,7 @@ void settings_draw()
         if (restart_to_apply_effect)
         {
             ImGui::AlignTextToFramePadding();
-            ImGui::TextColored(ImColor(TEXT_WARN_COLOR), tr("Changing that settings requires restarting the application."));
+            ImGui::TextColored(ImColor(TEXT_WARN_COLOR), tr("Changing that setting requires restarting the application."));
         }
     }
 
@@ -238,6 +240,8 @@ void settings_draw()
         ImGui::TextWrapped(tr("Time to wait before rendering another frame (ms).\nThe higher the number, less resources are used, therefore more battery time!"));
     }
 }
+
+#endif 
 
 void settings_initialize()
 {
@@ -271,3 +275,4 @@ void settings_shutdown()
     session_set_string("preferred_currency", SETTINGS.preferred_currency);
     session_set_float("good_dividends_ratio", (float)SETTINGS.good_dividends_ratio);
 }
+

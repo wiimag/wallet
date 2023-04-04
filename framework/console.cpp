@@ -497,17 +497,16 @@ FOUNDATION_STATIC void console_initialize()
 
     _console_string_table = string_table_allocate(64 * 1024, 64);
 
-    if (!main_is_running_tests())
+    if (BUILD_APPLICATION && !main_is_running_tests())
     {
         log_set_handler(logger);
         _console_window_opened = environment_command_line_arg("console") || session_get_bool("show_console", _console_window_opened);
         module_register_menu(HASH_CONSOLE, console_menu);
 
-        app_register_menu(HASH_CONSOLE, 
-            STRING_CONST("Windows/" ICON_MD_LOGO_DEV " Console"), STRING_CONST("F10"), AppMenuFlags::Append, [](void*)
-            {
-                _console_window_opened = !_console_window_opened;
-            });
+        app_register_menu(HASH_CONSOLE,  STRING_CONST("Windows/" ICON_MD_LOGO_DEV " Console"), STRING_CONST("F10"), AppMenuFlags::Append, [](void*)
+        {
+            _console_window_opened = !_console_window_opened;
+        });
     }
 
     string_const_t joined_expressions = session_get_string("console_expressions", "");
@@ -525,7 +524,11 @@ FOUNDATION_STATIC void console_initialize()
 
 FOUNDATION_STATIC void console_shutdown()
 {
-    log_set_handler(nullptr);
+    {
+        scoped_mutex_t lock(_message_lock);
+        log_set_handler(nullptr);
+    }
+
     console_clear_all();
     mutex_deallocate(_message_lock);
     session_set_bool("show_console", _console_window_opened);

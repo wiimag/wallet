@@ -113,7 +113,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 # FIXME: This is needed for now to access resources files (i.e. #include <resource.h>)
 include_directories(${ROOT_DIR}/sources)
 
-# Create the bx library
+# Create the application library
 add_library(framework STATIC 
     ${FRAMEWORK_SOURCES} 
     ${TEST_SOURCES} 
@@ -125,9 +125,25 @@ add_library(framework STATIC
 
 # Add dependencies to other libs
 target_link_libraries(framework PUBLIC foundation bx bgfx imgui)
-
 target_include_directories(framework PUBLIC ${ROOT_DIR})
 target_include_directories(framework PUBLIC ${ROOT_DIR}/external)
+target_compile_definitions(framework PUBLIC BUILD_SERVICE=0)
+target_compile_definitions(framework PUBLIC BUILD_APPLICATION=1)
+
+# Framework service lib variante (for the service.exe executable)
+add_library(service-framework STATIC 
+    ${FRAMEWORK_SOURCES} 
+    ${EXTERNAL_SOURCES} 
+    ${STB_SOURCES})
+
+target_link_libraries(service-framework PUBLIC foundation bx imgui)
+set_target_properties(service-framework PROPERTIES FOLDER "service/")
+
+# Add BUILD_SERVICE preprocessor definition
+target_compile_definitions(service-framework PUBLIC BUILD_SERVICE=1)
+target_compile_definitions(service-framework PUBLIC BUILD_APPLICATION=0)
+target_include_directories(service-framework PUBLIC ${ROOT_DIR})
+target_include_directories(service-framework PUBLIC ${ROOT_DIR}/external)
 
 #
 # Set framework and dependencies options
@@ -154,11 +170,13 @@ endif()
 #
 
 target_include_directories(framework PUBLIC ${ROOT_DIR}/external/glfw/include)
+target_include_directories(service-framework PUBLIC ${ROOT_DIR}/external/glfw/include)
 
 if (WIN32)
     
     # On Windows we use a #pragma comment(lib, "glfw3.lib") in the source code
     target_link_directories(framework PUBLIC ${ROOT_DIR}/external/glfw/lib-vc2022-64)
+    target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/glfw/lib-vc2022-64)
 
 elseif(APPLE)
 
@@ -176,10 +194,14 @@ endif()
 target_compile_definitions(framework PUBLIC CURL_STATICLIB)
 target_include_directories(framework PUBLIC ${ROOT_DIR}/external/libcurl/include)
 
+target_compile_definitions(service-framework PUBLIC CURL_STATICLIB)
+target_include_directories(service-framework PUBLIC ${ROOT_DIR}/external/libcurl/include)
+
 if (MSVC)
 
     # On Windows we use a #pragma comment(lib, "libcurl_a*.lib") in the source code
     target_link_directories(framework PUBLIC ${ROOT_DIR}/external/libcurl/lib)
+    target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/libcurl/lib)
 
 elseif(APPLE)
 
