@@ -34,7 +34,7 @@ struct localization_language_t
 constexpr const char* LOCALIZATION_DEFAULT_LANGUAGE = "en";
 const localization_language_t LOCALIZATION_SUPPORTED_LANGUAGES[] = {
     { CTEXT("en"), CTEXT_UTF8("English") },
-    { CTEXT("fr"), CTEXT(u8"Français") },
+    { CTEXT("fr"), CTEXT_UTF8("Français") },
 //  { CTEXT("de"), CTEXT(u8"Deutsch") },
 //  { CTEXT("es"), CTEXT(u8"Español") },
 //  { CTEXT("it"), CTEXT(u8"Italiano") },

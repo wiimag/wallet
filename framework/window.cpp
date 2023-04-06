@@ -1087,6 +1087,7 @@ FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t win
     // Create GLFW window
     glfwWindowHint(GLFW_FOCUSED, GLFW_FALSE);
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_MAXIMIZED, GLFW_FALSE);
     GLFWwindow* window = glfwCreateWindow(
         (int)(window_width / scale_x), (int)(window_height / scale_y), 
         window_title_null_terminated_buffer, nullptr, nullptr);
@@ -1117,7 +1118,7 @@ FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t win
 
     if (test(flags, WindowFlags::Dialog))
     {
-        glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_TRUE);
+        //glfwSetWindowAttrib(window, GLFW_FLOATING, GLFW_TRUE);
 
         #if ENABLE_DIALOG_NO_WINDOW_DECORATION
         glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_TRUE);

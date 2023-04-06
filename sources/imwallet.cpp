@@ -120,12 +120,12 @@ bool ImWallet::Exchanges(string_t*& selected_exchanges)
     char preview_buffer[64] = { 0 };
     if (_imwallet_module->exchanges == nullptr)
     {
-        string_const_t label = tr_format_static("Loading...");
+        string_const_t label = RTEXT("Loading...");
         preview = string_copy(STRING_BUFFER(preview_buffer), STRING_ARGS(label));
     }
     else if (array_size(selected_exchanges) == 0)
     {
-        string_const_t label = tr_format_static("Select stock exchanges");
+        string_const_t label = RTEXT("Select stock exchanges");
         preview = string_copy(STRING_BUFFER(preview_buffer), STRING_ARGS(label));
     }
     else

@@ -11,10 +11,6 @@
 #include <framework/handle.h>
 #include <framework/progress.h>
 
-#ifdef _OPENMP
-#include <omp.h>
-#endif
-
 typedef enum VecMatType : uint32_t {
     VECMAT_NIL = 0,
     VECMAT_SCALAR = 1,

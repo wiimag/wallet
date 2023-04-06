@@ -3,7 +3,7 @@
 # Source: https://www.codingforentrepreneurs.com/blog/create-icns-icons-for-macos-apps/
 
 cd ./resources
-input_filepath=logo_v_square2.png
+input_filepath=logo.png
 output_iconset_name="App.iconset"
 mkdir $output_iconset_name
 

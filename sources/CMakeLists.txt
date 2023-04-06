@@ -183,6 +183,7 @@ if (MSVC)
         ${RESOURCES_SOURCES}
         ${SHADERS_SOURCES}
         ${TEST_SOURCES}
+        ${EXTERNAL_SOURCES}
     )
 
     # Copy the config/*.sjson files to the build directory
@@ -204,6 +205,7 @@ if (MSVC)
         add_executable(service-exe WIN32
             ${APP_SOURCES}
             ${RESOURCES_SOURCES}
+            ${EXTERNAL_SOURCES}
         )
 
         set_target_properties(service-exe PROPERTIES FOLDER "service/")
@@ -243,6 +245,7 @@ elseif(APPLE)
         ${RESOURCES_SOURCES}
         ${SHADERS_SOURCES}
         ${TEST_SOURCES}
+        ${EXTERNAL_SOURCES}
         ${CONFIG_FILES} 
         ${ROOT_DIR}/resources/App.icns
     )

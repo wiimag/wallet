@@ -37,10 +37,11 @@ void settings_draw()
     {
         // Select language
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(tr("Language"));
+        ImGui::TrTextUnformatted("Language");
 
         ImGui::NextColumn();
         string_const_t current_language_name = localization_current_language_name();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x);
         if (ImGui::BeginCombo("##Language", current_language_name.str))
         {
             for (unsigned i = 0; i < localization_supported_language_count(); ++i)
@@ -204,7 +205,7 @@ void settings_draw()
         static bool restart_to_apply_effect = false;
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(tr("Font scaling"));
+        ImGui::TrTextWrapped("Font scaling");
 
         ImGui::NextColumn();
         ImGui::ExpandNextItem();
@@ -227,10 +228,11 @@ void settings_draw()
     {
         ImGui::NextColumn();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(tr("Frame Throttling"));
+        ImGui::TrTextWrapped("Frame Throttling");
+
+        int frame_throttling = session_get_integer("frame_throttling", 16);
 
         ImGui::NextColumn();
-        int frame_throttling = session_get_integer("frame_throttling", 16);
         ImGui::ExpandNextItem();
         if (ImGui::SliderInt("##frame_throttling", &frame_throttling, 0, 1000, tr("%d milliseconds"), ImGuiSliderFlags_AlwaysClamp))
             session_set_integer("frame_throttling", frame_throttling);

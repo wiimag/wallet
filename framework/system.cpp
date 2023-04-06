@@ -60,8 +60,8 @@ bool system_execute_command(const char* command)
         #else
             const char* open_executable = "xdg-open";
         #endif
-        char command[2048];
-        snprintf(command, 2048, "%s \"%s\"", open_executable, path);
+        char command_buffer[2048];
+        snprintf(command_buffer, 2048, "%s \"%s\"", open_executable, command);
         system(command);
 
         return true;
@@ -317,7 +317,9 @@ uint32_t system_get_last_error(string_const_t* out_error_string /*= nullptr*/)
 
     return error;
 #else
-#error "Not implemented"
+    if (out_error_string)
+        *out_error_string = string_null();
+    return 0;
 #endif
 }
 

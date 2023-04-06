@@ -1925,5 +1925,15 @@
 			en = "Changing that setting requires restarting the application."
 			fr = "Changer ce param\xc3\xa8tre requiert de red\xc3\xa9marrer l'application."
 		}
+		{
+			hash = "bbf704cab74d5320"
+			en = "{0} Transactions"
+			fr = "Transactions {0}"
+		}
+		{
+			hash = "add16f40a8854b83"
+			en = " Add a price alert of {0:currency} for {1:symbol} "
+			fr = " Ajouter une alerte de prix de {0:currency} pour {1:symbol} "
+		}
 	]
 }

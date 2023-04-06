@@ -335,7 +335,7 @@ FOUNDATION_STATIC bool pattern_render_stats_value(const stock_t* s, string_const
         if (ImGui::BeginPopupContextItem(value.str))
         {
             ImGui::AlignTextToFramePadding();
-            if (ImGui::Selectable(tr_format(" Add a price alert of %.*s for %.*s ", STRING_FORMAT(value), STRING_FORMAT(symbol))))
+            if (ImGui::Selectable(tr_format(" Add a price alert of {0:currency} for {1:symbol} ", value, symbol)))
             {
                 double price_alert = string_to_real(value.str, dollar_sign_pos);
                 FOUNDATION_ASSERT(price_alert > 0);
@@ -2366,20 +2366,26 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     }
 }
 
-FOUNDATION_STATIC void pattern_open_floating_window(pattern_handle_t handle)
+FOUNDATION_STATIC bool pattern_open_floating_window(pattern_handle_t handle)
 {
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
+    if (pattern == nullptr)
+    {
+        log_warnf(HASH_PATTERN, WARNING_INVALID_VALUE, STRING_CONST("Failed to open pattern window, pattern not found"));
+        return false;
+    }
+
     const stock_t* stock = pattern_refresh(pattern, FetchLevel::FUNDAMENTALS);
     if (stock == nullptr)
     {
         log_warnf(HASH_PATTERN, WARNING_INVALID_VALUE, STRING_CONST("Failed to open pattern window, stock not resolved"));
-        return;
+        return false;
     }
     
     string_const_t pattern_name = SYMBOL_CONST(stock->name);
     string_const_t pattern_code = SYMBOL_CONST(pattern->code);
     const char* pattern_window_title = string_format_static_const("%.*s (%.*s)", STRING_FORMAT(pattern_name), STRING_FORMAT(pattern_code));
-    window_open(pattern_window_title, L1(pattern_render(handle, PatternRenderFlags::HideTableHeaders)), WindowFlags::InitialProportionalSize);
+    return window_open(pattern_window_title, L1(pattern_render(handle, PatternRenderFlags::HideTableHeaders)), WindowFlags::InitialProportionalSize);
 }
 
 FOUNDATION_STATIC bool pattern_render_summarized_news_dialog(void* context)
@@ -2396,49 +2402,57 @@ FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
 {
     if (ImGui::BeginPopupContextItem())
     {
-        if (ImGui::BeginMenu(tr("Add")))
+        if (ImGui::TrBeginMenu("Add"))
         {
             pattern_add_to_report_menu(handle);
             ImGui::EndMenu();
         }
 
-        if (ImGui::MenuItem(tr("Float Window")))
-            pattern_open_floating_window(handle);
+        if (ImGui::TrMenuItem("Float Window"))
+        {
+            if (pattern_open_floating_window(handle))
+            {
+                // Close the tab if any.
+                pattern_t* pattern = (pattern_t*)pattern_get(handle);
+                if (pattern)
+                    pattern->opened = false;
+            }
+        }
 
         ImGui::EndPopup();
     }
 
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu(tr("Pattern")))
+        if (ImGui::TrBeginMenu("Pattern"))
         {
             pattern_t* pattern = (pattern_t*)pattern_get(handle);
             string_const_t code = string_table_decode_const(pattern->code);
 
-            if (ImGui::MenuItem(tr("Read News")))
+            if (ImGui::TrMenuItem("Read News"))
                 news_open_window(STRING_ARGS(code));
 
             #if BUILD_DEVELOPMENT
-            if (ImGui::MenuItem(tr("EOD"), nullptr, nullptr, true))
+            if (ImGui::TrMenuItem("EOD", nullptr, nullptr, true))
                 system_execute_command(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
 
-            if (ImGui::MenuItem(tr("Trends"), nullptr, nullptr, true))
+            if (ImGui::TrMenuItem("Trends", nullptr, nullptr, true))
                 system_execute_command(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
 
-            if (ImGui::MenuItem(tr("Earnings"), nullptr, nullptr, true))
+            if (ImGui::TrMenuItem("Earnings", nullptr, nullptr, true))
             {
                 time_t since_last_year = time_add_days(time_now(), -465);
                 string_const_t date_str = string_from_date(since_last_year);
                 system_execute_command(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
             }
 
-            if (ImGui::MenuItem(tr("Technical"), nullptr, nullptr, true))
+            if (ImGui::TrMenuItem("Technical", nullptr, nullptr, true))
                 system_execute_command(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);
 
-            if (ImGui::MenuItem(tr("Fundamentals"), nullptr, nullptr, true))
+            if (ImGui::TrMenuItem("Fundamentals", nullptr, nullptr, true))
                 system_execute_command(eod_build_url("fundamentals", code.str, FORMAT_JSON).str);
 
-            if (ImGui::MenuItem(tr("Real-time"), nullptr, nullptr, true))
+            if (ImGui::TrMenuItem("Real-time", nullptr, nullptr, true))
                 system_execute_command(eod_build_url("real-time", code.str, FORMAT_JSON).str);
 
             if (openai_available())

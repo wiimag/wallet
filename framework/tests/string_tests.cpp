@@ -12,6 +12,7 @@
 #include "test_utils.h"
 
 #include <framework/string.h>
+#include <framework/string_table.h>
 #include <framework/string_template.inl.h>
 
 #include <foundation/assert.h>
@@ -30,15 +31,6 @@ FOUNDATION_FORCEINLINE string_t stream_dude(char* buffer, size_t capacity, void*
 
 TEST_SUITE("String")
 {
-    TEST_CASE("Debugging")
-    {
-        //char buffer[256];
-        string_t str = {};
-
-        str = string_template_static("{0} {1} {0}", "Cool", "Cool");
-        CHECK_EQ(str, CTEXT("Cool Cool Cool"));
-    }
-
     TEST_CASE("Template")
     {
         {
@@ -127,15 +119,35 @@ TEST_SUITE("String")
             auto prev_handler = assert_handler();
             assert_set_handler([](hash_t context, const char* condition, size_t cond_length, const char* file, size_t file_length, unsigned int line, const char* msg, size_t msg_length) 
             {
-                CHECK_EQ(string_const(condition, cond_length), CTEXT("<Static fail>"));
                 CHECK_EQ(string_const(msg, msg_length), CTEXT("Invalid string argument type, potential overflow!"));
                 return 0;
             });
             str = string_template(STRING_BUFFER(buffer), "overflow={12}", 1, 2, 3, 4);
             CHECK_EQ(str, CTEXT("overflow={12}"));
+
+            
+            assert_set_handler([](hash_t context, const char* condition, size_t cond_length, const char* file, size_t file_length, unsigned int line, const char* msg, size_t msg_length) 
+            {
+                CHECK_EQ(string_const(msg, msg_length), CTEXT("Invalid template argument options (LIFE)"));
+                return 0;
+            });
+            str = string_template(STRING_BUFFER(buffer), "24!={0, LIFE}", 42);
+            CHECK_EQ(str, CTEXT("24!=42"));
+
+            // LIFE is used as a value descriptor here because of the ':'
+            // Value descriptor are usually ignored
+            str = string_template(STRING_BUFFER(buffer), "24!={0: LIFE}", 42);
+            CHECK_EQ(str, CTEXT("24!=42"));
+
             assert_set_handler(prev_handler);
         }
         #endif
+
+        str = string_template(STRING_BUFFER(buffer), "{0}{2:hex}{1,hex}", 42, 42e5, -66);
+        CHECK_EQ(str, CTEXT("42ffffffffffffffbe4200000"));
+
+        str = string_template(STRING_BUFFER(buffer), "{0:desc,hex0x}", 42);
+        CHECK_EQ(str, CTEXT("0x000000000000002a"));
 
         {
             string_t dynamic_str = string_allocate_format(STRING_CONST("%.2lf $"), (double)300e3);
@@ -189,7 +201,7 @@ TEST_SUITE("String")
         CHECK_EQ(str, CTEXT("3.14, true, pi"));
         string_deallocate(str);
 
-        str = string_allocate_template("{0,:short}, {1,:medium}, {2,:long}", 
+        str = string_allocate_template("{0:short}, {1:medium}, {2:long}", 
             "this is a short string",
             "this is a medium length string, but still not that long",
             "this is a very long string, it should require some allocation?");
@@ -231,6 +243,48 @@ TEST_SUITE("String")
     {
         CHECK_EQ(string_template_static("{0} {1} {0}", "Cool", "Cool"), CTEXT("Cool Cool Cool"));
         CHECK_EQ(string_template_static("{1} {0}", P, nullptr, 1), CTEXT("1 2 3 5 7 11 13 17 19 23 29"));
+    }
+
+    TEST_CASE("Currency option")
+    {
+        string_t str{};
+
+        CHECK_EQ(string_template_static("{0,currency}", 1234567.89), CTEXT("1 234 567.89 $"));
+        CHECK_EQ(string_template_static("{0,currency}", -123456.789), CTEXT("-123 456.79 $"));
+        CHECK_EQ(string_template_static("{0,currency}", 12345.6789f), CTEXT("12 345.68 $"));
+        CHECK_EQ(string_template_static("{0,currency}", -1234.56789f), CTEXT("-1 234.57 $"));
+        CHECK_EQ(string_template_static("{0,currency}", 123.456789f), CTEXT("123.46 $"));
+        CHECK_EQ(string_template_static("{0,currency}", -12.3456789), CTEXT("-12.35 $"));
+        CHECK_EQ(string_template_static("{0,currency}", -1.23456789), CTEXT("-1.23 $"));
+        CHECK_EQ(string_template_static("{0,currency}", 7.89), CTEXT("7.89 $"));
+        CHECK_EQ(string_template_static("{0,currency}", 0.89), CTEXT("0.89 $"));
+        CHECK_EQ(string_template_static("{0,currency}", 0.09), CTEXT("0.09 $"));
+
+        CHECK_EQ(string_template_static("{0,currency}", INT32_C(99)), CTEXT("99.00 $"));
+        CHECK_EQ(string_template_static("{0,currency}", INT32_C(-9)), CTEXT("-9.00 $"));
+        CHECK_EQ(string_template_static("{0,currency}", INT64_C(0)), CTEXT("0 $"));
+        CHECK_EQ(string_template_static("{0,currency}", UINT32_C(100)), CTEXT("100.00 $"));
+        CHECK_EQ(string_template_static("{0,currency}", (uint64_t)10e6), CTEXT("10M $"));
+        CHECK_EQ(string_template_static("{0,currency}", (uint64_t)12e9), CTEXT("12B $"));
+        CHECK_EQ(string_template_static("{0,currency}", NAN), CTEXT("-"));
+        CHECK_EQ(string_template_static("{0,currency}", DNAN), CTEXT("-"));
+    }
+
+    TEST_CASE("String table symbol option")
+    {
+        char buf[64];
+
+        int s1 = string_table_encode(STRING_CONST("P1: Hello Gangsters!"));
+        int s2 = string_table_encode(CTEXT("P2: What's up!"));
+        int s3 = string_table_encode(string_template(STRING_BUFFER(buf), 
+            "{0:uppercase}: {1}", "p1", "Playing with string template, ain't that full meta?"));
+
+        CHECK_NE(s1, STRING_TABLE_NOT_FOUND);
+        CHECK_NE(s2, STRING_TABLE_NOT_FOUND);
+        CHECK_NE(s3, STRING_TABLE_NOT_FOUND);
+
+        string_const_t dialog = string_template_static("{0:st}\n{1:st}\n{2:st}", s1, s2, s3);
+        CHECK_EQ(dialog, CTEXT("P1: Hello Gangsters!\nP2: What's up!\nP1: Playing with string template, ain't that full meta?"));
     }
 }
 

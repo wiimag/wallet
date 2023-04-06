@@ -11,7 +11,7 @@
 #include <foundation/assert.h>
 #include <foundation/string.h>
 
-//#include <framework/string_template.inl.h>
+#include <framework/string_template.inl.h>
  
 struct tm;
 
@@ -153,6 +153,15 @@ string_t string_static_buffer(size_t required_length = 64, bool clear_memory = f
  * @return The double value.
  */
 string_const_t string_from_currency(double value, const char* fmt = nullptr, size_t fmt_length = 0);
+
+/*! Converts a string to a double formatted as a dollar/currency value.
+ *
+ * @param str The string to convert.
+ * @param str_length The length of the string.
+ *
+ * @return The double value.
+ */
+string_t string_from_currency(char* buffer, size_t capacity, double value, const char* fmt = nullptr, size_t fmt_length = 0);
 
 /*! Format a string using a variable argument list using a temporary memory pool. 
  *

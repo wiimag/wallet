@@ -77,48 +77,41 @@ FOUNDATION_FORCEINLINE const char* tr(const char(&str)[N])
     #endif
 }
 
-/*! Format a string literal and translate it.
+/*! Format a string literal using #string_template and translates it.
  *
  *  @param fmt Format string.
  *  @param ... Format arguments.
  *
  *  @return Translated constant string object.
  */
-FOUNDATION_FORCEINLINE string_t tr_format(char* buffer, size_t capacity, const char* fmt, ...)
+template<typename... Args>
+FOUNDATION_FORCEINLINE string_t tr_format(char* buffer, size_t capacity, const char* fmt, Args&&... args)
 {
-    va_list args;
-    va_start(args, fmt);
-
     string_const_t fmttr = tr(fmt, string_length(fmt), false);
-    string_t formatted_tr_string = string_vformat(buffer, capacity, STRING_ARGS(fmttr), args);
+    string_t formatted_tr_string = string_template(buffer, capacity, fmttr, std::forward<Args>(args)...);
 
-    va_end(args);
     return formatted_tr_string;
 }
 
-/*! Format a string literal and translate it.
+/*! Format a string literal using #string_template and translates it.
  * 
  *  @param fmt Format string.
  *  @param ... Format arguments.
  * 
  *  @return Translated constant string object.
  */
-FOUNDATION_FORCEINLINE string_const_t tr_format_static(const char* fmt, ...)
+template<typename... Args>
+FOUNDATION_FORCEINLINE string_const_t tr_format_static(const char* fmt, Args&&... args)
 {
-    va_list args;
-    va_start(args, fmt);
-
     static thread_local char format_buffer[2048];
 
     string_const_t fmttr = tr(fmt, string_length(fmt), false);
+    string_t formatted_tr_string = string_template(STRING_BUFFER(format_buffer), fmttr, std::forward<Args>(args)...);
 
-    string_t formatted_tr_string = string_vformat(STRING_BUFFER(format_buffer), STRING_ARGS(fmttr), args);
-
-    va_end(args);
     return string_to_const(formatted_tr_string);
 }
 
-/*! Format a string literal and translate it.
+/*! Format a string literal using #string_template and translates it.
  * 
  *  @remark This function is limited to 2048 characters.
  * 
@@ -129,17 +122,14 @@ FOUNDATION_FORCEINLINE string_const_t tr_format_static(const char* fmt, ...)
  *
  *  @return Translated constant string object.
  */
-FOUNDATION_FORCEINLINE const char* tr_format(const char* fmt, ...)
+template<typename... Args>
+FOUNDATION_FORCEINLINE const char* tr_format(const char* fmt, Args&&... args)
 {
-    va_list args;
-    va_start(args, fmt);
-
     static thread_local char format_buffer[2048];
 
     string_const_t fmttr = tr(fmt, string_length(fmt), false);
-    string_t formatted_tr_string = string_vformat(STRING_BUFFER(format_buffer), STRING_ARGS(fmttr), args);
+    string_t formatted_tr_string = string_template(STRING_BUFFER(format_buffer), fmttr, std::forward<Args>(args)...);
 
-    va_end(args);
     return formatted_tr_string.str;
 }
 

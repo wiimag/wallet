@@ -2248,7 +2248,7 @@ void report_menu(report_t* report)
 
             if (ImGui::TrMenuItem(ICON_MD_AUTO_GRAPH " Show Transactions"))
             {
-                const char* window_title = tr_format("%s Transactions", string_table_decode(report->name));
+                const char* window_title = tr_format("{0} Transactions", string_table_decode(report->name));
                 window_open("##Transactions", window_title, string_length(window_title), [](window_handle_t win)
                 {
                     report_t* report = (report_t*)window_get_user_data(win);

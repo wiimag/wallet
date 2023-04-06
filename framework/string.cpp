@@ -197,28 +197,30 @@ string_t string_static_buffer(size_t required_length /*= 64*/, bool clear_memory
     return string_t{ cstr, required_length };
 }
 
-string_const_t string_from_currency(double value, const char* money_fmt /*= nullptr*/, size_t money_fmt_length /*= 0*/)
+string_t string_from_currency(char* buffer, size_t capacity, double value, const char* money_fmt /*= nullptr*/, size_t money_fmt_length /*= 0*/)
 {
+    FOUNDATION_ASSERT_MSG(capacity >= 16, "Currency buffer capacity must at least be of 16 characters");
+
     if (math_real_is_nan(value) || math_real_is_inf(value))
-        return CTEXT("-");
+        return string_copy(buffer, capacity, STRING_CONST("-"));
+    else if (money_fmt == nullptr && math_real_is_zero(value))
+        return string_copy(buffer, capacity, STRING_CONST("0 $"));
 
     const double abs_value = math_abs(value);
     if (abs_value >= 1e12)
-        return string_format_static(STRING_CONST("%.3gT $"), value / 1e12);
+        return string_format(buffer, capacity, STRING_CONST("%.3gT $"), value / 1e12);
     if (abs_value >= 1e9)
-        return string_format_static(STRING_CONST("%.3gB $"), value / 1e9);
+        return string_format(buffer, capacity, STRING_CONST("%.3gB $"), value / 1e9);
     else if (abs_value >= 1e7)
-        return string_format_static(STRING_CONST("%.3gM $"), value / 1e6);
-
-    string_t fmt_buffer = string_static_buffer(32);
+        return string_format(buffer, capacity, STRING_CONST("%.3gM $"), value / 1e6);
 
     if (money_fmt == nullptr)
     {
-        if (value < 0.05)
-            return string_to_const(string_format(STRING_ARGS(fmt_buffer), STRING_CONST("%.3lf $"), value));
+        if (abs_value < 0.05)
+            return string_format(buffer, capacity, STRING_CONST("%.3lf $"), value);
 
-        if (value < 1e3)
-            return string_to_const(string_format(STRING_ARGS(fmt_buffer), STRING_CONST("%.2lf $"), value));
+        if (abs_value < 1e3)
+            return string_format(buffer, capacity, STRING_CONST("%.2lf $"), value);
 
         money_fmt = "9 999 999.99 $";
         money_fmt_length = 0;
@@ -228,15 +230,30 @@ string_const_t string_from_currency(double value, const char* money_fmt /*= null
         money_fmt_length = string_length(money_fmt);
 
     if (money_fmt_length > 0 && (money_fmt[0] == '%' || string_find(money_fmt, max(0ULL, money_fmt_length - 1ULL), '%', 0) != STRING_NPOS))
-        return string_to_const(string_format(STRING_ARGS(fmt_buffer), money_fmt, money_fmt_length, value));
+        return string_format(buffer, capacity, money_fmt, money_fmt_length, value);
 
-    const mnyfmt_long mv = (mnyfmt_long)((value * 100.0) + 0.5);
-    string_copy(STRING_ARGS(fmt_buffer), money_fmt, money_fmt_length);
-    char* fmv = mnyfmt(fmt_buffer.str, '.', mv);
+    const mnyfmt_long mv = (mnyfmt_long)((abs_value * 100.0) + 0.5);
+    string_t mvfmt = string_copy(buffer, capacity, money_fmt, money_fmt_length);
+    char* fmv = mnyfmt(buffer, '.', mv);
     if (fmv)
-        return string_const(fmv, string_length(fmv));
+    {
+        const size_t fmv_length = string_length(fmv);
+        memmove(buffer, fmv, fmv_length + 1);
+        string_t fmvstr = { buffer, fmv_length };
+        const bool negative = value < 0.0;        
+        if (!negative)
+            return fmvstr;
+        return string_prepend(STRING_ARGS(fmvstr), capacity, STRING_CONST("-"));
+    }
 
-    return string_to_const(string_format(fmt_buffer.str, fmt_buffer.length, STRING_CONST("%.2lf $"), value));
+    return string_format(buffer, capacity, STRING_CONST("%.2lf $"), value);
+}
+
+string_const_t string_from_currency(double value, const char* money_fmt /*= nullptr*/, size_t money_fmt_length /*= 0*/)
+{
+    string_t fmt_buffer = string_static_buffer(32);
+    string_t fmt = string_from_currency(fmt_buffer.str, fmt_buffer.length, value, money_fmt, money_fmt_length);
+    return string_to_const(fmt);
 }
 
 string_const_t string_format_static(const char* fmt, size_t fmt_length, ...)
@@ -2323,22 +2340,11 @@ string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_
     return { buffer, size };
 }
 
-FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capacity, const char* format, size_t format_length, string_argument_type_t t1, va_list args)
+FOUNDATION_STATIC string_template_token_t* string_template_tokens(const char* format, size_t format_length, size_t offset, size_t capacity, bool& escaped_braces)
 {
-    // Check if we have any {} character first, if none then early out.
-    const size_t first_brace_pos = string_find(format, format_length, '{', 0);
-    if (first_brace_pos == STRING_NPOS)
-        return string_copy(buffer, capacity, format, format_length);
-
-    const size_t any_closing_brace_pos = string_find(format, format_length, '}', first_brace_pos);
-    if (any_closing_brace_pos == STRING_NPOS)
-        return string_copy(buffer, capacity, format, format_length);
-
-    bool escaped_braces = false;
-
     // Find all {...} templates in the format string
     string_template_token_t* tokens = nullptr;
-    for (size_t pos = first_brace_pos; pos < format_length; ++pos)
+    for (size_t pos = offset; pos < format_length; ++pos)
     {
         if (format[pos] == '{')
         {
@@ -2361,36 +2367,51 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
                 
                 // Check if we have a comma to separate the name and the options
                 string_const_t index{}, opts{};
-                size_t comma = string_find(format + pos, end - pos, ',', 0);
-                if (comma == STRING_NPOS)
+                const size_t comma = string_find(format + pos, end - pos, ',', 0);
+                const size_t colon = string_find(format + pos, end - pos, ':', 0);
+                if (comma == STRING_NPOS && colon == STRING_NPOS)
                 {
                     opts = { nullptr, 0 };
                     index = { format + pos + 1, end - pos - 1 };
                 }
-                else
+                else if (comma == STRING_NPOS)
+                {
+                    index = { format + pos + 1, colon - 1 };
+                    opts = { format + pos + colon + 1, end - pos - colon - 1 };
+                }
+                else if (comma < colon)
                 {
                     index = { format + pos + 1, comma - 1 };
                     opts = { format + pos + comma + 1, end - pos - comma - 1 };
-                    opts = string_trim(STRING_ARGS(opts), ' ');
+                }
+                else
+                {
+                    index = { format + pos + 1, colon - 1 };
+                    opts = { format + pos + comma + 1, end - pos - comma - 1 };
                 }
 
                 // Parse options
                 if (opts.length)
                 {
                     t.options =  StringTokenOption::None;
+                    opts = string_trim(STRING_ARGS(opts), ' ');
                     if (!string_try_convert_number(STRING_ARGS(opts), t.precision))
                     {
-                        if (string_equal(STRING_ARGS(opts), STRING_CONST("hex")))
+                        if (string_equal(STRING_ARGS(opts), STRING_ARGS(HEX_OPTION)))
                             t.options |= StringTokenOption::Hex;
-                        else if (string_equal(STRING_ARGS(opts), STRING_CONST("hex0x")))
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(HEX_0X_OPTION)))
                             t.options |= StringTokenOption::Hex | StringTokenOption::HexPrefix;
-                        else if (string_equal(STRING_ARGS(opts), STRING_CONST("hex0x2")))
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(HEX_0X_BYTE_OPTION)))
                             t.options |= StringTokenOption::Hex | StringTokenOption::HexBytePrefix | StringTokenOption::HexPrefix;
-                        else if (string_equal(STRING_ARGS(opts), STRING_CONST("lowercase")))
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(LOWERCASE_OPTION)))
                             t.options |= StringTokenOption::Lowercase;
-                        else if (string_equal(STRING_ARGS(opts), STRING_CONST("uppercase")))
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(UPPERCASE_OPTION)))
                             t.options |= StringTokenOption::Uppercase;
-                        else if (opts.str[0] != ':') // An options starting with : is valid and is used to provide a value description
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(CURRENCY_OPTION)))
+                            t.options |= StringTokenOption::Currency;
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(STRING_TABLE_SYMBOL_OPTION)))
+                            t.options |= StringTokenOption::StringTableSymbol;
+                        else if (colon == STRING_NPOS) // An options starting with : is valid and is used to provide a value description
                         {
                             FOUNDATION_ASSERT_FAILFORMAT("Invalid template argument options (%.*s)", STRING_FORMAT(opts));
                             t.options = StringTokenOption::None;
@@ -2428,6 +2449,41 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
         }
     }
 
+    return tokens;
+}
+
+FOUNDATION_FORCEINLINE bool string_template_argument_type_is_number(string_argument_type_t type)
+{
+    switch (type)
+    {
+        case StringArgumentType::INT32:
+        case StringArgumentType::INT64:
+        case StringArgumentType::UINT32:
+        case StringArgumentType::UINT64:
+        case StringArgumentType::FLOAT:
+        case StringArgumentType::DOUBLE:
+            return true;
+    }
+
+    return false;
+}
+
+FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capacity, const char* format, size_t format_length, string_argument_type_t t1, va_list args)
+{
+    // Check if we have any {} character first, if none then early out.
+    const size_t first_brace_pos = string_find(format, format_length, '{', 0);
+    if (first_brace_pos == STRING_NPOS)
+        return string_copy(buffer, capacity, format, format_length);
+
+    const size_t any_closing_brace_pos = string_find(format, format_length, '}', first_brace_pos);
+    if (any_closing_brace_pos == STRING_NPOS)
+        return string_copy(buffer, capacity, format, format_length);
+
+    bool escaped_braces = false;
+
+    // Find all {...} template tokens in the format string
+    string_template_token_t* tokens = string_template_tokens(format, format_length, first_brace_pos, capacity, escaped_braces);
+
     // If we don't have any tokens, just copy the format string
     if (array_size(tokens) == 0)
     {
@@ -2435,7 +2491,7 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
         return string_copy(buffer, capacity, format, format_length);
     }
     
-    // Get the maximum index of the arguments
+    // Get the maximum index of the template tokens
     int max_index = -1;
     for (unsigned i = 0; i < array_size(tokens); ++i)
         max_index = max(max_index, tokens[i].index);
@@ -2517,7 +2573,22 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
         if (hex && (type == StringArgumentType::INT32 || type == StringArgumentType::INT64))
             type = StringArgumentType::UINT64;
 
-        if (type == StringArgumentType::INT32 || type == StringArgumentType::INT64)
+        // Check currency option and reformat type accordingly
+        if (test(t.options, StringTokenOption::Currency) && string_template_argument_type_is_number(type))
+        {
+            double currency_value = values[t.index].f;
+            if (type == StringArgumentType::INT32 || type == StringArgumentType::INT64 || type == StringArgumentType::UINT32 || type == StringArgumentType::UINT64)
+                currency_value = (double)values[t.index].i;
+
+            bufpos += string_from_currency(buffer + bufpos, capacity - bufpos, currency_value).length;
+        }
+        else if (test(t.options, StringTokenOption::StringTableSymbol) && type == StringArgumentType::INT32)
+        {
+            extern string_const_t string_table_decode_const(int symbol);
+            string_const_t str = string_table_decode_const((int)values[t.index].i);
+            bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_ARGS(str)).length;
+        }
+        else if (type == StringArgumentType::INT32 || type == StringArgumentType::INT64)
         {
             bufpos += string_from_int(buffer + bufpos, capacity - bufpos, values[t.index].i, t.precision, 0).length;
         }
