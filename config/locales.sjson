@@ -1916,11 +1916,6 @@
 			fr = "\xee\x99\x81 Afficher les titres sans transaction"
 		}
 		{
-			hash = "2bc8823efd9df97"
-			en = "Changing that settings will restart the indexing process but if will not delete already indexed stock from removed exchanges. Indexing a new stock exchange can take between 1 to 3 hours."
-			fr = "Changer ce param\xc3\xa8tre red\xc3\xa9marrera le processus d'indexation mais ne supprimera pas les titres d\xc3\xa9j\xc3\xa0 index\xc3\xa9s des march\xc3\xa9s boursiers supprim\xc3\xa9s. L'indexation d'un nouveau march\xc3\xa9 boursier peut prendre entre 1 et 3 heures."
-		}
-		{
 			hash = "c31995e558728cd3"
 			en = "Changing that setting requires restarting the application."
 			fr = "Changer ce param\xc3\xa8tre requiert de red\xc3\xa9marrer l'application."
@@ -1934,6 +1929,16 @@
 			hash = "add16f40a8854b83"
 			en = " Add a price alert of {0:currency} for {1:symbol} "
 			fr = " Ajouter une alerte de prix de {0:currency} pour {1:symbol} "
+		}
+		{
+			hash = "a1ace1b624238f45"
+			en = "Show all records"
+			fr = "Afficher tous les enregistrements"
+		}
+		{
+			hash = "3e609c602478355a"
+			en = "Changing that setting will restart the indexing process but if will not delete already indexed stock from removed exchanges. Indexing a new stock exchange can take between 1 to 3 hours."
+			fr = "Changer ce param\xc3\xa8tre red\xc3\xa9marrera le processus d'indexation mais ne supprimera pas les titres d\xc3\xa9j\xc3\xa0 index\xc3\xa9s des march\xc3\xa9s boursiers supprim\xc3\xa9s. L'indexation d'un nouveau march\xc3\xa9 boursier peut prendre entre 1 et 3 heures."
 		}
 	]
 }

@@ -671,7 +671,6 @@ FOUNDATION_STATIC void window_bgfx_render_draw_lists(window_t* win, ImDrawData* 
     bgfx::setViewTransform(win->bgfx_view, NULL, ortho);
     bgfx::setViewRect(win->bgfx_view, 0, 0, win->frame_width, win->frame_height);
     
-
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++) 
     {
@@ -841,6 +840,10 @@ FOUNDATION_STATIC void window_imgui_resize_callback(ImGuiSizeCallbackData* args)
 FOUNDATION_STATIC void window_render(window_t* win)
 {        
     const bool graphical_mode = !main_is_batch_mode();
+
+    // Skip rendering if the window is iconified
+    if (glfwGetWindowAttrib(win->glfw_window, GLFW_ICONIFIED))
+        return;
 
     // Prepare next frame
     window_bgfx_new_frame(win);
@@ -1123,6 +1126,19 @@ FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t win
         #if ENABLE_DIALOG_NO_WINDOW_DECORATION
         glfwSetWindowAttrib(window, GLFW_RESIZABLE, GLFW_TRUE);
         glfwSetWindowAttrib(window, GLFW_DECORATED, GLFW_FALSE);
+        #endif
+
+        #if FOUNDATION_PLATFORM_WINDOWS
+        glfwSetWindowAttrib(window, GLFW_AUTO_ICONIFY, GLFW_FALSE);
+
+        // Get window handle and make it a child of the main window
+        HWND hwnd_child = glfwGetWin32Window(window);
+        HWND hwnd_main = glfwGetWin32Window(glfw_main_window());
+
+        // Set the window as a child of the main window and hide it from the taskbar
+        DWORD style = GetWindowLong(hwnd_child, GWL_EXSTYLE);
+        SetWindowLong(hwnd_child, GWL_EXSTYLE, (style & ~WS_EX_APPWINDOW) | WS_EX_TOOLWINDOW);
+        SetWindowLongPtr(hwnd_child, GWLP_HWNDPARENT, (LONG_PTR)hwnd_main);
         #endif
     }
     

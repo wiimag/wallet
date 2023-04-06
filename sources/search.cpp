@@ -109,6 +109,8 @@ constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
     CTEXT("Phone"),
 };
 
+struct search_window_t;
+
 struct search_result_entry_t
 {
     search_database_t* db{ nullptr };
@@ -117,6 +119,8 @@ struct search_result_entry_t
     stock_handle_t           stock{};
     tick_t                   uptime{ 0 };
     bool                     viewed{ false };
+
+    search_window_t*         window{ nullptr };
 };
 
 struct search_window_t
@@ -133,6 +137,8 @@ struct search_window_t
 
     tick_t                         delayed_tick{ 0 };
     bool                           delayed_input{ false };
+
+    window_handle_t                handle{0};
 };
 
 static struct SEARCH_MODULE {
@@ -827,6 +833,7 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
                 search_result_entry_t entry;
                 entry.db = db;
                 entry.doc = (search_document_handle_t)r->id;
+                entry.window = sw;
                 array_push_memcpy(sw->results, &entry);
             }
 
@@ -964,6 +971,22 @@ FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry
     }    
 
     return entry->stock.resolve();
+}
+
+FOUNDATION_STATIC void search_table_column_symbol_selected(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    const search_result_entry_t* entry = (const search_result_entry_t*)element;
+    FOUNDATION_ASSERT(entry);
+
+    if (entry->window == nullptr || entry->window->handle == 0)
+        return;
+
+    if (const stock_t* s = entry->stock)
+    {
+        string_const_t code = SYMBOL_CONST(s->code);
+        if (pattern_open(STRING_ARGS(code)))
+            window_close(entry->window->handle);
+    }
 }
 
 FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element, const column_t* column)
@@ -1304,7 +1327,8 @@ FOUNDATION_STATIC table_t* search_create_table()
     table->context_menu = search_table_contextual_menu;
 
     table_add_column(table, search_table_column_symbol, "Symbol", COLUMN_FORMAT_TEXT, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING)
-        .set_width(imgui_get_font_ui_scale(120.0f));
+        .set_width(imgui_get_font_ui_scale(120.0f))
+        .set_selected_callback(search_table_column_symbol_selected);
 
     table_add_column(table, search_table_column_name, ICON_MD_BUSINESS " Name", COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_STRETCH)
         .set_style_formatter(search_table_column_code_color)
@@ -1423,7 +1447,7 @@ FOUNDATION_STATIC void search_open_quick_search()
     FOUNDATION_ASSERT(_search->db);
 
     search_window_t* search_window = search_window_allocate();
-    window_open(HASH_SEARCH, STRING_CONST("Search"), 
+    search_window->handle = window_open(HASH_SEARCH, STRING_CONST("Search"), 
         L1(search_window_render(window_get_user_data(_1))),
         L1(search_window_deallocate(window_get_user_data(_1))), 
         search_window, WindowFlags::Dialog);
