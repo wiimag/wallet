@@ -5,6 +5,9 @@
 
 #include "string.h"
 
+#include <framework/array.h>
+#include <framework/string_template.inl.h>
+
 #include <foundation/random.h>
 
 #include <stdio.h>
@@ -259,27 +262,30 @@ const char* string_format_static_const(const char fmt[], ...)
     return fmt_result.str;
 }
 
+string_const_t string_trim(const char* str, size_t length, char c /*= ' '*/)
+{
+    // Remove leading characters
+    size_t start = 0;
+    for (; start < length; ++start)
+    {
+        if (str[start] != c)
+            break;
+    }
+
+    // Remove trailing characters
+    size_t end = length;
+    for (; end > start; --end)
+    {
+        if (str[end - 1] != c)
+            break;
+    }
+
+    return string_const(str + start, end - start);
+}
+
 string_const_t string_trim(string_const_t str, char c /*= ' '*/)
 {
-    for (size_t i = 0; i < str.length; ++i)
-    {
-        if (str.str[i] != c)
-            break;
-
-        str.str++;
-        str.length--;
-        i--;
-    }
-
-    for (int i = (int)str.length - 1; i >= 0; --i)
-    {
-        if (str.str[i] != c)
-            break;
-
-        str.length--;
-    }
-
-    return str;
+    return string_trim(str.str, str.length, c);
 }
 
 string_const_t string_to_const(const char* str)
@@ -2115,6 +2121,17 @@ bool string_try_convert_number(const char* str, size_t length, double& out_value
     return end == str + length;
 }
 
+bool string_try_convert_number(const char* str, size_t length, int& out_value, const int radix /*= 10*/)
+{
+    // Make sure the string starts with a digit or a sign
+    if (length == 0 || !isdigit(str[0]) && str[0] != '-')
+        return false;
+
+    char* end = (char*)str + length;
+    out_value = strtol(str, &end, radix);
+    return end == str + length;
+}
+
 string_t string_remove_character(char* buf, size_t size, size_t capacity, char char_to_remove)
 {
     size_t i = 0;
@@ -2305,3 +2322,361 @@ string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_
 
     return { buffer, size };
 }
+
+FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capacity, const char* format, size_t format_length, string_argument_type_t t1, va_list args)
+{
+    // Check if we have any {} character first, if none then early out.
+    const size_t first_brace_pos = string_find(format, format_length, '{', 0);
+    if (first_brace_pos == STRING_NPOS)
+        return string_copy(buffer, capacity, format, format_length);
+
+    const size_t any_closing_brace_pos = string_find(format, format_length, '}', first_brace_pos);
+    if (any_closing_brace_pos == STRING_NPOS)
+        return string_copy(buffer, capacity, format, format_length);
+
+    bool escaped_braces = false;
+
+    // Find all {...} templates in the format string
+    string_template_token_t* tokens = nullptr;
+    for (size_t pos = first_brace_pos; pos < format_length; ++pos)
+    {
+        if (format[pos] == '{')
+        {
+            // Check if the brace is espaced with {{
+            if (pos + 1 < format_length && format[pos + 1] == '{')
+            {
+                escaped_braces = true;
+                pos += 1;
+                continue;
+            }
+
+            size_t end = pos + 1;
+            while (end < format_length && format[end] != '}')
+                ++end;
+            if (end < format_length)
+            {
+                string_template_token_t t;
+                t.start = pos;
+                t.end = end;
+                
+                // Check if we have a comma to separate the name and the options
+                string_const_t index{}, opts{};
+                size_t comma = string_find(format + pos, end - pos, ',', 0);
+                if (comma == STRING_NPOS)
+                {
+                    opts = { nullptr, 0 };
+                    index = { format + pos + 1, end - pos - 1 };
+                }
+                else
+                {
+                    index = { format + pos + 1, comma - 1 };
+                    opts = { format + pos + comma + 1, end - pos - comma - 1 };
+                    opts = string_trim(STRING_ARGS(opts), ' ');
+                }
+
+                // Parse options
+                if (opts.length)
+                {
+                    t.options =  StringTokenOption::None;
+                    if (!string_try_convert_number(STRING_ARGS(opts), t.precision))
+                    {
+                        if (string_equal(STRING_ARGS(opts), STRING_CONST("hex")))
+                            t.options |= StringTokenOption::Hex;
+                        else if (string_equal(STRING_ARGS(opts), STRING_CONST("hex0x")))
+                            t.options |= StringTokenOption::Hex | StringTokenOption::HexPrefix;
+                        else if (string_equal(STRING_ARGS(opts), STRING_CONST("hex0x2")))
+                            t.options |= StringTokenOption::Hex | StringTokenOption::HexBytePrefix | StringTokenOption::HexPrefix;
+                        else if (string_equal(STRING_ARGS(opts), STRING_CONST("lowercase")))
+                            t.options |= StringTokenOption::Lowercase;
+                        else if (string_equal(STRING_ARGS(opts), STRING_CONST("uppercase")))
+                            t.options |= StringTokenOption::Uppercase;
+                        else if (opts.str[0] != ':') // An options starting with : is valid and is used to provide a value description
+                        {
+                            FOUNDATION_ASSERT_FAILFORMAT("Invalid template argument options (%.*s)", STRING_FORMAT(opts));
+                            t.options = StringTokenOption::None;
+                        }
+                    }
+                }
+                else
+                {
+                    t.precision = 0;
+                    t.options = StringTokenOption::None;
+                }
+
+                // Check if we have an index
+                if (index.length > 0 && isdigit(index.str[0]))
+                {
+                    t.index = string_to_int(STRING_ARGS(index));
+                    FOUNDATION_ASSERT(t.index >= 0);
+                 
+                    // Add the argument to the list
+                    array_push_memcpy(tokens, &t);
+                }
+                else
+                {
+                    FOUNDATION_ASSERT_FAILFORMAT("Invalid template argument index (%.*s)", STRING_FORMAT(index));
+                }
+
+                pos = end;
+            }
+        }
+        else
+        {
+            // Check if we've pass the buffer capacity
+            if (pos >= capacity)
+                break;
+        }
+    }
+
+    // If we don't have any tokens, just copy the format string
+    if (array_size(tokens) == 0)
+    {
+        FOUNDATION_ASSERT(tokens == nullptr); // Make sure nothing was reserved/allocated
+        return string_copy(buffer, capacity, format, format_length);
+    }
+    
+    // Get the maximum index of the arguments
+    int max_index = -1;
+    for (unsigned i = 0; i < array_size(tokens); ++i)
+        max_index = max(max_index, tokens[i].index);
+
+    if (max_index < 0)
+    {
+        array_deallocate(tokens);
+
+        // No arguments, just copy the format string
+        FOUNDATION_ASSERT_FAIL("No valid indexed template arguments found");
+        return string_copy(buffer, capacity, format, format_length);
+    }
+
+    // Parse the argument values
+    string_template_arg_value_t* values = nullptr;
+    for (int i = 0; i <= max_index; ++i)
+    {
+        string_template_arg_value_t v;
+        v.stream = nullptr;
+        v.type = i == 0 ? t1 : (string_argument_type_t)va_arg(args, unsigned int);
+
+        if (v.type == StringArgumentType::INT32)        v.i = (int64_t)va_arg(args, int32_t);
+        else if (v.type == StringArgumentType::INT64)   v.i = va_arg(args, int64_t);
+        else if (v.type == StringArgumentType::BOOL)    v.i = (int64_t)va_arg(args, bool);
+        else if (v.type == StringArgumentType::UINT32)  v.i = (int64_t)va_arg(args, uint32_t);
+        else if (v.type == StringArgumentType::UINT64)  v.i = (int64_t)va_arg(args, uint64_t);
+        else if (v.type == StringArgumentType::FLOAT)   v.f = (double)va_arg(args, float);
+        else if (v.type == StringArgumentType::DOUBLE)  v.f = va_arg(args, double);
+        else if (v.type == StringArgumentType::STRING)  v.str = va_arg(args, string_const_t);
+        else if (v.type == StringArgumentType::STREAM) 
+        {
+            v.stream = va_arg(args, string_template_stream_handler_t);
+
+            // Capture following pointer
+            string_argument_type_t ptype = (string_argument_type_t)va_arg(args, unsigned int);
+            FOUNDATION_ASSERT(ptype == StringArgumentType::POINTER);
+            v.ptr = va_arg(args, void*);
+        }
+        else if (v.type == StringArgumentType::POINTER) 
+        {
+            v.ptr = va_arg(args, void*);
+        }
+        else if (v.type == StringArgumentType::ARRAY_INT) v.ptr = va_arg(args, int*);
+        else if (v.type == StringArgumentType::CSTRING)
+        {
+            const char* cstr = va_arg(args, const char*);
+            v.str = { cstr, string_length(cstr) };
+        }
+        else
+        {
+            array_deallocate(tokens);
+            array_deallocate(values);
+
+            FOUNDATION_ASSERT_FAIL("Invalid string argument type, potential overflow!");
+            return string_copy(buffer, capacity, format, format_length);
+        }
+
+        array_push_memcpy(values, &v);
+    }
+
+    // Copy the format string to the buffer, replacing the arguments with the values
+    size_t bufpos = 0, fmtpos = 0;
+    for (unsigned i = 0; i < array_size(tokens); ++i)
+    {
+        const string_template_token_t& t = tokens[i];
+        FOUNDATION_ASSERT(t.index >= 0 && t.index < (int)array_size(values));
+
+        // Copy the part before the argument
+        if (t.start > fmtpos)
+        {
+            bufpos += string_copy(buffer + bufpos, capacity - bufpos, format + fmtpos, t.start - fmtpos).length;
+            fmtpos = t.start;
+        }
+
+        // Copy the value to the buffer
+        string_argument_type_t type = values[t.index].type;
+        const bool hex = any(t.options, StringTokenOption::Hex | StringTokenOption::HexPrefix);
+
+        if (hex && (type == StringArgumentType::INT32 || type == StringArgumentType::INT64))
+            type = StringArgumentType::UINT64;
+
+        if (type == StringArgumentType::INT32 || type == StringArgumentType::INT64)
+        {
+            bufpos += string_from_int(buffer + bufpos, capacity - bufpos, values[t.index].i, t.precision, 0).length;
+        }
+        else if (type == StringArgumentType::UINT32 || type == StringArgumentType::UINT64)
+        {
+            char padding = 0;
+            int width = t.precision;
+            
+            if (test(t.options, StringTokenOption::HexPrefix))
+            {   
+                padding = '0';
+                if (test(t.options, StringTokenOption::HexBytePrefix))
+                    width = 2;
+                else
+                    width = type == StringArgumentType::UINT32 ? 8 : 16;
+                bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_CONST("0x")).length;
+            }
+
+            uint64_t value = (uint64_t)values[t.index].i;
+            if (type == StringArgumentType::UINT32)
+                value = (uint32_t)value;
+
+            bufpos += string_from_uint(buffer + bufpos, capacity - bufpos, value, hex, width, padding).length;
+        }
+        else if (type == StringArgumentType::BOOL)
+        {
+            string_const_t boolstr = values[t.index].i ? CTEXT("true") : CTEXT("false");
+            bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_ARGS(boolstr)).length;
+        }
+        else if (type == StringArgumentType::FLOAT || type == StringArgumentType::DOUBLE)
+        {   
+            bufpos += string_from_float64(buffer + bufpos, capacity - bufpos, values[t.index].f, t.precision, 0, 0).length;
+        }
+        else if (type == StringArgumentType::STRING || type == StringArgumentType::CSTRING)
+        {
+            if (test(t.options, StringTokenOption::Lowercase))
+            {
+                bufpos += string_to_lower_utf8(buffer + bufpos, capacity - bufpos, STRING_ARGS(values[t.index].str)).length;
+            }
+            else if (test(t.options, StringTokenOption::Uppercase))
+            {
+                bufpos += string_to_upper_utf8(buffer + bufpos, capacity - bufpos, STRING_ARGS(values[t.index].str)).length;
+            }
+            else
+            {
+                bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_ARGS(values[t.index].str)).length;
+            }
+        }
+        else if (type == StringArgumentType::STREAM)
+        {
+            FOUNDATION_ASSERT(values[t.index].stream);
+            
+            string_t str{};
+            char stream_buffer[64] = { 0 };
+            if (t.precision > sizeof(stream_buffer))
+            {
+                char* dbuffer = (char*)memory_allocate(0, t.precision, 0, MEMORY_TEMPORARY);
+                str = values[t.index].stream(dbuffer, (size_t)t.precision, values[t.index].ptr);
+                bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_ARGS(str)).length;
+                memory_deallocate(dbuffer);
+            }
+            else 
+            {
+                str = values[t.index].stream(STRING_BUFFER(stream_buffer), values[t.index].ptr);
+                bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_ARGS(str)).length;
+            }   
+        }
+        else if (type == StringArgumentType::ARRAY_INT)
+        {
+            int* array = (int*)values[t.index].ptr;
+            for (int j = 0, end = array_size(array); j < end; ++j)
+            {
+                if (j > 0)
+                    bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_CONST(", ")).length;
+                bufpos += string_from_int(buffer + bufpos, capacity - bufpos, array[j], t.precision, 0).length;
+            }
+        }
+        else
+            FOUNDATION_ASSERT_FAIL("Invalid string argument type");
+        
+        // Check if we have reached the capacity
+        if (bufpos >= capacity)
+            break;
+        
+        // Move to the next token
+        fmtpos = t.end + 1;
+    }
+
+    // Copy the part after the last argument
+    const string_template_token_t* last = array_back(tokens);
+    if (bufpos < capacity && last && last->end < format_length)
+        bufpos += string_copy(buffer + bufpos, capacity - bufpos, format + last->end + 1, format_length - last->end - 1).length;
+
+    // Null terminate the string
+    if (bufpos < capacity)
+    {
+        buffer[bufpos] = '\0';
+    }
+    else if (capacity > 0)
+    {
+        buffer[capacity - 1] = '\0';
+        bufpos = capacity - 1;
+    }
+
+    // Free the tokens
+    array_deallocate(tokens);
+    array_deallocate(values);
+
+    string_t result = { buffer, bufpos };
+
+    // Replace {{ with { and }} with }
+    if (escaped_braces)
+    {
+        result = string_replace(STRING_ARGS(result), capacity, STRING_CONST("{{"), STRING_CONST("{"), true);
+        result = string_replace(STRING_ARGS(result), capacity, STRING_CONST("}}"), STRING_CONST("}"), true);
+    }
+
+    return result;
+}
+
+string_t string_format_template(char* buffer, size_t capacity, const char* format, size_t format_length, string_argument_type_t t1, ...)
+{
+    va_list args;
+    va_start(args, t1);
+    string_t result = string_format_template_args(buffer, capacity, format, format_length, t1, args);
+    va_end(args);
+    return result;
+}
+
+string_t string_format_allocate_template(const char* format, size_t length, string_argument_type_t t1, ...)
+{
+	if (!length) 
+    {
+		char* buffer = (char*)memory_allocate(0, 1, 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+		return {buffer, 0};
+	}
+	FOUNDATION_ASSERT(format);
+
+    int n = 0;
+	size_t capacity = length + 32;
+	char* buffer = (char*)memory_allocate(0, capacity, 0, MEMORY_PERSISTENT);
+
+	while (true) 
+    {
+        va_list list;
+		va_start(list, t1);
+
+        n = to_int(string_format_template_args(buffer, capacity, format, length, t1, list).length);
+		va_end(list);
+
+		if (((unsigned int)n + 1) < capacity)
+			break;
+
+		const size_t lastcapacity = capacity;
+		capacity *= 2;
+
+		buffer = (char*)memory_reallocate(buffer, capacity, 0, lastcapacity, MEMORY_NO_PRESERVE);
+	}
+
+	return {buffer, to_size(n)};
+}
+

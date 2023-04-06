@@ -20,6 +20,7 @@
 #include <framework/table.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/generics.h>
 
 #include <foundation/fs.h>
 #include <foundation/stream.h>
@@ -752,7 +753,7 @@ FOUNDATION_STATIC void realtime_initialize()
     _realtime_module->stream = realtime_open_stream();
 
     // Create thread to query realtime stock
-    if (main_is_interactive_mode() && !environment_command_line_arg("disable-realtime"))
+    if (main_is_interactive_mode() && !environment_argument("disable-realtime"))
     {
         _realtime_module->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
         if (_realtime_module->background_thread == nullptr || !thread_start(_realtime_module->background_thread))

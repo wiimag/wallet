@@ -252,7 +252,7 @@ FOUNDATION_STATIC bool environment_command_line_read_value(
     return false;
 }
 
-bool environment_command_line_arg(string_const_t name, string_const_t* value /*= nullptr*/)
+bool environment_argument(string_const_t name, string_const_t* value, bool check_environment_variable)
 {
     name = environment_command_line_trim_param(name);
     const string_const_t* cmdline = environment_command_line();
@@ -268,17 +268,24 @@ bool environment_command_line_arg(string_const_t name, string_const_t* value /*=
             return true;
     }
 
+    // Check for the environment variable
+    if (check_environment_variable && name.length >= 4)
+    {
+        char envname_buffer[32] = { 0 };
+        string_t envname = string_copy(STRING_BUFFER(envname_buffer), STRING_ARGS(name));
+        envname = string_to_upper_ascii(STRING_BUFFER(envname_buffer), STRING_ARGS(envname));
+        envname = string_replace(STRING_ARGS(envname), sizeof(envname_buffer), STRING_CONST("-"), STRING_CONST("_"), true);
+
+        string_const_t envval = environment_variable(STRING_ARGS(envname));
+        if (envval.length)
+        {
+            if (value)
+                *value = envval;
+            return true;
+        }
+    }
+
     return false;
-}
-
-bool environment_command_line_arg(const char* name, string_const_t* value)
-{
-    return environment_command_line_arg(string_const(name, string_length(name)), value);
-}
-
-bool environment_command_line_arg(const char* name, size_t name_length, string_const_t* value)
-{
-    return environment_command_line_arg(string_const(name, name_length), value);
 }
 
 bool path_equals(const char* a, size_t a_length, const char* b, size_t b_length)

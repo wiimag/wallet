@@ -5,6 +5,7 @@
 
 #pragma once
 
+#include <framework/memory.h>
 #include <framework/function.h>
 
 #include <foundation/fs.h>
@@ -14,11 +15,30 @@
 #include <time.h>
 #include <limits>
 
-// ## MACROS
+////////////////////////////////////////////////////////////////////////////
+// ## Constants
 
 constexpr double DNAN = __builtin_nan("0");
+
+////////////////////////////////////////////////////////////////////////////
+// ## MACROS
+
+/*! @def ARRAY_COUNT 
+ *
+ *  @brief Returns the number of elements in an fixed array.
+ */
 #define ARRAY_COUNT(ARR) (sizeof(ARR) / sizeof(ARR[0]))
 
+/*! @def SIZE_C
+ * 
+ *  @brief Make sure to cast the value to size_t.
+ */
+#define SIZE_C(val) (size_t)(UINT64_C(val))
+
+/*! @def DEFINE_ENUM_FLAGS 
+ *
+ *  @brief Defines bitwise operators for an enum class.
+ */
 #define DEFINE_ENUM_FLAGS(T) \
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T operator~ (T a) { return static_cast<T>(~(std::underlying_type_t<T>)a); } \
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool operator!= (const T a, const std::underlying_type_t<T> b) { return (std::underlying_type_t<T>)a != b; } \
@@ -36,68 +56,64 @@ constexpr double DNAN = __builtin_nan("0");
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool none(const T a, const T b) { return (a & b) == 0; } \
     FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL bool one(const T a, const T b) { const auto bits = ((std::underlying_type_t<T>)a & (std::underlying_type_t<T>)b); return bits && !(bits & (bits-1)); }
 
+////////////////////////////////////////////////////////////////////////////
+// ## Generics
+
+/*! Returns the minimal value of two values.
+ *
+ *  @param a First value.
+ *  @param b Second value.
+ *
+ *  @return The minimal value.
+ */
 template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T min(T a, T b) { return (((a) < (b)) ? (a) : (b)); }
+
+/*! Returns the maximal value of two values.
+ *
+ *  @param a First value.
+ *  @param b Second value.
+ *
+ *  @return The maximal value.
+ */
 template<typename T> FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL T max(T a, T b) { return (((a) > (b)) ? (a) : (b)); }
 
-#define SIZE_C(val) (size_t)(UINT64_C(val))
-
-template<typename T>
-struct range_view 
-{
-    FOUNDATION_FORCEINLINE range_view(T* data, std::size_t size)
-        : m_data{ data }, m_size{ size } { }
-
-    struct iterator
-    {
-        const T* ptr;
-
-        typedef T type;
-        typedef const T const_type;
-
-        FOUNDATION_FORCEINLINE iterator(const T* ptr)
-            : ptr(ptr)
-        {
-        }
-
-        FOUNDATION_FORCEINLINE bool operator!=(const iterator& other) const
-        {
-            return ptr != other.ptr;
-        }
-
-        FOUNDATION_FORCEINLINE bool operator==(const iterator& other) const
-        {
-            return ptr == other.ptr;
-        }
-
-        FOUNDATION_FORCEINLINE iterator& operator++()
-        {
-            ptr++;
-            return *this;
-        }
-
-        FOUNDATION_FORCEINLINE const T& operator*() const
-        {
-            return *ptr;
-        }
-    };
-
-    iterator begin() { return iterator(m_data); }
-    iterator end() { return iterator(m_data + m_size); }
-
-    iterator begin() const { return iterator(m_data); }
-    iterator end() const { return iterator(m_data + m_size); }
-
-    T* m_data;
-    size_t m_size;
-};
-
+////////////////////////////////////////////////////////////////////////////
 // ## URLs
 
+/*! Encode a string to be used in a URL.
+ * 
+ *  @note The functions used a static buffer, so the returned string is only valid until the next call to the function.
+ * 
+ *  @param str String to encode
+ *  @param str_length Length of string
+ * 
+ *  @return Encoded string
+ */
 string_const_t url_encode(const char* str, size_t str_length = 0);
+
+/*! Decode a string from a URL.
+ * 
+ *  @note The functions used a static buffer, so the returned string is only valid until the next call to the function.
+ * 
+ *  @param str String to decode
+ *  @param str_length Length of string
+ * 
+ *  @return Decoded string
+ */
 string_const_t url_decode(const char* str, size_t str_length = 0);
 
-// ## Paths
+////////////////////////////////////////////////////////////////////////////
+// ## Path manipulation functions
 
+/*! Compares two paths.
+ * 
+ *  @param a First path
+ *  @param a_length Length of first path
+ *  @param b Second path
+ *  @param b_length Length of second path
+ * 
+ *  @return True if paths are equivalent, false otherwise.
+ */
 bool path_equals(const char* a, size_t a_length, const char* b, size_t b_length);
 
 /*! Normalize path name, removing any redundant path components and by removing any illegal chars.
@@ -112,7 +128,8 @@ bool path_equals(const char* a, size_t a_length, const char* b, size_t b_length)
  */
 string_t path_normalize_name(char* buff, size_t capacity, const char* path, size_t path_length, const char replacement_char = '_');
 
-// ##FS
+////////////////////////////////////////////////////////////////////////////
+// ## File system functions
 
 /*! Returns all the text in a file.
  * 
@@ -134,29 +151,133 @@ string_t fs_read_text(const char* path, size_t path_length);
  */
 string_const_t fs_clean_file_name(const char* filename, size_t filename_length);
 
+/*! Returns an hash of the file contents.
+ * 
+ *  @param file_path Path to file
+ * 
+ *  @return Hash of file contents
+ */
 hash_t fs_hash_file(string_t file_path);
+
+/*! Returns an hash of the file contents.
+ * 
+ *  @param file_path Path to file
+ * 
+ *  @return Hash of file contents
+ */
 hash_t fs_hash_file(string_const_t file_path);
 
+/*! Checks if the file path is a file.
+ * 
+ *  @param file_path Path to file
+ * 
+ *  @return True if file exists, false otherwise
+ */
 FOUNDATION_FORCEINLINE bool fs_is_file(string_const_t file_path)
 {
     return fs_is_file(STRING_ARGS(file_path));
 }
 
+/*! Checks if the file path is a file.
+ * 
+ *  @param file_path Path to file
+ * 
+ *  @return True if file exists, false otherwise
+ */
 FOUNDATION_FORCEINLINE bool fs_is_file(string_t file_path)
 {
     return fs_is_file(STRING_ARGS(file_path));
 }
 
-// ## Time
+////////////////////////////////////////////////////////////////////////////
+// ## Time functions
 
+/*! Returns the current time date. 
+ *
+ *  @remarks Compared to #time_current the returned value is equivalent to a Unix timestamp and counts seconds since 1970-01-01 00:00:00 UTC.
+ *           As if #time_current returns milliseconds since 1970-01-01 00:00:00 UTC, the returned value is the same as #time_current divided by 1000.
+ */
 time_t time_now();
+
+/*! Adds a number of days to a date. 
+ *
+ *  @param t    Date to add days to
+ *  @param days Number of days to add
+ *  
+ *  @returns Date with days added
+ */
 time_t time_add_days(time_t t, int days);
+
+/*! Adds a number of hours to a date. 
+ *
+ *  @param t     Date to add hours to
+ *  @param hours Number of hours to add
+ *  
+ *  @returns Date with hours added
+ */
 time_t time_add_hours(time_t t, double hours);
+
+/*! Returns the number of days between two dates. 
+ * 
+ *  @remarks The returned value can be fractional, so if the dates are on the same day the returned value will be 0.xyz.
+ *
+ *  @param from Start date
+ *  @param to   End date
+ *  
+ *  @returns Number of days between dates
+ */
 double time_elapsed_days(time_t from, time_t to);
+
+/*! Returns the number of days between two dates, rounded to the nearest integer. 
+ *
+ *  @param from Start date
+ *  @param to   End date
+ *  
+ *  @returns Number of days between dates
+ */
 double time_elapsed_days_round(time_t from, time_t to);
+
+/*! Returns the time work date nearest to a given date. 
+ *
+ *  @param date Date to find nearest work date to
+ *  @param rel  Relative work day, 0 is today, -1 is yesterday, 1 is tomorrow, etc.
+ *  
+ *  @returns Nearest work date
+ */
 time_t time_work_day(time_t date, double rel);
+
+/*! Checks if two date are equal (i.e. same day). 
+ * 
+ *  @remarks The hour, minutes, seconds, etc. parts of the date are ignored.
+ *
+ *  @param da First date
+ *  @param db Second date
+ *  
+ *  @returns True if the dates are equal
+ */
 bool time_date_equal(time_t da, time_t db);
+
+/*! Converts a time date to a local time date structure. 
+ *
+ *  @param t     Date to convert
+ *  @param out_tm Pointer to tm struct to write converted date to
+ *  
+ *  @returns True if conversion was successful, false otherwise
+ */
 bool time_to_local(time_t t, tm* out_tm);
+
+/*! Converts time date parts to a time date. 
+ *
+ *  @param year        Year
+ *  @param month       Month
+ *  @param day         Day
+ *  @param hour        Hour
+ *  @param minute      Minute
+ *  @param second      Second
+ *  @param millisecond Millisecond (not used on most systems, use #tick_t instead if you need millisecond precision)
+ *  
+ *  @returns Time date
+ */
 time_t time_make(int year, int month, int day, int hour = 0, int minute = 0, int second = 0, int millisecond = 0);
 
 /*! Checks if two dates are on the same day. 
@@ -174,20 +295,29 @@ bool time_is_weekend();
 /*! @brief Checks if the current time is a working hour. */
 bool time_is_working_hours();
 
+/*! Returns the constant time that represents an hour. */
 FOUNDATION_FORCEINLINE constexpr time_t const time_one_hour()
 {
     constexpr const time_t one_day = 60 * 60;
     return one_day;
 }
 
+/*! Returns the constant time that represents a day. */
 FOUNDATION_FORCEINLINE constexpr time_t const time_one_day()
 {
     constexpr const time_t one_day = 24 * 60 * 60;
     return one_day;
 }
 
-// ## GENERICS
+////////////////////////////////////////////////////////////////////////////
+// ## Misc generic functions
 
+/*! Returns the number of digits in a number. 
+ *
+ *  @param number Number to count digits in
+ *  
+ *  @returns Number of digits in number
+ */
 template <class T>
 int num_digits(T number)
 {
@@ -200,68 +330,8 @@ int num_digits(T number)
     return digits;
 }
 
-template<typename T, void (*DTOR)(T* ptr)>
-struct ManagedPtr
-{
-    T* ptr{ nullptr };
-    bool managed{ false };
-
-    FOUNDATION_FORCEINLINE ManagedPtr(T* ptr)
-        : ptr(ptr)
-        , managed(true)
-    {
-    }
-
-    FOUNDATION_FORCEINLINE ManagedPtr(T& ptr)
-        : ptr(&ptr)
-        , managed(true)
-    {
-    }
-
-    FOUNDATION_FORCEINLINE ~ManagedPtr()
-    {
-        if (ptr && managed)
-            DTOR(ptr);
-        ptr = nullptr;
-        managed = false;
-    }
-
-    FOUNDATION_FORCEINLINE ManagedPtr(const ManagedPtr& o)
-        : ptr(o.ptr)
-        , managed(false)
-    {
-    }
-
-    FOUNDATION_FORCEINLINE ManagedPtr(ManagedPtr&& o)
-        : ptr(o.ptr)
-        , managed(o.managed)
-    {
-        o.ptr = nullptr;
-        o.managed = false;
-    }
-
-    FOUNDATION_FORCEINLINE ManagedPtr& operator=(ManagedPtr&& o)
-    {
-        this->ptr = o.ptr;
-        this->managed = o.managed;
-        o.ptr = nullptr;
-        o.managed = false;
-        return *this;
-    }
-
-    FOUNDATION_FORCEINLINE ManagedPtr& operator=(const ManagedPtr& o)
-    {
-        this->ptr = o.ptr;
-        this->managed = false;
-        return *this;
-    }
-
-    FOUNDATION_FORCEINLINE operator T* () { return ptr; }
-    FOUNDATION_FORCEINLINE operator const T* () const { return ptr; }
-
-    FOUNDATION_FORCEINLINE T* operator->() { return ptr; }
-    FOUNDATION_FORCEINLINE const T* operator->() const { return ptr; }
-};
+////////////////////////////////////////////////////////////////////////////
+// ## Environment functions
 
 /*! Get the system application resources path.
  * 
@@ -278,6 +348,94 @@ string_const_t environment_get_resources_path();
  *  @return Path to the application bundle folder.
  */
 string_const_t environment_get_build_path();
+
+/*! Checks and returns the environment argument with the given name.
+ *
+ *  We first check the command line arguments, then the environment variables.
+ *  For the command line arguments, we check the for --argument and -argument forms 
+ *  and for the value with check: `--argument=value`, or `--argument value` .
+ *  
+ *  Then we check the environment variables, and for the value we check: `ARGUMENT=value`.
+ *  For the environment variables, we check for the uppercase form of the argument name and replace `-` with an `_`.
+ *  In example `environment_variable("openai-api-key")` will check for the environment variable `OPENAI_API_KEY`.
+ *  
+ *  We ignore argument names that are smaller than 4 characters.
+ * 
+ *  @param name Name of the argument to check.
+ *  @param value If not null, will be set to the value of the argument.
+ *  @param check_environment_variable If false, will skip checking the environment variables.
+ * 
+ *  @return True if the argument was found.
+ */
+bool environment_argument(string_const_t name, string_const_t* value, bool check_environment_variable);
+
+/*! Checks and returns the environment argument with the given name.
+ *
+ *  @see environment_argument(string_const_t name, string_const_t* value, bool check_environment_variable)
+ * 
+ *  @param name        Name of the argument to check.
+ *  @param name_length Length of the name of the argument to check.
+ *  @param value       If not null, will be set to the value of the argument.
+ * 
+ *  @return True if the argument was found.
+ */
+FOUNDATION_FORCEINLINE bool environment_argument(const char* name, size_t name_length, string_const_t* value, bool check_environment_variable)
+{
+    string_const_t name_str = string_const(name, name_length);
+    return environment_argument(name_str, value, check_environment_variable);
+}
+
+/*! Checks and returns the environment argument with the given name.
+ *
+ *  @see environment_argument(string_const_t name, string_const_t* value, bool check_environment_variable)
+ * 
+ *  @param name  Name of the argument to check.
+ *  @param value If not null, will be set to the value of the argument.
+ * 
+ *  @return True if the argument was found.
+ */
+template<size_t N>
+FOUNDATION_FORCEINLINE bool environment_argument(const char (&name)[N], string_const_t* value)
+{
+    string_const_t name_str = string_const(name, N - 1);
+    return environment_argument(name_str, value, true);
+}
+
+/*! Checks and returns the environment argument with the given name.
+ *
+ *  @see environment_argument(string_const_t name, string_const_t* value, bool check_environment_variable)
+ * 
+ *  @param name  Name of the argument to check.
+ *  @param value If not null, will be set to the value of the argument.
+ *  @param check_environment_variable If false, will skip checking the environment variables.
+ * 
+ *  @return True if the argument was found.
+ */
+template<size_t N>
+FOUNDATION_FORCEINLINE bool environment_argument(const char(&name)[N], string_const_t* value, bool check_environment_variable)
+{
+    string_const_t name_str = string_const(name, N - 1);
+    return environment_argument(name_str, value, check_environment_variable);
+}
+
+/*! Checks if an command line argument is present.
+ * 
+ *  We do not check for an existing environment variable in this case, 
+ *  use #environment_varibale or other #environment_argument overload for that.
+ * 
+ *  @param name  Name of the argument to check.
+ * 
+ *  @return True if the argument was found, false otherwise.
+ */
+template<size_t N>
+FOUNDATION_FORCEINLINE bool environment_argument(const char(&name)[N])
+{
+    string_const_t name_str = string_const(name, N - 1);
+    return environment_argument(name_str, nullptr, false);
+}
+
+////////////////////////////////////////////////////////////////////////////
+// ## Main functions
 
 /*! Returns the true if the application is running in daemon mode, meaning that it is either running as a service or as a background process.
  * 
@@ -315,102 +473,16 @@ extern bool main_is_interactive_mode(bool exclude_debugger = false);
  */
 extern bool main_is_running_tests();
 
-
+/*! Returns the amount of time in milliseconds that has elapsed since the last application tick. 
+ *
+ *  @remark This is the time that has elapsed since the last call to #main_tick().
+ *  
+ *  @return Elapsed time in milliseconds.
+ */
 extern double main_tick_elapsed_time_ms();
 
-bool environment_command_line_arg(const char* name, string_const_t* value = nullptr);
-bool environment_command_line_arg(const char* name, size_t name_length, string_const_t* value = nullptr);
-bool environment_command_line_arg(string_const_t name, string_const_t* value = nullptr);
-
-#if BUILD_DEBUG
-struct TimeMarkerScope
-{
-    char label[128];
-    hash_t context;
-    tick_t start_time;
-    const double less_ignored_elapsed_time = 0.0009;
-
-    FOUNDATION_FORCEINLINE TimeMarkerScope(double max_time, hash_t _context, const char* fmt, ...)
-        : context(_context)
-        , less_ignored_elapsed_time(max_time)
-    {
-        va_list list;
-        va_start(list, fmt);
-        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
-        va_end(list);
-
-        start_time = time_current();
-    }
-
-    FOUNDATION_FORCEINLINE TimeMarkerScope(hash_t _context, const char* fmt, ...)
-        : context(_context)
-    {
-        va_list list;
-        va_start(list, fmt);
-        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
-        va_end(list);   
-        
-        start_time = time_current();
-    }
-
-    template <size_t N> FOUNDATION_FORCEINLINE
-        TimeMarkerScope(const char(&name)[N])
-        : context(memory_context())
-    {
-        string_copy(STRING_BUFFER(label), name, N - 1);
-        start_time = time_current();
-    }
-
-    FOUNDATION_FORCEINLINE TimeMarkerScope(const char* FOUNDATION_RESTRICT fmt, ...)
-        : context(memory_context())
-    {
-        va_list list;
-        va_start(list, fmt);
-        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
-        va_end(list);
-
-        start_time = time_current();
-    }
-
-    FOUNDATION_FORCEINLINE TimeMarkerScope(double max_time, const char* FOUNDATION_RESTRICT fmt, ...)
-        : context(memory_context())
-        , less_ignored_elapsed_time(max_time)
-    {
-        va_list list;
-        va_start(list, fmt);
-        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
-        va_end(list);
-
-        start_time = time_current();
-    }
-
-    FOUNDATION_FORCEINLINE ~TimeMarkerScope()
-    {
-        const double elapsed_time = time_elapsed(start_time);
-        if (elapsed_time > less_ignored_elapsed_time)
-        {
-            if (elapsed_time < 0.1)
-                log_debugf(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
-            else if (elapsed_time < 1.0)
-                log_infof(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
-            else
-                log_warnf(context, WARNING_PERFORMANCE, STRING_CONST("%s took %.3lg seconds <<<"), label, elapsed_time);
-        }
-    }
-};
-
-#define TIME_TRACKER_NAME_COUNTER_EXPAND(COUNTER, ...) TimeMarkerScope __var_time_tracker__##COUNTER (__VA_ARGS__)
-#define TIME_TRACKER_NAME_COUNTER(COUNTER, ...) TIME_TRACKER_NAME_COUNTER_EXPAND(COUNTER, __VA_ARGS__)
-#define TIME_TRACKER(...) TIME_TRACKER_NAME_COUNTER(__LINE__, __VA_ARGS__)
-
-#else
-
-#define TIME_TRACKER(...)                       \
-	do {                                        \
-		FOUNDATION_UNUSED_VARARGS(__VA_ARGS__); \
-	} while (0)
-
-#endif
+////////////////////////////////////////////////////////////////////////////
+// ## Logging
 
 struct LogPrefixScope
 {
@@ -429,13 +501,8 @@ struct LogPrefixScope
 
 #define LOG_PREFIX(enable)  LogPrefixScope __var_log_prefix_scope__##COUNTER (enable) 
 
-template<typename T> using alias = T;
-#define MEM_NEW(context, type, ...) new (memory_allocate(context, sizeof(type), alignof(type), MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED)) type(__VA_ARGS__);
-#define MEM_DELETE(ptr) {   \
-    ptr->~alias<std::remove_reference<decltype(*ptr)>::type>(); \
-    memory_deallocate(ptr); \
-    ptr = nullptr;          \
-}
+////////////////////////////////////////////////////////////////////////////
+// ## Type conversion
 
 FOUNDATION_FORCEINLINE int32_t to_int(size_t v)
 {
@@ -475,6 +542,9 @@ FOUNDATION_FORCEINLINE T to_opaque(void* ptr)
     return (T)v;
 }
 
+////////////////////////////////////////////////////////////////////////////
+// ## Color utility functions
+
 FOUNDATION_FORCEINLINE uint32_t rgb_to_abgr(const uint32_t v, const uint8_t alpha = 0xFF)
 {
     const uint8_t r = (v & 0x00FF0000) >> 16;
@@ -482,6 +552,9 @@ FOUNDATION_FORCEINLINE uint32_t rgb_to_abgr(const uint32_t v, const uint8_t alph
     const uint8_t b = (v & 0x000000FF);
     return (alpha << 24) | (b << 16) | (g << 8) | (r);
 }
+
+////////////////////////////////////////////////////////////////////////////
+// ## Hashing
 
 FOUNDATION_FORCEINLINE hash_t hash_combine(hash_t h1, hash_t h2)
 {

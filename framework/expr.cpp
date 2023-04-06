@@ -2125,7 +2125,7 @@ FOUNDATION_STATIC void expr_initialize()
     expr_set_global_var("LOGN10", DBL_LOGN10);
 
     string_const_t eval_expression;
-    if (environment_command_line_arg("eval", &eval_expression))
+    if (environment_argument("eval", &eval_expression))
     {
         static string_t command_line_eval_expression = string_clone(STRING_ARGS(eval_expression));
         dispatch([]()
@@ -2142,7 +2142,7 @@ FOUNDATION_STATIC void expr_initialize()
             expr_result_t result = eval(STRING_ARGS(expression_string));
             if (EXPR_ERROR_CODE == 0)
             {
-                if (environment_command_line_arg("X"))
+                if (environment_argument("X"))
                 {
                     string_const_t result_string = result.as_string();
                     log_info(0, STRING_ARGS(result_string));

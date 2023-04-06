@@ -143,6 +143,19 @@ template<typename T> T* array_last(T* arr)
     return &arr[count - 1];
 }
 
+/*! Returns the last element in the array.
+ * 
+ *  @template T The type of the array.
+ *
+ *  @param arr The array to get the last element from.
+ *  
+ *  @return The last element in the array pr #nullptr if none.
+ */
+template<typename T> T* array_back(T* arr)
+{
+    return array_last(arr);
+}
+
 /*! Returns the element index offset from the start of the array. 
  * 
  *  @param arr      The array to get the offset from.

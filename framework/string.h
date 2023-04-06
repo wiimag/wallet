@@ -10,6 +10,8 @@
  
 #include <foundation/assert.h>
 #include <foundation/string.h>
+
+//#include <framework/string_template.inl.h>
  
 struct tm;
 
@@ -194,6 +196,15 @@ string_const_t string_to_const(const char* str);
  */
 string_const_t string_trim(string_const_t str, char c = ' ');
 
+/*! Trims a string from the left and the right.
+ *
+ * @param str The string to trim.
+ * @param length The length of the string to trim.
+ * @param c The character to trim.
+ * @return The trimmed string.
+ */
+string_const_t string_trim(const char* str, size_t length, char c = ' ');
+
 /*! Checks if #str1 is less than #str2.
  *
  * @remark Usually used as a functor.
@@ -284,6 +295,16 @@ string_t string_remove_character(char* buf, size_t size, size_t capacity, char c
  * @return True if the string is a valid number, false otherwise.
  */
 bool string_try_convert_number(const char* str, size_t length, double& out_value);
+
+/*! Try to convert a string to an integer. It will return false if the string is not a valid number.
+ *
+ * @param str The string to convert.
+ * @param length The length of the string.
+ * @param out_value The value to write to.
+ * @param radix The radix of the number.
+ * @return True if the string is a valid number, false otherwise.
+ */
+bool string_try_convert_number(const char* str, size_t length, int& out_value, const int radix = 10);
 
 /*! Try to convert a string to a date. It will return false if the string is not a valid date.
  * 
@@ -593,3 +614,4 @@ string_const_t string_remove_trailing_whitespaces(const char* str, size_t length
  * @return The escaped url.
  */
 string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_t url_length);
+    

@@ -173,26 +173,14 @@ FOUNDATION_STATIC const char* openai_ensure_key_loaded()
             stream_deallocate(key_stream);
         }
     }
-    else
-    {
-        // Check if the key is in the environment variable OPENAI_API_KEY
-        string_const_t key = environment_variable(STRING_CONST("OPENAI_API_KEY"));
-        if (key.length)
-            _openai_module->apikey = string_copy(_openai_module->apikey.str, OPENAI_API_KEY_CAPACITY, STRING_ARGS(key));
-
-        // Check if the organization is in the environment variable OPENAI_ORGANIZATION
-        string_const_t organization = environment_variable(STRING_CONST("OPENAI_ORGANIZATION"));
-        if (organization.length)
-            _openai_module->organization = string_copy(_openai_module->organization.str, OPENAI_ORGANIZATION_CAPACITY, STRING_ARGS(organization));
-    }
 
     // Check if the key is specified on the command line
     string_const_t cmdline_key;
-    if (environment_command_line_arg("openai-key", &cmdline_key))
+    if (environment_argument("openai-api-key", &cmdline_key))
         _openai_module->apikey = string_copy(_openai_module->apikey.str, OPENAI_API_KEY_CAPACITY, STRING_ARGS(cmdline_key));
 
     string_const_t cmdline_organization;
-    if (environment_command_line_arg("openai-organization", &cmdline_organization))
+    if (environment_argument("openai-organization", &cmdline_organization))
         _openai_module->organization = string_copy(_openai_module->organization.str, OPENAI_ORGANIZATION_CAPACITY, STRING_ARGS(cmdline_organization));
 
     console_add_secret_key_token(STRING_ARGS(_openai_module->apikey));

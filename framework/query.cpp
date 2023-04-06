@@ -134,7 +134,7 @@ FOUNDATION_STATIC CURL* query_create_curl_request()
         curl_easy_setopt(req, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(req, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_WHATEVER);
 
-        if (environment_command_line_arg("verbose"))
+        if (environment_argument("verbose"))
             curl_easy_setopt(req, CURLOPT_VERBOSE, 1L);
 
         #if BUILD_DEVELOPMENT

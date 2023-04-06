@@ -17,6 +17,7 @@
 #include <framework/dispatcher.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/generics.h>
 
 #define HASH_INDICATORS static_hash_string("indicators", 10, 0x80f942b8e488d9c0ULL)
 

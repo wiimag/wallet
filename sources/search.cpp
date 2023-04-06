@@ -720,7 +720,7 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
     
     dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);
 
-    if (environment_command_line_arg("disable-indexing"))
+    if (environment_argument("disable-indexing"))
     {
         log_warnf(HASH_SEARCH, WARNING_SUSPICIOUS, STRING_CONST("Search indexing is disabled, skipping search indexing"));
         return 0;

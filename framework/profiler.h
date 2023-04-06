@@ -8,6 +8,7 @@
 #include <foundation/platform.h>
 #include <foundation/hash.h>
 #include <foundation/memory.h>
+#include <foundation/time.h>
 
 #if BUILD_ENABLE_PROFILE
 
@@ -63,19 +64,93 @@ FOUNDATION_FORCEINLINE void profiler_menu_timer() {}
 
 #endif
 
-struct MemoryScope
+#if BUILD_DEBUG && BUILD_ENABLE_PROFILE
+struct TimeMarkerScope
 {
-    FOUNDATION_FORCEINLINE MemoryScope(const hash_t& context)
+    char label[128];
+    hash_t context;
+    tick_t start_time;
+    const double less_ignored_elapsed_time = 0.0009;
+
+    FOUNDATION_FORCEINLINE TimeMarkerScope(double max_time, hash_t _context, const char* fmt, ...)
+        : context(_context)
+        , less_ignored_elapsed_time(max_time)
     {
-        memory_context_push(context);
+        va_list list;
+        va_start(list, fmt);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
+        va_end(list);
+
+        start_time = time_current();
     }
 
-    FOUNDATION_FORCEINLINE ~MemoryScope()
+    FOUNDATION_FORCEINLINE TimeMarkerScope(hash_t _context, const char* fmt, ...)
+        : context(_context)
     {
-        memory_context_pop();
+        va_list list;
+        va_start(list, fmt);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
+        va_end(list);
+
+        start_time = time_current();
+    }
+
+    template <size_t N> FOUNDATION_FORCEINLINE
+        TimeMarkerScope(const char(&name)[N])
+        : context(memory_context())
+    {
+        string_copy(STRING_BUFFER(label), name, N - 1);
+        start_time = time_current();
+    }
+
+    FOUNDATION_FORCEINLINE TimeMarkerScope(const char* FOUNDATION_RESTRICT fmt, ...)
+        : context(memory_context())
+    {
+        va_list list;
+        va_start(list, fmt);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
+        va_end(list);
+
+        start_time = time_current();
+    }
+
+    FOUNDATION_FORCEINLINE TimeMarkerScope(double max_time, const char* FOUNDATION_RESTRICT fmt, ...)
+        : context(memory_context())
+        , less_ignored_elapsed_time(max_time)
+    {
+        va_list list;
+        va_start(list, fmt);
+        string_vformat(STRING_BUFFER(label), fmt, string_length(fmt), list);
+        va_end(list);
+
+        start_time = time_current();
+    }
+
+    FOUNDATION_FORCEINLINE ~TimeMarkerScope()
+    {
+        const double elapsed_time = time_elapsed(start_time);
+        if (elapsed_time > less_ignored_elapsed_time)
+        {
+            if (elapsed_time < 0.1)
+                log_debugf(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
+            else if (elapsed_time < 1.0)
+                log_infof(context, STRING_CONST("%s took %.3lg ms"), label, elapsed_time * 1000.0);
+            else
+                log_warnf(context, WARNING_PERFORMANCE, STRING_CONST("%s took %.3lg seconds <<<"), label, elapsed_time);
+        }
     }
 };
 
-#define MEMORY_TRACKER_NAME_COUNTER_EXPAND(HASH, COUNTER) MemoryScope __var_memory_tracker__##COUNTER (HASH)
-#define MEMORY_TRACKER_NAME_COUNTER(HASH, COUNTER) MEMORY_TRACKER_NAME_COUNTER_EXPAND(HASH, COUNTER)
-#define MEMORY_TRACKER(HASH) MEMORY_TRACKER_NAME_COUNTER(HASH, __LINE__)
+#define TIME_TRACKER_NAME_COUNTER_EXPAND(COUNTER, ...) TimeMarkerScope __var_time_tracker__##COUNTER (__VA_ARGS__)
+#define TIME_TRACKER_NAME_COUNTER(COUNTER, ...) TIME_TRACKER_NAME_COUNTER_EXPAND(COUNTER, __VA_ARGS__)
+#define TIME_TRACKER(...) TIME_TRACKER_NAME_COUNTER(__LINE__, __VA_ARGS__)
+
+#else
+
+#define TIME_TRACKER(...)                       \
+    do {                                        \
+        FOUNDATION_UNUSED_VARARGS(__VA_ARGS__); \
+    } while (0)
+
+#endif
+

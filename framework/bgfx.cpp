@@ -79,10 +79,10 @@ struct BgfxCallbackHandler : bgfx::CallbackI
     bool ignore_logs = true;
     BgfxCallbackHandler()
     {
-        if (environment_command_line_arg("verbose"))
+        if (environment_argument("verbose"))
         {
             ignore_logs = false;
-            ignore_logs = environment_command_line_arg("bgfx-ignore-logs");
+            ignore_logs = environment_argument("bgfx-ignore-logs");
         }
     }
     virtual ~BgfxCallbackHandler() {};
@@ -385,7 +385,7 @@ bgfx::CallbackI* bgfx_system_callback_handler()
 
 void bgfx_initialize(GLFWwindow* window)
 {
-    if (!environment_command_line_arg("render-thread"))
+    if (!environment_argument("render-thread"))
     {
         // Call bgfx::renderFrame before bgfx::init to signal to bgfx not to create a render thread.
         // Most graphics APIs must be used on the same thread that created the window.

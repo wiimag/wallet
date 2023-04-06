@@ -198,7 +198,7 @@ extern int main_tests(void* _context, GLFWwindow* window)
     context.setOption("no-path-filenames", "true");
     context.setOption("no-debug-output", "true");
 
-    if (!environment_command_line_arg("out"))
+    if (!environment_argument("out"))
     {
         char test_log_path_buffer[BUILD_MAX_PATHLEN];
         string_const_t exe_dir = environment_executable_directory();

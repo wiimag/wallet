@@ -503,7 +503,7 @@ FOUNDATION_STATIC void console_initialize()
     if (BUILD_APPLICATION && !main_is_running_tests())
     {
         log_set_handler(logger);
-        _console_module->opened = environment_command_line_arg("console") || session_get_bool("show_console", _console_module->opened);
+        _console_module->opened = environment_argument("console") || session_get_bool("show_console", _console_module->opened);
         module_register_menu(HASH_CONSOLE, console_menu);
 
         app_register_menu(HASH_CONSOLE,  STRING_CONST("Windows/" ICON_MD_LOGO_DEV " Console"), STRING_CONST("F10"), AppMenuFlags::Append, [](void*)

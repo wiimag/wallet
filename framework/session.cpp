@@ -12,6 +12,7 @@
 #include <framework/string.h>
 #include <framework/array.h>
 #include <framework/scoped_string.h>
+#include <framework/profiler.h>
 
 #include <foundation/environment.h>
 #include <foundation/path.h>
@@ -200,7 +201,7 @@ string_const_t session_get_user_dir()
         user_dir = string_concat(STRING_BUFFER(user_dir_buffer), STRING_ARGS(user_dir), STRING_CONST("_tests"));
     
     string_const_t profile_name{};
-    if (environment_command_line_arg("session", &profile_name) && profile_name.length > 0)
+    if (environment_argument("session", &profile_name, false) && profile_name.length > 0)
     {
         user_dir = string_concat(STRING_BUFFER(user_dir_buffer), STRING_ARGS(user_dir), STRING_CONST("_"));
         user_dir = string_concat(STRING_BUFFER(user_dir_buffer), STRING_ARGS(user_dir), STRING_ARGS(profile_name));

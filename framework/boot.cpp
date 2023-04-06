@@ -38,7 +38,7 @@ static bool _process_should_exit = false;
  */
 FOUNDATION_STATIC void main_handle_debug_break()
 {
-    if (!environment_command_line_arg("debug-break"))
+    if (!environment_argument("debug-break"))
         return;
     
     if (system_debugger_attached())
@@ -72,7 +72,7 @@ FOUNDATION_STATIC int main_process_command_line(foundation_config_t& config, app
 {
     LOG_PREFIX(false);
 
-    if (environment_command_line_arg("version"))
+    if (environment_argument("version"))
     {
         string_const_t version_string = string_from_version_static(application.version);
         fprintf(stdout, "%.*s\n", STRING_FORMAT(version_string));
@@ -111,11 +111,11 @@ extern int main_initialize()
         return init_result;
 
     #if BUILD_APPLICATION && FOUNDATION_PLATFORM_WINDOWS
-        log_enable_stdout(system_process_redirect_io_to_console() || environment_command_line_arg("build-machine"));
+        log_enable_stdout(system_process_redirect_io_to_console() || environment_argument("build-machine"));
     #endif
     
     #if BUILD_DEVELOPMENT
-    _run_tests = environment_command_line_arg("run-tests");
+    _run_tests = environment_argument("run-tests");
     #endif
 
     int command_line_result = main_process_command_line(config, application);
@@ -126,13 +126,13 @@ extern int main_initialize()
         return command_line_result;
     }
 
-    if (environment_command_line_arg("debug") || environment_command_line_arg("verbose"))
+    if (environment_argument("debug") || environment_argument("verbose"))
         log_set_suppress(0, ERRORLEVEL_NONE);
     else
     {
         log_set_suppress(0, ERRORLEVEL_DEBUG);
      
-        if (environment_command_line_arg("X"))
+        if (environment_argument("X"))
         {
             log_enable_prefix(false);
             log_enable_stdout(true);
@@ -140,8 +140,8 @@ extern int main_initialize()
     }
 
     // Check if running batch mode (which is incompatible with running tests)
-    const bool run_eval_mode = environment_command_line_arg("eval");
-    _batch_mode = !main_is_running_tests() && (environment_command_line_arg("batch-mode") || run_eval_mode);
+    const bool run_eval_mode = environment_argument("eval");
+    _batch_mode = !main_is_running_tests() && (environment_argument("batch-mode") || run_eval_mode);
 
     dispatcher_initialize();
     main_handle_debug_break();
@@ -444,7 +444,7 @@ extern int main_run(void* context)
         return main_tests(context, current_window);
     #endif
 
-    _process_should_exit = environment_command_line_arg("exit");
+    _process_should_exit = environment_argument("exit");
 
     uint64_t frame_counter = 1;
     while (main_poll(current_window))

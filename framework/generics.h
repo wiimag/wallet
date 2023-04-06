@@ -648,3 +648,116 @@ namespace generics {
         }
     };
 }
+
+template<typename T>
+struct range_view
+{
+    FOUNDATION_FORCEINLINE range_view(T* data, std::size_t size)
+        : m_data{ data }, m_size{ size } { }
+
+    struct iterator
+    {
+        const T* ptr;
+
+        typedef T type;
+        typedef const T const_type;
+
+        FOUNDATION_FORCEINLINE iterator(const T* ptr)
+            : ptr(ptr)
+        {
+        }
+
+        FOUNDATION_FORCEINLINE bool operator!=(const iterator& other) const
+        {
+            return ptr != other.ptr;
+        }
+
+        FOUNDATION_FORCEINLINE bool operator==(const iterator& other) const
+        {
+            return ptr == other.ptr;
+        }
+
+        FOUNDATION_FORCEINLINE iterator& operator++()
+        {
+            ptr++;
+            return *this;
+        }
+
+        FOUNDATION_FORCEINLINE const T& operator*() const
+        {
+            return *ptr;
+        }
+    };
+
+    iterator begin() { return iterator(m_data); }
+    iterator end() { return iterator(m_data + m_size); }
+
+    iterator begin() const { return iterator(m_data); }
+    iterator end() const { return iterator(m_data + m_size); }
+
+    T* m_data;
+    size_t m_size;
+};
+
+template<typename T, void (*DTOR)(T* ptr)>
+struct ManagedPtr
+{
+    T* ptr{ nullptr };
+    bool managed{ false };
+
+    FOUNDATION_FORCEINLINE ManagedPtr(T* ptr)
+        : ptr(ptr)
+        , managed(true)
+    {
+    }
+
+    FOUNDATION_FORCEINLINE ManagedPtr(T& ptr)
+        : ptr(&ptr)
+        , managed(true)
+    {
+    }
+
+    FOUNDATION_FORCEINLINE ~ManagedPtr()
+    {
+        if (ptr && managed)
+            DTOR(ptr);
+        ptr = nullptr;
+        managed = false;
+    }
+
+    FOUNDATION_FORCEINLINE ManagedPtr(const ManagedPtr& o)
+        : ptr(o.ptr)
+        , managed(false)
+    {
+    }
+
+    FOUNDATION_FORCEINLINE ManagedPtr(ManagedPtr&& o)
+        : ptr(o.ptr)
+        , managed(o.managed)
+    {
+        o.ptr = nullptr;
+        o.managed = false;
+    }
+
+    FOUNDATION_FORCEINLINE ManagedPtr& operator=(ManagedPtr&& o)
+    {
+        this->ptr = o.ptr;
+        this->managed = o.managed;
+        o.ptr = nullptr;
+        o.managed = false;
+        return *this;
+    }
+
+    FOUNDATION_FORCEINLINE ManagedPtr& operator=(const ManagedPtr& o)
+    {
+        this->ptr = o.ptr;
+        this->managed = false;
+        return *this;
+    }
+
+    FOUNDATION_FORCEINLINE operator T* () { return ptr; }
+    FOUNDATION_FORCEINLINE operator const T* () const { return ptr; }
+
+    FOUNDATION_FORCEINLINE T* operator->() { return ptr; }
+    FOUNDATION_FORCEINLINE const T* operator->() const { return ptr; }
+};

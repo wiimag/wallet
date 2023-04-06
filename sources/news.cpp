@@ -486,7 +486,7 @@ string_t news_set_google_search_api_key(const char* apikey)
 FOUNDATION_STATIC void news_initialize()
 {
     string_const_t google_apis_key{};
-    if (environment_command_line_arg("google-apis-key", &google_apis_key))
+    if (environment_argument("google-apis-key", &google_apis_key))
     {
         string_copy(STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY), STRING_ARGS(google_apis_key));
         console_add_secret_key_token(STRING_ARGS(google_apis_key));

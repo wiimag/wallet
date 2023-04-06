@@ -13,6 +13,7 @@
 #include <framework/string_table.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/profiler.h>
 
 #include <foundation/stream.h>
 

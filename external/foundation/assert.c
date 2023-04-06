@@ -70,15 +70,15 @@ assert_report(hash_t context, const char* condition, size_t cond_length, const c
 
 	if (!condition || !cond_length) {
 		condition = nocondition;
-		cond_length = sizeof(nocondition);
+		cond_length = sizeof(nocondition)-1;
 	}
 	if (!file || !file_length) {
 		file = nofile;
-		file_length = sizeof(nofile);
+		file_length = sizeof(nofile)-1;
 	}
 	if (!msg || !msg_length) {
 		msg = nomsg;
-		msg_length = sizeof(nomsg);
+		msg_length = sizeof(nomsg)-1;
 	}
 
 	if (assert_handler_current && (assert_handler_current != assert_report))

@@ -322,7 +322,7 @@ void profiler_menu_timer()
 
 FOUNDATION_STATIC void profiler_initialize()
 {
-    if (!environment_command_line_arg("profile"))
+    if (!environment_argument("profile"))
         return;
         
     const size_t profile_buffer_size = 2 * 1024 * 1024;
@@ -332,7 +332,7 @@ FOUNDATION_STATIC void profiler_initialize()
     profile_enable(true);
 
     string_const_t session_profile_file_path;
-    if (environment_command_line_arg("profile-log", &session_profile_file_path))
+    if (environment_argument("profile-log", &session_profile_file_path))
     {
         if (string_is_null(session_profile_file_path))
         {

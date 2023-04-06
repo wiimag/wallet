@@ -198,7 +198,7 @@ FOUNDATION_STATIC string_locale_t* localization_sort_locales(string_locale_t* lo
 
 FOUNDATION_STATIC string_t localization_build_locales_path()
 {
-    if (environment_command_line_arg("skip-dev-locales"))
+    if (environment_argument("skip-dev-locales"))
         return {};
     #if BUILD_DEVELOPMENT
     // Get the locales.sjson path
@@ -261,7 +261,7 @@ FOUNDATION_STATIC localization_dictionary_t* localization_load_system_locales(st
     // Check if language is specified through the command line
     if (string_is_null(user_lang))
     {
-        if (environment_command_line_arg("lang", &user_lang) && !string_is_null(user_lang))
+        if (environment_argument("lang", &user_lang, false) && !string_is_null(user_lang))
         {
             user_lang = string_to_const(string_copy(STRING_BUFFER(dict->lang), STRING_ARGS(user_lang)));
         }
@@ -433,7 +433,7 @@ FOUNDATION_STATIC void localization_initialize()
     _localization_module = MEM_NEW(HASH_LOCALIZATION, LOCALIZATION_MODULE);
 
     // Check if we need to build the locales as we load strings
-    _localization_module->build_locales = environment_command_line_arg("build-locales");
+    _localization_module->build_locales = environment_argument("build-locales");
 
     // Load translation tables
     _localization_module->locales = localization_load_system_locales();
