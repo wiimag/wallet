@@ -101,8 +101,11 @@ add_compile_options("$<$<CONFIG:DEBUG>:-D_DEBUG>")
 # Set common BUILD_* flags
 #
 
-# Set 16 threads to fetch queries using MAX_QUERY_THREADS=16
-add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DMAX_QUERY_THREADS=16>")
+# Read project settings to define how many job system threads to use
+add_compile_options(-DMAX_JOB_THREADS=${BUILD_MAX_JOB_THREADS})
+
+# Read project settings to define how many query system threads to use
+add_compile_options(-DMAX_QUERY_THREADS=${BUILD_MAX_QUERY_THREADS})
 
 add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_DEBUG=1>")
 add_compile_options("$<$<CONFIG:RELEASE>:-DBUILD_RELEASE=1>")
@@ -277,6 +280,11 @@ add_subdirectory(${ROOT_DIR}/external/imgui)
 
 # Load main framework library
 add_subdirectory(${ROOT_DIR}/framework)
+
+# Include config/extras.cmake if it exists
+if(EXISTS ${ROOT_DIR}/config/extras.cmake)
+    include(${ROOT_DIR}/config/extras.cmake)
+endif()
 
 # Load main exectuable project under sources/
 add_subdirectory(${ROOT_DIR}/sources)

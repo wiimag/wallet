@@ -75,7 +75,7 @@ struct pattern_limits_t
 struct pattern_t
 {
     string_table_symbol_t code;
-    stock_handle_t stock;
+    mutable stock_handle_t stock;
 
     time_t date { 0 };
     bool save{ false };

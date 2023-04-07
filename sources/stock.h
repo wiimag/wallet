@@ -490,3 +490,25 @@ stock_index_t stock_index(const char* symbol, size_t symbol_length);
  *  @return True if the data was extracted successfully.
  */
 bool stock_get_time_range(const char* symbol, size_t symbol_length, time_t* start_time, time_t* end_time = nullptr, double timeout = 1);
+
+/*! Get the stock today's price. This is the price at the end of the day.
+ *
+ *  @remark This is a convenience function that calls #stock_price_on_date with the current date.
+ *          This function blocks until the data is available or the timeout is reached.
+ * 
+ *  @param handle The stock handle.
+ * 
+ *  @return The stock today's price.
+ */
+double stock_current_price(stock_handle_t& handle);
+
+/*! Get the stock price at a given date.
+ *
+ *  @remark This function blocks until the data is available or the timeout is reached.
+ * 
+ *  @param handle The stock handle.
+ *  @param at     Query date
+ * 
+ *  @return The stock price at the given date.
+ */
+double stock_price_on_date(stock_handle_t& handle, time_t at);

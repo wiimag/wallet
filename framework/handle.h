@@ -30,7 +30,7 @@ typedef enum {
     STATUS_ERROR_INVALID_REQUEST = (-17),
     STATUS_ERROR_INVALID_STREAM = (-18),
     STATUS_ERROR_LOAD_FAILURE = (-19),
-    STATUS_ERROR_NOT_AVAILABLE = (-19),
+    STATUS_ERROR_NOT_AVAILABLE = (-20),
 } status_t;
 
 struct HandleKey

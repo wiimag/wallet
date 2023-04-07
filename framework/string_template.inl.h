@@ -54,8 +54,33 @@ constexpr string_const_t CURRENCY_OPTION = { STRING_CONST("currency") };
  */
 constexpr string_const_t STRING_TABLE_SYMBOL_OPTION = { STRING_CONST("st") };
 
+/*! @def {i,date}
+ *  @brief Format the value as a date using the YYYY-MM-DD format
+ *  @example string_template("{0,date}", 1234567890) -> "2009-02-13"
+ */
+constexpr string_const_t DATE_OPTION = { STRING_CONST("date") };
+
+/*! @def {i,since}
+ *  @brief Format the date value as a time since the current time using the 1 day ago, 2 hours ago, 3 minutes ago, 4 seconds ago, etc. format
+ *  @example string_template("{0,since}", 1234567890) -> "1 day ago"
+ */
+constexpr string_const_t SINCE_OPTION = { STRING_CONST("since") };
+
+/*! @def {i,round} 
+ *  @brief Round the floating point value to the nearest integer
+ *  @example string_template("{0,round}", 1234.5678) -> "1235"
+ */
+constexpr string_const_t ROUND_OPTION = { STRING_CONST("round") };
+
+/*! @def {i,translate}
+ *  @brief Translate the string using the localization system.
+ *  @see tr
+ *  @note This option only works if the translations are available in locales.sjson
+ *  @example string_template("{0,translate}", "Hello") -> "Bonjour"
+ */
+constexpr string_const_t TRANSLATE_OPTION = { STRING_CONST("translate") };
+
 // TODO (ideas):
-// - {i,date} - Format as date
 // - {i,time} - Format as time
 // - {i,datetime} - Format as date and time
 // - {i,url} - Format as url
@@ -63,7 +88,6 @@ constexpr string_const_t STRING_TABLE_SYMBOL_OPTION = { STRING_CONST("st") };
 // - {i,path} - Format as path
 // - {i,fullpath} - Format as an absolute path
 // - {i,hexdump} - Format as hexdump
-// - {i,since} - Format as time since (1 day ago, 2 hours ago, 3 minutes ago, 4 seconds ago, etc.)
 // - {i,until} - Format as time until (in 1 day, in 2 hours, in 3 minutes, in 4 seconds, etc.)
 // - {i,ordinal} - Format as ordinal (1st, 2nd, 3rd, 4th, etc.)
 // - {i,tag} - Format as (1A2B,3C4D)
@@ -100,7 +124,12 @@ typedef enum class StringTokenOption
     Uppercase = 1 << 4,
     Array = 1 << 5,
     Currency = 1 << 6,
-    StringTableSymbol = 1 << 7
+    StringTableSymbol = 1 << 7,
+    ShortDate = 1 << 8,
+    Since = 1 << 9,
+    Until = 1 << 10,
+    Round = 1 << 11,
+    Translate = 1 << 12,
 
 } string_token_option_t;
 DEFINE_ENUM_FLAGS(StringTokenOption);

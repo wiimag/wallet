@@ -55,6 +55,18 @@ You can find the `locales.sjson` which contains the localized strings at `config
 
 When build with `BUILD_DEPLOY`, the `locales.sjson` file will be copied to the `build` directory.
 
+### `-DBUILD_MAX_QUERY_THREADS=N`
+
+**Default: `4`**
+
+The maximum number of query threads that can be used by the project. If your project heavily uses the query system, you can increase this value to improve performance, otherwise you can decrease it to reduce memory usage.
+
+### `-DBUILD_MAX_JOB_THREADS=N`
+
+**Default: `4`**
+
+The maximum number of job threads that can be used by the project. If your project heavily uses the job system, you can increase this value to improve performance, otherwise you can decrease it to reduce memory usage.
+
 ### `-DBUILD_SERVICE_EXE=ON|OFF`
 
 **Default: `OFF`**

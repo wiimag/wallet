@@ -307,6 +307,40 @@ FOUNDATION_STATIC void pattern_render_planning_url(string_const_t label, string_
         mark_valid ? string_const(dbuf, dbuf_length) : CTEXT("-"),
         mark_valid ? string_from_date(mark.date) : CTEXT("-"),
         change_p_str, label.length > 1 && translate);
+
+    if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+    {
+        const double initial_investment = 10000.0;
+        const double today_price = stock_current_price(pattern->stock);
+        const double priceat_date = stock_price_on_date(pattern->stock, mark.date);
+        double change = 0;
+        double initial_qty = 0;
+        double gain = 0;
+
+        if (mark_index < ARRAY_COUNT(FIXED_MARKS) - 1)
+        {
+            const double priceat_date_3_months_before = stock_price_on_date(pattern->stock, time_add_days(mark.date, -pattern->range));
+            change = (priceat_date - priceat_date_3_months_before);
+            initial_qty = initial_investment / priceat_date_3_months_before;
+            gain = change * initial_qty;
+            const char* label2 = tr_format("If you would've invested {0,currency:10k} {1} days before {2:date} and sold on that day you would of {3,translate:gain} {4:currency}",
+                initial_investment, pattern->range, mark.date, gain >= 0 ? ICON_MD_TRENDING_UP " gained" : ICON_MD_TRENDING_DOWN " lost", gain);
+            ImGui::BulletTextWrapped(label2);
+        }
+
+        ImGui::Dummy(ImVec2(IM_SCALEF(550), 1));
+        change = (today_price - priceat_date);
+        initial_qty = initial_investment / priceat_date;
+        gain = change * initial_qty;
+        const char* label = tr_format("If you would have invested {0,currency:10k} in {1:date} ({1:since}) you would of {3,translate:gain} {2:currency}", 
+            initial_investment, mark.date, gain, gain >= 0 ? ICON_MD_TRENDING_UP " gained" : ICON_MD_TRENDING_DOWN " lost");
+        
+        ImGui::BulletTextWrapped(label);
+
+        ImGui::Dummy(ImVec2(1, 1)); // Ensure similar spacing to top of tooltip
+
+        ImGui::EndTooltip();
+    }
 }
 
 FOUNDATION_STATIC void pattern_render_planning_line(string_const_t label, const pattern_t* pattern, int mark_index, bool can_skip_if_not_valid = false, bool translate = false)

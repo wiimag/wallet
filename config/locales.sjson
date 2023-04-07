@@ -1940,5 +1940,85 @@
 			en = "Changing that setting will restart the indexing process but if will not delete already indexed stock from removed exchanges. Indexing a new stock exchange can take between 1 to 3 hours."
 			fr = "Changer ce param\xc3\xa8tre red\xc3\xa9marrera le processus d'indexation mais ne supprimera pas les titres d\xc3\xa9j\xc3\xa0 index\xc3\xa9s des march\xc3\xa9s boursiers supprim\xc3\xa9s. L'indexation d'un nouveau march\xc3\xa9 boursier peut prendre entre 1 et 3 heures."
 		}
+		{
+			hash = "27c76e01e90f64de"
+			en = "No results for %s"
+			fr = "Aucun r\xc3\xa9sultat pour %s"
+		}
+		{
+			hash = "b2c881cf59ec0a7c"
+			en = "gained"
+			fr = "gagn\xc3\xa9"
+		}
+		{
+			hash = "e7f5fc3ffdc5c13"
+			en = "lost"
+			fr = "perdu"
+		}
+		{
+			hash = "728d100e99ae013c"
+			en = "ago"
+			fr = "depuis"
+		}
+		{
+			hash = "63dff7df4d269339"
+			en = "year"
+			fr = "ann\xc3\xa9e"
+		}
+		{
+			hash = "e6347f48be4d176a"
+			en = "days"
+			fr = "jours"
+		}
+		{
+			hash = "7f5436f808f6244f"
+			en = "week"
+			fr = "semaine"
+		}
+		{
+			hash = "6edb9fc978c2949"
+			en = "weeks"
+			fr = "semaines"
+		}
+		{
+			hash = "f43264d7a6f0f237"
+			en = "month"
+			fr = "mois"
+		}
+		{
+			hash = "1786b723766e2dcb"
+			en = "months"
+			fr = "mois"
+		}
+		{
+			hash = "b553427889c4a99c"
+			en = "{0,round} {1,translate:unit} {2,translate:ago}"
+			fr = "il y a {0,round} {1,translate:unit}"
+		}
+		{
+			hash = "efa8d20efe8998ab"
+			en = "years"
+			fr = "ann\xc3\xa9es"
+		}
+		{
+			hash = "e30845f8fb711593"
+			en = "\xee\xa3\xa5 gained"
+			fr = "\xee\xa3\xa5 gagn\xc3\xa9"
+		}
+		{
+			hash = "b0a7a474d0b1c7c0"
+			en = "\xee\xa3\xa3 lost"
+			fr = "\xee\xa3\xa3 perdu"
+		}
+		{
+			hash = "ba935660802261a4"
+			en = "If you would have invested {0,currency:10k} in {1:date} ({1:since}) you would of {3,translate:gain} {2:currency}"
+			fr = "Si vous aviez investi {0,currency:10k} en {1:date} ({1:since}) vous auriez {3,translate:gain} {2:currency} depuis"
+		}
+		{
+			hash = "c89d036ff171ed01"
+			en = "If you would've invested {0,currency:10k} {1} days before {2:date} and sold on that day you would of {3,translate:gain} {4:currency}"
+			fr = "Si vous aviez investi {0,currency:10k} {1} jours avant le {2:date} et vendu ce jour-l\xc3\xa0 vous auriez {3,translate:gain} {4:currency}"
+		}
 	]
 }

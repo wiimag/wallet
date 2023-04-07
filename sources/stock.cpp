@@ -1017,6 +1017,34 @@ string_const_t stock_get_currency(const char* code, size_t code_length)
     return string_const(SETTINGS.preferred_currency, string_length(SETTINGS.preferred_currency));
 }
 
+double stock_current_price(stock_handle_t& handle)
+{
+    if (stock_resolve(handle, FetchLevel::REALTIME) < 0)
+        return NAN;
+
+    const tick_t timeout = time_current();
+    while (!handle->has_resolve(FetchLevel::REALTIME) && time_elapsed(timeout) < 5)
+        dispatcher_wait_for_wakeup_main_thread(250);
+
+    return handle->current.price;
+}
+
+double stock_price_on_date(stock_handle_t& handle, time_t at)
+{
+    if (stock_resolve(handle, FetchLevel::EOD) < 0)
+        return NAN;
+
+    const tick_t timeout = time_current();
+    while (!handle->has_resolve(FetchLevel::EOD) && time_elapsed(timeout) < 5)
+        dispatcher_wait_for_wakeup_main_thread(250);
+
+    const day_result_t* ed = stock_get_EOD(handle, at, true);
+    if (ed == nullptr)
+        return NAN;
+
+    return ed->adjusted_close;
+}
+
 bool stock_get_time_range(const char* symbol, size_t symbol_length, time_t* start_time, time_t* end_time, double timeout_seconds)
 {
     stock_handle_t handle = stock_request(symbol, symbol_length, FetchLevel::EOD);

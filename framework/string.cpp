@@ -152,6 +152,14 @@ bool string_contains_nocase(const char* lhs, size_t lhs_length, const char* rhs,
     return false;
 }
 
+string_t string_from_date(char* buffer, size_t capacity, time_t at)
+{
+    tm tm;
+    if (time_to_local(at, &tm) == false)
+        return {buffer, 0};
+    return string_format(buffer, capacity, STRING_CONST("%d-%02d-%02d"), tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+}
+
 string_const_t string_from_date(const tm& tm)
 {
     string_t time_buffer = string_static_buffer(16);
@@ -2382,7 +2390,10 @@ FOUNDATION_STATIC string_template_token_t* string_template_tokens(const char* fo
                 else if (comma < colon)
                 {
                     index = { format + pos + 1, comma - 1 };
-                    opts = { format + pos + comma + 1, end - pos - comma - 1 };
+                    if (colon != STRING_NPOS)
+                        opts = { format + pos + comma + 1, colon - comma - 1 };
+                    else
+                        opts = { format + pos + comma + 1, end - pos - comma - 1 };
                 }
                 else
                 {
@@ -2411,6 +2422,14 @@ FOUNDATION_STATIC string_template_token_t* string_template_tokens(const char* fo
                             t.options |= StringTokenOption::Currency;
                         else if (string_equal(STRING_ARGS(opts), STRING_ARGS(STRING_TABLE_SYMBOL_OPTION)))
                             t.options |= StringTokenOption::StringTableSymbol;
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(DATE_OPTION)))
+                            t.options |= StringTokenOption::ShortDate;
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(SINCE_OPTION)))
+                            t.options |= StringTokenOption::Since;
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(ROUND_OPTION)))
+                            t.options |= StringTokenOption::Round;
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(TRANSLATE_OPTION)))
+                            t.options |= StringTokenOption::Translate;
                         else if (colon == STRING_NPOS) // An options starting with : is valid and is used to provide a value description
                         {
                             FOUNDATION_ASSERT_FAILFORMAT("Invalid template argument options (%.*s)", STRING_FORMAT(opts));
@@ -2552,6 +2571,9 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
         array_push_memcpy(values, &v);
     }
 
+    // Depends on localization system to declare this function
+    extern string_const_t tr(const char* str, size_t length, bool literal);
+
     // Copy the format string to the buffer, replacing the arguments with the values
     size_t bufpos = 0, fmtpos = 0;
     for (unsigned i = 0; i < array_size(tokens); ++i)
@@ -2588,6 +2610,32 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
             string_const_t str = string_table_decode_const((int)values[t.index].i);
             bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_ARGS(str)).length;
         }
+        else if (test(t.options, StringTokenOption::ShortDate) && (type == StringArgumentType::INT64 || type == StringArgumentType::UINT64))
+        {
+            const time_t time = (time_t)values[t.index].i;
+            bufpos += string_from_date(buffer + bufpos, capacity - bufpos, time).length;
+        }
+        else if (test(t.options, StringTokenOption::Since) && (type == StringArgumentType::INT64 || type == StringArgumentType::UINT64))
+        {
+            const time_t time = (time_t)values[t.index].i;
+            double unit_since = time_elapsed_days(time, time_now());
+
+            string_const_t unit_label = CTEXT("days");
+            if (unit_since > 699) { unit_label = CTEXT("years"); unit_since /= 365.0; }
+            else if (unit_since > 365) { unit_label = CTEXT("year"); unit_since /= 365.0; }
+            else if (unit_since > 59) { unit_label = CTEXT("months"); unit_since /= 30.0; }
+            else if (unit_since > 30) { unit_label = CTEXT("month"); unit_since /= 30.0; }
+            else if (unit_since > 10) { unit_label = CTEXT("weeks"); unit_since /= 7.0; }
+            else if (unit_since > 6) { unit_label = CTEXT("week"); unit_since /= 7.0; }
+            else if (unit_since > 1) { unit_label = CTEXT("days"); }
+            else if (unit_since > 1.0 / 24.0) { unit_label = CTEXT("hours"); unit_since *= 24.0; }
+            else if (unit_since > 1.0 / 24.0 / 60.0) { unit_label = CTEXT("minutes"); unit_since *= 24.0 * 60.0; }
+            else { unit_label = CTEXT("seconds"); unit_since *= 24.0 * 60.0 * 60.0; }
+
+            //unit_label = tr(STRING_ARGS(unit_label), true);
+            string_const_t fmttr = tr(STRING_CONST("{0,round} {1,translate:unit} {2,translate:ago}"), true);
+            bufpos += string_template(buffer + bufpos, capacity - bufpos,  fmttr, unit_since, unit_label, "ago").length;
+        }
         else if (type == StringArgumentType::INT32 || type == StringArgumentType::INT64)
         {
             bufpos += string_from_int(buffer + bufpos, capacity - bufpos, values[t.index].i, t.precision, 0).length;
@@ -2620,7 +2668,11 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
         }
         else if (type == StringArgumentType::FLOAT || type == StringArgumentType::DOUBLE)
         {   
-            bufpos += string_from_float64(buffer + bufpos, capacity - bufpos, values[t.index].f, t.precision, 0, 0).length;
+            double value = values[t.index].f;
+            if (test(t.options, StringTokenOption::Round))
+                bufpos += string_from_int(buffer + bufpos, capacity - bufpos, math_round(value), t.precision, 0).length;
+            else
+                bufpos += string_from_float64(buffer + bufpos, capacity - bufpos, value, t.precision, 0, 0).length;
         }
         else if (type == StringArgumentType::STRING || type == StringArgumentType::CSTRING)
         {
@@ -2631,6 +2683,11 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
             else if (test(t.options, StringTokenOption::Uppercase))
             {
                 bufpos += string_to_upper_utf8(buffer + bufpos, capacity - bufpos, STRING_ARGS(values[t.index].str)).length;
+            }
+            else if (test(t.options, StringTokenOption::Translate))
+            {
+                string_const_t str = tr(STRING_ARGS(values[t.index].str), false);
+                bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_ARGS(str)).length;
             }
             else
             {

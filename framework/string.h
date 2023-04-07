@@ -136,6 +136,14 @@ string_const_t string_from_date(const tm& tm);
  */
 string_const_t string_from_date(time_t at);
 
+/*! Converts a date to a string buffer.
+ *
+ * @param at The date to convert.
+ *
+ * @return The string representation of the date.
+ */
+string_t string_from_date(char* buffer, size_t capacity, time_t at);
+
 /*! Returns a string buffer allocated from a volatile memory pool.
  * 
  * @remark The buffer is allocated from a volatile memory pool and must be used as soon as possible. 

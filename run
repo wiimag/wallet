@@ -7,64 +7,20 @@
 # Run script to execute most common operations used when working on the application framework.
 #
 
-APP_NAME=Wallet
+# Set the directory containing additional scripts
+SCRIPT_DIR=$(cd $(dirname $0)/scripts; pwd)
+
+# Set the directory where the build configuration files are located.
+CONFIG_DIR=$(cd $(dirname $0)/config; pwd)
+
+# Load the scripts/common.sh file
+source $SCRIPT_DIR/common.sh
+
+# Set the default values for the parameters
+APP_NAME=$(build_setting "APP_NAME")
 SHORT_NAME=$(basename $(pwd))
 SOLUTION_DIR=projects/.build
 PROGRAM_NAME=$(basename $0)
-
-# Determine running platform
-unameOut="$(uname -s)"
-case "${unameOut}" in
-    Linux*)     machine=Linux;;
-    Darwin*)    machine=Mac;;
-    CYGWIN*)    machine=Cygwin;;
-    MINGW*)     machine=MinGw;;   # i.e. running from git bash
-    *)          machine="UNKNOWN:${unameOut}"
-esac
-
-# Determine if we are running on a mac
-if [ $machine = "Mac" ]; then
-  PLATFORM_MAC=1
-else
-  PLATFORM_MAC=0
-fi
-
-# Determine if we are running on a linux
-if [ $machine = "Linux" ]; then
-  PLATFORM_LINUX=1
-else
-  PLATFORM_LINUX=0
-fi
-
-# Determine if we are running on a windows
-if [ $machine = "Cygwin" ] || [ $machine = "MinGw" ]; then
-  PLATFORM_WINDOWS=1
-else
-  PLATFORM_WINDOWS=0
-fi
-
-is_number() { 
-  [ "$1" ] && [ -z "${1//[0-9]}" ] ;
-}
-
-function convert_path_to_platform() {
-  if [ $PLATFORM_WINDOWS -eq 1 ]; then
-    win_path=$(cygpath -w "$1")
-    # Replace all \ with / in the path
-    echo "${win_path//\\/\/}"
-  else
-    echo "$1"
-  fi
-}
-
-function convert_path_to_file_link() {
-  local_path=$(convert_path_to_platform $1)
-  if [ $machine = "MinGw" ]; then
-    echo "file:///${local_path//\\/\/}"
-  else
-    echo "$1"
-  fi
-}
 
 # Precompute some paths
 FULL_SOLUTION_DIR=$(convert_path_to_platform $(pwd)/$SOLUTION_DIR)
@@ -72,7 +28,6 @@ FULL_SOLUTION_DIR=$(convert_path_to_platform $(pwd)/$SOLUTION_DIR)
 #
 # Parse common command line arguments
 #
-
 POSITIONAL_ARGS=()
 RUN=1 # Indicate if the default build should be run at the end
 BUILD=0
@@ -110,7 +65,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     --verbose)
       VERBOSE=1
-      POSITIONAL_ARGS+=("$1") # save positional arg
+      #POSITIONAL_ARGS+=("$1") # save positional arg
       shift # past argument
       ;;
     --no-color)
@@ -298,6 +253,9 @@ fi
 
 if [ $VERBOSE -ge 1 ]; then
 
+  # Invoke print_global_variables
+  print_global_variables
+
   # Print all set variables
   echo "APP_NAME: $APP_NAME"
   echo "SHORT_NAME: $SHORT_NAME"
@@ -326,7 +284,7 @@ fi
 if [ $GENERATE -ge 1 ]; then
 
   echo 
-  echo -e "${green}Generating solution...${normal}"
+  echo -e "${green}Generating ${APP_NAME} solution...${normal}"
   echo
 
   # Create the build directory if it doesn't exist and ignore any errors
@@ -338,12 +296,25 @@ if [ $GENERATE -ge 1 ]; then
     CMAKE_ARGS=(${POSITIONAL_ARGS[@]})
   fi
 
-  # If verbose is enabled add -DBUILD_INFO=ON to the cmake command
-  if [ $VERBOSE -ge 1 ]; then
-    CMAKE_ARGS+=("-DBUILD_INFO=ON")
-  else
-    CMAKE_ARGS+=("-DBUILD_INFO=OFF")
-  fi
+  # Read build.settings and add all the name=value pairs to the CMAKE_ARGS array as -Dname=value
+  while IFS='=' read -r name value; do
+    # Skip comments
+    [[ $name == \#* ]] && continue
+
+    # Skip empty lines
+    [[ -z $name ]] && continue
+
+    # Skip lines that do not start with BUILD_
+    [[ $name != BUILD_* ]] && continue
+
+    CMAKE_ARGS+=("-D$name=$value")
+  done < $CONFIG_DIR/build.settings
+
+  # Write to cmake.args file if verbose is enabled all the cmake arguments one per line
+  echo "CMAKE_ARGS:" > cmake.args
+  for arg in "${CMAKE_ARGS[@]}"; do
+    echo "  $arg" >> cmake.args
+  done
 
   if [ $machine == "MinGw" ]; then
     cmake -G "Visual Studio 17 2022" -A x64 ../.. ${CMAKE_ARGS[@]}
@@ -379,7 +350,7 @@ if [ $BUILD -ge 1 ]; then
 
   # Print building message in green
   echo 
-  echo -e "${green}Building solution...${normal}"
+  echo -e "${green}Building ${APP_NAME} solution...${normal}"
   echo
 
   cd $SOLUTION_DIR
@@ -515,10 +486,15 @@ if [ $TESTS -ge 1 ]; then
   ADDITIONAL_ARGS=()
   if [ $TESTS -eq $COMMAND_COUNTER ]; then
     ADDITIONAL_ARGS=(${POSITIONAL_ARGS[@]})
+
+    # If VERBOSE is defined, add it to POSITIONAL_ARGS
+    if [ $VERBOSE -eq 1 ]; then
+      ADDITIONAL_ARGS=("${ADDITIONAL_ARGS[@]:0:0}" "--verbose" "${ADDITIONAL_ARGS[@]:0}")
+    fi
   fi
 
   echo 
-  echo -e "${green}${italic}Running tests with arguments: ${ADDITIONAL_ARGS[@]}${normal}"
+  echo -e "${green}${italic}Running ${APP_NAME} tests with arguments: ${ADDITIONAL_ARGS[@]}${normal}"
   echo
 
   if [ ${machine} == "MinGw" ]; then
@@ -554,6 +530,11 @@ fi
 
 # Finally run the application if requested.
 if [ $RUN -eq 1 ]; then
+
+  # If VERBOSE is defined, add it to POSITIONAL_ARGS
+  if [ $VERBOSE -eq 1 ]; then
+    POSITIONAL_ARGS=("${POSITIONAL_ARGS[@]:0:0}" "--verbose" "${POSITIONAL_ARGS[@]:0}")
+  fi
 
   echo 
   echo -e "${green}${italic}Running ${APP_NAME} with arguments: ${POSITIONAL_ARGS[@]}${normal}"

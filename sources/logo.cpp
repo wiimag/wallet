@@ -365,6 +365,12 @@ FOUNDATION_STATIC bool logo_download_image(logo_t* logo, logo_image_t* image)
     if (download_stream == nullptr)
     {
         const stock_t* s = logo->stock_handle;
+        if (s == nullptr)
+        {
+            log_warnf(HASH_LOGO, WARNING_RESOURCE, STRING_CONST("Failed to get stock for %s"), SYMBOL_CSTR(logo->symbol));
+            return (image->status = STATUS_ERROR_NOT_AVAILABLE);
+        }
+
         string_const_t url = string_table_decode_const(s->logo);
         if (url.length == 0)
         {

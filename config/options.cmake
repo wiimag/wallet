@@ -15,3 +15,6 @@ option(BUILD_ENABLE_LOCALIZATION "Enable localization" ON)
 
 # Set the build service executable option to OFF by default and do not cache it.
 option(BUILD_SERVICE_EXE "Build service executable" OFF)
+
+# Defines how many threads to use for the query system.
+option(BUILD_MAX_QUERY_THREADS "Build max query threads" 4)

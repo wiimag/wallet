@@ -485,7 +485,7 @@ FOUNDATION_STATIC void symbols_market_deallocate(market_report_t* m)
     array_deallocate(m->symbols);
 }
 
-FOUNDATION_STATIC market_report_t* symbols_get_or_create_market(const char* market, size_t market_length = 0)
+FOUNDATION_STATIC market_report_t* symbols_get_or_create_market(const char* market, size_t market_length)
 {
     string_table_symbol_t market_symbol = string_table_encode(market, market_length);
 
@@ -504,7 +504,7 @@ FOUNDATION_STATIC market_report_t* symbols_get_or_create_market(const char* mark
 
 FOUNDATION_STATIC void symbols_render_search(string_const_t search_filter, const function<void(string_const_t)>& selector = nullptr)
 {
-    market_report_t* market_report = symbols_get_or_create_market("search");
+    market_report_t* market_report = symbols_get_or_create_market(STRING_CONST("search"));
     if (market_report == nullptr)
         return;
 
@@ -549,7 +549,7 @@ FOUNDATION_STATIC void symbols_render_search(string_const_t search_filter, const
 
 void symbols_render(const char* market, bool filter_null_isin /*= true*/)
 {
-    market_report_t* market_report = symbols_get_or_create_market(market);
+    market_report_t* market_report = symbols_get_or_create_market(STRING_LENGTH(market));
     if (market_report == nullptr)
         return;
 
