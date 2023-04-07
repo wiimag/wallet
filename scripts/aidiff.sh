@@ -95,6 +95,7 @@ COMMIT_REVISION=""
 
 # Set the extra commit arguments
 if [ $CACHED -eq 1 ]; then
+  COMMIT_REVISION="HEAD~1"
   EXTRA_COMMIT_ARGS="--cached"
 else
   EXTRA_COMMIT_ARGS=""
@@ -103,7 +104,6 @@ fi
 # If POSITIONAL_ARGS is not empty then use the first argument as the commit
 if [ ${#POSITIONAL_ARGS[@]} -gt 0 ]; then
   COMMIT_REVISION=${POSITIONAL_ARGS[0]}
-  EXTRA_COMMIT_ARGS=""
 fi
 
 # Run git command to extract the list of modified files
@@ -288,13 +288,12 @@ fi
 # If --commit flag was used, commit the changes and amend the commit message with the summary
 if [ $COMMIT -eq 1 ]; then
 
-    git commit -a -F "$COMMIT_MESSAGE_FILE_PATH"
-
-    # Amend the commit message to allow any edits
-    git commit --amend
+    # You can run the following command to commit the changes
+    echo "git commit -a -F $COMMIT_MESSAGE_FILE_PATH"
+    
 else
 
+    # If --commit flag was not used, open the commit message file in the default editor
     start ${COMMIT_MESSAGE_FILE_PATH}
 
 fi
-
