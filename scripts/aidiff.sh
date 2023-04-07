@@ -92,6 +92,7 @@ fi
 
 # Set the revision to use
 COMMIT_REVISION=""
+USE_RANGE_COMMIT=0
 
 # Set the extra commit arguments
 if [ $CACHED -eq 1 ]; then
@@ -103,11 +104,24 @@ fi
 
 # If POSITIONAL_ARGS is not empty then use the first argument as the commit
 if [ ${#POSITIONAL_ARGS[@]} -gt 0 ]; then
-  COMMIT_REVISION=${POSITIONAL_ARGS[0]}
+    COMMIT_REVISION=${POSITIONAL_ARGS[0]}
+
+    echo -e "${bold}Using commit:${normal} $COMMIT_REVISION"
 fi
 
 # Run git command to extract the list of modified files
-MODIFIED_FILES=$(git -c core.safecrlf=false diff --name-only $COMMIT_REVISION $EXTRA_COMMIT_ARGS)
+if [ -z "$COMMIT_REVISION" ]; then
+    USE_RANGE_COMMIT=0
+    MODIFIED_FILES=$(git -c core.safecrlf=false diff --name-only ${POSITIONAL_ARGS[@]} $EXTRA_COMMIT_ARGS)
+elif [ ${#POSITIONAL_ARGS[@]} -eq 1 ]; then
+    
+    # If we only have one revision then format with COMMIT_REVISION~1 COMMIT_REVISION
+    USE_RANGE_COMMIT=0
+    MODIFIED_FILES=$(git -c core.safecrlf=false diff --name-only ${COMMIT_REVISION}~1 $COMMIT_REVISION $EXTRA_COMMIT_ARGS)
+else
+    USE_RANGE_COMMIT=1
+    MODIFIED_FILES=$(git -c core.safecrlf=false diff --name-only ${POSITIONAL_ARGS[@]} $EXTRA_COMMIT_ARGS])
+fi
 
 # Split the list of modified files into an array
 IFS=$'
@@ -133,10 +147,17 @@ HEADER_AUTHORIZATION="Authorization: Bearer $OPENAI_API_KEY"
 #echo "Modified files:"
 for MODIFIED_FILE in "${MODIFIED_FILES_ARRAY[@]}"
 do
-    echo -ne "${bold}$MODIFIED_FILE:${normal} "
-
     # Get the file diff, make sure git do not output any warnings
-    DIFF=$(git -c core.safecrlf=false diff $COMMIT_REVISION -- $MODIFIED_FILE)
+    if [ $USE_RANGE_COMMIT -eq 1 ]; then
+        DIFF=$(git -c core.safecrlf=false diff ${POSITIONAL_ARGS[@]} -- $MODIFIED_FILE 2>&1)
+    else
+        DIFF=$(git -c core.safecrlf=false diff ${COMMIT_REVISION}~1 $COMMIT_REVISION -- $MODIFIED_FILE 2>&1)
+    fi
+
+    # If using --verbose print the diff command
+    if [ $VERBOSE -eq 1 ]; then
+        echo "> git -c core.safecrlf=false show ${POSITIONAL_ARGS[@]} -- $MODIFIED_FILE"
+    fi
 
     # Check if last git command failed
     if [ $? -ne 0 ]; then
@@ -148,6 +169,11 @@ do
     if [ -z "$DIFF" ]; then
         continue
     fi
+
+    # Truncate the DIFF to ~3000 characters
+    DIFF=$(echo $DIFF | cut -c -3500)
+
+    echo -ne "${bold}$MODIFIED_FILE:${normal} "
 
     # Generate a prompt for OpenAI
     PROMPT="These are changes to $MODIFIED_FILE. Please summarize the changes in this file in a single sentence. The summary should be short and to the point.".
@@ -180,9 +206,9 @@ $DIFF
     echo "{" > $JSON_PROMPT_FILE_PATH
     echo "  \"model\": \"text-davinci-003\"," >> $JSON_PROMPT_FILE_PATH
     echo "  \"prompt\": \"$PROMPT\"," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"temperature\": 0.4," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"max_tokens\": 240," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"top_p\": 0.9," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"temperature\": 0.2," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"max_tokens\": 200," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"top_p\": 0.8," >> $JSON_PROMPT_FILE_PATH
     echo "  \"frequency_penalty\": 0.9," >> $JSON_PROMPT_FILE_PATH
     echo "  \"presence_penalty\": 0.6," >> $JSON_PROMPT_FILE_PATH
     echo "  \"stop\": [\"---\"]" >> $JSON_PROMPT_FILE_PATH
@@ -206,7 +232,7 @@ $DIFF
     fi
 
     # Append the summary to the all summaries file
-    echo "**$MODIFIED_FILE:** $SUMMARY" >> $ALL_SUMMARIES_FILE_PATH
+    echo "* $MODIFIED_FILE: $SUMMARY" >> $ALL_SUMMARIES_FILE_PATH
 
     # Pause
     if [ $PAUSE -eq 1 ]; then
@@ -247,23 +273,19 @@ $(cat $ALL_SUMMARIES_FILE_PATH)
     echo "  \"model\": \"text-davinci-003\"," >> $JSON_PROMPT_FILE_PATH
     echo "  \"prompt\": \"$PROMPT\"," >> $JSON_PROMPT_FILE_PATH
     echo "  \"temperature\": 0.1," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"max_tokens\": 250," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"top_p\": 0.6," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"frequency_penalty\": 0.9," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"presence_penalty\": 0.1," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"max_tokens\": 100," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"top_p\": 1," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"frequency_penalty\": 0.2," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"presence_penalty\": 0.2," >> $JSON_PROMPT_FILE_PATH
     echo "  \"stop\": [\"---\"]" >> $JSON_PROMPT_FILE_PATH
     echo "}" >> $JSON_PROMPT_FILE_PATH
 
     # Run curl to send the prompt to OpenAI
     SUMMARY_JSON=$(curl -s -X POST https://api.openai.com/v1/completions -H "$HEADER_JSON" -H "$HEADER_AUTHORIZATION" -d @$JSON_PROMPT_FILE_PATH)
 
-    # Extract the summary from the JSON response from the "text": "..." field, make sure to preserve espaced characters
+    # Parse the summary from the JSON response from the "text": "..." field, make sure to preserve espaced characters
     SUMMARY=$(echo $SUMMARY_JSON | sed 's/.*"text":"//' | sed 's/"[,\}].*//')
-
-    # Trim all leading and trailing whitespace
     SUMMARY=$(echo $SUMMARY | sed 's/^[ \t]*//;s/[ \t]*$//')
-
-    # Remove all \n characters
     SUMMARY=$(echo $SUMMARY | sed 's/\\n//g' | sed 's/\\t//g' | sed 's/\\r//g' | sed 's/\\//g')
 
     echo 
