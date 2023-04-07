@@ -103,6 +103,7 @@ fi
 # If POSITIONAL_ARGS is not empty then use the first argument as the commit
 if [ ${#POSITIONAL_ARGS[@]} -gt 0 ]; then
   COMMIT_REVISION=${POSITIONAL_ARGS[0]}
+  EXTRA_COMMIT_ARGS=""
 fi
 
 # Run git command to extract the list of modified files
