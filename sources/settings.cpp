@@ -98,20 +98,6 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
-    // Google API KEY
-    {
-        ImGui::NextColumn();
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextURL(tr("Google API Key"), nullptr, STRING_CONST("https://developers.google.com/webmaster-tools/search-console-api/v1/configure?hl=en"));
-
-        ImGui::NextColumn();
-        ImGui::ExpandNextItem();
-        string_t google_search_api_key = backend_google_search_api_key();
-        if (ImGui::InputTextWithHint("##GoogleAPIKey", "", google_search_api_key.str, google_search_api_key.length - 1, ImGuiInputTextFlags_Password))
-            backend_set_google_search_api_key(google_search_api_key.str);
-        ImGui::NextColumn();
-    }
-
     // Open AI API KEY
     {
         ImGui::NextColumn();

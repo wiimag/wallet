@@ -483,8 +483,11 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
     #if BUILD_APPLICATION
     dispatch(eod_update_window_title);
 
+    const bool is_demo_key = string_equal(STRING_LENGTH(EOD->KEY), STRING_CONST("demo"));
+    const bool is_wallet_key = string_equal(STRING_LENGTH(EOD->KEY), STRING_CONST("wallet"));
+
     // If we are still disconnected and no valid key is set, show the login dialog
-    if (!EOD->PROMPT_EOD_API_KEY && (!EOD->CONNECTED || string_equal(EOD->KEY, string_length(EOD->KEY), STRING_CONST("demo"))))
+    if (!is_wallet_key && !EOD->PROMPT_EOD_API_KEY && (!EOD->CONNECTED || is_demo_key))
         eod_show_login_dialog();
     #endif
 }
@@ -542,7 +545,9 @@ FOUNDATION_STATIC void eod_main_menu_status()
                 "All request will use the local cache if available."), EOD->STATUS);
         }
         else
-            ImGui::SetTooltip("%s", EOD->STATUS);
+        {
+            ImGui::SetTooltip(tr("%s\n\nConnected through %s"), EOD->STATUS, EOD->API_URL);
+        }
     }
 
     const ImRect status_box(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());

@@ -14,15 +14,14 @@ const _ = require('lodash'),
     fs = require('fs/promises'),
     path = require('path');
 
-const { readdir, stat } = require('fs/promises');
-const constants = require('fs').constants;
 const HttpService = require('./http-service');
 const ApplicationService = require('./application-service');
 
 const minimist = require('minimist');
 const opts = minimist(process.argv.slice(2));
-
 const proxy = require('http-proxy-middleware');
+
+const { dirSize, dirCount } = require('../common/fs-utils');
 
 const SECONDS = 1000;
 const MINUTES = 60 * SECONDS;
@@ -36,43 +35,6 @@ const MONTHS = 25 * DAYS;
  * @typedef {string} DbFilePath - Artifact database file path
  */
 
-const dirSize = async dir => {
-    const files = await readdir( dir, { withFileTypes: true } );
-
-    const paths = files.map( async file => {
-        const dir_path = path.join( dir, file.name );
-
-        if ( file.isDirectory() ) 
-            return await dirSize( dir_path );
-
-        if ( file.isFile() ) {
-            const { size } = await stat( dir_path );
-            return size;
-        }
-
-        return 0;
-    });
-
-    return ( await Promise.all( paths ) ).flat( Infinity ).reduce( ( i, size ) => i + size, 0 );
-}
-
-const dirCount = async dirPath => {
-    // Count the number of files in a directory recursively
-    const files = await readdir(dirPath, { withFileTypes: true });
-    
-    // @ts-ignore
-    return files.reduce(async (count, file) => {
-        const filePath = path.join(dirPath, file.name);
-        const fileStats = await stat(filePath);
-        
-        if (fileStats.isDirectory()) {
-            return count + await dirCount(filePath);
-        } else {
-            return count + 1;
-        }
-    }, 0);
-}
-
 class EodService {
 
     /**
@@ -83,6 +45,8 @@ class EodService {
 
         this.httpService = httpService;
         this.applicationService = applicationService;
+
+        this.cacheDir = path.join(this.applicationService.appDir(), 'artifacts', 'cache');
 
         this.eodUrl = 'https://eodhistoricaldata.com/';
         this.eodApiKey = process.env["EOD_API_KEY"] || opts["eod-api-key"];
@@ -99,10 +63,7 @@ class EodService {
             throw new Error('EOD_API_KEY environment variable is not set.');
         }
 
-        // Create the cache artifact directory
-        this.cacheDir = path.join(this.applicationService.appDir(), 'artifacts', 'cache');
-        fs.mkdir(this.cacheDir, { recursive: true });
-
+        // Create the EOD proxy
         this.eodProxy = proxy.createProxyMiddleware({
             target: this.eodUrl,
             changeOrigin: true,
@@ -111,6 +72,7 @@ class EodService {
             onProxyRes: (proxyRes, req, res) => this.writeCache(proxyRes, req, res)
         });
 
+        // Create the Google proxy
         this.googleSearchProxy = proxy.createProxyMiddleware({
             target: this.googleApiUrl,
             changeOrigin: true,
@@ -119,6 +81,7 @@ class EodService {
             onProxyRes: (proxyRes, req, res) => this.writeCache(proxyRes, req, res)
         });
 
+        // Create the OpenAI proxy
         this.openAIProxy = proxy.createProxyMiddleware({
             changeOrigin: true,
             timeout: 30 * SECONDS,
@@ -138,9 +101,45 @@ class EodService {
 
         // curl -X GET -s http://localhost/status | json_pp
         httpService.register('get', '/status', this.routeStatus.bind(this));
+        httpService.register('get', '/api/status', this.routeStatus.bind(this));
 
         // curl -X GET -s http://localhost/api/user | json_pp
-        httpService.register('get', '/api/user', this.routeApiUser.bind(this));
+        httpService.register('get', '/api/user', proxy.createProxyMiddleware({
+            target: this.eodUrl,
+            changeOrigin: true,
+            secure: true,
+            selfHandleResponse: true, // We handle the response in the onProxyRes callback
+            onProxyReq: (proxyReq, req, res) => this.eodProxyRequest(proxyReq, req, res),
+
+            onProxyRes: (proxyRes, req, res) => {
+                return new Promise((resolve, reject) => {
+                    let body = [];
+                    proxyRes.on('data', (chunk) => {
+                        body.push(chunk);
+                    }).on('end', () => {
+
+                        let json = JSON.parse(Buffer.concat(body).toString());
+
+                        // Check if the api_token query param is 'wallet', if so, 
+                        // lets transform the JSON response to hide the name and email  
+                        if (req.query.api_token === 'wallet') {
+                            json.name = 'Wallet';
+                            json.email = 'info@wiimag.com';
+                        }
+
+                        return resolve(res.json(json));
+                    }).on('error', (err) => {
+                        return reject(err);
+                    });
+                });
+            },
+            onError: (err, req, res) => {
+                console.log('Error: ', err);
+                return this.httpService.sendError(req, res, 500, `Failed to execute the EOD query ${req.path}`, {
+                    msg: err.message
+                });
+            }
+        }));
 
         // curl -X GET -s http://localhost/api/eod/U.US | json_pp
         httpService.register('get', '/api/eod/:symbol', this.routeForwardEodRequest.bind(this, 'eod', 1 * WORKING_DAYS));
@@ -179,10 +178,18 @@ class EodService {
         httpService.register('get', '/v1/models', this.routeForwardOpenAIRequest.bind(this, 'models', 2 * WEEKS));
 
         // curl -X POST http://localhost/v1/completions -d '{ "model": "text-davinci-003",  "prompt": "Testing...\n\nTl;dr", "temperature": 0.7, "max_tokens": 60, "top_p": 1, "frequency_penalty": 0, "presence_penalty": 1 }' -H "Content-Type: application/json"
-        httpService.register('post', '/v1/completions', this.routeForwardOpenAIRequest.bind(this, 'completions', 0));
+        httpService.register('post', '/v1/completions', this.routeForwardOpenAIRequest.bind(this, 'completions', 0), true);
 
         // TODO: Downlaod search index
         // TODO: Cache thumnails icon and banners
+
+        // @ts-ignore Create the cache artifact directory
+        return fs.mkdir(this.cacheDir, { recursive: true }).then(() => {
+            // Delete all the files in the cache folder that are older than 3 months
+            return this.cleanCacheFolder();
+        }).then(() => {
+            return this;
+        });        
     }
 
     /**
@@ -191,22 +198,44 @@ class EodService {
     release () {
     }
 
+    async cleanCacheFolder () {
+        let cacheFolder = this.cacheDir;
+        let files = await fs.readdir(cacheFolder);
+        let now = Date.now();
+        for (let file of files) {
+            let filePath = path.join(cacheFolder, file);
+            let stats = await fs.stat(filePath);
+            let diff = now - stats.ctimeMs;
+            if (diff > 3 * MONTHS)
+                await fs.unlink(filePath);
+        }
+    }
+
     /**
      * Build a hash from the URL.
      * @param {string} url - The URL to hash.
      * @returns {number} The hash.
-     * @see https://stackoverflow.com/questions/7616461/generate-a-hash-from-string-in-javascript
      */
     urlHash (url) {
         let hash = 0;
         if (url.length == 0) 
             return hash;
+
+        // Replace api_token=VALUE with api_token=XXX
+        url = url.replace(/api_token=[^&]*/, 'api_token=XXX');
+
+        // Replace key=VALUE wtih key=XXX
+        url = url.replace(/key=[^&]*/, 'key=XXX');
+
         for (let i = 0; i < url.length; i++) {
             let char = url.charCodeAt(i);
             hash = ((hash << 5) - hash) + char;
-            hash = hash & hash; // Convert to 32bit integer
+
+            // Convert to unsigned integer
+            hash = hash & hash;
         }
-        return hash;
+
+        return Math.abs(hash);
     }
 
     /**
@@ -255,7 +284,8 @@ class EodService {
         }).catch((err) => {
 
             // Log error
-            console.log(`Failed to read cache file ${filePath}: ${err.message}`);
+            if ('ENOENT' !== err.code)
+                console.warn(`Failed to read cache file ${path.basename(filePath)}: ${err.message}`);
 
             // File does not exist, forward request to EOD API
             proxy(req, res, next);
@@ -279,7 +309,7 @@ class EodService {
                 body += chunk;
             }).on('end', () => {
                 fs.writeFile(req.cachePath, body, { encoding: 'utf8' }).then(() => {
-                    console.log('Cached response for ' + req.url + ' to ' + req.cachePath);
+                    console.log('Cached response for ' + req.url + ' to ' + path.basename(req.cachePath));
                 });
             });
         }
@@ -362,6 +392,8 @@ class EodService {
         let count = await dirCount(this.cacheDir);
             
         let status = {
+            name: this.applicationService.name(),
+            version: this.applicationService.version(),
             cache: {
                 size,
                 count,
@@ -369,18 +401,6 @@ class EodService {
         };
 
         res.json(status);
-    }
-
-    /**
-     * Handles the /api/user HTTP route.
-     * @param {HttpService.Request} req
-     * @param {HttpService.Response} res
-     * @param {HttpService.Next} next
-     */
-    routeApiUser (req, res, next) {
-
-        // Forward request url path to EOD API as-is
-        this.eodProxy(req, res, next);  
     }
 
     /**

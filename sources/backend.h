@@ -14,8 +14,4 @@ bool backend_is_connected();
 
 string_const_t backend_url();
 
-string_t backend_google_search_api_key();
-
-string_t backend_set_google_search_api_key(const char* apikey);
-
 bool backend_execute_news_search_query(const char* symbol, size_t symbol_length, const query_callback_t& callback);

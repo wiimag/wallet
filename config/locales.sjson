@@ -2023,7 +2023,17 @@
 		{
 			hash = "1280527451e7f85d"
 			en = "EOD API Service URL"
-			fr = "@TODO"
+			fr = "URL du service EOD API"
+		}
+		{
+			hash = "292f5e6df687a8fb"
+			en = "Connected through %s"
+			fr = "Connect\xc3\xa9 via %s"
+		}
+		{
+			hash = "48deb88dc1038b3a"
+			en = "%s\n\nConnected through %s"
+			fr = "%s\n\nConnect\xc3\xa9 via %s"
 		}
 	]
 }

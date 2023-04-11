@@ -6,9 +6,11 @@
 module.exports = (function () {
     'use strict';
 
-    var fs = require('fs'),
+    const fs = require('fs'),
         path = require('path'),        
         async = require('async');
+
+    const { readdir, stat } = require('fs/promises');
 
     function rmDir(dirPath, removeSelf) {
         var files = [];
@@ -74,11 +76,52 @@ module.exports = (function () {
         var stats = fs.statSync(filename);
         return stats.size;
     }
+
+    const dirSize = async dir => {
+        const files = await readdir( dir, { withFileTypes: true } );
+    
+        const paths = files.map( async file => {
+            const dir_path = path.join( dir, file.name );
+    
+            if ( file.isDirectory() ) 
+                return await dirSize( dir_path );
+    
+            if ( file.isFile() ) {
+                const { size } = await stat( dir_path );
+                return size;
+            }
+    
+            return 0;
+        });
+    
+        return ( await Promise.all( paths ) ).flat( Infinity ).reduce( ( i, size ) => i + size, 0 );
+    }
+    
+    const dirCount = async dirPath => {
+        // Count the number of files in a directory recursively
+        const files = await readdir(dirPath, { withFileTypes: true });
+
+        const paths = files.map(async file => {
+            const dir_path = path.join(dirPath, file.name);
+
+            if (file.isDirectory())
+                return await dirCount(dir_path);
+
+            if (file.isFile())
+                return 1;
+
+            return 0;
+        });
+
+        return (await Promise.all(paths)).flat(Infinity).reduce((i, count) => i + count, 0);
+    }
     
     return {
         rmDir: rmDir,
         getDirItems: getDirItems,
         getDirs: getDirs,
-        getFileSizeInBytes: getFileSizeInBytes
+        getFileSizeInBytes: getFileSizeInBytes,
+        dirCount: dirCount,
+        dirSize: dirSize
     };
 })();

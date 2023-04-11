@@ -112,6 +112,7 @@ class HttpService {
         this.app = null;
         this.server = null;
         this.router = express.Router();
+        this.proxyRouter = express.Router();
         this.routes = {
             get: {},
             post: {},
@@ -141,11 +142,15 @@ class HttpService {
             app.use(express.static(this.contentRoot));            
             app.use(cors());
 
+            app.use((req, res, next) => {
+                this.proxyRouter(req, res, next);
+            });
+
             // Enable files upload
             app.use(fileUpload({createParentPath: true}));
             
             // @ts-ignore
-            //app.use(express.json({limit: "10mb", extended: true}))
+            app.use(express.json({limit: "10mb", extended: true}))
             app.use(express.urlencoded({limit: "10mb", extended: true, parameterLimit: 16}))
 
             app.use((err, req, res, next) => {
@@ -202,11 +207,13 @@ class HttpService {
       }
 
     /**
-     * @param {string} type 
-     * @param {string} route 
+     * @param {string} type       - HTTP method type
+     * @param {string} route      - Route to register
+     * @param {function} callback - Callback function to be called when the route is requested
+     * @param {boolean} [isProxy] - If true, the route will be routed through the proxy router
      * @returns 
      */
-    register(type, route, callback) {
+    register(type, route, callback, isProxy) {
         var r = this.routes[type][route];
         if (r === undefined) {
             r = this.routes[type][route] = {
@@ -214,9 +221,11 @@ class HttpService {
                 routed: null
             }
 
-            r.routed = this.router[type].apply(this.router, [route, (req, res, next) => {
-                return r.fn(req, res, next);
-            }]);
+            if (isProxy) {
+                r.routed = this.proxyRouter[type].apply(this.proxyRouter, [route, (req, res, next) => r.fn(req, res, next)]);
+            } else {
+                r.routed = this.router[type].apply(this.router, [route, (req, res, next) => r.fn(req, res, next)]);
+            }
         } else {
             r.fn = callback;
         }
