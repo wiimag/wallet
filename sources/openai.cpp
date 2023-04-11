@@ -7,6 +7,7 @@
 
 #include "eod.h"
 #include "stock.h"
+#include "backend.h"
 
 #include <framework/app.h>
 #include <framework/imgui.h>
@@ -128,6 +129,9 @@ static struct OPENAI_MODULE
 
 FOUNDATION_STATIC string_t* openai_ensure_http_headers()
 {
+    if (backend_is_connected())
+        return nullptr;
+
     string_array_deallocate(_openai_module->http_headers);
 
     string_t Authorization = string_allocate_format(STRING_CONST("Authorization: Bearer %.*s"), STRING_FORMAT(_openai_module->apikey));
@@ -212,9 +216,19 @@ FOUNDATION_STATIC void openai_save_api_key()
     }
 }
 
+FOUNDATION_STATIC string_const_t openai_api_url()
+{
+    if (backend_is_connected())
+        return backend_url();
+
+    return CTEXT("https://api.openai.com");
+}
+
 FOUNDATION_STATIC const char* openai_build_url(const char* api, const char* fmt = nullptr, ...)
 {
     static thread_local char url_buffer[2048] = {0};
+
+    string_const_t root_url = openai_api_url();
 
     if (fmt)
     {
@@ -225,11 +239,11 @@ FOUNDATION_STATIC const char* openai_build_url(const char* api, const char* fmt 
         string_t fmtstr = string_vformat(STRING_BUFFER(fmt_buffer), fmt, string_length(fmt), args);
         va_end(args);
 
-        string_t url = string_format(STRING_BUFFER(url_buffer), STRING_CONST("https://api.openai.com/v1/%s/%.*s"), api, STRING_FORMAT(fmtstr));
+        string_t url = string_format(STRING_BUFFER(url_buffer), STRING_CONST("%.*s/v1/%s/%.*s"), STRING_FORMAT(root_url), api, STRING_FORMAT(fmtstr));
         return url.str;
     }
 
-    string_t url = string_format(STRING_BUFFER(url_buffer), STRING_CONST("https://api.openai.com/v1/%s"), api);
+    string_t url = string_format(STRING_BUFFER(url_buffer), STRING_CONST("%.*s/v1/%s"), STRING_FORMAT(root_url), api);
     return url.str;
 }
 

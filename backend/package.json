@@ -1,0 +1,44 @@
+{
+  "name": "wallet",
+  "version": "2023.4.8",
+  "description": "Wallet Cloud Services",
+  "main": "main.js",
+  "scripts": {
+    "start": "node main.js --port=80",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@github.com/jschmidt42/wallet.git"
+  },
+  "keywords": [
+    "wallet",
+    "finance",
+    "stock",
+    "market",
+    "300K"
+  ],
+  "author": "Jonathan Schmidt",
+  "bugs": {
+    "url": "https://github.com/jschmidt42/wallet/issues"
+  },
+  "homepage": "https://www.equals-forty-two.com",
+  "dependencies": {
+    "async": "^3.2.4",
+    "body-parser": "^1.20.1",
+    "cors": "^2.8.5",
+    "dicom-parser": "^1.8.20",
+    "express": "^4.18.2",
+    "express-fileupload": "^1.4.0",
+    "http-proxy-middleware": "^2.0.6",
+    "lodash": "^4.17.21",
+    "md5": "^2.3.0",
+    "minimist": "^1.2.7",
+    "mkdirp": "^1.0.4",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemailer": "^6.8.0",
+    "portscanner": "^2.2.0",
+    "serve-favicon": "^2.5.0"
+  }
+}

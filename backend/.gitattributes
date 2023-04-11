@@ -1,0 +1,62 @@
+* text=auto
+
+# .gitattributes file
+.gitignore diff eol=lf
+.gitattributes diff eol=lf
+
+# Text files
+
+*.md   text
+*.bsdoc text
+*.config text
+*.txt   text
+*.vsc   text
+*.fsc   text
+*.java  text diff=java
+*.xml   text diff=xml
+*.json text eol=lf
+
+# Make sure generated files uses LF
+**/generated/*.h text eol=lf
+*.sc    text eol=lf
+
+# Shell scripts require LF
+*.sh    text eol=lf
+
+# Batch scripts require CRLF
+*.bat   text eol=crlf
+
+# Windows text files
+
+*.csproj text eol=crlf
+*.filters text eol=crlf
+*.sln text eol=crlf
+*.vcxproj text eol=crlf
+*.rc text eol=crlf
+
+# MacOS text files
+*.pbxproj text eol=lf
+
+# Binary files
+
+*.a binary
+*.dll binary
+*.exe binary
+*.gif binary
+*.gzip binary
+*.ico binary
+*.jpg binary
+*.JPG binary
+*.o binary
+*.pdb binary
+*.png binary
+*.psd binary
+*.ttf binary
+*.svg binary
+
+# Project binary files
+
+*.dds binary
+*.mb binary
+*.physx_metadata binary
+*.raw binary

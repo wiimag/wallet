@@ -6,6 +6,8 @@
 #include "eod.h"
 #include "version.h"
 
+#include "backend.h"
+
 #include <framework/app.h>
 #include <framework/glfw.h>
 #include <framework/imgui.h>
@@ -23,9 +25,14 @@
 
 #define HASH_EOD static_hash_string("eod", 3, 0x35f39422e491f3e1ULL)
 
+#define EOD_URL "https://eodhistoricaldata.com"
+
+constexpr const char EOD_API_URL_KEY[] = "eod_api_url";
+
 static struct EOD_MODULE {
     
     char KEY[32] = { '\0' };
+    char API_URL[128] = EOD_URL "/api/";
     
     bool CONNECTED = true; // We assume that we are connected by default.
     
@@ -56,7 +63,35 @@ FOUNDATION_STATIC const char* eod_ensure_key_loaded()
     if (EOD->KEY[0] != '\0')
         return EOD->KEY;
 
-    const string_const_t& eod_key_file_path = session_get_user_file_path(STRING_CONST("eod.key"));
+    // Load the EOD user API url and ensure it ends with /
+    string_t eod_url{};
+    string_const_t eod_url_command_line{};
+    if (environment_argument("backend", &eod_url_command_line))
+    {
+        eod_url = string_copy(STRING_BUFFER(EOD->API_URL), STRING_ARGS(eod_url_command_line));
+
+        // Append the /api/
+        if (eod_url.str[eod_url.length - 1] != '/')
+            eod_url = string_append(EOD->API_URL, eod_url.length, sizeof(EOD->API_URL), STRING_CONST("/api/"));
+        else
+            eod_url = string_append(EOD->API_URL, eod_url.length, sizeof(EOD->API_URL), STRING_CONST("api/"));
+    }
+    else
+    {
+        eod_url = session_get_string(EOD_API_URL_KEY, STRING_BUFFER(EOD->API_URL), EOD_URL "/api/");
+    }
+
+    // Lets make sure the url ends with a / and starts with http
+    if (string_length(eod_url.str) < 4 || string_compare(eod_url.str, 4, STRING_CONST("http")) != 0)
+        eod_url = string_copy(STRING_BUFFER(EOD->API_URL), STRING_CONST(EOD_URL "/api/"));
+    else if (EOD->API_URL[string_length(EOD->API_URL) - 1] != '/')
+        string_append(EOD->API_URL, eod_url.length, sizeof(EOD->API_URL), STRING_CONST("/"));
+
+    string_const_t eod_api_key{};
+    if (environment_argument("eod-api-key", &eod_api_key))
+        return string_copy(STRING_BUFFER(EOD->KEY), STRING_ARGS(eod_api_key)).str;
+
+    string_const_t eod_key_file_path = session_get_user_file_path(STRING_CONST("eod.key"));
     if (!fs_is_file(STRING_ARGS(eod_key_file_path)))
         return string_copy(STRING_BUFFER(EOD->KEY), STRING_CONST("demo")).str;
     
@@ -142,7 +177,7 @@ string_const_t eod_build_url(const char* api, const char* ticker, query_format_t
     const char* api_key = eod_ensure_key_loaded();
     string_t EOD_URL_BUFFER = string_static_buffer(2048);
 
-    string_const_t HOST_API = string_const(STRING_CONST("https://eodhistoricaldata.com/api/"));
+    string_const_t HOST_API = string_const(EOD->API_URL, string_length(EOD->API_URL));
     string_t eod_url = string_copy(EOD_URL_BUFFER.str, EOD_URL_BUFFER.length, STRING_ARGS(HOST_API));
     eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, api, string_length(api));
     eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("/"));
@@ -197,7 +232,7 @@ const char* eod_build_image_url(const char* image_url, size_t image_url_length)
 {
     static thread_local char IMAGE_URL_BUFFER[2048];
 
-    string_const_t HOST_API = string_const(STRING_CONST("https://eodhistoricaldata.com"));
+    string_const_t HOST_API = string_const(EOD_URL);
     string_t url = string_copy(STRING_BUFFER(IMAGE_URL_BUFFER), STRING_ARGS(HOST_API));
     
     return string_append(STRING_ARGS_BUFFER(url, IMAGE_URL_BUFFER), image_url, image_url_length).str;
@@ -207,7 +242,7 @@ const char* eod_build_url(const char* api, query_format_t format, const char* ur
 {    
     static thread_local char URL_BUFFER[2048];
 
-    string_const_t HOST_API = CTEXT("https://eodhistoricaldata.com/api/");
+    string_const_t HOST_API = string_const(EOD->API_URL, string_length(EOD->API_URL));
     string_t url = string_copy(STRING_BUFFER(URL_BUFFER), STRING_ARGS(HOST_API));
     if (url.str[url.length - 1] != '/')
         url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("/"));
@@ -288,6 +323,49 @@ bool eod_fetch(const char* api, const char* ticker, query_format_t format, const
     return query_execute_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
 }
 
+char* eod_api_url_buffer()
+{
+    FOUNDATION_ASSERT(EOD);
+    return EOD->API_URL;
+}
+
+size_t eod_api_url_buffer_capacity()
+{
+    FOUNDATION_ASSERT(EOD);
+    return sizeof(EOD->API_URL);
+}
+
+const char* eod_save_api_url(const char* url)
+{
+    const size_t url_length = string_length(url); 
+    if (url_length == 0)
+    {
+        session_clear_value(EOD_API_URL_KEY);
+        return string_copy(STRING_BUFFER(EOD->API_URL), STRING_CONST(EOD_URL "/api/")).str;
+    }
+
+    FOUNDATION_ASSERT(EOD);
+    string_t saved_url = string_copy(STRING_BUFFER(EOD->API_URL), url, string_length(url));
+
+    // Ensure URL ends with a slash.
+    if (saved_url.str[saved_url.length - 1] != '/')
+        saved_url = string_append(STRING_ARGS_BUFFER(saved_url, EOD->API_URL), STRING_CONST("/"));
+
+    // Save to user settings.
+    if (!session_set_string(EOD_API_URL_KEY, STRING_ARGS(saved_url)))
+    {
+        log_warnf(HASH_EOD, WARNING_SYSTEM_CALL_FAIL, STRING_CONST("Failed to save EOD API URL to user settings"));
+        return nullptr;
+    }
+
+    return saved_url.str;
+}
+
+string_const_t eod_web_site_url()
+{
+    return string_const(EOD_URL);
+}
+
 bool eod_fetch_async(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 0*/)
 {
     string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
@@ -346,7 +424,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
     app_open_dialog("Enter EOD API KEY", [](void*)->bool
     {     
         // Explain that the EOD api needs to be set
-        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com"));
+        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST(EOD_URL));
         ImGui::TextWrapped(tr("EOD API Key is required to use this application."));
         ImGui::NewLine();
         ImGui::TrTextWrapped("You can get a free API key by registering at the link above. Please enter your API key below and press Continue");
@@ -441,7 +519,7 @@ FOUNDATION_STATIC void eod_main_menu_status()
             eod_refresh();
 
         ImGui::Separator();
-        ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com"));
+        ImGui::TextURL("EOD API Key", nullptr, STRING_CONST(EOD_URL));
         if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length,
             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_Password))
         {

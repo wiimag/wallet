@@ -54,7 +54,7 @@
 #endif
 
 #define VERSION_MAJOR                   0
-#define VERSION_MINOR                  13   // Latest feature: Add service.exe to execute commands from the command line
+#define VERSION_MINOR                  14   // Latest feature: Add new backend server to proxy requests
 #define VERSION_PATCH                   2   // Latest patch/fix: Rename service to module
 #define VERSION_BUILD                   GIT_REVCOUNT
 
