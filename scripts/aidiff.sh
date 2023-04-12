@@ -18,6 +18,7 @@ VERBOSE=0
 NO_COLOR=0
 COMMIT=0
 CACHED=0
+TEST=0
 COMMAND_COUNTER=0
 
 while [[ $# -gt 0 ]]; do
@@ -45,6 +46,10 @@ while [[ $# -gt 0 ]]; do
       ;;
     --cached)
       CACHED=1
+      shift # past argument
+      ;;
+    --test)
+      TEST=1
       shift # past argument
       ;;
     *)
@@ -168,7 +173,7 @@ HEADER_JSON="Content-Type: application/json"
 HEADER_AUTHORIZATION="Authorization: Bearer $OPENAI_API_KEY"
 
 # Define the diff arguments
-DIFF_ARGUMENTS=(--unified=1 --minimal --no-color -b -w --ignore-blank-lines)
+DIFF_ARGUMENTS=(--unified=0 --minimal --no-color -b -w --ignore-blank-lines)
 
 # For each file get the diff and pass it to OpenAI
 for MODIFIED_FILE in "${MODIFIED_FILES_ARRAY[@]}"
@@ -226,8 +231,20 @@ do
     # Remove all lines starting with "diff --git"
     DIFF=$(echo "$DIFF" | sed '/^diff --git/d')
 
+    # Remove all lines starting with "index"
+    DIFF=$(echo "$DIFF" | sed '/^index/d')
+
+    # Remove all lines starting with +++
+    DIFF=$(echo "$DIFF" | sed '/^+++/d')
+
+    # Remove all lines starting with ---
+    DIFF=$(echo "$DIFF" | sed '/^---/d')
+
+    # Remove all lines starting with @@
+    DIFF=$(echo "$DIFF" | sed '/^@@/d')
+
     # Truncate the DIFF to ~3500 characters
-    DIFF=$(echo $DIFF | cut -c -3500)
+    #DIFF=$(echo $DIFF | cut -c -3500)
 
     echo -ne "${bold}$MODIFIED_FILE:${normal} "
 
@@ -241,12 +258,12 @@ do
 $DIFF
 \`\`\` ---"
 
-    # Cleanup the prompt
-    PROMPT=$(echo $PROMPT | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
-    PROMPT=$(echo $PROMPT | sed 's/\t/\\t/g')
-    PROMPT=$(echo $PROMPT | sed 's/\n/\\n/g')
+    #echo "${PROMPT}"
 
-    #echo "$PROMPT"
+    # Cleanup the prompt
+    PROMPT=$(echo ${PROMPT//$'\n'/\\n} | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
+
+    #echo "${PROMPT//$'\n'/\\n}"
 
     # Get file base name
     FILE_BASE_NAME=$(basename $MODIFIED_FILE)
@@ -257,7 +274,7 @@ $DIFF
     # Generate a JSON file under artifacts for the given file to send the prompt to OpenAI
     echo "{" > $JSON_PROMPT_FILE_PATH
     echo "  \"model\": \"text-davinci-003\"," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"prompt\": \"$PROMPT\"," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"prompt\": \"${PROMPT}\"," >> $JSON_PROMPT_FILE_PATH
     echo "  \"temperature\": 0.1," >> $JSON_PROMPT_FILE_PATH
     echo "  \"max_tokens\": 150," >> $JSON_PROMPT_FILE_PATH
     echo "  \"top_p\": 0.5," >> $JSON_PROMPT_FILE_PATH
@@ -267,7 +284,11 @@ $DIFF
     echo "}" >> $JSON_PROMPT_FILE_PATH
 
     # Run curl to send the prompt to OpenAI
-    SUMMARY_JSON=$(curl -s -X POST https://api.openai.com/v1/completions -H "$HEADER_JSON" -H "$HEADER_AUTHORIZATION" -d @$JSON_PROMPT_FILE_PATH)
+    if [ $TEST -eq 0 ]; then
+        SUMMARY_JSON=$(curl -s -X POST https://api.openai.com/v1/completions -H "$HEADER_JSON" -H "$HEADER_AUTHORIZATION" -d @$JSON_PROMPT_FILE_PATH)
+    else
+        SUMMARY_JSON="curl -s -X POST https://api.openai.com/v1/completions -H \"$HEADER_JSON\" -H \"$HEADER_AUTHORIZATION\" -d @$JSON_PROMPT_FILE_PATH"
+    fi    
 
     # Extract the summary from the JSON response from the "text": "..." field, make sure to preserve espaced characters
     SUMMARY=$(echo $SUMMARY_JSON | sed 's/.*"text":"//' | sed 's/"[,\}].*//')
@@ -333,7 +354,11 @@ $(cat $ALL_SUMMARIES_FILE_PATH)
     echo "}" >> $JSON_PROMPT_FILE_PATH
 
     # Run curl to send the prompt to OpenAI
-    SUMMARY_JSON=$(curl -s -X POST https://api.openai.com/v1/completions -H "$HEADER_JSON" -H "$HEADER_AUTHORIZATION" -d @$JSON_PROMPT_FILE_PATH)
+    if [ $TEST -eq 0 ]; then
+        SUMMARY_JSON=$(curl -s -X POST https://api.openai.com/v1/completions -H "$HEADER_JSON" -H "$HEADER_AUTHORIZATION" -d @$JSON_PROMPT_FILE_PATH)
+    else
+        SUMMARY_JSON="curl -s -X POST https://api.openai.com/v1/completions -H \"$HEADER_JSON\" -H \"$HEADER_AUTHORIZATION\" -d @$JSON_PROMPT_FILE_PATH"
+    fi
 
     # Parse the summary from the JSON response from the "text": "..." field, make sure to preserve espaced characters
     SUMMARY=$(echo $SUMMARY_JSON | sed 's/.*"text":"//' | sed 's/"[,\}].*//')
@@ -368,7 +393,8 @@ if [ $COMMIT -eq 1 ]; then
     
 else
 
-    # If --commit flag was not used, open the commit message file in the default editor
-    start ${COMMIT_MESSAGE_FILE_PATH}
-
+    if [ $TEST -eq 0 ]; then
+      # If --commit flag was not used, open the commit message file in the default editor
+      start ${COMMIT_MESSAGE_FILE_PATH}
+    fi
 fi
