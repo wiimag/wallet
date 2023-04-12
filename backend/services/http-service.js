@@ -6,15 +6,15 @@
 
 const _ = require('lodash');
 const path = require('path'),
+    fs = require('fs'),
+    https = require('https'),
     express = require('express'),
     logger = require('morgan'),
-    opts = require('minimist')(process.argv.slice(2));
-const cors = require('cors');
-const fileUpload = require('express-fileupload');
+    opts = require('minimist')(process.argv.slice(2)),
+    cors = require('cors'),
+    fileUpload = require('express-fileupload');
 
-const fs = require('fs');
-const https = require('https');
-
+// Setup the HTTPS credentials and certificate
 let credentials = null;
 let useHttps = opts['use-https'];
 if (useHttps) {
@@ -48,9 +48,9 @@ if (useHttps) {
 /**
  * @typedef {express.Response} Response
  * @property {function(Object):void} json - Commits a JSON payload
- * @property {function(Object):void} send - Commits a JSON payload
- * @property {function(Object):void} status - Commits a JSON payload
- * @property {function(Object):void} end - Commits a JSON payload
+ * @property {function(Object):void} send - Commits message
+ * @property {function(Object):void} status - Commits request status
+ * @property {function(Object):void} end - Commits response
  */
 
 /**
@@ -105,6 +105,9 @@ function _getIP() {
     return ip;
 }
 
+/**
+ * @class HttpService - HTTP server service
+ */
 class HttpService {
     constructor () {
 
@@ -194,6 +197,11 @@ class HttpService {
         });
     }
 
+    /**
+     * Checks if the given object is a promise
+     * @param {any} p - Object to check
+     * @returns {boolean}
+     */
     isPromise(p) {
         if (
           typeof p === 'object' &&

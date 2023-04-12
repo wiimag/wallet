@@ -505,7 +505,7 @@ void app_menu_help(GLFWwindow* window)
     }
     #endif
 
-    #if BUILD_DEVELOPMENT && BUILD_ENABLE_MEMORY_TRACKER && BUILD_ENABLE_MEMORY_CONTEXT
+    #if BUILD_DEBUG && BUILD_ENABLE_MEMORY_TRACKER && BUILD_ENABLE_MEMORY_CONTEXT
     if (ImGui::TrMenuItem("Show Memory Usages"))
     {
         console_show();

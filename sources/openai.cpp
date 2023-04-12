@@ -1034,7 +1034,7 @@ string_t* openai_generate_summary_sentiment(
             }
 
             string_const_t payload = res.to_string();
-            log_infof(HASH_OPENAI, STRING_CONST("Response: %.*s"), STRING_FORMAT(payload));
+            log_debugf(HASH_OPENAI, STRING_CONST("Response: %.*s"), STRING_FORMAT(payload));
 
             string_const_t first_choice = res["choices"].get(0ULL)["text"].as_string();
             

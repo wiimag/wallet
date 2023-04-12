@@ -12,6 +12,13 @@ module.exports = (function () {
 
     const { readdir, stat } = require('fs/promises');
 
+    /**
+     * Remove a directory recursively
+     * @param {string} dirPath - The path to the directory
+     * @param {boolean} removeSelf - Whether to remove the directory itself
+     * @returns {void}
+     * @example rmDir('C:/Users/JohnDoe/Desktop/MyFolder', true); 
+     */
     function rmDir(dirPath, removeSelf) {
         var files = [];
         if (removeSelf === undefined) {
@@ -34,6 +41,12 @@ module.exports = (function () {
         }
     }
 
+    /**
+     * Get all files and directories in a directory
+     * @param {string} srcPath - The path to the directory
+     * @param {function} cb - The callback function
+     * @returns {array} The files and directories in the directory
+     */
     function getDirItems(srcPath, cb) {
         fs.readdir(srcPath, function (err, files) {
             if(err) {
@@ -53,6 +66,12 @@ module.exports = (function () {
         });
     }
 
+    /**
+     * Get the directories in a directory
+     * @param {string} srcPath - The path to the directory
+     * @param {function} cb - The callback function
+     * @returns {array} The directories in the directory
+     */
     function getDirs(srcPath, cb) {
         fs.readdir(srcPath, function (err, files) {
             if(err) {
@@ -72,11 +91,21 @@ module.exports = (function () {
         });
     }
 
+    /**
+     * Get the size of a file in bytes
+     * @param {string} filename - The path to the file
+     * @returns {number} The size of the file in bytes
+     */
     function getFileSizeInBytes(filename) {
         var stats = fs.statSync(filename);
         return stats.size;
     }
 
+    /**
+     * Get the size of a directory recursively
+     * @param {string} dir - The path to the directory
+     * @returns {number} The size of the directory in bytes
+     */
     const dirSize = async dir => {
         const files = await readdir( dir, { withFileTypes: true } );
     
@@ -97,6 +126,11 @@ module.exports = (function () {
         return ( await Promise.all( paths ) ).flat( Infinity ).reduce( ( i, size ) => i + size, 0 );
     }
     
+    /**
+     * Count the number of files in a directory recursively
+     * @param {string} dirPath - The path to the directory
+     * @returns {number} The number of files in the directory
+     */
     const dirCount = async dirPath => {
         // Count the number of files in a directory recursively
         const files = await readdir(dirPath, { withFileTypes: true });

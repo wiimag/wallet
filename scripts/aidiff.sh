@@ -109,17 +109,36 @@ if [ ${#POSITIONAL_ARGS[@]} -gt 0 ]; then
 fi
 
 # Run git command to extract the list of modified files
+if [ $VERBOSE -eq 1 ]; then
+  echo -e "${bold}Running git command to extract the list of modified files:${normal}"
+fi
+
 if [ -z "$COMMIT_REVISION" ]; then
     USE_RANGE_COMMIT=0
     MODIFIED_FILES=$(git -c core.safecrlf=false diff --name-only ${POSITIONAL_ARGS[@]} $EXTRA_COMMIT_ARGS)
+
+    # Print command line if using --verbose
+    if [ $VERBOSE -eq 1 ]; then
+        echo "> git -c core.safecrlf=false diff --name-only ${POSITIONAL_ARGS[@]} $EXTRA_COMMIT_ARGS"
+    fi
 elif [ ${#POSITIONAL_ARGS[@]} -eq 1 ]; then
     # If we only have one revision then format with COMMIT_REVISION~1 COMMIT_REVISION
     USE_RANGE_COMMIT=0
     MODIFIED_FILES=$(git -c core.safecrlf=false diff --name-only ${COMMIT_REVISION}~1 $COMMIT_REVISION $EXTRA_COMMIT_ARGS)
+
+    # Print command line if using --verbose
+    if [ $VERBOSE -eq 1 ]; then
+        echo "> git -c core.safecrlf=false diff --name-only ${COMMIT_REVISION}~1 $COMMIT_REVISION $EXTRA_COMMIT_ARGS"
+    fi
 else
     echo "Here"
     USE_RANGE_COMMIT=1
     MODIFIED_FILES=$(git -c core.safecrlf=false diff --name-only ${POSITIONAL_ARGS[@]} $EXTRA_COMMIT_ARGS])
+
+    # Print command line if using --verbose
+    if [ $VERBOSE -eq 1 ]; then
+        echo "> git -c core.safecrlf=false diff --name-only ${POSITIONAL_ARGS[@]} $EXTRA_COMMIT_ARGS"
+    fi
 fi
 
 # Split the list of modified files into an array
@@ -150,18 +169,32 @@ HEADER_AUTHORIZATION="Authorization: Bearer $OPENAI_API_KEY"
 
 # For each file get the diff and pass it to OpenAI
 #echo "Modified files:"
+# Add the following arguments "--unified=1 --minimal --no-color -b -w --ignore-blank-lines" to DIFF_ARGUMENTS
+DIFF_ARGUMENTS=(--unified=1 --minimal --no-color -b -w --ignore-blank-lines)
+
 for MODIFIED_FILE in "${MODIFIED_FILES_ARRAY[@]}"
 do
     # Get the file diff, make sure git do not output any warnings
     if [ $USE_RANGE_COMMIT -eq 1 ]; then
-        DIFF=$(git -c core.safecrlf=false diff ${POSITIONAL_ARGS[@]} -- $MODIFIED_FILE 2>&1)
+        DIFF=$(git -c core.safecrlf=false diff ${DIFF_ARGUMENTS[@]} ${POSITIONAL_ARGS[@]} -- $MODIFIED_FILE 2>&1)
+        # If using --verbose print the diff command
+        if [ $VERBOSE -eq 1 ]; then
+            echo "> git -c core.safecrlf=false diff ${DIFF_ARGUMENTS[@]} ${POSITIONAL_ARGS[@]} -- $MODIFIED_FILE"
+        fi
     else
-        DIFF=$(git -c core.safecrlf=false diff ${COMMIT_REVISION}~1 $COMMIT_REVISION -- $MODIFIED_FILE 2>&1)
-    fi
-
-    # If using --verbose print the diff command
-    if [ $VERBOSE -eq 1 ]; then
-        echo "> git -c core.safecrlf=false show ${POSITIONAL_ARGS[@]} -- $MODIFIED_FILE"
+        if [ -z "$COMMIT_REVISION" ]; then
+          DIFF=$(git -c core.safecrlf=false diff ${DIFF_ARGUMENTS[@]} -- $MODIFIED_FILE)
+          # If using --verbose print the diff command
+          if [ $VERBOSE -eq 1 ]; then
+              echo "> git -c core.safecrlf=false diff ${DIFF_ARGUMENTS[@]} -- $MODIFIED_FILE"
+          fi
+        else
+          DIFF=$(git -c core.safecrlf=false diff ${DIFF_ARGUMENTS[@]} ${COMMIT_REVISION}~1 $COMMIT_REVISION -- $MODIFIED_FILE 2>&1)
+          # If using --verbose print the diff command
+          if [ $VERBOSE -eq 1 ]; then
+              echo "> git -c core.safecrlf=false diff ${DIFF_ARGUMENTS[@]} ${COMMIT_REVISION}~1 $COMMIT_REVISION -- $MODIFIED_FILE"
+          fi
+        fi
     fi
 
     # Check if last git command failed
@@ -175,13 +208,13 @@ do
         continue
     fi
 
-    # Truncate the DIFF to ~3000 characters
+    # Truncate the DIFF to ~3500 characters
     DIFF=$(echo $DIFF | cut -c -3500)
 
     echo -ne "${bold}$MODIFIED_FILE:${normal} "
 
     # Generate a prompt for OpenAI
-    PROMPT="These are changes to $MODIFIED_FILE. Please summarize the changes in this file in a single sentence. The summary should be short and to the point.".
+    PROMPT="Please summarize the following changes in a short and consice way:"
 
     # Add the diff to the prompt on a new line
     PROMPT="$PROMPT
@@ -207,11 +240,11 @@ $DIFF
     echo "{" > $JSON_PROMPT_FILE_PATH
     echo "  \"model\": \"text-davinci-003\"," >> $JSON_PROMPT_FILE_PATH
     echo "  \"prompt\": \"$PROMPT\"," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"temperature\": 0.2," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"max_tokens\": 200," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"top_p\": 0.8," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"frequency_penalty\": 0.9," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"presence_penalty\": 0.6," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"temperature\": 0.1," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"max_tokens\": 150," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"top_p\": 0.5," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"frequency_penalty\": 0.8," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"presence_penalty\": 0.2," >> $JSON_PROMPT_FILE_PATH
     echo "  \"stop\": [\"---\"]" >> $JSON_PROMPT_FILE_PATH
     echo "}" >> $JSON_PROMPT_FILE_PATH
 
@@ -273,11 +306,11 @@ $(cat $ALL_SUMMARIES_FILE_PATH)
     echo "{" > $JSON_PROMPT_FILE_PATH
     echo "  \"model\": \"text-davinci-003\"," >> $JSON_PROMPT_FILE_PATH
     echo "  \"prompt\": \"$PROMPT\"," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"temperature\": 0.1," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"max_tokens\": 100," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"temperature\": 0.2," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"max_tokens\": 90," >> $JSON_PROMPT_FILE_PATH
     echo "  \"top_p\": 1," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"frequency_penalty\": 0.2," >> $JSON_PROMPT_FILE_PATH
-    echo "  \"presence_penalty\": 0.2," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"frequency_penalty\": 0.1," >> $JSON_PROMPT_FILE_PATH
+    echo "  \"presence_penalty\": 0.8," >> $JSON_PROMPT_FILE_PATH
     echo "  \"stop\": [\"---\"]" >> $JSON_PROMPT_FILE_PATH
     echo "}" >> $JSON_PROMPT_FILE_PATH
 

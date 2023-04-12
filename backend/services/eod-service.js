@@ -63,6 +63,10 @@ class EodService {
             throw new Error('EOD_API_KEY environment variable is not set.');
         }
 
+        // Initialize the realtime cache
+        this.realtime = {};
+        this.gmtoffset = (new Date()).getTimezoneOffset() * 60 * 1000;
+
         // Create the EOD proxy
         this.eodProxy = proxy.createProxyMiddleware({
             target: this.eodUrl,
@@ -70,6 +74,22 @@ class EodService {
             secure: true,
             onProxyReq: (proxyReq, req, res) => this.eodProxyRequest(proxyReq, req, res),
             onProxyRes: (proxyRes, req, res) => this.writeCache(proxyRes, req, res)
+        });
+
+        this.eodRealtimeProxy = proxy.createProxyMiddleware({
+            secure: true,
+            changeOrigin: true,
+            target: this.eodUrl,
+            onProxyReq: (proxyReq, req, res) => this.eodProxyRequest(proxyReq, req, res),
+            onProxyRes: (proxyRes, req, res) => {
+                let body = [];
+                proxyRes.on('data', (chunk) => {
+                    body.push(chunk);
+                }).on('end', () => {
+                    let json = JSON.parse(Buffer.concat(body).toString());
+                    this.realtime[req.path] = json;
+                });
+            }
         });
 
         // Create the Google proxy
@@ -123,8 +143,8 @@ class EodService {
                         // Check if the api_token query param is 'wallet', if so, 
                         // lets transform the JSON response to hide the name and email  
                         if (req.query.api_token === 'wallet') {
-                            json.name = 'Wallet';
-                            json.email = 'info@wiimag.com';
+                            json.name = 'Beta';
+                            json.email = 'wallet@wiimag.com';
                         }
 
                         return resolve(res.json(json));
@@ -141,11 +161,11 @@ class EodService {
             }
         }));
 
+        // curl -X GET -s http://localhost/api/real-time/U.US | json_pp
+        httpService.register('get', '/api/real-time/:symbol', this.routeRealtime.bind(this));
+
         // curl -X GET -s http://localhost/api/eod/U.US | json_pp
         httpService.register('get', '/api/eod/:symbol', this.routeForwardEodRequest.bind(this, 'eod', 1 * WORKING_DAYS));
-
-        // curl -X GET -s http://localhost/api/real-time/U.US | json_pp
-        httpService.register('get', '/api/real-time/:symbol', this.routeForwardEodRequest.bind(this, 'realtime', 5 * MINUTES));
 
         // curl -X GET -s http://localhost/api/technical/U.US?function=splitadjusted | json_pp
         httpService.register('get', '/api/technical/:symbol', this.routeForwardEodRequest.bind(this, 'technical', 1 * WORKING_DAYS));
@@ -292,6 +312,13 @@ class EodService {
         });
     }
 
+    /**
+     * Write the response to the cache.
+     * @param {any} proxyRes - The HTTP response.
+     * @param {HttpService.RequestCacheSettings} req - The HTTP request.
+     * @param {HttpService.Response} res - The HTTP response.
+     * @returns {void}
+     */
     writeCache (proxyRes, /** @type {HttpService.RequestCacheSettings} */ req, res) {
 
         // Check if the request is a cacheable request
@@ -315,6 +342,12 @@ class EodService {
         }
     }
 
+    /**
+     * Proxy the request to the OpenAI API.
+     * @param {HttpService.Request} req - The HTTP request.
+     * @param {HttpService.Response} res - The HTTP response.
+     * @returns {void}
+     */
     openAIProxyRequest (proxyReq, req, res) {
 
         // Add keep alive header if not present
@@ -333,6 +366,12 @@ class EodService {
         }
     }
 
+    /**
+     * Proxy the request to the Google Search API.
+     * @param {HttpService.Request} req - The HTTP request.
+     * @param {HttpService.Response} res - The HTTP response.
+     * @returns {void}
+     */
     googleSearchProxyRequest (proxyReq, req, res) {
         // Check if the query param fmt is set to json, if not, then add it
         if (!req.query.cx) {
@@ -355,6 +394,12 @@ class EodService {
         }
     }
 
+    /**
+     * Proxy the request to the EOD API.
+     * @param {HttpService.Request} req - The HTTP request.
+     * @param {HttpService.Response} res - The HTTP response.
+     * @returns {void}
+     */
     eodProxyRequest (proxyReq, req, res) {
         // Check if the query param fmt is set to json, if not, then add it
         if (!req.query.fmt) {
@@ -401,6 +446,29 @@ class EodService {
         };
 
         res.json(status);
+    }
+
+    /**
+     * Polls the EOD API for the latest real-time data.
+     */
+    routeRealtime (req, res, next) {
+        // Check if the query param `s` is set
+        if (req.query.s) {
+            // If so, then we are requesting a specific date
+            return this.routeForwardEodRequest('real-time', 0, req, res, next);
+        }
+
+        // Check if the symbol is in the cache
+        let rt = this.realtime[req.path];
+        let utcTimestamp = Date.now() - this.gmtoffset;
+        if (rt && rt.timestamp && (rt.timestamp * 1000) > utcTimestamp - 5 * MINUTES) {
+            // If so, return the cached value
+            return res.json(rt);
+        }
+
+        // Otherwise, forward the request to the EOD API
+        console.log(`Fetching ${req.params.symbol} realtime data...`);
+        return this.eodRealtimeProxy(req, res, next);
     }
 
     /**

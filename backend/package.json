@@ -4,8 +4,7 @@
   "description": "Wallet Cloud Services",
   "main": "main.js",
   "scripts": {
-    "start": "node main.js --port=80",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node main.js --port=80"
   },
   "repository": {
     "type": "git",
