@@ -243,17 +243,13 @@ do
     # Remove all lines starting with @@
     DIFF=$(echo "$DIFF" | sed '/^@@/d')
 
-    # Truncate the DIFF to ~3500 characters
-    #DIFF=$(echo $DIFF | cut -c -3500)
+    # Truncate the DIFF if it is too long
+    DIFF=$(echo $DIFF | cut -c -5500)
 
     echo -ne "${bold}$MODIFIED_FILE:${normal} "
 
     # Generate a prompt for OpenAI
-    PROMPT="Please summarize the following changes in a short and consice way:"
-
-    # Add the diff to the prompt on a new line
-    PROMPT="$PROMPT
-
+    PROMPT="Please summarize the following changes in a short and consice way:
 \`\`\`
 $DIFF
 \`\`\` ---"
@@ -317,17 +313,12 @@ done
 if [ ${#MODIFIED_FILES_ARRAY[@]} -gt 1 ]; then
 
     # Generate a prompt for OpenAI
-    PROMPT="These are changes to multiple files. Please consolidate the changes in these files in a single sentence and markdown format for symbol decoration. The summary should be short and to the point.".
-
-    # Add the summary to the prompt on a new line
-    PROMPT="$PROMPT 
+    PROMPT="Please consolidate the following changes in a single sentence. The summary should be short and to the point:
 $(cat $ALL_SUMMARIES_FILE_PATH)
 ---"
 
     # Cleanup the prompt to make sure it is valid JSON
-    PROMPT=$(echo $PROMPT | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
-    PROMPT=$(echo $PROMPT | sed 's/\t/\\t/g')
-    PROMPT=$(echo $PROMPT | sed 's/\n/\\n/g')
+    PROMPT=$(echo ${PROMPT//$'\n'/\\n} | sed 's/\\/\\\\/g' | sed 's/"/\\"/g')
 
     # If COMMIT_REVISION is empty, use the current branch name
     if [ -z "$COMMIT_REVISION" ]; then
