@@ -167,13 +167,28 @@ echo "" > $ALL_SUMMARIES_FILE_PATH
 HEADER_JSON="Content-Type: application/json"
 HEADER_AUTHORIZATION="Authorization: Bearer $OPENAI_API_KEY"
 
-# For each file get the diff and pass it to OpenAI
-#echo "Modified files:"
-# Add the following arguments "--unified=1 --minimal --no-color -b -w --ignore-blank-lines" to DIFF_ARGUMENTS
+# Define the diff arguments
 DIFF_ARGUMENTS=(--unified=1 --minimal --no-color -b -w --ignore-blank-lines)
 
+# For each file get the diff and pass it to OpenAI
 for MODIFIED_FILE in "${MODIFIED_FILES_ARRAY[@]}"
 do
+
+    # Run command to check if the file is binary or text.
+    # If the file is binary then skip it
+    if [ $VERBOSE -eq 1 ]; then
+        echo -e "${bold}Running git command to check if the file is binary or text:${normal}"
+    fi
+
+    # Get the file type
+    FILE_TYPE=$(git check-attr --cached --all $MODIFIED_FILE <<< "diff: diff" | cut -d: -f2 | tr -d ' ' | head -n 1)
+
+    # If the file is binary then skip it
+    if [ "$FILE_TYPE" == "binary" ]; then
+        echo -e "${bold}Skipping binary file:${normal} $MODIFIED_FILE"
+        continue
+    fi
+
     # Get the file diff, make sure git do not output any warnings
     if [ $USE_RANGE_COMMIT -eq 1 ]; then
         DIFF=$(git -c core.safecrlf=false diff ${DIFF_ARGUMENTS[@]} ${POSITIONAL_ARGS[@]} -- $MODIFIED_FILE 2>&1)
@@ -207,6 +222,9 @@ do
     if [ -z "$DIFF" ]; then
         continue
     fi
+
+    # Remove all lines starting with "diff --git"
+    DIFF=$(echo "$DIFF" | sed '/^diff --git/d')
 
     # Truncate the DIFF to ~3500 characters
     DIFF=$(echo $DIFF | cut -c -3500)
