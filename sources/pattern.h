@@ -91,6 +91,7 @@ struct pattern_t
     double_option_t yy_ratio{ DNAN };
     double_option_t performance_ratio{ DNAN };
     double_option_t years{ DNAN };
+    mutable double_option_t average_volume_3months{ DNAN };
 
     // Persisted data
     bool opened{ true };
@@ -132,4 +133,6 @@ pattern_handle_t pattern_open_window(const char* symbol, size_t symbol_length);
 
 bool pattern_menu_item(const char* symbol, size_t symbol_length);
 
-double pattern_get_bid_price(pattern_handle_t pattern_handle);
+double pattern_get_bid_price_low(pattern_handle_t pattern_handle);
+
+double pattern_get_bid_price_high(pattern_handle_t pattern_handle);

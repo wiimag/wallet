@@ -2430,6 +2430,8 @@ FOUNDATION_STATIC string_template_token_t* string_template_tokens(const char* fo
                             t.options |= StringTokenOption::Round;
                         else if (string_equal(STRING_ARGS(opts), STRING_ARGS(TRANSLATE_OPTION)))
                             t.options |= StringTokenOption::Translate;
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(ABBREVIATE_OPTION)))
+                            t.options |= StringTokenOption::Abbreviate;
                         else if (colon == STRING_NPOS) // An options starting with : is valid and is used to provide a value description
                         {
                             FOUNDATION_ASSERT_FAILFORMAT("Invalid template argument options (%.*s)", STRING_FORMAT(opts));
@@ -2603,6 +2605,30 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
                 currency_value = (double)values[t.index].i;
 
             bufpos += string_from_currency(buffer + bufpos, capacity - bufpos, currency_value).length;
+        }
+        else if (test(t.options, StringTokenOption::Abbreviate) && string_template_argument_type_is_number(type))
+        {
+            if ((type == StringArgumentType::DOUBLE || type == StringArgumentType::FLOAT) && !math_real_is_finite(values[t.index].f))
+            {
+                bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_CONST("-")).length;
+            }
+            else
+            {
+                int64_t value = math_round(values[t.index].f);
+                if (type == StringArgumentType::INT32 || type == StringArgumentType::INT64 || type == StringArgumentType::UINT32 || type == StringArgumentType::UINT64)
+                    value = values[t.index].i;
+
+                if (value > 1e12)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%lldT"), value / 1000000000000LL).length;
+                else if (value > 1e9)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%lldG"), value / 1000000000LL).length;
+                else if (value > 1e6)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%lldM"), value / 1000000LL).length;
+                else if (value > 1e3)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%lldK"), value / 1000LL).length;
+                else
+                    bufpos += string_from_int(buffer + bufpos, capacity - bufpos, value, t.precision, 0).length;
+            }
         }
         else if (test(t.options, StringTokenOption::StringTableSymbol) && type == StringArgumentType::INT32)
         {

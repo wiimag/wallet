@@ -129,6 +129,7 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
     string_table_symbol_t url{};
     string_table_symbol_t logo{};
     string_table_symbol_t exchange{};
+    double market_cap{ DNAN };
     double shares_count{ DNAN };
     double low_52{ DNAN };
     double high_52{ DNAN };

@@ -309,6 +309,17 @@ FOUNDATION_FORCEINLINE constexpr time_t const time_one_day()
     return one_day;
 }
 
+/*! Convert a time date to a tick count. 
+ *
+ *  @param time Time date to convert
+ *  
+ *  @returns Tick count
+ */
+FOUNDATION_FORCEINLINE tick_t time_to_tick(time_t time)
+{
+    return (tick_t)time * 1000;
+}
+
 ////////////////////////////////////////////////////////////////////////////
 // ## Misc generic functions
 

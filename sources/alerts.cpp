@@ -3,13 +3,12 @@
  * License: https://equals-forty-two.com/LICENSE
  */
 
-#if BUILD_APPLICATION
-
 #include "alerts.h"
 
 #include "logo.h"
 #include "pattern.h"
 
+#include <framework/app.h>
 #include <framework/expr.h>
 #include <framework/imgui.h>
 #include <framework/array.h>
@@ -33,6 +32,7 @@ struct expr_evaluator_t
     char expression[1024]{ '\0' };
     double frequency{ 60.0 * 5 }; // 5 minutes
 
+    time_t creation_date{ 0 };
     time_t last_run_time{ 0 };
     time_t triggered_time{ 0 };
     bool discarded{ false };
@@ -42,7 +42,6 @@ static struct ALERTS_MODULE {
     expr_evaluator_t*   evaluators = nullptr;
 
     bool                show_window{ false };
-    bool                has_ever_show_evaluators{ false };
     bool                new_notifications{ false };
 
     tick_t              last_evaluation{ 0 };
@@ -67,6 +66,7 @@ FOUNDATION_STATIC expr_evaluator_t* alerts_load_evaluators(const config_handle_t
         e.last_run_time = (time_t)cv["last_run_time"].as_number((double)time_now());
         e.triggered_time = (time_t)cv["triggered_time"].as_number(0);
         e.discarded = cv["discarded"].as_boolean(false);
+        e.creation_date = (time_t)cv["created"].as_number((double)time_now());
 
         array_push_memcpy(evaluators, &e);
     }
@@ -87,6 +87,7 @@ FOUNDATION_STATIC void alerts_save_evaluators(const expr_evaluator_t* evaluators
             config_set(ecv, "label", e.description, string_length(e.description));
             config_set(ecv, "expression", e.expression, string_length(e.expression));
             config_set(ecv, "frequency", e.frequency);
+            config_set(ecv, "created", (double)e.creation_date);
             config_set(ecv, "last_run_time", (double)e.last_run_time);
             config_set(ecv, "triggered_time", (double)e.triggered_time);
             config_set(ecv, "discarded", e.discarded);
@@ -212,16 +213,17 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
         ImGuiTableFlags_RowBg | 
         ImGuiTableFlags_Reorderable |
         ImGuiTableFlags_Hideable;
-    if (ImGui::BeginTable("Alerts##6", 5, table_display_flags))
+    if (ImGui::BeginTable("Alerts##14", 6, table_display_flags))
     {
-        ImGui::TableSetupColumn(tr("Title"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(80));
-        ImGui::TableSetupColumn(tr("Description"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(160));
+        ImGui::TableSetupColumn(tr("Title"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(125));
+        ImGui::TableSetupColumn(tr("Created"), ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultHide, IM_SCALEF(140));
+        ImGui::TableSetupColumn(tr("Description"), ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(250));
         ImGui::TableSetupColumn(tr("Expression"), ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn(tr("Frequency||Frequency in seconds"), ImGuiTableColumnFlags_DefaultHide);
+        ImGui::TableSetupColumn(tr("Frequency||Frequency in seconds"), ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_DefaultHide, IM_SCALEF(100));
         ImGui::TableSetupColumn(tr("Status"),
             ImGuiTableColumnFlags_WidthFixed |
             ImGuiTableColumnFlags_NoHeaderLabel |
-            ImGuiTableColumnFlags_NoResize, IM_SCALEF(20));
+            ImGuiTableColumnFlags_NoResize, IM_SCALEF(22));
         ImGui::TableHeadersRow();
 
         // New row
@@ -230,11 +232,16 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
             bool add_alert = false;
             static expr_evaluator_t new_entry;
 
+            // Title
             if (ImGui::TableNextColumn())
             {
                 ImGui::ExpandNextItem();
                 ImGui::InputTextWithHint("##Title", "U.US", STRING_BUFFER(new_entry.title), ImGuiInputTextFlags_EnterReturnsTrue);
             }
+
+            // Creation date
+            if (ImGui::TableNextColumn())
+                ImGui::TextUnformatted("-");
 
             if (ImGui::TableNextColumn())
             {
@@ -260,6 +267,7 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
                 ImGui::BeginDisabled(new_entry.expression[0] == 0);
                 if (ImGui::Button(ICON_MD_ADD) || add_alert)
                 {
+                    new_entry.creation_date = time_now();
                     array_insert_memcpy_safe(evaluators, 0, &new_entry);
 
                     // Reset static entry
@@ -274,144 +282,149 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
         {
             expr_evaluator_t& ev = evaluators[i];
             ImGui::TableNextRow(ImGuiTableRowFlags_None);
+            bool evaluate_expression = false;
+
+            ImGui::PushID(&ev);
+
+            // Title
+            if (ImGui::TableNextColumn())
             {
-                bool evaluate_expression = false;
-
-                ImGui::PushID(&ev);
-
-                // Title
-                if (ImGui::TableNextColumn())
+                ImVec2 logo_size{ IM_SCALEF(18), IM_SCALEF(18) };
+                string_const_t title = string_const(ev.title, string_length(ev.title));
+                if (logo_render_icon(STRING_ARGS(title), logo_size))
                 {
-                    ImVec2 logo_size{ IM_SCALEF(18), IM_SCALEF(18) };
-                    string_const_t title = string_const(ev.title, string_length(ev.title));
-                    if (logo_render_icon(STRING_ARGS(title), logo_size))
-                    {
-                        ImGui::Dummy(logo_size);
-                        ImGui::SameLine();
-                    }
-
-                    static float open_button_width = 10.0f;
-                    const bool has_title = ev.title[0] != 0;
-                    ImGui::ExpandNextItem(has_title ? open_button_width : 0.0f, has_title);
-                    if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_BUFFER(ev.title), ImGuiInputTextFlags_EnterReturnsTrue))
-                        evaluate_expression = true;
-
-                    if (has_title)
-                    {
-                        // Open pattern in floating window
-                        ImGui::SameLine();
-                        if (ImGui::Button(ICON_MD_OPEN_IN_NEW))
-                            pattern_open_window(ev.title, string_length(ev.title));
-                        open_button_width = ImGui::GetItemRectSize().x;
-                    }
+                    ImGui::Dummy(logo_size);
+                    ImGui::SameLine();
                 }
 
-                // Description
-                if (ImGui::TableNextColumn())
+                static float open_button_width = 10.0f;
+                const bool has_title = ev.title[0] != 0;
+                ImGui::ExpandNextItem(has_title ? open_button_width : 0.0f, has_title);
+                if (ImGui::InputTextWithHint("##Title", "AAPL.US", STRING_BUFFER(ev.title), ImGuiInputTextFlags_EnterReturnsTrue))
+                    evaluate_expression = true;
+
+                if (has_title)
                 {
-                    ImGui::ExpandNextItem();
-                    if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(ev.description), ImGuiInputTextFlags_EnterReturnsTrue))
-                        evaluate_expression = true;
+                    // Open pattern in floating window
+                    ImGui::SameLine();
+                    if (ImGui::Button(ICON_MD_OPEN_IN_NEW))
+                        pattern_open_window(ev.title, string_length(ev.title));
+                    open_button_width = ImGui::GetItemRectSize().x;
                 }
+            }
 
-                // Expression
-                if (ImGui::TableNextColumn())
+            // Creation date
+            if (ImGui::TableNextColumn())
+            {
+                string_const_t datestr = string_from_time_static(time_to_tick(ev.creation_date), true);
+                ImGui::TextUnformatted(STRING_RANGE(datestr));
+            }
+
+            // Description
+            if (ImGui::TableNextColumn())
+            {
+                ImGui::ExpandNextItem();
+                if (ImGui::InputTextWithHint("##Label", "Description", STRING_BUFFER(ev.description), ImGuiInputTextFlags_EnterReturnsTrue))
+                    evaluate_expression = true;
+            }
+
+            // Expression
+            if (ImGui::TableNextColumn())
+            {
+                ImGui::ExpandNextItem();
+                if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)<S(APPL.US, open)", STRING_BUFFER(ev.expression), ImGuiInputTextFlags_EnterReturnsTrue))
+                    evaluate_expression = true;
+
+                ImGui::BeginGroup();
+                if (ev.triggered_time)
                 {
-                    ImGui::ExpandNextItem();
-                    if (ImGui::InputTextWithHint("##Expression", "S(AAPL.US, price)<S(APPL.US, open)", STRING_BUFFER(ev.expression), ImGuiInputTextFlags_EnterReturnsTrue))
-                        evaluate_expression = true;
-
-                    ImGui::BeginGroup();
-                    if (ev.triggered_time)
+                    ImGui::Checkbox("##Enabled", &ev.discarded);
+                    if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
                     {
-                        ImGui::Checkbox("##Enabled", &ev.discarded);
-                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                        {
-                            ImGui::TrTextUnformatted("Discarded?");
-                            ImGui::EndTooltip();
-                        }
-
-                        // Add button to reset the trigger
-                        ImGui::SameLine();
-                        if (ImGui::Button(ICON_MD_UPDATE))
-                            evaluate_expression = true;
-                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                        {
-                            ImGui::TrTextUnformatted("Reset the alert");
-                            ImGui::EndTooltip();
-                        }
-
-                        string_const_t triggered_time_string = string_from_time_static(ev.triggered_time * 1000, true);
-                        ImGui::SameLine();
-                        ImGui::AlignTextToFramePadding();
-                        ImGui::TextColored(ImVec4(0.0f, 0.9f, 0.0f, 1.0f), ICON_MD_NOTIFICATIONS_ACTIVE " %.*s", STRING_FORMAT(triggered_time_string));
-                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                        {
-                            ImGui::TrTextUnformatted("This alert was triggered at the time shown above.");
-                            ImGui::EndTooltip();
-                        }
-                    }
-                    else if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
-                    {
-                        ImGui::AlignTextToFramePadding();
-                        string_const_t last_run_time_string = string_from_time_static(ev.last_run_time * 1000, true);
-                        ImGui::TextWrapped("%.*s", STRING_FORMAT(last_run_time_string));
-                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                        {
-                            ImGui::TrTextUnformatted("Last time the expression was evaluated");
-                            ImGui::EndTooltip();
-                        }
-
-                        ImGui::SameLine();
-                        ImGui::TextUnformatted(ICON_MD_UPDATE);
-                        if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                        {
-                            ImGui::TrTextUnformatted("Number of seconds to wait before re-evaluating the expression condition.");
-                            ImGui::EndTooltip();
-                        }
-                    }
-                    ImGui::EndGroup();
-                }
-
-                // Frequency
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::ExpandNextItem();
-                    if (ImGui::InputDouble("##Frequency", &ev.frequency, ev.frequency > 60.0 ? 60.0 : 5.0, 0.0, "%.4g s."))
-                    {
-                        ev.discarded = false;
-                        ev.triggered_time = 0;
-                        ev.frequency = max(0.0, ev.frequency);
-                    }
-                }
-
-                // Action buttons
-                if (ImGui::TableNextColumn())
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
-                    if (ImGui::Button(ICON_MD_DELETE_FOREVER))
-                    {
-                        array_erase_ordered(evaluators, i);
-                        i--;
-                        evaluate_expression = false;
-                    }
-                    else if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
-                    {
-                        ImGui::TrText("Delete the alert `%s`", ev.description);
+                        ImGui::TrTextUnformatted("Discarded?");
                         ImGui::EndTooltip();
                     }
-                    ImGui::PopStyleColor();
-                }
 
-                if (evaluate_expression)
+                    // Add button to reset the trigger
+                    ImGui::SameLine();
+                    if (ImGui::Button(ICON_MD_UPDATE))
+                        evaluate_expression = true;
+                    if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                    {
+                        ImGui::TrTextUnformatted("Reset the alert");
+                        ImGui::EndTooltip();
+                    }
+
+                    string_const_t triggered_time_string = string_from_time_static(ev.triggered_time * 1000, true);
+                    ImGui::SameLine();
+                    ImGui::AlignTextToFramePadding();
+                    ImGui::TextColored(ImVec4(0.0f, 0.9f, 0.0f, 1.0f), ICON_MD_NOTIFICATIONS_ACTIVE " %.*s", STRING_FORMAT(triggered_time_string));
+                    if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                    {
+                        ImGui::TrTextUnformatted("This alert was triggered at the time shown above.");
+                        ImGui::EndTooltip();
+                    }
+                }
+                else if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
                 {
-                    ev.last_run_time = 0;
-                    ev.triggered_time = 0;
-                    ev.discarded = false;
-                }
+                    ImGui::AlignTextToFramePadding();
+                    string_const_t last_run_time_string = string_from_time_static(ev.last_run_time * 1000, true);
+                    ImGui::TextWrapped("%.*s", STRING_FORMAT(last_run_time_string));
+                    if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                    {
+                        ImGui::TrTextUnformatted("Last time the expression was evaluated");
+                        ImGui::EndTooltip();
+                    }
 
-                ImGui::PopID();
+                    ImGui::SameLine();
+                    ImGui::TextUnformatted(ICON_MD_UPDATE);
+                    if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                    {
+                        ImGui::TrTextUnformatted("Number of seconds to wait before re-evaluating the expression condition.");
+                        ImGui::EndTooltip();
+                    }
+                }
+                ImGui::EndGroup();
             }
+
+            // Frequency
+            if (ImGui::TableNextColumn())
+            {
+                ImGui::ExpandNextItem();
+                if (ImGui::InputDouble("##Frequency", &ev.frequency, ev.frequency > 60.0 ? 60.0 : 5.0, 0.0, "%.4g s."))
+                {
+                    ev.discarded = false;
+                    ev.triggered_time = 0;
+                    ev.frequency = max(0.0, ev.frequency);
+                }
+            }
+
+            // Action buttons
+            if (ImGui::TableNextColumn())
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
+                if (ImGui::Button(ICON_MD_DELETE_FOREVER))
+                {
+                    array_erase_ordered(evaluators, i);
+                    i--;
+                    evaluate_expression = false;
+                }
+                else if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
+                {
+                    ImGui::TrText("Delete the alert `%s`", ev.description);
+                    ImGui::EndTooltip();
+                }
+                ImGui::PopStyleColor();
+            }
+
+            if (evaluate_expression)
+            {
+                ev.last_run_time = 0;
+                ev.triggered_time = 0;
+                ev.discarded = false;
+            }
+
+            ImGui::PopID();
         }
 
         ImGui::EndTable();
@@ -419,23 +432,14 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
 }
 
 FOUNDATION_STATIC void alerts_render_evaluators()
-{
-    expr_evaluator_t*& evaluators = _alerts_module->evaluators;
-
-    bool start_show_stock_console = _alerts_module->show_window;
-    if (shortcut_executed(ImGuiKey_F9))
-        _alerts_module->show_window = !_alerts_module->show_window;
-
+{    
     if (!_alerts_module->show_window)
         return;
 
-    // Setup initial window size
-    if (!_alerts_module->has_ever_show_evaluators)
-    {
-        ImGui::SetNextWindowSize(ImVec2(1480, 920), ImGuiCond_Once);
-        _alerts_module->has_ever_show_evaluators = true;
-    }
+    expr_evaluator_t*& evaluators = _alerts_module->evaluators;
 
+    // Setup initial window size
+    ImGui::SetNextWindowSize(ImVec2(1480, 920), ImGuiCond_FirstUseEver);
     if (ImGui::Begin(tr("Alerts"), &_alerts_module->show_window))
     {
         alerts_render_table(evaluators);
@@ -477,6 +481,12 @@ void alerts_show_window()
     _alerts_module->show_window = true;
 }
 
+void alerts_show_alerts_dialog(void* context)
+{
+    FOUNDATION_UNUSED(context);
+    alerts_show_window();
+}
+
 bool alerts_add_price_change(const char* title, size_t title_length, double price, const char* icon_md, const char* op_token)
 {
     expr_evaluator_t new_alert{};
@@ -509,6 +519,7 @@ bool alerts_add_price_change(const char* title, size_t title_length, double pric
     new_alert.last_run_time = 0.0;
     new_alert.triggered_time = 0.0;
     new_alert.discarded = false;
+    new_alert.creation_date = time_now();
 
     array_insert_memcpy_safe(_alerts_module->evaluators, 0, &new_alert);
 
@@ -663,6 +674,9 @@ FOUNDATION_STATIC void alerts_initialize()
 
     module_register_update(HASH_ALERTS, alerts_run_evaluators);
     module_register_window(HASH_ALERTS, alerts_render_evaluators);
+
+    app_register_menu(HASH_ALERTS, STRING_CONST("Modules/" ICON_MD_EDIT_NOTIFICATIONS " Alerts"), 
+        STRING_CONST("F9"), AppMenuFlags::Append, alerts_show_alerts_dialog, nullptr);
 }
 
 FOUNDATION_STATIC void alerts_shutdown()
@@ -676,5 +690,3 @@ FOUNDATION_STATIC void alerts_shutdown()
 }
 
 DEFINE_MODULE(ALERTS, alerts_initialize, alerts_shutdown, MODULE_PRIORITY_UI);
-
-#endif // BUILD_APPLICATION

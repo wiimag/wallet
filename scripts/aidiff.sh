@@ -228,6 +228,9 @@ do
         continue
     fi
 
+    # Replace \t with two spaces
+    DIFF=$(echo "$DIFF" | sed 's/\t/  /g')
+
     # Remove all lines starting with "diff --git"
     DIFF=$(echo "$DIFF" | sed '/^diff --git/d')
 
