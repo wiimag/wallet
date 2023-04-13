@@ -499,6 +499,52 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
     return cell_t();
 }
 
+FOUNDATION_STATIC void report_column_price_alert_menu(const title_t* title)
+{
+    const double current_price = title_current_price(title);
+    if (math_real_is_finite(current_price) && !ImGui::TrBeginMenu("Price Alerts"))
+        return;
+
+    ImGui::MoveCursor(8.0f, 4.0f);
+    ImGui::BeginGroup();
+
+    if (ImGui::TrMenuItem("Add ask price alert"))
+    {
+        const double ask_price = title_get_ask_price(title);
+        alerts_add_price_increase(title->code, title->code_length, ask_price);
+    }
+
+    if (ImGui::TrMenuItem("Add bought price alert"))
+    {
+        const double ask_price = title_get_bought_price(title);
+        alerts_add_price_increase(title->code, title->code_length, ask_price);
+    }
+
+    pattern_handle_t pattern = pattern_load(title->code, title->code_length);
+    const double bid_low = pattern_get_bid_price_low(pattern);
+    if (bid_low < current_price)
+    {
+        const char* big_low_label = tr_format("Add bid price alert (Low: {0, currency})", bid_low);
+        if (ImGui::MenuItem(big_low_label))
+        {
+            alerts_add_price_decrease(title->code, title->code_length, bid_low);
+        }
+    }
+
+    const double bid_high = pattern_get_bid_price_high(pattern);
+    if (bid_high > bid_low && bid_high > current_price)
+    {
+        const char* big_high_label = tr_format("Add bid price alert (High: {0, currency})", bid_high);
+        if (ImGui::MenuItem(big_high_label))
+        {
+            alerts_add_price_increase(title->code, title->code_length, bid_high);
+        }
+    }
+
+    ImGui::EndGroup();
+    ImGui::EndMenu();
+}
+
 FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     #if BUILD_APPLICATION
@@ -507,6 +553,11 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
     ImGui::MoveCursor(8.0f, 4.0f);
     ImGui::BeginGroup();
     {
+        ImGui::BeginDisabled(true);
+        ImGui::MenuItem(title->code);
+        ImGui::Separator();
+        ImGui::EndDisabled();
+
         if (ImGui::MenuItem(tr("Buy")))
             ((title_t*)title)->show_buy_ui = true;
 
@@ -518,36 +569,9 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
 
         ImGui::Separator();
 
-        if (pattern_menu_item(title->code, title->code_length))
-        {
-        }
+        pattern_menu_item(title->code, title->code_length);
 
-        if (ImGui::TrBeginMenu("Price Alerts"))
-        {
-            ImGui::MoveCursor(8.0f, 4.0f);
-            ImGui::BeginGroup();
-            if (ImGui::TrMenuItem("Add ask price alert"))
-            {
-                const double ask_price = title_get_ask_price(title);
-                alerts_add_price_increase(title->code, title->code_length, ask_price);
-            }
-
-            if (ImGui::TrMenuItem("Add bid price alert"))
-            {
-                pattern_handle_t pattern = pattern_load(title->code, title->code_length);
-                const double bid_price = pattern_get_bid_price(pattern);
-                alerts_add_price_decrease(title->code, title->code_length, bid_price);
-            }
-
-            if (ImGui::TrMenuItem("Add bought price alert"))
-            {
-                const double ask_price = title_get_bought_price(title);
-                alerts_add_price_increase(title->code, title->code_length, ask_price);
-            }
-
-            ImGui::EndGroup();
-            ImGui::EndMenu();
-        }
+        report_column_price_alert_menu(title);
 
         ImGui::Separator();
 
@@ -1004,14 +1028,12 @@ FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_con
     if (title->average_price > 0 && current_price >= title->ask_price.fetch())
     {
         style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
-        //style.text_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.04f);
         style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.94f); // hsv(176, 94%, 94%)
         style.text_color = imgui_color_text_for_background(style.background_color);
     }
     else if (title->average_price > 0 && current_price >= (title->average_price * (1.0 + title->wallet->profit_ask)))
     {
         style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
-        //style.text_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.04f);
         style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.94f); // hsv(176, 94%, 94%)
         style.text_color = imgui_color_text_for_background(style.background_color);
     }

@@ -55,7 +55,7 @@
 
 #define VERSION_MAJOR                   0
 #define VERSION_MINOR                  14   // Latest feature: Add new backend server to proxy requests
-#define VERSION_PATCH                   2   // Latest patch/fix: Rename service to module
+#define VERSION_PATCH                   3   // Latest patch/fix: Add creation date to alerts
 #define VERSION_BUILD                   GIT_REVCOUNT
 
 #define PRODUCT_VERSION STRINGIZE(VERSION_MAJOR.VERSION_MINOR.VERSION_PATCH)

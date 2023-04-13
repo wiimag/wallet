@@ -616,3 +616,15 @@ double title_get_ask_price(const title_t* title)
     
     return title->ask_price.fetch();
 }
+
+double title_current_price(const title_t* title)
+{
+    if (title == nullptr)
+        return NAN;
+
+    const stock_t* stock = title->stock;
+    if (stock == nullptr)
+        return NAN;
+
+    return stock->current.price;
+}

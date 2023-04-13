@@ -12,6 +12,7 @@
 #include "news.h"
 #include "alerts.h"
 #include "openai.h"
+#include "financials.h"
 
 #include <framework/app.h>
 #include <framework/jobs.h>
@@ -246,10 +247,19 @@ FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_co
     ImGui::SetWindowFontScale(0.8f);
 
     ImGui::TableNextColumn();
-    if (!string_is_null(v3)) table_cell_right_aligned_label(STRING_ARGS(v3));
+    if (!string_is_null(v3)) 
+    {
+        table_cell_right_aligned_label(STRING_ARGS(v3));
+    }
 
     ImGui::TableNextColumn();
-    if (!string_is_null(v4)) table_cell_right_aligned_label(STRING_ARGS(v4));
+    if (!string_is_null(v4)) 
+    {
+        char value_with_thin_spaces_buffer[16] = { 0 };
+        string_t value_with_thin_spaces = string_copy(STRING_BUFFER(value_with_thin_spaces_buffer), STRING_ARGS(v4));
+        value_with_thin_spaces = string_replace(STRING_ARGS(value_with_thin_spaces), sizeof(value_with_thin_spaces_buffer), STRING_CONST(" "), STRING_CONST(THIN_SPACE), true);
+        table_cell_right_aligned_label(STRING_ARGS(value_with_thin_spaces));
+    }
 }
 
 FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v2, string_const_t v3, string_const_t v4, bool translate = false)
@@ -355,7 +365,10 @@ FOUNDATION_STATIC bool pattern_render_stats_value(const stock_t* s, string_const
     if (string_is_null(value))
         return false;
 
-    table_cell_right_aligned_label(STRING_ARGS(value));
+    char value_with_thin_spaces_buffer[16] = { 0 };
+    string_t value_with_thin_spaces = string_copy(STRING_BUFFER(value_with_thin_spaces_buffer), STRING_ARGS(value));
+    value_with_thin_spaces = string_replace(STRING_ARGS(value_with_thin_spaces), sizeof(value_with_thin_spaces_buffer), STRING_CONST(" "), STRING_CONST(THIN_SPACE), true);
+    table_cell_right_aligned_label(STRING_ARGS(value_with_thin_spaces));
 
     if (s == nullptr)
         return false;
@@ -405,7 +418,7 @@ FOUNDATION_STATIC void pattern_render_stats_line(const stock_t* s, string_const_
     pattern_render_stats_value(s, v3);
 }
 
-FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const char* text, size_t text_length)
+FOUNDATION_STATIC bool pattern_render_decision_line(int rank, bool* check, const char* text, size_t text_length)
 {
     ImGui::TableNextRow();
 
@@ -417,14 +430,23 @@ FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const
 
     ImGui::TableNextColumn();
     ImGui::Text("%d.", rank);
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered())
+    {
+        if (check)
+            *check = !(*check);
+    }
 
     ImGui::TableNextColumn();
     ImGui::TextWrapped("%.*s", (int)text_length, text);
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::IsItemHovered())
+        return true;
+
+    return false;
 }
 
-FOUNDATION_STATIC void pattern_render_decision_line(int rank, bool* check, const char* text)
+FOUNDATION_STATIC bool pattern_render_decision_line(int rank, bool* check, const char* text)
 {
-    pattern_render_decision_line(rank, check, text, string_length(text));
+    return pattern_render_decision_line(rank, check, text, string_length(text));
 }
 
 FOUNDATION_STATIC string_const_t pattern_price(const pattern_t* pattern)
@@ -641,7 +663,7 @@ FOUNDATION_STATIC const stock_t* pattern_refresh(pattern_t* pattern, FetchLevel 
     return pattern->stock;
 }
 
-double pattern_get_bid_price(pattern_handle_t pattern_handle)
+double pattern_get_bid_price_low(pattern_handle_t pattern_handle)
 {
     pattern_t* pattern = pattern_get(pattern_handle);
     if (!pattern)
@@ -660,8 +682,56 @@ double pattern_get_bid_price(pattern_handle_t pattern_handle)
     mcp += s->current.change_p / 100.0;
     mcp /= 4.0;
 
-    double buy_limit = min(today_price + (today_price * (flex_low_p + math_abs(mcp))), today_price - (today_price * pattern->flex_high.fetch()));
-    return buy_limit;
+    return min(today_price + (today_price * (flex_low_p + math_abs(mcp))), today_price - (today_price * pattern->flex_high.fetch()));
+}
+
+double pattern_get_bid_price_high(pattern_handle_t pattern_handle)
+{
+    pattern_t* pattern = pattern_get(pattern_handle);
+    if (!pattern)
+        return NAN;
+    const stock_t* s = pattern_refresh(pattern, FetchLevel::EOD | FetchLevel::REALTIME);
+    if (!s)
+        return NAN;
+
+    const double flex_low_p = pattern->flex_low.fetch();
+    const double flex_high_p = pattern->flex_high.fetch();
+    const double today_price = s->current.adjusted_close;
+    
+    double mcp = 0;
+    for (int i = 0; i < 3; ++i)
+        mcp += pattern_mark_change_p(pattern, i);
+    mcp += s->current.change_p / 100.0;
+    mcp /= 4.0;
+
+    return today_price + (today_price * (flex_high_p - mcp));
+}
+
+FOUNDATION_STATIC double pattern_average_volume_3months(const pattern_t* pattern)
+{
+    if (pattern->average_volume_3months.initialized)
+        return pattern->average_volume_3months.fetch();
+
+    const stock_t* s = pattern->stock;
+    if (s == nullptr)
+        return NAN; 
+        
+    if (!s->has_resolve(FetchLevel::EOD))
+        return s->current.volume;
+
+    double occurence = 0;
+    double total_volume = 0;
+    for (unsigned i = 0, end = min(SIZE_C(60), s->history_count); i < end; ++i)
+    {
+        if (s->history[i].volume == 0)
+            continue;
+
+        occurence += 1.0;
+        total_volume += s->history[i].volume;
+    }
+
+    pattern->average_volume_3months = total_volume / occurence;
+    return pattern->average_volume_3months.fetch();
 }
 
 FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
@@ -674,21 +744,38 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         ImGuiTableFlags_NoBordersInBody |
         ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoPadInnerX;
 
-    if (!ImGui::BeginTable("Stats", 3, flags))
+    if (!ImGui::BeginTable("Stats##1", 3, flags))
         return 0;
 
     ImGui::TableSetupColumn("Labels", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableSetupColumn("V1", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(60));
-    ImGui::TableSetupColumn("V2", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(45));
+    ImGui::TableSetupColumn("V2", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(50));
     //ImGui::TableHeadersRow();
 
     const stock_t* s = pattern->stock;
     if (s)
     {
-        double share_p = s->current.volume / s->shares_count;
+        const double current_volume = s->current.volume;
+        const double average_volume = pattern_average_volume_3months(pattern);
+        const double volume_p = current_volume / average_volume * 100.0;
         pattern_render_stats_line(nullptr, CTEXT("Volume"), 
-            pattern_format_number(STRING_CONST("%.0lf"), s->current.volume),
-            pattern_format_number(STRING_CONST("%.2lf %%"), share_p * 100.0), true);
+            string_template_static("{0,abbreviate}/{1,abbreviate}", current_volume, average_volume),
+            pattern_format_number(STRING_CONST("%.2lf %%"), volume_p), true);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && average_volume > 0)
+        {
+            ImGui::BeginTooltip();
+
+            string_const_t volumestr = string_template_static("{0,abbreviate}", current_volume);
+            string_const_t averagestr = string_template_static("{0,abbreviate}", average_volume);
+            ImGui::TrText("Today's volume is %.2lf %% of the average volume over the last 3 months (%.*s/%.*s)", volume_p, 
+                STRING_FORMAT(volumestr), STRING_FORMAT(averagestr));
+            ImGui::EndTooltip();
+        }
+        
+        pattern_render_stats_line(nullptr, CTEXT("Market Cap"),
+            string_template_static("{1,translate} {0,abbreviate}", s->shares_count, "units:"),
+            string_template_static("{0,currency}", s->market_cap), true);
+
         pattern_render_stats_line(s, CTEXT("High 52"), 
             pattern_format_currency(s->high_52),
             pattern_format_percentage(s->current.adjusted_close / s->high_52 * 100.0), true);
@@ -788,7 +875,31 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
     return y_offset;
 }
 
-FOUNDATION_STATIC float pattern_render_decisions(const pattern_t* pattern)
+template<size_t L, size_t D>
+FOUNDATION_STATIC bool pattern_render_decision_mark(const pattern_t* pattern, unsigned rank, const char (&label)[L], const char (&description)[D])
+{
+    pattern_check_t* checks = ((pattern_t*)pattern)->checks;
+    bool clicked = pattern_render_decision_line(rank, &checks[rank-1].checked, tr(label));
+
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && ImGui::BeginTooltip())
+    {
+        ImGui::Dummy(ImVec2(IM_SCALEF(405), IM_SCALEF(4)));
+        ImGui::MoveCursor(IM_SCALEF(5), IM_SCALEF(0));
+        ImGui::PushTextWrapPos(IM_SCALEF(400));
+        ImGui::AlignTextToFramePadding();
+        ImGui::TrTextUnformatted(description);
+        ImGui::PopTextWrapPos();
+        ImGui::Dummy(ImVec2(IM_SCALEF(405), IM_SCALEF(8)));
+        ImGui::EndTooltip();
+    }
+
+    return clicked;
+}
+
+FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
 {
     ImGuiTableFlags flags =
         ImGuiTableFlags_NoSavedSettings |
@@ -801,20 +912,108 @@ FOUNDATION_STATIC float pattern_render_decisions(const pattern_t* pattern)
     if (!ImGui::BeginTable("Decisions", 3, flags))
         return 0;
 
+    string_const_t code = SYMBOL_CONST(pattern->code);
+
     ImGui::TableSetupColumn("Check", ImGuiTableColumnFlags_WidthFixed, 50.0f);
     ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 40.0f);
     ImGui::TableSetupColumn("Text", ImGuiTableColumnFlags_WidthStretch);
     //ImGui::TableHeadersRow();
 
-    pattern_check_t* checks = ((pattern_t*)pattern)->checks;
-    pattern_render_decision_line(1, &checks[0].checked, tr("Price trend is positive."));
-    pattern_render_decision_line(2, &checks[1].checked, tr("Moving trends are null or slightly negative and about to go up (crossing each others)."));
-    pattern_render_decision_line(3, &checks[2].checked, tr("Activity polarity trend is positive."));
-    pattern_render_decision_line(4, &checks[3].checked, tr("Sell limit is higher or equal to 3%."));
-    pattern_render_decision_line(5, &checks[4].checked, tr("Beta is higher or equal to 90%."));
-    pattern_render_decision_line(6, &checks[5].checked, tr("Flex difference is higher than 6%."));
-    pattern_render_decision_line(7, &checks[6].checked, tr("MAX mark is higher than 25%."));
-    pattern_render_decision_line(8, &checks[7].checked, tr("Target limits are interesting."));
+    if (pattern_render_decision_mark(pattern, 1, 
+        "Price trends are positive.", 
+        "It's important to examine the price trend of the company to determine if it's growing or declining. "
+        "\n\nPrice trends such as 50-day moving average, 200-day moving average, and 52-week high can help evaluate a company's financial performance."
+        "\n\nMarket trends can impact the stock price. Investors should monitor market trends to determine if the company is likely to outperform or "
+        "under perform the market as a whole."
+        "\n " ICON_MD_CHECK_BOX " Check the Trend graphic"
+        "\n " ICON_MD_CHECK_BOX " Check the Market Trend (EMA, SMA, WMA, etc.)"
+        "\n"))
+    {
+        pattern->type = (int)PATTERN_GRAPH_TRENDS;
+    }
+
+    if (pattern_render_decision_mark(pattern, 2, 
+        "Company fundamentals and diversification are considered",
+        "It's important to understand the company's fundamentals, including its business model, competition, and future prospects. "
+        "If the company has a competitive advantage and positive future prospects, it can be a good sign for investors."
+        "\n\nInvestors should be aware of the importance of diversifying their investment portfolio. "
+        "It's recommended not to invest all funds in one stock but to diversify the portfolio by investing in different companies and industries."
+        "\n " ICON_MD_CHECK_BOX " Check the company website"
+        "\n " ICON_MD_CHECK_BOX " Check the company's annual report"
+        "\n"))
+    {
+        pattern->notes_opened = true;
+    }
+
+    if (pattern_render_decision_mark(pattern, 3,
+       "Recent events are positive.",
+       "It's important to monitor recent events related to the company, such as financial results announcements, "
+       "management changes, and product developments. These events can impact the stock price."
+       "\n " ICON_MD_CHECK_BOX " Check the company's news"
+       "\n " ICON_MD_CHECK_BOX " Check the company's social media"
+       "\n " ICON_MD_CHECK_BOX " Check the Activity graphic"
+       "\n"))
+    {
+        news_open_window(STRING_ARGS(code));
+    }
+
+    if (pattern_render_decision_mark(pattern, 4,
+        "Financial performance",
+        "It's important to examine the financial performance of the company over the last few quarters to determine if it's growing or declining. "
+        "Financial ratios such as price-to-earnings ratio, price-to-book ratio, and dividend yield ratio can help evaluate a company's financial performance."
+        "\n " ICON_MD_CHECK_BOX " Check the Financials charts"
+        "\n " ICON_MD_CHECK_BOX " Check the company's financial ratios"
+        "\n " ICON_MD_CHECK_BOX " Check the company's financial statements"
+        "\n"))
+    {
+        financials_open_window(STRING_ARGS(code));
+    }
+
+    if (pattern_render_decision_mark(pattern, 5,
+        "Stock liquidity",
+        "It's important to choose a stock that is sufficiently liquid so that the investor can buy and sell quickly and easily without "
+        "suffering significant losses due to lack of liquidity."
+        "\n " ICON_MD_CHECK_BOX " Check the daily transaction volume."
+        "\n " ICON_MD_CHECK_BOX " Check the company capitalization."
+        "\n " ICON_MD_CHECK_BOX " Check the company's market share"
+        "\n"))
+    {
+        pattern->type = (int)PATTERN_GRAPH_YOY;
+    }
+
+    if (pattern_render_decision_mark(pattern, 6,
+        "Stock volatility",
+        "Investors should be aware of the stock's volatility, or the extent to which the stock price fluctuates. "
+        "More volatile stocks may offer higher potential gains but also carry higher risk."
+        "\n " ICON_MD_CHECK_BOX " Beta is higher or equal to 90%."
+        "\n " ICON_MD_CHECK_BOX " Flex difference is higher than 6%."
+        "\n " ICON_MD_CHECK_BOX " Sell limit is higher or equal to 3%."
+        "\n"))
+    {
+        pattern->type = (int)PATTERN_GRAPH_FLEX;
+    }
+
+    if (pattern_render_decision_mark(pattern, 7,
+        "Target limits are interesting",
+        "Analyst opinions can provide an indication of the stock's future direction. "
+        "Investors may consider analyst opinions to get an idea of the company's prospects."
+        "\n " ICON_MD_CHECK_BOX " Check the Wall Street target"
+        "\n " ICON_MD_CHECK_BOX " Check the year low and year high"
+        "\n"))
+    {
+        pattern->type = (int)PATTERN_GRAPH_DEFAULT;
+    }
+
+    if (pattern_render_decision_mark(pattern, 8,
+        "Company perspectives are positive. (MAX >= 25%)",
+        "It's important to compare the company with its peers to determine if it's growing or declining. Also take a close look to the company's "
+        "financial performance and future prospects year after year."
+        "\n" ICON_MD_CHECK_BOX " Look for green value!"
+        "\n" ICON_MD_CHECK_BOX " Is company dividend yield high?"
+        "\n"))
+    {
+        pattern->type = (int)PATTERN_GRAPH_ANALYSIS;
+    }
 
     float y_offset = ImGui::GetCursorPosY();
     ImGui::EndTable();

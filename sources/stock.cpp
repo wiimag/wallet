@@ -269,6 +269,9 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     // have been outstanding if the dilutive common share would have been issued for the trailing 12 months.
     entry.diluted_eps_ttm = hightlights["DilutedEpsTTM"].as_number();
 
+    // Get the stock market capitalization
+    entry.market_cap = hightlights["MarketCapitalization"].as_number();
+
     const json_object_t& valuation = json["Valuation"];
     entry.trailing_pe = valuation["TrailingPE"].as_number();
     entry.forward_pe = valuation["ForwardPE"].as_number();

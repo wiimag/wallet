@@ -80,6 +80,15 @@ constexpr string_const_t ROUND_OPTION = { STRING_CONST("round") };
  */
 constexpr string_const_t TRANSLATE_OPTION = { STRING_CONST("translate") };
 
+/*! @def {i,abbreviate}
+ *  @brief Abbreviate the string using the localization system.
+ *  @see tr
+ *  @note This option only works if the translations are available in locales.sjson
+ *  @example string_template("{0,abbreviate}", "Hello") -> "H."
+ *  @example string_template("{0,abbreviate}", 100e6) -> "100M"
+ */
+constexpr string_const_t ABBREVIATE_OPTION = { STRING_CONST("abbreviate") };
+
 // TODO (ideas):
 // - {i,time} - Format as time
 // - {i,datetime} - Format as date and time
@@ -130,6 +139,7 @@ typedef enum class StringTokenOption
     Until = 1 << 10,
     Round = 1 << 11,
     Translate = 1 << 12,
+    Abbreviate = 1 << 13,
 
 } string_token_option_t;
 DEFINE_ENUM_FLAGS(StringTokenOption);
