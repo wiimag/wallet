@@ -2020,5 +2020,20 @@
 			en = "If you would've invested {0,currency:10k} {1} days before {2:date} and sold on that day you would of {3,translate:gain} {4:currency}"
 			fr = "Si vous aviez investi {0,currency:10k} {1} jours avant le {2:date} et vendu ce jour-l\xc3\xa0 vous auriez {3,translate:gain} {4:currency}"
 		}
+		{
+			hash = "1280527451e7f85d"
+			en = "EOD API Service URL"
+			fr = "URL du service EOD API"
+		}
+		{
+			hash = "292f5e6df687a8fb"
+			en = "Connected through %s"
+			fr = "Connect\xc3\xa9 via %s"
+		}
+		{
+			hash = "48deb88dc1038b3a"
+			en = "%s\n\nConnected through %s"
+			fr = "%s\n\nConnect\xc3\xa9 via %s"
+		}
 	]
 }
