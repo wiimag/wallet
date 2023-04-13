@@ -1513,6 +1513,9 @@ FOUNDATION_STATIC report_handle_t report_create(const char* name, size_t name_le
     report->save = true;
     report->show_summary = true;
     report->show_add_title_ui = true;
+
+    log_infof(HASH_REPORT, STRING_CONST("Created report %.*s"), (int)name_length, name);
+
     return report_handle;
 }
 
@@ -1878,21 +1881,17 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
 
 FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_length, const config_handle_t& data)
 {
-    if (_reports == nullptr)
-        array_reserve(_reports, 1);
-
     string_table_symbol_t name_symbol = string_table_encode(name, name_length);
 
-    for (int i = 0, end = array_size(_reports); i < end; ++i)
+    for (unsigned i = 0, end = array_size(_reports); i < end; ++i)
     {
         const report_t& r = _reports[i];
         if (r.name == name_symbol)
             return r.id;
     }
 
-    _reports = array_push(_reports, report_t{ name_symbol });
-    unsigned int report_index = array_size(_reports) - 1;
-    report_t* report = &_reports[report_index];
+    array_push(_reports, report_t{ name_symbol });
+    report_t* report = array_last(_reports);
 
     // Ensure default structure
     report->data = data ? data : config_allocate(CONFIG_VALUE_OBJECT);
@@ -1904,7 +1903,8 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
 
     if (cid)
     {
-        report->id = string_to_uuid(STRING_ARGS(cid.as_string()));
+        string_const_t id = cid.as_string();
+        report->id = string_to_uuid(STRING_ARGS(id));
     }
     else
     {
@@ -2329,7 +2329,14 @@ report_handle_t report_load(string_const_t report_file_path)
 
     config_handle_t data;
     if (fs_is_file(STRING_ARGS(report_file_path)))
+    {
         data = config_parse_file(STRING_ARGS(report_file_path), report_json_flags);
+        if (!data)
+        {
+            FOUNDATION_ASSERT(data);
+            log_warnf(HASH_REPORT, WARNING_INVALID_VALUE, STRING_CONST("Failed to load report '%.*s'"), STRING_FORMAT(report_file_path));
+        }
+    }
 
     string_const_t report_name = data["name"].as_string();
     if (string_is_null(report_name))
