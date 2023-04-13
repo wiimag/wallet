@@ -2252,25 +2252,41 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
 {
     openai_completion_options_t& options = pattern->analysis_options;
 
-    ImGui::TrText("Notes");
-    ImVec2 notes_widget_size = ImVec2(-1, IM_SCALEF(70));
-    if (pattern->analysis_summary == nullptr && openai_available())
-    {
-        string_const_t code = string_table_decode_const(pattern->code);
-        pattern->analysis_summary = openai_generate_summary_sentiment(STRING_ARGS(code), STRING_LENGTH(pattern->notes), options);
-        FOUNDATION_ASSERT(pattern->analysis_summary);
-    }
-    else if (pattern->analysis_summary == nullptr)
-    {
-        notes_widget_size = ImGui::GetContentRegionAvail();
-    }
+    const size_t notes_size = string_length(pattern->notes);
 
-    if (focus_notes)
+    ImGui::SetNextItemOpen(notes_size > 0, ImGuiCond_Appearing);
+    if (pattern->analysis_summary == nullptr || ImGui::TreeNode(tr("Notes")))
     {
-        ImGui::SetKeyboardFocusHere();
-        focus_notes = false;
+        const bool used_tree_node = pattern->analysis_summary != nullptr;
+
+        if (used_tree_node)
+            ImGui::Unindent();
+        ImVec2 notes_widget_size = ImVec2(-1, IM_SCALEF(70));
+        if (pattern->analysis_summary == nullptr && openai_available())
+        {
+            string_const_t code = string_table_decode_const(pattern->code);
+            pattern->analysis_summary = openai_generate_summary_sentiment(STRING_ARGS(code), pattern->notes, notes_size, options);
+            FOUNDATION_ASSERT(pattern->analysis_summary);
+        }
+        else if (pattern->analysis_summary == nullptr)
+        {
+            notes_widget_size = ImGui::GetContentRegionAvail();
+        }
+
+        if (focus_notes)
+        {
+            ImGui::SetKeyboardFocusHere();
+            focus_notes = false;
+        }
+
+        ImGui::InputTextMultiline("##Notes", STRING_BUFFER(pattern->notes), notes_widget_size, ImGuiInputTextFlags_None);
+
+        if (used_tree_node)
+        {
+            ImGui::Indent();
+            ImGui::TreePop();
+        }
     }
-    ImGui::InputTextMultiline("##Notes", STRING_BUFFER(pattern->notes), notes_widget_size, ImGuiInputTextFlags_None);
 
     if (pattern->analysis_summary)
     {
