@@ -268,7 +268,7 @@ FOUNDATION_STATIC localization_dictionary_t* localization_load_system_locales(st
         else
         {
             // Get the user language from the session
-            user_lang = session_get_string("lang", STRING_BUFFER(dict->lang), "en");
+            user_lang = string_to_const(session_get_string("lang", STRING_BUFFER(dict->lang), "en"));
         }
     }
     else

@@ -114,7 +114,7 @@ string_const_t session_get_string(const char* keyname, const char* default_value
  * 
  *  @return The string value of the setting.
  */
-string_const_t session_get_string(const char* keyname, char* buf, size_t size, const char* default_value = nullptr);
+string_t session_get_string(const char* keyname, char* buf, size_t size, const char* default_value = nullptr);
 
 /*! Sets the boolean value of a user setting. 
  * 
