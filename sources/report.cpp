@@ -499,6 +499,52 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
     return cell_t();
 }
 
+FOUNDATION_STATIC void report_column_price_alert_menu(const title_t* title)
+{
+    const double current_price = title_current_price(title);
+    if (math_real_is_finite(current_price) && !ImGui::TrBeginMenu("Price Alerts"))
+        return;
+
+    ImGui::MoveCursor(8.0f, 4.0f);
+    ImGui::BeginGroup();
+
+    if (ImGui::TrMenuItem("Add ask price alert"))
+    {
+        const double ask_price = title_get_ask_price(title);
+        alerts_add_price_increase(title->code, title->code_length, ask_price);
+    }
+
+    if (ImGui::TrMenuItem("Add bought price alert"))
+    {
+        const double ask_price = title_get_bought_price(title);
+        alerts_add_price_increase(title->code, title->code_length, ask_price);
+    }
+
+    pattern_handle_t pattern = pattern_load(title->code, title->code_length);
+    const double bid_low = pattern_get_bid_price_low(pattern);
+    if (bid_low < current_price)
+    {
+        const char* big_low_label = tr_format("Add bid price alert (Low: {0, currency})", bid_low);
+        if (ImGui::MenuItem(big_low_label))
+        {
+            alerts_add_price_decrease(title->code, title->code_length, bid_low);
+        }
+    }
+
+    const double bid_high = pattern_get_bid_price_high(pattern);
+    if (bid_high > bid_low && bid_high > current_price)
+    {
+        const char* big_high_label = tr_format("Add bid price alert (High: {0, currency})", bid_high);
+        if (ImGui::MenuItem(big_high_label))
+        {
+            alerts_add_price_increase(title->code, title->code_length, bid_high);
+        }
+    }
+
+    ImGui::EndGroup();
+    ImGui::EndMenu();
+}
+
 FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     #if BUILD_APPLICATION
@@ -507,6 +553,11 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
     ImGui::MoveCursor(8.0f, 4.0f);
     ImGui::BeginGroup();
     {
+        ImGui::BeginDisabled(true);
+        ImGui::MenuItem(title->code);
+        ImGui::Separator();
+        ImGui::EndDisabled();
+
         if (ImGui::MenuItem(tr("Buy")))
             ((title_t*)title)->show_buy_ui = true;
 
@@ -518,36 +569,9 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
 
         ImGui::Separator();
 
-        if (pattern_menu_item(title->code, title->code_length))
-        {
-        }
+        pattern_menu_item(title->code, title->code_length);
 
-        if (ImGui::TrBeginMenu("Price Alerts"))
-        {
-            ImGui::MoveCursor(8.0f, 4.0f);
-            ImGui::BeginGroup();
-            if (ImGui::TrMenuItem("Add ask price alert"))
-            {
-                const double ask_price = title_get_ask_price(title);
-                alerts_add_price_increase(title->code, title->code_length, ask_price);
-            }
-
-            if (ImGui::TrMenuItem("Add bid price alert"))
-            {
-                pattern_handle_t pattern = pattern_load(title->code, title->code_length);
-                const double bid_price = pattern_get_bid_price(pattern);
-                alerts_add_price_decrease(title->code, title->code_length, bid_price);
-            }
-
-            if (ImGui::TrMenuItem("Add bought price alert"))
-            {
-                const double ask_price = title_get_bought_price(title);
-                alerts_add_price_increase(title->code, title->code_length, ask_price);
-            }
-
-            ImGui::EndGroup();
-            ImGui::EndMenu();
-        }
+        report_column_price_alert_menu(title);
 
         ImGui::Separator();
 
@@ -1004,14 +1028,12 @@ FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_con
     if (title->average_price > 0 && current_price >= title->ask_price.fetch())
     {
         style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
-        //style.text_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.04f);
         style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.94f); // hsv(176, 94%, 94%)
         style.text_color = imgui_color_text_for_background(style.background_color);
     }
     else if (title->average_price > 0 && current_price >= (title->average_price * (1.0 + title->wallet->profit_ask)))
     {
         style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
-        //style.text_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.04f);
         style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.94f); // hsv(176, 94%, 94%)
         style.text_color = imgui_color_text_for_background(style.background_color);
     }
@@ -1513,6 +1535,9 @@ FOUNDATION_STATIC report_handle_t report_create(const char* name, size_t name_le
     report->save = true;
     report->show_summary = true;
     report->show_add_title_ui = true;
+
+    log_infof(HASH_REPORT, STRING_CONST("Created report %.*s"), (int)name_length, name);
+
     return report_handle;
 }
 
@@ -1878,21 +1903,17 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
 
 FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_length, const config_handle_t& data)
 {
-    if (_reports == nullptr)
-        array_reserve(_reports, 1);
-
     string_table_symbol_t name_symbol = string_table_encode(name, name_length);
 
-    for (int i = 0, end = array_size(_reports); i < end; ++i)
+    for (unsigned i = 0, end = array_size(_reports); i < end; ++i)
     {
         const report_t& r = _reports[i];
         if (r.name == name_symbol)
             return r.id;
     }
 
-    _reports = array_push(_reports, report_t{ name_symbol });
-    unsigned int report_index = array_size(_reports) - 1;
-    report_t* report = &_reports[report_index];
+    array_push(_reports, report_t{ name_symbol });
+    report_t* report = array_last(_reports);
 
     // Ensure default structure
     report->data = data ? data : config_allocate(CONFIG_VALUE_OBJECT);
@@ -1904,7 +1925,8 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
 
     if (cid)
     {
-        report->id = string_to_uuid(STRING_ARGS(cid.as_string()));
+        string_const_t id = cid.as_string();
+        report->id = string_to_uuid(STRING_ARGS(id));
     }
     else
     {
@@ -2329,7 +2351,14 @@ report_handle_t report_load(string_const_t report_file_path)
 
     config_handle_t data;
     if (fs_is_file(STRING_ARGS(report_file_path)))
+    {
         data = config_parse_file(STRING_ARGS(report_file_path), report_json_flags);
+        if (!data)
+        {
+            FOUNDATION_ASSERT(data);
+            log_warnf(HASH_REPORT, WARNING_INVALID_VALUE, STRING_CONST("Failed to load report '%.*s'"), STRING_FORMAT(report_file_path));
+        }
+    }
 
     string_const_t report_name = data["name"].as_string();
     if (string_is_null(report_name))

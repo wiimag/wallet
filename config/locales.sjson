@@ -543,7 +543,7 @@
 		{
 			hash = "18acc03186d6353f"
 			en = "Trend"
-			fr = "Tendance"
+			fr = "T.C."
 		}
 		{
 			hash = "bc44b82da566f3d3"
@@ -2019,6 +2019,156 @@
 			hash = "c89d036ff171ed01"
 			en = "If you would've invested {0,currency:10k} {1} days before {2:date} and sold on that day you would of {3,translate:gain} {4:currency}"
 			fr = "Si vous aviez investi {0,currency:10k} {1} jours avant le {2:date} et vendu ce jour-l\xc3\xa0 vous auriez {3,translate:gain} {4:currency}"
+		}
+		{
+			hash = "1280527451e7f85d"
+			en = "EOD API Service URL"
+			fr = "URL du service EOD API"
+		}
+		{
+			hash = "292f5e6df687a8fb"
+			en = "Connected through %s"
+			fr = "Connect\xc3\xa9 via %s"
+		}
+		{
+			hash = "48deb88dc1038b3a"
+			en = "%s\n\nConnected through %s"
+			fr = "%s\n\nConnect\xc3\xa9 via %s"
+		}
+		{
+			hash = "7dd5e7cabf51dec7"
+			en = "\xee\x94\xa5 Alerts"
+			fr = "\xee\x94\xa5 Alertes"
+		}
+		{
+			hash = "78fc1717688c95f8"
+			en = "Created"
+			fr = "Date de cr\xc3\xa9ation"
+		}
+		{
+			hash = "5dad570b622774e7"
+			en = "Add bid price alert (Low: {0, currency})"
+			fr = "Ajouter une alerte de prix d'achat (Bas: {0, currency})"
+		}
+		{
+			hash = "98ccc914980194e3"
+			en = "Add bid price alert (High: {0, currency})"
+			fr = "Ajouter une alerte de prix d'achat (Haut: {0, currency})"
+		}
+		{
+			hash = "93116b625ecf1d40"
+			en = "Price trends are positive."
+			fr = "Les tendances de prix sont positives."
+		}
+		{
+			hash = "53c1c8e8c078a0e4"
+			en = "Company fundamentals and diversification are considered"
+			fr = "Fondamentaux de l'entreprise et diversification sont consid\xc3\xa9r\xc3\xa9s"
+		}
+		{
+			hash = "f9b79dc49aeac70c"
+			en = "Recent events are positive."
+			fr = "Les derniers \xc3\xa9v\xc3\xa8nements sont positifs."
+		}
+		{
+			hash = "b4f380a153da5d49"
+			en = "Financial performance"
+			fr = "Performance financi\xc3\xa8re"
+		}
+		{
+			hash = "8c9e40065f3cb650"
+			en = "Stock liquidity"
+			fr = "Liquidit\xc3\xa9 de l'action"
+		}
+		{
+			hash = "69a87c3705e18a3b"
+			en = "Stock volatility"
+			fr = "Volatilit\xc3\xa9 de l'action"
+		}
+		{
+			hash = "75a927db93916caa"
+			en = "Target limits are interesting"
+			fr = "Les limites de cible sont int\xc3\xa9ressantes"
+		}
+		{
+			hash = "a0552fc5df318b08"
+			en = "Company perspectives are positive. (MAX >= 25%)"
+			fr = "Perspectives de l'entreprise sont positives. (MAX >= 25%)"
+		}
+		{
+			hash = "175c1141dd6e8702"
+			en = "It's important to examine the price trend of the company to determine if it's growing or declining. \n\nPrice trends such as 50-day moving average, 200-day moving average, and 52-week high can help evaluate a company's financial performance.\n\nMarket trends can impact the stock price. Investors should monitor market trends to determine if the company is likely to outperform or under perform the market as a whole.\n \xee\xa0\xb4 Check the Trend graphic\n \xee\xa0\xb4 Check the Market Trend (EMA, SMA, WMA, etc.)\n"
+			fr = "Il est important d'examiner la tendance des prix de l'entreprise pour d\xc3\xa9terminer s'il est en croissance ou en d\xc3\xa9clin. \n\nLes tendances de prix telles que la moyenne mobile de 50 jours, la moyenne mobile de 200 jours et le 52e plus haut peuvent aider \xc3\xa9valuer la performance financi\xc3\xa8re d'une entreprise.\n\nLes tendances du march\xc3\xa9 peuvent impacter le prix de l'action. Les investisseurs doivent surveiller les tendances du march\xc3\xa9 pour d\xc3\xa9terminer si l'entreprise est susceptible de d\xc3\xa9passer ou de sous-performer le march\xc3\xa9 dans son ensemble.\n \xee\xa0\xb4 V\xc3\xa9rifier le graphique de tendance\n \xee\xa0\xb4 V\xc3\xa9rifier la tendance du march\xc3\xa9 (EMA, SMA, WMA, etc.)\n"
+		}
+		{
+			hash = "2b732a16056f6650"
+			en = "It's important to understand the company's fundamentals, including its business model, competition, and future prospects. If the company has a competitive advantage and positive future prospects, it can be a good sign for investors.\n\nInvestors should be aware of the importance of diversifying their investment portfolio. It's recommended not to invest all funds in one stock but to diversify the portfolio by investing in different companies and industries.\n \xee\xa0\xb4 Check the company website\n \xee\xa0\xb4 Check the company's annual report\n"
+			fr = "Il est important de comprendre les fondamentaux de l'entreprise, y compris son mod\xc3\xa8le d'affaires, sa concurrence et ses perspectives futures. Si l'entreprise a un avantage concurrentiel et des perspectives futures positives, cela peut \xc3\xaatre un bon signe pour les investisseurs.\n\nLes investisseurs doivent \xc3\xaatre conscients de l'importance de diversifier leur portefeuille d'investissement. Il est recommand\xc3\xa9 de ne pas investir tous les fonds dans une seule action mais de diversifier le portefeuille en investissant dans diff\xc3\xa9rentes entreprises et industries.\n \xee\xa0\xb4 V\xc3\xa9rifier le site web de l'entreprise\n \xee\xa0\xb4 V\xc3\xa9rifier le rapport annuel de l'entreprise\n"
+		}
+		{
+			hash = "4a445eaad10b9668"
+			en = "It's important to monitor recent events related to the company, such as financial results announcements, management changes, and product developments. These events can impact the stock price.\n \xee\xa0\xb4 Check the company's news\n \xee\xa0\xb4 Check the company's social media\n \xee\xa0\xb4 Check the Activity graphic\n"
+			fr = "Il est important de surveiller les derniers \xc3\xa9v\xc3\xa8nements li\xc3\xa9s \xc3\xa0 l'entreprise, tels que les annonces de r\xc3\xa9sultats financiers, les changements de direction et les d\xc3\xa9veloppements de produits. Ces \xc3\xa9v\xc3\xa8nements peuvent impacter le prix de l'action.\n \xee\xa0\xb4 V\xc3\xa9rifier les nouvelles de l'entreprise\n \xee\xa0\xb4 V\xc3\xa9rifier les r\xc3\xa9seaux sociaux de l'entreprise\n \xee\xa0\xb4 V\xc3\xa9rifier le graphique d'activit\xc3\xa9\n"
+		}
+		{
+			hash = "7252e43a040bef70"
+			en = "It's important to examine the financial performance of the company over the last few quarters to determine if it's growing or declining. Financial ratios such as price-to-earnings ratio, price-to-book ratio, and dividend yield ratio can help evaluate a company's financial performance.\n \xee\xa0\xb4 Check the Financials charts\n \xee\xa0\xb4 Check the company's financial ratios\n \xee\xa0\xb4 Check the company's financial statements\n"
+			fr = "Il est important d'examiner les performances financi\xc3\xa8res de l'entreprise au cours des derniers trimestres pour d\xc3\xa9terminer s'il est en croissance ou en d\xc3\xa9clin. Les ratios financiers tels que le ratio cours-b\xc3\xa9n\xc3\xa9fice, le ratio cours-livre et le ratio rendement du dividende peuvent aider \xc3\xa9valuer la performance financi\xc3\xa8re d'une entreprise.\n \xee\xa0\xb4 V\xc3\xa9rifier les graphiques financiers\n \xee\xa0\xb4 V\xc3\xa9rifier les ratios financiers de l'entreprise\n \xee\xa0\xb4 V\xc3\xa9rifier les d\xc3\xa9clarations financi\xc3\xa8res de l'entreprise\n"
+		}
+		{
+			hash = "15ee369d6d9961c4"
+			en = "It's important to choose a stock that is sufficiently liquid so that the investor can buy and sell quickly and easily without suffering significant losses due to lack of liquidity.\n \xee\xa0\xb4 Check the daily transaction volume.\n \xee\xa0\xb4 Check the company capitalization.\n \xee\xa0\xb4 Check the company's market share\n"
+			fr = "Il est important de choisir une action suffisamment liquide pour que l'investisseur puisse acheter et vendre rapidement et facilement sans subir de pertes importantes en raison du manque de liquidit\xc3\xa9.\n \xee\xa0\xb4 V\xc3\xa9rifier le volume de transactions journalier.\n \xee\xa0\xb4 V\xc3\xa9rifier la capitalisation de l'entreprise.\n \xee\xa0\xb4 V\xc3\xa9rifier la part de march\xc3\xa9 de l'entreprise\n"
+		}
+		{
+			hash = "3f19279904c14006"
+			en = "Investors should be aware of the stock's volatility, or the extent to which the stock price fluctuates. More volatile stocks may offer higher potential gains but also carry higher risk.\n \xee\xa0\xb4 Beta is higher or equal to 90%.\n \xee\xa0\xb4 Flex difference is higher than 6%.\n \xee\xa0\xb4 Sell limit is higher or equal to 3%.\n"
+			fr = "Les investisseurs doivent \xc3\xaatre conscients de la volatilit\xc3\xa9 de l'action, c'est-\xc3\xa0-dire de l'\xc3\xa9tendue \xc3\xa0 laquelle le prix de l'action fluctue. Les actions plus volatiles peuvent offrir des gains potentiels plus \xc3\xa9lev\xc3\xa9s, mais elles comportent \xc3\xa9galement un risque plus \xc3\xa9lev\xc3\xa9.\n \xee\xa0\xb4 Le beta est sup\xc3\xa9rieur ou \xc3\xa9gal \xc3\xa0 90%.\n \xee\xa0\xb4 La diff\xc3\xa9rence de flex est sup\xc3\xa9rieure \xc3\xa0 6%.\n \xee\xa0\xb4 Le plafond de vente est sup\xc3\xa9rieur ou \xc3\xa9gal \xc3\xa0 3%.\n"
+		}
+		{
+			hash = "dc188617c607d2f"
+			en = "Analyst opinions can provide an indication of the stock's future direction. Investors may consider analyst opinions to get an idea of the company's prospects.\n \xee\xa0\xb4 Check the Wall Street target\n \xee\xa0\xb4 Check the year low and year high\n"
+			fr = "Les opinions des analystes peuvent fournir une indication de la direction future de l'action. Les investisseurs peuvent prendre en consid\xc3\xa9ration les opinions des analystes pour avoir une id\xc3\xa9e des perspectives de l'entreprise.\n \xee\xa0\xb4 V\xc3\xa9rifier la cible de Wall Street\n \xee\xa0\xb4 V\xc3\xa9rifier le plus bas et le plus haut de l'ann\xc3\xa9e\n"
+		}
+		{
+			hash = "3752c38f4ccd8309"
+			en = "It's important to compare the company with its peers to determine if it's growing or declining. Also take a close look to the company's financial performance and future prospects year after year.\n\xee\xa0\xb4 Look for green value!\n\xee\xa0\xb4 Is company dividend yield high?\n"
+			fr = "Il est important de comparer l'entreprise avec ses concurrents pour d\xc3\xa9terminer s'il est en croissance ou en d\xc3\xa9clin. Regardez \xc3\xa9galement de pr\xc3\xa8s la performance financi\xc3\xa8re de l'entreprise et ses perspectives de l'ann\xc3\xa9e prochaine.\n\xee\xa0\xb4 Cherchez la valeur verte!\n\xee\xa0\xb4 Le rendement du dividende de l'entreprise est-il \xc3\xa9lev\xc3\xa9?\n"
+		}
+		{
+			hash = "9468b8725848f001"
+			en = "Market Cap"
+			fr = "Capitalisation"
+		}
+		{
+			hash = "a0e9c9f3d4f991eb"
+			en = "Current volume is %.2lf %% of the average volume over the last 3 months"
+			fr = "Le volume actuel est de %.2lf %% du volume moyen sur les 3 derniers mois"
+		}
+		{
+			hash = "238e690afc6e4ef2"
+			en = "Today's volume is %.2lf %% of the average volume over the last 3 months (%.*s/%.*s)"
+			fr = "Le volume d'aujourd'hui est de %.2lf %% du volume moyen sur les 3 derniers mois (%.*s/%.*s)"
+		}
+		{
+			hash = "b119fb860a2f5930"
+			en = "Y/Y"
+			fr = "Y/Y"
+		}
+		{
+			hash = "f1dd235cb979adc0"
+			en = "units"
+			fr = "unit\xc3\xa9s"
+		}
+		{
+			hash = "a0835b687fb8759d"
+			en = "units:"
+			fr = "unit\xc3\xa9s:"
+		}
+		{
+			hash = "eb2cffc14e2b519f"
+			en = "No financial sheets to display"
+			fr = "Aucune feuille financi\xc3\xa8re \xc3\xa0 afficher"
 		}
 	]
 }

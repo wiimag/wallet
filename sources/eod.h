@@ -146,3 +146,27 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
  *  @return Returns true if the query was successful.
  */
 bool eod_fetch_async(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds = 15ULL * 60ULL);
+
+/*! Returns the EOD API URL buffer to write too.
+ * 
+ *  @remark Use #eod_api_url_buffer_capacity to determine the size of the buffer.
+
+ *  @return Returns the EOD API URL buffer to write too.
+ */
+char* eod_api_url_buffer();
+
+/*! Returns the EOD API URL buffer capacity.
+ * 
+ *  @return Returns the EOD API URL buffer capacity.
+ */
+size_t eod_api_url_buffer_capacity();
+
+/*! Returns the EOD Web Site URL. */
+string_const_t eod_web_site_url();
+
+ /*! Save the EOD API URL.
+  *
+  *  @param url The url to save. The url must be null terminated.
+  *  @return Returns the saved url.
+  */  
+const char* eod_save_api_url(const char* url);
