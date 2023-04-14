@@ -85,7 +85,9 @@ S("GFL.TO", "ema") => 44.0917
 #### Column Expressions
 
 **Split:** `S($TITLE, price_factor)`
+
 **Ready:** `ROUND((S($TITLE, close) / ((S($TITLE, dma_200)+S($TITLE, dma_50))/2)) * 100)`
+
 **DMA:** `MAX(S($TITLE, dma_50), S($TITLE, dma_200))`
 
 ### S($symbol, $field, $date)
@@ -95,7 +97,7 @@ This variante of the `S(...)` function is used to get a value from a stock symbo
 #### Examples
 
 ```
-# you can use unix UTC timestamps
+# You can use unix timestamps
 S(TSL.TO, wma, 1661497600) => 3.5795
 
 # Or dates in the format "YYYY-MM-DD"
@@ -157,7 +159,9 @@ R('300K', 'GFL.TO', sold) => true
 #### Column Expressions
 
 **Recent:** `R($REPORT, $TITLE, date_max)`
+
 **Ask II:** `R($REPORT, $TITLE, ask) * (1 + (1 - ((S($TITLE, close) / ((S($TITLE, dma_200)+S($TITLE, dma_50))/2)))))`
+
 **Dividends:** `R($REPORT, $TITLE, buy_total_price) - R($REPORT, $TITLE, buy_total_adjusted_price)`
 
 ### F($symbol, $field)

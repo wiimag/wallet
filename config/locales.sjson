@@ -2170,5 +2170,20 @@
 			en = "No financial sheets to display"
 			fr = "Aucune feuille financi\xc3\xa8re \xc3\xa0 afficher"
 		}
+		{
+			hash = "fda31757cf88e0af"
+			en = "Funds {0,currency}"
+			fr = "Fonds {0,currency}"
+		}
+		{
+			hash = "b27c30d25da85728"
+			en = "{0,currency}"
+			fr = "{0,currency}"
+		}
+		{
+			hash = "8825d774e10cc4fa"
+			en = "Create Report##1"
+			fr = "Cr\xc3\xa9er un rapport##1"
+		}
 	]
 }

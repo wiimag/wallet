@@ -35,31 +35,35 @@ struct plot_context_t
     double a{ 0 }, b{ 0 }, c{ 0 }, d{ 0 }, e{ 0 }, f{ 0 };
 };
 
+FOUNDATION_STATIC void wallet_render_funds_text(float available_space, float padding, string_const_t fundsstr)
+{
+    const float tw = ImGui::CalcTextSize(STRING_RANGE(fundsstr)).x;
+    const float iw = ImGui::GetItemRectSize().x;
+    ImGui::MoveCursor(available_space - tw - iw + IM_SCALEF(10) - padding, 0, true);
+    ImGui::TextUnformatted(fundsstr.str);
+}
+
 bool wallet_draw(wallet_t* wallet, float available_space)
 {
     bool updated = false;
 
     float last_item_size = 0;
-    const float control_padding = IM_SCALEF(10.0f);
+    const float control_padding = IM_SCALEF(14.0f) + (ImGui::GetScrollMaxY() > 0 ? IM_SCALEF(8) : 0);
 
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-
+    // Draw wallet history tracking check box
     {
         ImGui::AlignTextToFramePadding();
         ImGui::TrTextUnformatted("History");
         last_item_size = ImGui::GetItemRectSize().x;
-        ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(32.0f), 0, true);
+        ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(20.0f) - control_padding, 0, true);
         if (ImGui::Checkbox("##History", &wallet->track_history))
             updated |= true;
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(tr("Track historical data for this report."));
     }
-
+    
+    // Draw wallet target percentage
     {
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-
         ImGui::AlignTextToFramePadding();
         ImGui::TrTextUnformatted("Target %");
         last_item_size = ImGui::GetItemRectSize().x;
@@ -75,10 +79,8 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         }
     }
 
+    // Draw wallet preferred currency
     {
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-
         ImGui::AlignTextToFramePadding();
         ImGui::TrTextUnformatted("Currency");
         last_item_size = ImGui::GetItemRectSize().x;
@@ -98,34 +100,44 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         }
     }
 
+    // Draw wallet funds (expands to all currencies)
     {
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-
-        string_const_t funds_string = string_from_currency(wallet_get_total_funds(wallet), STRING_CONST("9 999 999.99 $"));
+        string_const_t fundsstr = tr_format_static("{0,currency}", wallet_get_total_funds(wallet));
+        ImGui::MoveCursor(-IM_SCALEF(4), 0);
         if (ImGui::TreeNode(tr("Funds")))
         {
+            wallet_render_funds_text(available_space, control_padding, fundsstr);
             ImGui::SetWindowFontScale(0.9f);
-            ImGui::TableNextColumn();
-            table_cell_right_aligned_label(STRING_ARGS(funds_string));
 
+            ImGui::Columns(2, "funds", true);
             foreach(f, wallet->funds)
             {
                 char currency_code[8];
                 string_copy(STRING_BUFFER(currency_code), STRING_ARGS(f->currency));
 
                 ImGui::PushID(f);
-                ImGui::TableNextColumn();
+                if (i > 0)
+                    ImGui::NextColumn();
 
+                if (ImGui::Button(ICON_MD_DELETE))
+                {
+                    array_erase(wallet->funds, i);
+                    updated |= true;
+                    ImGui::PopID();
+                    break;
+                }
+
+                ImGui::SameLine();
                 ImGui::ExpandNextItem();
                 if (ImGui::InputTextWithHint("##Currency", "USD", STRING_BUFFER(currency_code), ImGuiInputTextFlags_AutoSelectAll))
                 {
                     updated |= true;
-                    string_deallocate(f->currency.str);
-                    f->currency = string_clone(currency_code, string_length(currency_code));
+                    string_deallocate(f->currency);
+                    const size_t len = string_length(currency_code);
+                    f->currency = string_clone(currency_code, len);
                 }
 
-                ImGui::TableNextColumn();
+                ImGui::NextColumn();
                 ImGui::ExpandNextItem();
                 if (ImGui::InputDouble("##Amount", &f->amount, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
                     updated |= true;
@@ -141,13 +153,14 @@ bool wallet_draw(wallet_t* wallet, float available_space)
                 bool added = false;
                 static double new_fund_amount = 0.0;
                 static char new_fund_currency[8] = { 0 };
-                ImGui::TableNextColumn();
 
+                if (!array_empty(wallet->funds))
+                    ImGui::NextColumn();
                 ImGui::ExpandNextItem();
                 if (ImGui::InputTextWithHint("##Currency", "USD", STRING_BUFFER(new_fund_currency), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
                     added = true;
 
-                ImGui::TableNextColumn();
+                ImGui::NextColumn();
                 ImGui::ExpandNextItem();
                 if (ImGui::InputDouble("##Amount", &new_fund_amount, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
                     added = true;
@@ -168,8 +181,6 @@ bool wallet_draw(wallet_t* wallet, float available_space)
                 }
                 ImGui::PopID();
 
-                ImGui::TableNextColumn();
-                ImGui::TableNextColumn();
                 ImGui::ExpandNextItem();
                 if (ImGui::SmallButton(tr("Cancel")))
                 {
@@ -180,8 +191,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
             }
             else
             {
-                ImGui::TableNextColumn();
-                ImGui::TableNextColumn();
+                ImGui::NextColumn();
                 ImGui::ExpandNextItem();
                 if (ImGui::SmallButton(tr("Add currency")))
                 {
@@ -189,13 +199,14 @@ bool wallet_draw(wallet_t* wallet, float available_space)
                 }
             }
 
+            ImGui::Columns(1, "##closefunds", false);
+
             ImGui::SetWindowFontScale(1.0f);
             ImGui::TreePop();
         }
         else
         {
-            ImGui::TableNextColumn();
-            table_cell_right_aligned_label(STRING_ARGS(funds_string));
+            wallet_render_funds_text(available_space, control_padding, fundsstr);
         }
     }
 
