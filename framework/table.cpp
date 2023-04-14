@@ -848,6 +848,36 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
         table->row_end(table, &row, element);
 }
 
+FOUNDATION_STATIC bool table_handle_horizontal_scrolling(table_t* table)
+{
+    // Do we have an horizontal scrollbar?
+    const bool has_horizontal_scrollbar = ImGui::GetScrollMaxX() > 0;
+    if (!has_horizontal_scrollbar)
+        return false;
+
+    // Check if the user is hovering the table and scrolling using the mouse wheel
+    const bool is_mouse_hovering_table = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+    if (!is_mouse_hovering_table)
+        return false;
+
+    // Check if we already have an vertical scrollbar
+    const bool has_vertical_scrollbar = ImGui::GetScrollMaxY() > 0;
+    if (has_vertical_scrollbar)
+        return false;
+
+    const float mouse_wheel_delta = ImGui::GetIO().MouseWheel;
+    const bool is_mouse_scrolling = (mouse_wheel_delta != 0.0f);
+    if (!is_mouse_scrolling)
+        return false;
+
+    // Scroll the table horizontally
+    const float scroll_x = ImGui::GetScrollX();
+    const float scroll_x_delta = mouse_wheel_delta * 20.0f;
+    ImGui::SetScrollX(scroll_x - scroll_x_delta);
+
+    return true;
+}
+
 FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
 {
     //TIME_TRACKER(0.008, "Render table %.*s", STRING_FORMAT(table->name));
@@ -932,6 +962,8 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
     table_render_sort_rows(table);
 
     table_render_elements(table, column_count);
+
+    table_handle_horizontal_scrolling(table);
 
     ImGui::EndTable();
 }
