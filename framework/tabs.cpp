@@ -17,16 +17,31 @@ struct tabbar_t
     int* active_tab{ nullptr };
     int push_color_tabs_counter{0};
 
+    /*! Track the next tab to automatically select, -1 if none. */
+    int select_tab_index{ -1 };
+    bool tab_init_selected{ false };
+
     ImVec2 end_tabs_cursor;
     function<void()> tools_callback{ nullptr };
+
+    /*! Track the tabs that are selected. */
+    int* tab_selection_queue{ nullptr };
 };
 
 static int _tab_current = -1;
 static tabbar_t* _tabbars = nullptr;
+static int _current_tabbar_index = -1;
 
 FOUNDATION_STATIC void tab_capture_cursor(tabbar_t* tb)
 {
     tb->end_tabs_cursor = ImVec2(ImGui::GetItemRectMax().x + 8.0f, ImGui::GetItemRectMin().y);
+}
+
+FOUNDATION_FORCEINLINE tabbar_t* tab_current_bar()
+{
+    FOUNDATION_ASSERT(_tabbars);
+    FOUNDATION_ASSERT(_current_tabbar_index >= 0 && _current_tabbar_index < (int)array_size(_tabbars));
+    return _tabbars + _current_tabbar_index;
 }
 
 void tab_draw(
@@ -35,10 +50,7 @@ void tab_draw(
     const function<void(void)>& render_tab_callback,
     const function<void(void)>& tab_tools_callback)
 {
-    static bool tab_init_selected = false;
-
-    tabbar_t* tb = array_last(_tabbars);
-    FOUNDATION_ASSERT(tb);
+    tabbar_t* tb = tab_current_bar();
 
     int& tab_index = tb->tab_index;
     int& current_tab = *tb->active_tab;
@@ -49,7 +61,14 @@ void tab_draw(
     if (opened && *opened == false && current_tab == tab_index)
         current_tab++;
 
-    tab_flags |= !tab_init_selected && current_tab == tab_index ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
+    if (tb->select_tab_index >= 0)
+    {
+        tb->tab_init_selected = false;
+        current_tab = tb->select_tab_index;
+        tb->select_tab_index = -1;
+    }
+
+    tab_flags |= !tb->tab_init_selected && current_tab == tab_index ? ImGuiTabItemFlags_SetSelected : ImGuiTabItemFlags_None;
     if (ImGui::BeginTabItem(label, opened, tab_flags))
     {
         tab_capture_cursor(tb);
@@ -83,11 +102,22 @@ void tab_draw(
 
             ImGui::PopStyleVar(1);
         }
+        else
+        {
+            log_infof(0, STRING_CONST("Tab %s is not active"), label);
+        }
 
-        if (!tab_init_selected && current_tab == tab_index)
-            tab_init_selected = true;
-        else if (tab_init_selected && current_tab != tab_index)
+        if (!tb->tab_init_selected && current_tab == tab_index)
+            tb->tab_init_selected = true;
+        else if (tb->tab_init_selected && current_tab != tab_index)
+        {
+            // Remove current_tab in selection queue.
+            if (array_size(tb->tab_selection_queue) > 0 && tb->tab_selection_queue[0] != tab_index)
+                array_remove(tb->tab_selection_queue, tab_index);
+
+            array_insert(tb->tab_selection_queue, 0, tab_index);
             current_tab = tab_index;
+        }
          
         ImGui::EndTabItem();
     }
@@ -101,8 +131,7 @@ void tab_draw(
 
 void tab_set_color(ImU32 color)
 {
-    tabbar_t* tb = array_last(_tabbars);
-    FOUNDATION_ASSERT(tb);
+    tabbar_t* tb = tab_current_bar();
 
     ImGui::PushStyleColor(ImGuiCol_Tab, color);
     ImGui::PushStyleColor(ImGuiCol_TabActive, imgui_color_highlight(color, 0.2f));
@@ -118,9 +147,7 @@ void tab_set_color(const ImVec4& c)
 
 void tab_pop_color() 
 {
-    tabbar_t* tb = array_last(_tabbars);
-    FOUNDATION_ASSERT(tb);
-
+    tabbar_t* tb = tab_current_bar();
     tb->push_color_tabs_counter -= 3;
     ImGui::PopStyleColor(3);
 }
@@ -133,13 +160,22 @@ bool tabs_begin(
 {
     if (ImGui::BeginTabBar(tab_bar_name, flags | ImGuiTabBarFlags_NoTabListScrollingButtons))
     {
-        tabbar_t tb{};
-        tb.tab_index = 0;
-        tb.active_tab = &active_tab;
-        tb.push_color_tabs_counter = 0;
-        tb.tools_callback = tools_callback;
+        ++_current_tabbar_index;
+        tabbar_t* tb = _tabbars + _current_tabbar_index;
+        
+        // Do we need to stack a new tab bar?
+        if (_current_tabbar_index + 1 > (int)array_size(_tabbars))
+        {
+            tabbar_t ntb{};
+            array_push_memcpy(_tabbars, &ntb);
+            tb = _tabbars + _current_tabbar_index;
+        }
 
-        array_push_memcpy(_tabbars, &tb);
+        tb->tab_index = 0;
+        tb->active_tab = &active_tab;
+        tb->push_color_tabs_counter = 0;
+        tb->tools_callback = tools_callback;
+
         return true;
     }
 
@@ -148,13 +184,48 @@ bool tabs_begin(
 
 void tabs_end()
 {
-    tabbar_t* tb = array_last(_tabbars);
-    FOUNDATION_ASSERT(tb);
+    tabbar_t* tb = tab_current_bar();
 
     ImGui::PopStyleColor(tb->push_color_tabs_counter);
 
     if (*tb->active_tab > tb->tab_index)
         *tb->active_tab = tb->tab_index - 1;
+
+    // Check if the CTRL+TAB key has been pressed to change the active tab.
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Tab, 0, ImGuiInputFlags_RouteGlobal))
+    {
+        if (array_size(tb->tab_selection_queue) > 1)
+        {
+            int current_tab = tb->tab_selection_queue[0];
+            array_erase_ordered_safe(tb->tab_selection_queue, 0);
+            array_push(tb->tab_selection_queue, current_tab);
+            tb->select_tab_index = tb->tab_selection_queue[0];
+        }
+        else
+            tb->select_tab_index = (*tb->active_tab + 1) % tb->tab_index;
+        tb->select_tab_index = max(0, min(tb->select_tab_index, tb->tab_index));
+    }
+    else if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Tab, 0, ImGuiInputFlags_RouteGlobal))
+    {
+        if (array_size(tb->tab_selection_queue) > 1)
+        {
+            int next_tab = *array_last(tb->tab_selection_queue);
+            array_pop_safe(tb->tab_selection_queue);
+            array_insert(tb->tab_selection_queue, 0, next_tab);
+            tb->select_tab_index = tb->tab_selection_queue[0];
+        }
+        else
+            tb->select_tab_index = (*tb->active_tab + tb->tab_index - 1) % tb->tab_index;
+        tb->select_tab_index = max(0, min(tb->select_tab_index, tb->tab_index));
+    }
+
+    // Remove all index from selection queue that are larger than the tab index
+    for (int i = (int)array_size(tb->tab_selection_queue) - 1; i >= 0; --i)
+    {
+        if (tb->tab_selection_queue[i] >= tb->tab_index)
+            array_erase(tb->tab_selection_queue, i);
+    }
+
 
     ImGui::EndTabBar();
 
@@ -164,7 +235,7 @@ void tabs_end()
         tb->tools_callback();
     }
 
-    array_pop(_tabbars);
+    _current_tabbar_index--;
 }
 
 void tabs_draw_all()
@@ -191,5 +262,11 @@ void tabs_draw_all()
 void tabs_shutdown()
 {
     session_set_integer("current_tab", _tab_current);
+
+    for (unsigned i = 0; i < array_size(_tabbars); ++i)
+    {
+        tabbar_t* tb = _tabbars + i;
+        array_deallocate(tb->tab_selection_queue);
+    }
     array_deallocate(_tabbars);
 }

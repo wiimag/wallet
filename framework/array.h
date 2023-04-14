@@ -555,3 +555,36 @@ uint32_t array_shuffle(T* arr)
 
     return swap_count;
 }
+
+/*! Search for a given value in the array and remove it if found. 
+ *  
+ *  @template T             The type of the array elements.
+ *  @template U             The type of the value to remove.
+ *
+ *  @param arr              The dynamic array (@see <foundation/array.h>)
+ *  @param value_to_remove  The value to remove.
+ *
+ *  @remark The value type need to be comparable.
+ *
+ *  @return True if the value was found and removed, false otherwise.
+ *
+ *  @example
+ *      int numbers[] = { 1, 2, 3, 4, 5 };
+ *      FOUNDATION_ASSERT(array_remove(numbers, 3));
+ *      FOUNDATION_ASSERT(!array_remove(numbers, 42));
+ *      FOUNDATION_ASSERT(array_size(numbers) == 4);
+ */
+template<typename T, typename U>
+bool array_remove(T* arr, const U& value_to_remove)
+{
+    const uint32_t size = array_size(arr);
+    for (uint32_t i = 0; i < size; ++i)
+    {
+        if (arr[i] == value_to_remove)
+        {
+            array_erase_ordered_safe(arr, i);
+            return true;
+        }
+    }
+    return false;
+}
