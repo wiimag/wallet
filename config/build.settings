@@ -1,4 +1,19 @@
+# Main application names
 APP_NAME=Wallet
+PROJECT_ID=wallet
+
+# Product info
+PRODUCT_NAME=Wallet
+PRODUCT_COMPANY=Wiimag Inc.
+PRODUCT_DESCRIPTION=Wallet - Finance 300K
+PRODUCT_CODE_NAME=Wallet
+PRODUCT_COPYRIGHT=Copyright (C) 2022-2023 - equals-forty-two.com - All rights reserved
+PRODUCT_WINDOWS_FILENAME=app.exe
+
+# Version info
+VERSION_MAJOR=0
+VERSION_MINOR=13
+VERSION_PATCH=3
 
 # Build settings (Usually passed to Cmake)
 BUILD_SERVICE_EXE=OFF

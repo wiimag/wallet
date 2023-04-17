@@ -1,13 +1,12 @@
 /*
- * Copyright 2023 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
 #if BUILD_APPLICATION
 
 #include "about.h"
-
-#include <version.h>
+#include "version.h"
 
 #include <framework/app.h>
 #include <framework/bgfx.h>
@@ -101,7 +100,7 @@ FOUNDATION_STATIC void about_menu_open_dialog(void* user_data)
 void about_open_window()
 {
     const char* title = string_format_static_const(tr("About - %s##8"), PRODUCT_NAME);
-    app_open_dialog(title, uint32_t(IM_SCALEF(350)), uint32_t(IM_SCALEF(500)), false, about_render_dialog);
+    app_open_dialog(title, uint32_t(IM_SCALEF(350)), uint32_t(IM_SCALEF(400)), false, about_render_dialog);
 }
 
 //

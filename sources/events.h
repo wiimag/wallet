@@ -1,8 +1,8 @@
 /*
- * Copyright 2023 Wiimag Inc. All rights reserved.
+ * Copyright 2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
- * 
- * Declare globally define messages
+ *
+ * Declare application message events
  */
 
 #pragma once

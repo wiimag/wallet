@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  * 
  * This module provides a set of function to translate strings and to manage the

@@ -94,4 +94,3 @@ The solution will be generated in the `projects/.build` folder.
 ```
 
 This will generate the solution, build it, run the tests, open the workspace, and start the application (or course if everything went well!).
-

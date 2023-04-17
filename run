@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright 2022-2023 Wiimag Inc. All rights reserved.
+# Copyright 2022-2023 - All rights reserved.
 # License: https://equals-forty-two.com/LICENSE
 #
 # Run script to execute most common operations used when working on the application framework.
@@ -18,7 +18,7 @@ source $SCRIPT_DIR/common.sh
 
 # Set the default values for the parameters
 APP_NAME=$(build_setting "APP_NAME")
-SHORT_NAME=$(basename $(pwd))
+SHORT_NAME=$(build_setting "PROJECT_ID")
 SOLUTION_DIR=projects/.build
 PROGRAM_NAME=$(basename $0)
 
@@ -71,16 +71,6 @@ while [[ $# -gt 0 ]]; do
     --no-color)
       NO_COLOR=1
       shift # past argument
-      ;;
-    -n|--name)
-      SHORT_NAME="$2"
-      shift # past argument
-      shift # past value
-      ;;
-    -a|--app-name)
-      APP_NAME="$2"
-      shift # past argument
-      shift # past value
       ;;
     b|build)
       # Update the command counter
@@ -228,8 +218,6 @@ if [ $HELP -ge 1 ]; then
   echo ""
   echo "  Optional arguments:"
   echo "   -h, --help            Show this help message and exit"
-  echo "   -n, --name <name>     Specify the solution name (used to open the workspace are launch the exe on Windows)"
-  echo "   -a, --app-name <name> Specify the App name to launch application on MacOS"
   echo "   --verbose             Increase the verbosity of the bash script"
   echo "   --no-color            Disable color output"
   echo ""
@@ -497,6 +485,9 @@ if [ $TESTS -ge 1 ]; then
   echo -e "${green}${italic}Running ${APP_NAME} tests with arguments: ${ADDITIONAL_ARGS[@]}${normal}"
   echo
 
+  # Delete old test log
+  rm -f artifacts/tests.log 2> /dev/null
+
   if [ ${machine} == "MinGw" ]; then
     ./build/${SHORT_NAME}.exe --run-tests ${ADDITIONAL_ARGS[@]}
   elif [ ${machine} == "Mac" ]; then
@@ -508,7 +499,7 @@ if [ $TESTS -ge 1 ]; then
     echo
     echo -e "${red}===TESTS FAILED ($retval)===${normal}"
     echo
-    cat artifacts/tests.log
+    cat artifacts/tests.log 2> /dev/null
     exit $retval
   fi
 

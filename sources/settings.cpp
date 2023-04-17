@@ -1,8 +1,8 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
- 
+
 #include "settings.h"
 
 #include "eod.h"
@@ -13,22 +13,22 @@
 #include "search.h"
 
 #include <framework/imgui.h>
+#include <framework/string.h>
 #include <framework/common.h>
 #include <framework/session.h>
-#include <framework/string.h>
 #include <framework/localization.h>
 
-#define SESSION_KEY_SEARCH_TERMS "search_terms"
-#define SESSION_KEY_SEARCH_FILTER "search_filter"
-#define SESSION_KEY_CURRENT_TAB "current_tab_1"
-
 settings_t SETTINGS{};
+
+constexpr const char SESSION_KEY_CURRENT_TAB[] = "current_tab_1";
+constexpr const char SESSION_KEY_SEARCH_TERMS[] = "search_terms";
+constexpr const char SESSION_KEY_SEARCH_FILTER[] = "search_filter";
 
 #if BUILD_APPLICATION
 
 void settings_draw()
 {
-    ImGui::Columns(3, nullptr, false);
+    ImGui::Columns(3, "#Settings", false);
 
     ImGui::SetColumnWidth(0, IM_SCALEF(260.0f));
     ImGui::SetColumnWidth(1, IM_SCALEF(270.0f));

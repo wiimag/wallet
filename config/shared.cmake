@@ -1,5 +1,5 @@
 #
-# Copyright 2023 Wiimag Inc. All rights reserved.
+# Copyright 2022-2023 - All rights reserved.
 # License: https://equals-forty-two.com/LICENSE
 #
 # Module that share a set of utility functions
@@ -100,5 +100,30 @@ function(set_executable_framework_linker_flags CMAKE_EXE_LINKER_FLAGS CMAKE_EXE_
         set(${CMAKE_EXE_LINKER_FLAGS} "${CMAKE_EXE_LINKER_FLAGS} -weak_framework Metal -weak_framework MetalKit -framework QuartzCore")
 
     endif()
+
+endfunction()
+
+# Function used to read a NAME=value property from the config/build.settings file
+function(read_build_settings_property property_name property_value)
+
+    # Read the build.settings file
+    file(READ ${CMAKE_CURRENT_SOURCE_DIR}/config/build.settings BUILD_SETTINGS_FILE)
+
+    # Find the property in the build.settings file and read the entire line
+    string(REGEX MATCH "${property_name}=([^\n\r]*)" PROPERTY_LINE ${BUILD_SETTINGS_FILE})
+
+    # Check if the property was found
+    if("${PROPERTY_LINE}" STREQUAL "")
+        message(FATAL_ERROR "Property ${property_name} not found in ${CMAKE_CURRENT_SOURCE_DIR}/config/build.settings file")
+    endif()
+
+    # Extract the property value
+    string(REGEX MATCH "=(.*)" PROPERTY_VALUE ${PROPERTY_LINE})
+
+    # Remove the = from the property value
+    string(REGEX REPLACE "=" "" PROPERTY_VALUE ${PROPERTY_VALUE})
+
+    # Set the property value
+    set(${property_value} ${PROPERTY_VALUE} PARENT_SCOPE)
 
 endfunction()

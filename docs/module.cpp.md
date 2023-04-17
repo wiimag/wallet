@@ -81,7 +81,7 @@ bool tic_tac_toe_open_window(const char* title, int width, int height, GLFWwindo
 
 ```cpp
 /*
- * Copyright 2023 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  * 
  * DESCRIPTION OF THE MODULE, i.e. Render pad to test rendering code.

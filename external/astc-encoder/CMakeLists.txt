@@ -1,5 +1,5 @@
 #
-# Copyright 2023 Wiimag Inc. All rights reserved.
+# Copyright 2022-2023 - All rights reserved.
 # License: https://equals-forty-two.com/LICENSE
 #
 # Build the C++ bimg library project

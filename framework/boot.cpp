@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
@@ -19,6 +19,8 @@
 #include <framework/about.h>
 
 #include <foundation/foundation.h>
+
+#undef ERROR_ACCESS_DENIED
 
 #if BUILD_DEVELOPMENT
 static bool _run_tests = false;
@@ -71,6 +73,12 @@ FOUNDATION_STATIC void main_handle_debug_break()
 FOUNDATION_STATIC int main_process_command_line(foundation_config_t& config, application_t& application)
 {
     LOG_PREFIX(false);
+
+    if (BUILD_DEPLOY && environment_argument("run-tests"))
+    {
+        log_error(0, ERROR_ACCESS_DENIED, STRING_CONST("Tests cannot run in deploy mode"));
+        return -1;
+    }
 
     if (environment_argument("version"))
     {

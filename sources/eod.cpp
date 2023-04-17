@@ -4,7 +4,6 @@
  */
 
 #include "eod.h"
-#include "version.h"
 
 #include <framework/app.h>
 #include <framework/glfw.h>

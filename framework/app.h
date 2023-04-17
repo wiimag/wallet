@@ -1,11 +1,24 @@
 /*
- * Copyright 2022-2023 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
 #pragma once
 
+#include "version.h"
+
+// Include most common application headers
+#include <framework/jobs.h>
+#include <framework/tabs.h>
+#include <framework/imgui.h>
 #include <framework/common.h>
+#include <framework/module.h>
+#include <framework/session.h>
+#include <framework/progress.h>
+#include <framework/profiler.h>
+#include <framework/dispatcher.h>
+#include <framework/string_table.h>
+#include <framework/localization.h>
 
 typedef struct GLFWwindow GLFWwindow;
 

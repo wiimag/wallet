@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  * 
  * Array helper extensions on top of the foundation_lib <foundation/array.h>

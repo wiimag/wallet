@@ -2,13 +2,17 @@
 
 This document illustrates the use of expressions in the Wallet application.
 
-## Introduction
+# Introduction
 
 First a few words about expressions. An expression is a string that is evaluated to a value. The value can be a number, a string, a boolean, or a list of values. The expression can be used in the following places:
 
 - In the console window,
 - in the `--eval` command,
 - and in the report column expressions.
+
+# Framework
+
+# Wallet
 
 ## Functions
 

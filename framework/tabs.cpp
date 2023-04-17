@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
@@ -101,10 +101,6 @@ void tab_draw(
                 ImGui::TextUnformatted(label);
 
             ImGui::PopStyleVar(1);
-        }
-        else
-        {
-            log_infof(0, STRING_CONST("Tab %s is not active"), label);
         }
 
         if (!tb->tab_init_selected && current_tab == tab_index)

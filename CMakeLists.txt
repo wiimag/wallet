@@ -1,5 +1,5 @@
 #
-# Copyright 2023 Wiimag Inc. All rights reserved.
+# Copyright 2022-2023 - All rights reserved.
 # License: https://equals-forty-two.com/LICENSE
 #
 # CMake entry point to build the project solutions
@@ -42,15 +42,16 @@ set(BUILD_DIR ${CMAKE_CURRENT_SOURCE_DIR}/build CACHE PATH "Build directory path
 set(SHARED_MODULE_PATH ${CMAKE_SOURCE_DIR}/config/shared.cmake CACHE PATH "Shared module path")
 include(${SHARED_MODULE_PATH})
 
-# Cache the shared options path
-set(SHARED_OPTIONS_PATH ${CMAKE_SOURCE_DIR}/config/options.cmake CACHE PATH "Shared options path")
-
 # Include the shared options module
+set(SHARED_OPTIONS_PATH ${CMAKE_SOURCE_DIR}/config/options.cmake CACHE PATH "Shared options path")
 include(${SHARED_OPTIONS_PATH})
 
-# Get the project name from the current directory name
-get_filename_component(ProjectId ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+# Read the PROJECT_ID=... from the config/build.settings file
+read_build_settings_property("PROJECT_ID" ProjectId)
 string(REPLACE " " "_" ProjectId ${ProjectId})
+
+# Print the project name
+message(STATUS "Project: ${ProjectId}")
 
 # Make sure ${ProjectId} can be accessed for all nested projects
 set(ProjectId ${ProjectId} CACHE INTERNAL "Set project `${ProjectId}` variable" FORCE)
@@ -109,8 +110,8 @@ add_compile_options(-DMAX_QUERY_THREADS=${BUILD_MAX_QUERY_THREADS})
 
 add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_DEBUG=1>")
 add_compile_options("$<$<CONFIG:RELEASE>:-DBUILD_RELEASE=1>")
-add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEVELOPMENT=0>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEPLOY=1>")
+add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEVELOPMENT=0>")
 add_compile_options("$<$<CONFIG:DEBUG,RELEASE,DEPLOY>:-DBUILD_ENABLE_LOG=1>")
 add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_ENABLE_DEBUG_LOG=0>")
 add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_ENABLE_ASSERT=0>")
@@ -121,6 +122,32 @@ add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_TRACKER=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_GUARD=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_MEMORY_STATISTICS=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_ENABLE_STATIC_HASH_DEBUG=1>")
+
+# Set program information defines
+read_build_settings_property("PRODUCT_NAME" PRODUCT_NAME)
+add_compile_options(-DPRODUCT_NAME="${PRODUCT_NAME}")
+
+read_build_settings_property("PRODUCT_COMPANY" PRODUCT_COMPANY)
+add_compile_options(-DPRODUCT_COMPANY="${PRODUCT_COMPANY}")
+
+read_build_settings_property("PRODUCT_DESCRIPTION" PRODUCT_DESCRIPTION)
+add_compile_options(-DPRODUCT_DESCRIPTION="${PRODUCT_DESCRIPTION}")
+
+read_build_settings_property("PRODUCT_COPYRIGHT" PRODUCT_COPYRIGHT)
+add_compile_options(-DPRODUCT_COPYRIGHT="${PRODUCT_COPYRIGHT}")
+
+read_build_settings_property("PRODUCT_CODE_NAME" PRODUCT_CODE_NAME)
+add_compile_options(-DPRODUCT_CODE_NAME="${PRODUCT_CODE_NAME}")
+
+# Set product version defines
+read_build_settings_property("VERSION_MAJOR" VERSION_MAJOR)
+add_compile_options(-DVERSION_MAJOR=${VERSION_MAJOR})
+
+read_build_settings_property("VERSION_MINOR" VERSION_MINOR)
+add_compile_options(-DVERSION_MINOR=${VERSION_MINOR})
+
+read_build_settings_property("VERSION_PATCH" VERSION_PATCH)
+add_compile_options(-DVERSION_PATCH=${VERSION_PATCH})
 
 # If the option BUILD_ENABLE_LOCALIZATION is OFF, then disable localization
 if(NOT BUILD_ENABLE_LOCALIZATION)
@@ -281,6 +308,9 @@ add_subdirectory(${ROOT_DIR}/external/imgui)
 # Load main framework library
 add_subdirectory(${ROOT_DIR}/framework)
 
+# Load docs project
+add_subdirectory(${ROOT_DIR}/docs)
+
 # Include config/extras.cmake if it exists
 if(EXISTS ${ROOT_DIR}/config/extras.cmake)
     include(${ROOT_DIR}/config/extras.cmake)
@@ -289,8 +319,9 @@ endif()
 # Load main exectuable project under sources/
 add_subdirectory(${ROOT_DIR}/sources)
 
-if (MSVC)
-    # Load installer solution
-    # TODO: Only works on Windows as of now
-    add_subdirectory(${ROOT_DIR}/tools/installer)
-endif()
+# Add subdirectories for all cmakelist under tools/
+file(GLOB_RECURSE CMAKE_LISTS ${ROOT_DIR}/tools/*CMakeLists.txt)
+foreach(CMAKE_LIST ${CMAKE_LISTS})
+    get_filename_component(CMAKE_LIST_DIR ${CMAKE_LIST} DIRECTORY)
+    add_subdirectory(${CMAKE_LIST_DIR})
+endforeach()
