@@ -24,7 +24,11 @@
 
 #define HASH_EOD static_hash_string("eod", 3, 0x35f39422e491f3e1ULL)
 
+#if BUILD_BACKEND
+#define EOD_URL "https://wallet.wiimag.com"
+#else
 #define EOD_URL "https://eodhistoricaldata.com"
+#endif
 
 constexpr const char EOD_API_URL_KEY[] = "eod_api_url";
 

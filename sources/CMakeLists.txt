@@ -177,6 +177,10 @@ elseif(XCODE)
 
 endif()
 
+#
+# Define custom application build target
+add_compile_options(-DBUILD_BACKEND=1)
+
 # Write the executable file to the build folder directly without any configuration sub folder
 if (MSVC)
 

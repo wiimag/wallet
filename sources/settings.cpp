@@ -98,6 +98,7 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
+    #if !BUILD_BACKEND
     // Open AI API KEY
     {
         ImGui::NextColumn();
@@ -129,6 +130,7 @@ void settings_draw()
             openai_set_organization(openai_org.str);
         ImGui::NextColumn();
     }
+    #endif
 
     // Default currency for reports
     {

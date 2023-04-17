@@ -10,6 +10,10 @@
 
 #include <foundation/string.h>
 
+#ifndef BUILD_BACKEND
+#  define BUILD_BACKEND 0
+#endif
+
 bool backend_is_connected();
 
 string_const_t backend_url();
