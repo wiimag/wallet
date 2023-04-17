@@ -139,6 +139,9 @@ add_compile_options(-DPRODUCT_COPYRIGHT="${PRODUCT_COPYRIGHT}")
 read_build_settings_property("PRODUCT_CODE_NAME" PRODUCT_CODE_NAME)
 add_compile_options(-DPRODUCT_CODE_NAME="${PRODUCT_CODE_NAME}")
 
+read_build_settings_property("PRODUCT_URL" PRODUCT_URL)
+add_compile_options(-DPRODUCT_URL="${PRODUCT_URL}")
+
 # Set product version defines
 read_build_settings_property("VERSION_MAJOR" VERSION_MAJOR)
 add_compile_options(-DVERSION_MAJOR=${VERSION_MAJOR})

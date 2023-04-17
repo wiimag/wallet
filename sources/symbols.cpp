@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 equals-forty-two.com All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
+ * License: https://wallet.wiimag.com/LICENSE
  */
 
 #define HASH_SYMBOLS static_hash_string("symbols", 7, 0x2550ceb198e6a738ULL)

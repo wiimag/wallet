@@ -2,8 +2,8 @@
 //
 
 #pragma warning(disable: 4067)
-#include "resource.h"
-#include "version.h"
+#include <framework/resource.h>
+#include <framework/version.h>
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -89,11 +89,11 @@ BEGIN
         BLOCK "040904b0"
         BEGIN
             VALUE "CompanyName", PRODUCT_COMPANY
-            VALUE "FileDescription", PRODUCT_DESCRIPTION
+            VALUE "FileDescription", "Wallet Setup Installer"
             VALUE "FileVersion", STRINGIZE(VERSION_MAJOR.VERSION_MINOR.VERSION_PATCH.VERSION_BUILD)
             VALUE "InternalName", PRODUCT_CODE_NAME
             VALUE "LegalCopyright", PRODUCT_COPYRIGHT
-            VALUE "OriginalFilename", PRODUCT_WINDOWS_FILENAME
+            VALUE "OriginalFilename", "setup.exe"
             VALUE "ProductName", PRODUCT_NAME
             VALUE "ProductVersion", STRINGIZE(VERSION_MAJOR.VERSION_MINOR.VERSION_PATCH.VERSION_BUILD)
         END

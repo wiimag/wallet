@@ -36,7 +36,7 @@ FOUNDATION_STATIC const char* FOUNDATION_RESTRICT about_configuration_cstr()
 
 FOUNDATION_STATIC void about_render_dialog()
 {
-    ImGui::TextURL(PRODUCT_COMPANY, nullptr, STRING_CONST("https://equals-forty-two.com"));
+    ImGui::TextURL(PRODUCT_COMPANY, nullptr, STRING_CONST(PRODUCT_URL));
     ImGui::TrTextWrapped(PRODUCT_DESCRIPTION);
 
     string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));

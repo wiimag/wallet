@@ -1,6 +1,6 @@
 #
 # Copyright 2022-2023 - All rights reserved.
-# License: https://equals-forty-two.com/LICENSE
+# License: https://wallet.wiimag.com/LICENSE
 #
 # Main app executable CMakeLists.txt project file.
 #
