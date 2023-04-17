@@ -1,6 +1,6 @@
 /*
- * Copyright 2023 equals-forty-two.com All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * Copyright 2023 Wiimag Inc. All rights reserved.
+ * License: https://wallet.wiimag.com/LICENSE
  */
 
 #include "news.h"
@@ -514,8 +514,7 @@ FOUNDATION_STATIC void news_initialize()
 }
 
 FOUNDATION_STATIC void news_shutdown()
-{
-    
+{   
 }
 
 DEFINE_MODULE(NEWS, news_initialize, news_shutdown, MODULE_PRIORITY_UI);

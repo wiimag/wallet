@@ -267,7 +267,7 @@ FOUNDATION_STATIC void installer_render()
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - 200.0f);
     ImGui::Checkbox(tr("I Agree"), &agree);
 
-    ImGui::TextURL("https://equals-forty-two.com/privacy", nullptr, STRING_CONST("https://equals-forty-two.com/privacy"));
+    ImGui::TextURL("https://wallet.wiimag.com/privacy", nullptr, STRING_CONST("https://wallet.wiimag.com/privacy"));
     ImGui::EndGroup();
 
     // Draw a footer rect at the bottom of the screen

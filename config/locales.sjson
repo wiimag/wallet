@@ -1536,11 +1536,6 @@
 			fr = "Version %s %.*s (%s)"
 		}
 		{
-			hash = "4de6c636a936ac13"
-			en = "Copyright (C) 2022-2023 - equals-forty-two.com - All rights reserved"
-			fr = "Copyright (C) 2022-2023 - equals-forty-two.com - Tous droits r\xc3\xa9serv\xc3\xa9s"
-		}
-		{
 			hash = "720a1625a590e4cd"
 			en = "Build %s"
 			fr = "Build %s"
@@ -2184,6 +2179,11 @@
 			hash = "8825d774e10cc4fa"
 			en = "Create Report##1"
 			fr = "Cr\xc3\xa9er un rapport##1"
+		}
+		{
+			hash = "11ecbfd243830613"
+			en = "Copyright (C) 2022-2023 - wallet.wiimag.com - All rights reserved"
+			fr = "Copyright (C) 2022-2023 - wallet.wiimag.com - Tous droits r\xc3\xa9serv\xc3\xa9s"
 		}
 	]
 }

@@ -1,6 +1,6 @@
 #
 # Copyright 2022-2023 - All rights reserved.
-# License: https://equals-forty-two.com/LICENSE
+# License: https://wallet.wiimag.com/LICENSE
 #
 # Main app executable CMakeLists.txt project file.
 #
@@ -176,6 +176,10 @@ elseif(XCODE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -weak_framework Metal -weak_framework MetalKit -framework QuartzCore")
 
 endif()
+
+#
+# Define custom application build target
+add_compile_options(-DBUILD_BACKEND=0)
 
 # Write the executable file to the build folder directly without any configuration sub folder
 if (MSVC)
