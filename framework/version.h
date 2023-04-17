@@ -1,5 +1,5 @@
 /*
- * Copyright 2022-2023 Wiimag Inc. All rights reserved.
+ * Copyright 2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
@@ -53,15 +53,40 @@
     #define GIT_REVCOUNT 0
 #endif
 
+#ifndef VERSION_MAJOR
 #define VERSION_MAJOR                   0
-#define VERSION_MINOR                  14   // Latest feature: Add new backend server to proxy requests
-#define VERSION_PATCH                   3   // Latest patch/fix: Add creation date to alerts
+#endif
+
+#ifndef VERSION_MINOR
+#define VERSION_MINOR                   1
+#endif
+
+#ifndef VERSION_PATCH
+#define VERSION_PATCH                   0 
+#endif
+
+#ifndef VERSION_BUILD
 #define VERSION_BUILD                   GIT_REVCOUNT
+#endif
 
 #define PRODUCT_VERSION STRINGIZE(VERSION_MAJOR.VERSION_MINOR.VERSION_PATCH)
-#define PRODUCT_NAME "Wallet"
-#define PRODUCT_COMPANY "Wiimag Inc."
-#define PRODUCT_DESCRIPTION "Wallet - Finance 300K"
-#define PRODUCT_CODE_NAME "Wallet"
-#define PRODUCT_COPYRIGHT "Copyright (C) 2022-2023 - equals-forty-two.com - All rights reserved"
-#define PRODUCT_WINDOWS_FILENAME "wallet.exe"
+
+#ifndef PRODUCT_NAME
+#error "PRODUCT_NAME is not defined"
+#endif
+
+#ifndef PRODUCT_COMPANY
+#error "PRODUCT_COMPANY is not defined"
+#endif
+
+#ifndef PRODUCT_DESCRIPTION
+#error "PRODUCT_DESCRIPTION is not defined"
+#endif
+
+#ifndef PRODUCT_CODE_NAME
+#error "PRODUCT_CODE_NAME is not defined"
+#endif
+
+#ifndef PRODUCT_COPYRIGHT
+#error "PRODUCT_COPYRIGHT is not defined"
+#endif

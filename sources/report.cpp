@@ -1280,7 +1280,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         E32(report_column_get_change_value, _1, _2, -365 * 10), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ROUND_NUMBER);
 
     table_add_column(table, STRING_CONST(ICON_MD_FLAG "||" ICON_MD_FLAG " Currency"),
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_CURRENCY), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CENTER_ALIGN);
+        E32(report_column_get_value, _1, _2, REPORT_FORMULA_CURRENCY), COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_CENTER_ALIGN | COLUMN_SEARCHABLE);
     table_add_column(table, STRING_CONST("   " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_EXCHANGE_RATE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE);
 
@@ -1574,21 +1574,37 @@ FOUNDATION_STATIC void report_toggle_show_summary(report_t* report)
     report_summary_update(report);
 }
 
-FOUNDATION_STATIC void report_render_summary_info(report_t* report, const char* field_name, double value, const char* fmt, bool negative_parens = false)
+FOUNDATION_STATIC void report_render_summary_line(report_t* report, const char* field_name, double value, const char* fmt, bool negative_parens = false)
 {
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn(); 
-    ImGui::TextWrapped("%s", field_name);
-    
-    ImGui::TableNextColumn(); 
+    char value_buffer[16] = {0};
+
+    string_t formatted_value = string_from_currency(STRING_BUFFER(value_buffer), math_abs(value), fmt);
+
     if (negative_parens && value < 0)
     {
-        string_const_t formatted_value = string_from_currency(-1.0 * value, fmt);
-        string_const_t formatted_label = string_format_static(STRING_CONST("(%.*s)"), STRING_FORMAT(formatted_value));
-        table_cell_right_aligned_label(STRING_ARGS(formatted_label));
+        char neg_value_buffer[sizeof(value_buffer)] = {0};
+        formatted_value = string_format(STRING_BUFFER(neg_value_buffer), STRING_CONST("(%.*s)"), STRING_FORMAT(formatted_value));
+    }
+
+    const float padding = IM_SCALEF(4);
+    const float available_space = ImGui::GetContentRegionAvail().x;
+    const float label_text_width = ImGui::CalcTextSize(field_name).x;
+    const float value_text_width = ImGui::CalcTextSize(STRING_RANGE(formatted_value)).x;
+    const float combined_text_width = label_text_width + value_text_width + padding;
+ 
+    if (combined_text_width < available_space)
+    {
+        ImGui::TextUnformatted(field_name);
     }
     else
-        table_cell_right_aligned_label(STRING_ARGS(string_from_currency(value, fmt)));
+    {
+        ImGui::PushTextWrapPos(available_space - value_text_width - padding);
+        ImGui::TextUnformatted(field_name);
+        ImGui::PopTextWrapPos();
+    }
+
+    ImGui::SameLine(available_space - value_text_width);
+    ImGui::TextUnformatted(STRING_RANGE(formatted_value));
 }
 
 FOUNDATION_STATIC void report_render_summary(report_t* report)
@@ -1602,46 +1618,39 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
         ImGuiTableFlags_PadOuterX |
         ImGuiTableFlags_Resizable;
 
-    ImVec2 space = ImGui::GetContentRegionAvail();
-    if (!ImGui::BeginTable("Report Summary 9", 2, flags))
-        return;
+    const ImVec2 space = ImGui::GetContentRegionAvail();
 
-    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4());
+    // TODO: Draw closing X button
 
-    ImGui::TableSetupColumn(tr(ICON_MD_WALLET " Wallet"), ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHeaderWidth, IM_SCALEF(200.0f));
-    ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoHeaderLabel, 0, 0, [](const char* name, void* payload)
-    {
-        ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - IM_SCALEF(18.0f), IM_SCALEF(-1));
-        ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.6f, 0.4f, 0.4f, 0.5f));
-        if (ImGui::Selectable(ICON_MD_CLOSE, false, 0, { IM_SCALEF(18), IM_SCALEF(18)}))
-        {
-            report_t* r = (report_t*)payload;
-            r->show_summary = false;
-        }
-        ImGui::PopStyleColor(1);
-    }, report);
-        
-    ImGui::TableHeadersRow();
-
-    static const char* currency_fmt = "-9 999 999.99 $";
-    static const char* pourcentage_fmt = "-9999.99 %";
-    static const char* integer_fmt = "-9 999 999  ";
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
+    if (!ImGui::BeginChild("##Summary", {-1, -1}, false, ImGuiWindowFlags_AlwaysUseWindowPadding))
+        return ImGui::EndChild();
+    ImGui::TrTextUnformatted(ICON_MD_WALLET " Wallet");
+    ImGui::SameLine();
+    ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - IM_SCALEF(18.0f), IM_SCALEF(1));
+    ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImVec4(0.6f, 0.4f, 0.4f, 0.5f));
+    if (ImGui::Selectable(ICON_MD_CLOSE, false, 0, { IM_SCALEF(14), IM_SCALEF(14)}))
+        report->show_summary = false;
+    ImGui::PopStyleColor(1);
 
     if (wallet_draw(report->wallet, space.x))
     {
         report->dirty = true;
         report_refresh(report);
-    }    
+    }
 
-    ImGui::TableNextRow();
-    report_render_summary_info(report, tr("Target"), report->wallet->target_ask * 100.0, pourcentage_fmt);
-    report_render_summary_info(report, tr("Profit"), report->wallet->profit_ask * 100.0, pourcentage_fmt);
-    report_render_summary_info(report, tr("Avg. Days"), report->wallet->average_days, integer_fmt);
+    constexpr const char* currency_fmt = "-9 999 999.99 $";
+    constexpr const char* pourcentage_fmt = "-9999.99 %";
+    constexpr const char* integer_fmt = "-9 999 999  ";
 
-    ImGui::TableNextRow();
+    report_render_summary_line(report, tr("Target"), report->wallet->target_ask * 100.0, pourcentage_fmt);
+    report_render_summary_line(report, tr("Profit"), report->wallet->profit_ask * 100.0, pourcentage_fmt);
+    report_render_summary_line(report, tr("Avg. Days"), report->wallet->average_days, integer_fmt);
+
     string_const_t user_preferred_currency = string_const(SETTINGS.preferred_currency);
     const double today_exchange_rate = stock_exchange_rate(STRING_CONST("USD"), STRING_ARGS(user_preferred_currency));
-    report_render_summary_info(report, string_format_static_const("USD%s", SETTINGS.preferred_currency), today_exchange_rate, currency_fmt);
+    report_render_summary_line(report, string_format_static_const("USD%s", SETTINGS.preferred_currency), today_exchange_rate, currency_fmt);
     if (ImGui::IsItemHovered())
     {
         double average_count = 0;
@@ -1662,76 +1671,69 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
                 average_rate, average_count);
     }
 
-    ImGui::TableNextRow();
-    report_render_summary_info(report, tr("Daily average"), report->total_daily_average_p, pourcentage_fmt, true);
+    report_render_summary_line(report, tr("Daily average"), report->total_daily_average_p, pourcentage_fmt, true);
+
     ImGui::PushStyleColor(ImGuiCol_Text, report->total_day_gain > 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
-    report_render_summary_info(report, tr("Day Gain"), report->total_day_gain, currency_fmt, true);
+    report_render_summary_line(report, tr("Day Gain"), report->total_day_gain, currency_fmt, true);
     ImGui::PopStyleColor(1);
 
     const double total_funds = wallet_get_total_funds(report->wallet);
-
-    ImGui::TableNextRow();
     const double capital = max(0.0, total_funds - report->total_investment);
-    report_render_summary_info(report, tr("Dividends"), report->wallet->total_dividends, currency_fmt);
+    report_render_summary_line(report, tr("Dividends"), report->wallet->total_dividends, currency_fmt);
 
     if (total_funds > 0)
-        report_render_summary_info(report, tr("Capital"), max(0.0, total_funds - report->total_investment + report->wallet->sell_total_gain), currency_fmt);
+        report_render_summary_line(report, tr("Capital"), max(0.0, total_funds - report->total_investment + report->wallet->sell_total_gain), currency_fmt);
 
     const double total_gain_with_sells = report->total_gain + report->wallet->sell_total_gain;
-
     if (report->wallet->total_title_sell_count > 0)
     {
-        report_render_summary_info(report, tr("Enhanced earnings"), report->wallet->enhanced_earnings, currency_fmt);
+        report_render_summary_line(report, tr("Enhanced earnings"), report->wallet->enhanced_earnings, currency_fmt);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(tr("Minimal amount (%.2lf) to sell titles if you want to increase your gain considerably."), report->wallet->total_sell_gain_if_kept);
 
-        ImGui::TableRowSeparator();
+        ImGui::Separator();
 
-        ImGui::TableNextRow();
-        report_render_summary_info(report, tr("Sell Count"), report->wallet->total_title_sell_count, integer_fmt);
-        report_render_summary_info(report, tr("Sell Total"), report->wallet->sell_total_gain, currency_fmt, true);
-        report_render_summary_info(report, tr("Sell Average"), report->wallet->sell_gain_average, currency_fmt, true);
+        report_render_summary_line(report, tr("Sell Count"), report->wallet->total_title_sell_count, integer_fmt);
+        report_render_summary_line(report, tr("Sell Total"), report->wallet->sell_total_gain, currency_fmt, true);
+        report_render_summary_line(report, tr("Sell Average"), report->wallet->sell_gain_average, currency_fmt, true);
 
         ImGui::PushStyleColor(ImGuiCol_Text, report->wallet->total_sell_gain_if_kept_p <= 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
         ImGui::BeginGroup();
-        report_render_summary_info(report, tr("Sell Greediness"), report->wallet->total_sell_gain_if_kept_p * 100.0, pourcentage_fmt, true);
-        report_render_summary_info(report, "", report->wallet->total_sell_gain_if_kept, currency_fmt, true);
-        report_render_summary_info(report, tr("Sells (Saved)"), total_gain_with_sells - report->wallet->total_sell_gain_if_kept, currency_fmt, true);
+        report_render_summary_line(report, tr("Sell Greediness"), report->wallet->total_sell_gain_if_kept_p * 100.0, pourcentage_fmt, true);
+        report_render_summary_line(report, "", report->wallet->total_sell_gain_if_kept, currency_fmt, true);
+        report_render_summary_line(report, tr("Sells (Saved)"), total_gain_with_sells - report->wallet->total_sell_gain_if_kept, currency_fmt, true);
         ImGui::EndGroup();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(tr(" Loses or (Gains) if titles were kept longer before being sold"));
         ImGui::PopStyleColor(1);
     }
 
-    ImGui::TableRowSeparator();
+    ImGui::Separator();
 
-    ImGui::TableNextRow();
-    report_render_summary_info(report, tr("Investments"), report->total_investment, currency_fmt);
-    report_render_summary_info(report, tr("Total Value"), report->total_value, currency_fmt);
+    report_render_summary_line(report, tr("Investments"), report->total_investment, currency_fmt);
+    report_render_summary_line(report, tr("Total Value"), report->total_value, currency_fmt);
 
     ImGui::PushStyleColor(ImGuiCol_Text, report->total_gain > 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
-    report_render_summary_info(report, tr("Total Gain"), report->total_gain, currency_fmt, true);
+    report_render_summary_line(report, tr("Total Gain"), report->total_gain, currency_fmt, true);
     ImGui::PopStyleColor(1);
 
     ImGui::PushStyleColor(ImGuiCol_Text, total_gain_with_sells > 0 ? TEXT_GOOD_COLOR : TEXT_BAD_COLOR);
     if (report->wallet->sell_total_gain != 0)
     {
-        report_render_summary_info(report, "", total_gain_with_sells, currency_fmt, true);
+        report_render_summary_line(report, "", total_gain_with_sells, currency_fmt, true);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(tr("Gain including previous sells (%.2lf $)"), report->wallet->sell_total_gain);
     }
 
     const double gain_p = total_gain_with_sells / report->total_investment * 100.0;
-    report_render_summary_info(report, "", math_ifnan(gain_p, report->total_gain_p * 100.0), pourcentage_fmt, true);
+    report_render_summary_line(report, "", math_ifnan(gain_p, report->total_gain_p * 100.0), pourcentage_fmt, true);
     ImGui::PopStyleColor(1);
 
-    ImGui::TableNextRow();
     if (report_is_loading(report))
-        report_render_summary_info(report, tr("Loading data..."), NAN, nullptr);
+        report_render_summary_line(report, tr("Loading data..."), NAN, nullptr);
 
-    ImGui::PopStyleColor(1);
-
-    ImGui::EndTable();
+    ImGui::EndChild();
+    ImGui::PopStyleVar(2);
 }
 
 FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_const_t code)
@@ -1743,7 +1745,7 @@ FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_
 
 FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title, string_const_t apply_label, string_const_t initial_value, string_const_t hint, bool* show_ui)
 {
-    if (!report_render_dialog_begin(title, show_ui, ImGuiWindowFlags_NoResize))
+    if (!report_render_dialog_begin(title, show_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar))
         return string_null();
 
     bool applied = false;
@@ -1755,6 +1757,8 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
     {
         input_length = string_copy(STRING_BUFFER(input), STRING_ARGS(initial_value)).length;
     }
+
+    const float available_space = ImGui::GetContentRegionAvail().x;
 
     ImGui::MoveCursor(2, 10);
     if (ImGui::BeginChild("##Content", ImVec2(IM_SCALEF(350.0f), IM_SCALEF(90.0f)), false))
@@ -1773,12 +1777,10 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
 
         static float apply_button_width = 90;
         static float cancel_button_width = 90;
-        static float button_between_space = 10;
+        const float button_between_space = IM_SCALEF(4);
 
-        ImGui::MoveCursor(0, 10);
-        ImGui::Dummy(ImVec2(1, 1));
-        ImGui::SameLine(ImGui::GetContentRegionAvail().x - cancel_button_width - apply_button_width - button_between_space);
-        if (ImGui::Button(tr("Cancel"), { IM_SCALEF(90), IM_SCALEF(30) }))
+        ImGui::MoveCursor(available_space - cancel_button_width - apply_button_width - button_between_space, IM_SCALEF(8));
+        if (ImGui::Button(tr("Cancel"), { IM_SCALEF(90), IM_SCALEF(24) }))
         {
             applied = false;
             *show_ui = false;
@@ -1787,7 +1789,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
 
         ImGui::SameLine();
         ImGui::BeginDisabled(!can_apply);
-        if (ImGui::Button(apply_label.str, { IM_SCALEF(90), IM_SCALEF(30) }))
+        if (ImGui::Button(apply_label.str, { IM_SCALEF(90), IM_SCALEF(24) }))
             applied = true;
         apply_button_width = ImGui::GetItemRectSize().x;
         ImGui::EndDisabled();
@@ -1806,7 +1808,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
 FOUNDATION_STATIC void report_render_rename_dialog(report_t* report)
 {
     string_const_t current_name = string_table_decode_const(report->name);
-    string_const_t name = report_render_input_dialog(CTEXT("Rename##1"), RTEXT("Apply"), current_name, 
+    string_const_t name = report_render_input_dialog(RTEXT("Rename##1"), RTEXT("Apply"), current_name, 
         current_name, &report->show_rename_ui);
     if (!string_is_null(name))
         report_rename(report, name);
@@ -2335,7 +2337,7 @@ void report_render_create_dialog(bool* show_ui)
 {
     FOUNDATION_ASSERT(show_ui);
 
-    string_const_t name = report_render_input_dialog(CTEXT("Create Report##1"), RTEXT("Create"), CTEXT(""), RTEXT("Name"), show_ui);
+    string_const_t name = report_render_input_dialog(RTEXT("Create Report##1"), RTEXT("Create"), CTEXT(""), RTEXT("Name"), show_ui);
     if (!string_is_null(name))
         report_create(STRING_ARGS(name));
 }

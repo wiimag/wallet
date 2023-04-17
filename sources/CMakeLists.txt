@@ -1,5 +1,5 @@
 #
-# Copyright 2023 Wiimag Inc. All rights reserved.
+# Copyright 2022-2023 - All rights reserved.
 # License: https://equals-forty-two.com/LICENSE
 #
 # Main app executable CMakeLists.txt project file.
@@ -28,17 +28,19 @@ source_group("app" FILES ${APP_SOURCES})
 file(GLOB RESOURCES_SOURCES
     "${ROOT_DIR}/resources/*.ico"
     "${ROOT_DIR}/resources/*.manifest"
+    "${ROOT_DIR}/config/locales.sjson"
+    "${ROOT_DIR}/config/build.settings"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.rc"
 )
 source_group("resources" FILES ${RESOURCES_SOURCES})
 
 # Load distribution files
-file(GLOB RESOURCES_FILES
+file(GLOB BUNDLE_FILES
     "${ROOT_DIR}/resources/*.png"
     "${ROOT_DIR}/resources/*.ttf"
     "${ROOT_DIR}/resources/*.plist"
 )
-source_group("bundle" FILES ${RESOURCES_FILES})
+source_group("bundle" FILES ${BUNDLE_FILES})
 
 #
 # Load app shader files
@@ -177,6 +179,10 @@ endif()
 
 # Write the executable file to the build folder directly without any configuration sub folder
 if (MSVC)
+
+    # Define PRODUCT_WINDOWS_FILENAME
+    add_compile_options(-DPRODUCT_WINDOWS_FILENAME="${AppId}.exe")
+
     # Create executable
     add_executable(${AppId} WIN32
         ${APP_SOURCES}
@@ -231,7 +237,7 @@ elseif(APPLE)
 
     # Set ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
     set_source_files_properties(
-        ${RESOURCES_FILES} 
+        ${BUNDLE_FILES} 
         ${CONFIG_FILES} 
         PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
 
@@ -241,7 +247,7 @@ elseif(APPLE)
     # Create application MacOS bundle
     add_executable(${AppId} MACOSX_BUNDLE
         ${APP_SOURCES}
-        ${RESOURCES_FILES}
+        ${BUNDLE_FILES}
         ${RESOURCES_SOURCES}
         ${SHADERS_SOURCES}
         ${TEST_SOURCES}
@@ -261,7 +267,7 @@ elseif(APPLE)
         MACOSX_FRAMEWORK_IDENTIFIER "com.wiimag.${AppId}"
         MACOSX_BUNDLE_INFO_PLIST ${ROOT_DIR}/resources/osx-info.plist
         XCODE_ATTRIBUTE_LD_RUNPATH_SEARCH_PATHS "@loader_path/Libraries"
-        RESOURCE "${RESOURCES_FILES}"
+        RESOURCE "${BUNDLE_FILES}"
         XCODE_ATTRIBUTE_ENABLE_HARDENED_RUNTIME TRUE
         XCODE_ATTRIBUTE_EXECUTABLE_NAME "${AppIdCamelCase}"
         XCODE_ATTRIBUTE_PRODUCT_NAME "${AppIdCamelCase}"

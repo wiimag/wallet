@@ -3,7 +3,7 @@
  * License: https://equals-forty-two.com/LICENSE
  */
 
-#include "version.h"
+
 #include "settings.h"
 
 #include "alerts.h"

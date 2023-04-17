@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  * 
  * This module contains application framework specific code. 
@@ -13,8 +13,7 @@
  */
 
 #include "app.h"
-
-#include <version.h>
+#include "version.h"
 
 #include <framework/imgui.h>
 #include <framework/module.h>

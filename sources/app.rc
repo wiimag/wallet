@@ -2,8 +2,8 @@
 //
 
 #pragma warning(disable: 4067)
-#include "resource.h"
-#include "version.h"
+#include <framework/version.h>
+#include <framework/resource.h>
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////

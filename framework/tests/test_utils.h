@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  * 
  * Testing helpers. Most helpers are written in UPPERCASE in order to blend 

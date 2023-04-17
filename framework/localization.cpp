@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright 2023 Wiimag Inc. All rights reserved.
+ * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
 
@@ -19,7 +19,7 @@
 #include <foundation/environment.h>
 
 #if FOUNDATION_PLATFORM_WINDOWS
-#include <resource.h>
+#include <framework/resource.h>
 #include <foundation/windows.h>
 #endif
 

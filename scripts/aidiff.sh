@@ -2,7 +2,7 @@
 # Path: scripts\aidiff.sh
 
 #
-# Copyright 2023 Wiimag Inc. All rights reserved.
+# Copyright 2022-2023 - All rights reserved.
 # License: https://equals-forty-two.com/LICENSE
 #
 # Use OpenAI to generate a short summary of every modified file in the current repo.
