@@ -155,3 +155,14 @@ void window_close(window_handle_t window_handle);
 
 /*! Handle the main Windows/ menu items. */
 void window_menu();
+
+/*! Update the window system. */
+void window_update();
+
+/*! Checks if the window is valid.
+ *
+ *  @param window_handle The handle of the window.
+ *
+ *  @return              True if the window is valid, false otherwise.
+ */
+bool window_valid(window_handle_t window_handle);

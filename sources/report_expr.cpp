@@ -492,6 +492,7 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     // Examples: R('FLEX', 'ps')
     //           R('_300K', BB.TO, 'ps')
     //           R('_300K', 'buy')
+    //           R('300K', PFE.NEO, transactions)
 
     const auto& report_name = expr_eval_get_string_arg(args, 0, "Invalid report name");
     if (report_name.length < 2)
@@ -527,15 +528,51 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     }
 
     expr_result_t* results = nullptr;
-    for (int i = 0; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
-    {
-        const auto& pe = report_field_property_evalutors[i];
-        if (report_eval_report_field_test(pe.property_name, report, title_filter, field_name, pe.handler, pe.filter_out, &results, pe.required_level))
-            break;
-    }
 
-    if (results == nullptr)
-        throw ExprError(EXPR_ERROR_EVALUATION_NOT_IMPLEMENTED, "Field %.*s not supported", STRING_FORMAT(field_name));
+    if (string_equal_nocase(STRING_ARGS(field_name), STRING_CONST("transactions")))
+    {
+        // Return a set of all transactions for the given title
+        if (title_filter.length == 0)
+            throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Title filter required for transactions");
+
+        for (unsigned i = 0, end = array_size(report->titles); i < end; ++i)
+        {
+            title_t* t = report->titles[i];
+            if (!string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
+                continue;
+
+            for (auto cv : t->data["orders"])
+            {
+                string_const_t datestr = cv["date"].as_string();
+                string_const_t buy_or_sell = cv["buy"].as_boolean() ? CTEXT("buy") : CTEXT("sell");
+                const time_t date = string_to_date(STRING_ARGS(datestr));
+                const double qty = cv["qty"].as_number();
+                const double price = cv["price"].as_number();
+
+                expr_result_t* title_field_values = nullptr;
+                array_push(title_field_values, expr_result_t(datestr));
+                array_push(title_field_values, expr_result_t((double)date));
+                array_push(title_field_values, expr_result_t(buy_or_sell));
+                array_push(title_field_values, expr_result_t(qty));
+                array_push(title_field_values, expr_result_t(price));
+
+                array_push(results, expr_eval_list(title_field_values));
+            }
+        }
+    }
+    else
+    {
+        // Evaluate the field for the given title
+        for (int i = 0; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
+        {
+            const auto& pe = report_field_property_evalutors[i];
+            if (report_eval_report_field_test(pe.property_name, report, title_filter, field_name, pe.handler, pe.filter_out, &results, pe.required_level))
+                break;
+        }
+
+        if (results == nullptr)
+            throw ExprError(EXPR_ERROR_EVALUATION_NOT_IMPLEMENTED, "Field %.*s not supported", STRING_FORMAT(field_name));
+    }
 
     if (array_size(results) == 1)
     {

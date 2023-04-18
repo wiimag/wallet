@@ -586,6 +586,9 @@ FOUNDATION_STATIC expr_result_t expr_eval_math_count(const expr_result_t* list)
 {
     FOUNDATION_ASSERT(list);
 
+    if (array_size(list) == 1 && list[0].is_null())
+        return 0.0;
+
     expr_result_t element_count(0.0);
     for (size_t i = 0; i < array_size(list); ++i)
     {
@@ -1303,7 +1306,7 @@ expr_result_t expr_eval(expr_t* e)
 
         if (n.type == EXPR_RESULT_NUMBER && n.as_number() != 0.0)
             return n;
-        return expr_result_t(false);
+        return expr_result_t(true);
 
     case OP_LOGICAL_OR:
         n = expr_eval(&e->args.buf[0]);
@@ -1365,7 +1368,7 @@ FOUNDATION_STATIC int expr_next_token(const char* s, size_t len, int& flags)
         return 0;
 
     char c = s[0];
-    if (c == '#') 
+    if (c == '#' || (c == '/' && len > 1 && s[1] == '/'))
     {
         for (; i < len && s[i] != '\n'; i++)
             ;
@@ -2108,10 +2111,8 @@ void expr_log_evaluation_result(string_const_t expression_string, const expr_res
     {
         if (expression_string.length)
             log_infof(HASH_EXPR, STRING_CONST("%.*s\n"), STRING_FORMAT(expression_string));
-        //_console_concat_messages = true;
         for (unsigned i = 0; i < result.element_count(); ++i)
             expr_log_evaluation_result({ nullptr, 0 }, result.element_at(i));
-        //_console_concat_messages = false;
     }
     else if (result.type == EXPR_RESULT_POINTER && result.element_count() == 16 && result.element_size() == sizeof(float))
     {

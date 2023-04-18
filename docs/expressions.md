@@ -12,11 +12,20 @@ First a few words about expressions. An expression is a string that is evaluated
 
 # Framework
 
+## FILTER($set, $filter)
+
+The `FILTER(...)` function is used to filter a set of values. The first argument is the set of values, and the second argument is the filter expression. The filter expression is usually an assertion that return true or false. If the assertion is true, the value is kept in the set. If the assertion is false, the value is removed from the set. The filter expression can be any expression that returns a boolean value. The following examples illustrate the use of the `FILTER(...)` function:
+
+### Examples
+
+```js
+// Keep only the values that are greater than 10
+FILTER([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], $1 > 5) == [6, 7, 8, 9, 10]
+```
+
 # Wallet
 
-## Functions
-
-### S($symbol, $field)
+## S($symbol, $field)
 
 The `S(...)` function is used to get a value from a stock symbol. The first argument is the symbol name, and the second argument is the field name. The field name can be one of the following:
 
@@ -75,7 +84,7 @@ The `S(...)` function is used to get a value from a stock symbol. The first argu
 - `short_percent` - the short percent,
 - `diluted_eps_ttm` - the diluted earnings per share for the trailing 12 months
 
-#### Examples
+### Examples
 
 ```
 S("AAPL.US", "price") => 164.15
@@ -86,7 +95,7 @@ S("U.US", "wma") => 30.4493
 S("GFL.TO", "ema") => 44.0917
 ```	
 
-#### Column Expressions
+### Column Expressions
 
 **Split:** `S($TITLE, price_factor)`
 
@@ -94,11 +103,11 @@ S("GFL.TO", "ema") => 44.0917
 
 **DMA:** `MAX(S($TITLE, dma_50), S($TITLE, dma_200))`
 
-### S($symbol, $field, $date)
+## S($symbol, $field, $date)
 
 This variante of the `S(...)` function is used to get a value from a stock symbol for a specific date. The first argument is the symbol name, the second argument is the field name, and the third argument is the date. The date can be a string in the format `YYYY-MM-DD` or a number of days in the past. The field name can be one of the following:
 
-#### Examples
+### Examples
 
 ```
 # You can use unix timestamps
@@ -111,7 +120,7 @@ S(PFE.US, close, "2018-01-01") => 28.3434
 S(TSL.TO, close, DATESTR(1671497600)) => 3.2456
 ```	
 
-### R($report, $title, $field)
+## R($report, $title, $field)
 
 The `R(...)` function is used to get a value from a report. The first argument is the report name, the second argument is the title symbol ticker, and the third argument is the field name. The field name are the same as for the `S(...)` function above plus the following:
 
@@ -152,15 +161,55 @@ The `R(...)` function is used to get a value from a report. The first argument i
 - `ask` - returns the ask price for that title,
 - `today_exchange_rate` - returns the exchange rate for that title for the current date,
 
-#### Examples
+### Examples
 
-```
+```js
 R("300K", "TSLA.US", "close") => 3.2456
 R('300K', 'TNT-UN.TO', dividends) => 0.0887
 R('300K', 'GFL.TO', sold) => true
 ```	
 
-#### Column Expressions
+#### List all transactions for a title
+
+```js
+R('300K', PFE.NEO, transactions)
+```
+
+> **Output:**
+
+```js
+	[[2022-05-30, 1.65389e+09, buy, 200, 25.8],
+	 [2022-06-09, 1.65475e+09, buy, 40, 25.6],
+	 [2022-06-20, 1.6557e+09, buy, 60, 22.73],
+	 [2023-01-05, 1.67289e+09, buy, 40, 23.7],
+	 [2023-01-10, 1.67333e+09, buy, 40, 22.96],
+	 [2023-01-11, 1.67341e+09, buy, 40, 22.53],
+	 [2023-01-12, 1.6735e+09, buy, 40, 22.48],
+	 [2023-03-07, 1.67817e+09, buy, 60, 19.26],
+	 [2023-03-08, 1.67825e+09, buy, 50, 19.06],
+	 [2023-03-09, 1.67834e+09, buy, 50, 18.96],
+	 [2023-04-12, 1.68128e+09, buy, 50, 19.77],
+	 [2023-04-18, 1.68179e+09, buy, 50, 19.36]]
+```
+
+#### Find the average price of transactions that have a gain compared to today's price
+
+```js
+$title='PFE.NEO'
+$current = S($title, close)
+$transactions = R('300K', $title, transactions)
+$transactions = FILTER($transactions, ($5 < $current) && ($3 == 'buy'))
+$average = IF(COUNT($transactions) > 0, AVG(MAP($transactions, $5)), nan)
+```
+
+
+> **Output:**
+
+```js
+$average => 22.77
+```
+
+### Column Expressions
 
 **Recent:** `R($REPORT, $TITLE, date_max)`
 
@@ -168,11 +217,13 @@ R('300K', 'GFL.TO', sold) => true
 
 **Dividends:** `R($REPORT, $TITLE, buy_total_price) - R($REPORT, $TITLE, buy_total_adjusted_price)`
 
-### F($symbol, $field)
+**GPrice:** `$current = S($TITLE, close),$transactions = FILTER(R($REPORT, $TITLE, transactions), ($5 < $current) && ($3 == 'buy')), IF(COUNT($transactions) > 0, AVG(MAP($transactions, $5)), nan)`
+
+## F($symbol, $field)
 
 The `F(...)` function is used to get a fundamental value from a symbol. The first argument is the symbol name, and the second argument is the field name. The field name can be about anything return by the /api/fundamentals endpoint.
 
-#### Examples
+### Examples
 
 ```
 # Get the stock beta
@@ -184,6 +235,6 @@ F(TSLA.US, "Technicals.Beta") #=> 2.0705
 F(TSLA.US, "General.Industry") #=> Auto Manufacturers
 ```
 
-#### Column Expressions
+### Column Expressions
 
 **Beta:** `ROUND(F($TITLE, "Technicals.Beta") * 100)`
