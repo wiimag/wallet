@@ -1,6 +1,6 @@
 #
 # Copyright 2022-2023 - All rights reserved.
-# License: https://wallet.wiimag.com/LICENSE
+# License: https://equals-forty-two.com/LICENSE
 #
 # Main app executable CMakeLists.txt project file.
 #
@@ -139,7 +139,7 @@ file(GLOB TEST_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/tests/*.cpp"
     "${ROOT_DIR}/framework/tests/*_tests.cpp"
 )
-source_group("tests" FILES ${TEST_SOURCES})
+source_group(TREE ${ROOT_DIR} PREFIX "tests" FILES ${TEST_SOURCES})
 
 # Include self directory for tests sources to access headers as if it was in the same directory
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})

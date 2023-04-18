@@ -708,7 +708,7 @@ void expr_register_vec_mat_functions(expr_func_t*& funcs)
     array_push(funcs, (expr_func_t{ STRING_CONST("vec2"), expr_eval_vecmat_vec2, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("vec3"), expr_eval_vecmat_vec3, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("vec4"), expr_eval_vecmat_vec4, NULL, VECMAT_CONTEXT_SIZE }));
-    array_push(funcs, (expr_func_t{ STRING_CONST("q"), expr_eval_vecmat_vec4, NULL, VECMAT_CONTEXT_SIZE }));
+    array_push(funcs, (expr_func_t{ STRING_CONST("quat"), expr_eval_vecmat_vec4, NULL, VECMAT_CONTEXT_SIZE }));
 
     // ADD([1, 2, 3], [1, 2, 3]) == [2, 4, 6]
     array_push(funcs, (expr_func_t{ STRING_CONST("ADD"), expr_eval_vecmat_add, NULL, VECMAT_CONTEXT_SIZE }));

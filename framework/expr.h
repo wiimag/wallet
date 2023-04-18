@@ -6,6 +6,7 @@
 #pragma once
 
 #include <framework/common.h>
+#include <framework/string.h>
 #include <framework/string_table.h>
 
 #include <foundation/math.h>
@@ -206,6 +207,14 @@ typedef enum ExprResultType {
     EXPR_RESULT_POINTER,
 } expr_result_type_t;
 
+/*! Create an evaluation list that will be managed by the expression system.
+ *
+ *  @param list Newly created expression result list that will get disposed next update.
+ *
+ *  @return Stored expression result list.
+ */
+const expr_result_t* expr_eval_list(const expr_result_t* list);
+
 /*! Expression result. 
  * 
  *  @note The @list member is used to store the result of an expression that
@@ -330,7 +339,28 @@ struct expr_result_t
             return 0.0;
 
         if (type == EXPR_RESULT_SYMBOL)
-            return (double)math_trunc(value);
+        {
+            string_const_t str = as_string();
+            if (str.length)
+            {
+                if (str.length == 4)
+                {
+                    if (string_equal_nocase(STRING_ARGS(str), STRING_CONST("true")))
+                        return 1.0;
+                    if (string_equal_nocase(STRING_ARGS(str), STRING_CONST("null")))
+                        return 0.0;
+                }
+                if (str.length == 5 && string_equal_nocase(STRING_ARGS(str), STRING_CONST("false")))
+                    return 0.0;
+                if (str.length == 3 && string_equal_nocase(STRING_ARGS(str), STRING_CONST("nil")))
+                    return 0.0;
+
+                double d;
+                if (string_try_convert_number(STRING_ARGS(str), d))
+                    return d;
+            }
+            return default_value;
+        }
 
         if (type == EXPR_RESULT_POINTER)
         {
@@ -344,8 +374,10 @@ struct expr_result_t
             uint16_t element_size = this->element_size();
             if ((index & EXPR_POINTER_ARRAY_FLOAT))
             {
-                if (element_size == 4) return (double)*((const float*)ptr + vindex);
-                else if (element_size == 8)  return *((const double*)ptr + vindex);
+                if (element_size == 4) 
+                    return (double)*((const float*)ptr + vindex);
+                else if (element_size == 8)  
+                    return *((const double*)ptr + vindex);
             }
             else if ((index & EXPR_POINTER_ARRAY_INTEGER))
             {
@@ -386,6 +418,39 @@ struct expr_result_t
         return default_value;
     }
 
+    bool as_boolean(size_t vindex = NO_INDEX) const
+    {
+        if (type == EXPR_RESULT_NULL)
+            return false;
+
+        if (type == EXPR_RESULT_NUMBER)
+            return !math_real_is_nan(value) && !math_real_is_zero(value);
+
+        if (type == EXPR_RESULT_TRUE)
+            return true;
+
+        if (type == EXPR_RESULT_FALSE)
+            return false;
+
+        if (type == EXPR_RESULT_SYMBOL)
+        {
+            if (value == 0)
+                return false;
+
+            string_const_t str = as_string();
+            if (str.length == 4 && string_equal_nocase(STRING_ARGS(str), STRING_CONST("true")))
+                return true;
+
+            return false;
+        }
+
+        if (is_set())
+            return element_at(vindex == NO_INDEX ? (index == NO_INDEX ? 0 : to_uint(index)) : to_uint(vindex)).as_boolean();
+
+        FOUNDATION_ASSERT_FAIL("Unsupported");
+        return false;
+    }
+
     /*! Returns the string value of a result, or the default value if the result is not a string
      *
      *  @param fmt          Format string to use for conversion if the value is a number for instance.
@@ -405,22 +470,34 @@ struct expr_result_t
         if (type == EXPR_RESULT_NULL)
             return true;
 
-        if (type == EXPR_RESULT_TRUE)
+        if (type == EXPR_RESULT_TRUE || type == EXPR_RESULT_FALSE)
             return false;
-
-        if (type == EXPR_RESULT_FALSE)
-            return true;
 
         if (type == EXPR_RESULT_NUMBER)
             return !math_real_is_finite(value);
 
         if (type == EXPR_RESULT_SYMBOL)
-            return math_trunc(value) == 0;
+        {
+            if (value == 0.0)
+                return true;
+            string_const_t str = as_string();
+            if (str.length)
+            {
+                if (str.length == 4 && string_equal_nocase(STRING_ARGS(str), STRING_CONST("null")))
+                    return true;
+                if (str.length == 3 && string_equal_nocase(STRING_ARGS(str), STRING_CONST("nil")))
+                    return true;
+            }
+            return false;
+        }
 
         if (type == EXPR_RESULT_ARRAY)
         {
-            if (vindex == NO_INDEX || vindex >= array_size(list))
+            if (vindex == NO_INDEX)
                 return list == nullptr;
+
+            if (vindex >= array_size(list))
+                return true;
 
             return list[vindex].is_null();
         }
@@ -491,14 +568,14 @@ struct expr_result_t
         if (element_count() == 0)
             return 0;
 
-        if (type == EXPR_RESULT_POINTER)
-            return (uint16_t)((index & EXPR_POINTER_ELEMENT_SIZE_MASK) >> EXPR_POINTER_ELEMENT_SIZE_SHIFT);
-
         if (type == EXPR_RESULT_TRUE || type == EXPR_RESULT_FALSE)
             return 1;
 
         if (type == EXPR_RESULT_NUMBER)
             return sizeof(value);
+
+        if (type == EXPR_RESULT_POINTER)
+            return (uint16_t)((index & EXPR_POINTER_ELEMENT_SIZE_MASK) >> EXPR_POINTER_ELEMENT_SIZE_SHIFT);
 
         if (type == EXPR_RESULT_SYMBOL)
             return (uint16_t)string_table_decode_const((int)value).length;
@@ -534,9 +611,21 @@ struct expr_result_t
     /*! Returns true if the value is defined (i.e. not nil). */
     FOUNDATION_FORCEINLINE operator bool() const
     {
+        if (type == EXPR_RESULT_NULL)
+            return false;
+        if (type == EXPR_RESULT_TRUE)
+            return true;
+        if (type == EXPR_RESULT_FALSE)
+            return false;
         if (type == EXPR_RESULT_NUMBER && math_real_is_zero(value))
             return false;
         return !is_null();
+    }
+
+    /*! Returns the value as a number. */
+    FOUNDATION_FORCEINLINE operator double() const
+    {
+        return this->as_number();
     }
 
     /*! Returns the negated value of the result. */
@@ -551,6 +640,17 @@ struct expr_result_t
         if (type == EXPR_RESULT_FALSE)
             return expr_result_t(true);
 
+        if (type == EXPR_RESULT_SYMBOL)
+            return *this; // Return same thing
+
+        if (is_set())
+        {
+            expr_result_t* elements = nullptr;
+            for (unsigned i = 0, end = element_count(); i < end; ++i)
+                array_push(elements, -element_at(i));
+            return expr_result_t(expr_eval_list(elements));
+        }
+
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
     }
@@ -561,14 +661,46 @@ struct expr_result_t
         if (is_null() || rhs.is_null())
             return NIL;
 
+        if (type == EXPR_RESULT_TRUE)
+            return rhs;
+
+        if (type == EXPR_RESULT_FALSE || rhs.type == EXPR_RESULT_FALSE)
+            return expr_result_t(false);
+
+        if (rhs.type == EXPR_RESULT_TRUE)
+            return *this;
+
+        if (!is_set() && rhs.is_set())
+        {
+            expr_result_t* elements = nullptr;
+            for (unsigned i = 0, end = rhs.element_count(); i < end; ++i)
+                array_push(elements, *this * rhs.element_at(i));
+            return expr_result_t(expr_eval_list(elements));
+        }
+
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value * rhs.as_number(0.0));
 
         if (type == EXPR_RESULT_SYMBOL)
+            return expr_result_t(as_number(NAN) * rhs.as_number(0.0));
+
+        if (is_set() && !rhs.is_set())
         {
-            string_const_t symbol = string_table_decode_const((string_table_symbol_t)value);
-            const double n = string_to_real(STRING_ARGS(symbol));
-            return expr_result_t(n * rhs.as_number(0.0));
+            expr_result_t* elements = nullptr;
+            for (unsigned i = 0, end = element_count(); i < end; ++i)
+                array_push(elements, element_at(i) * rhs);
+            return expr_result_t(expr_eval_list(elements));
+        }
+
+        if (is_set() && rhs.is_set())
+        {
+            expr_result_t* elements = nullptr;
+            for (unsigned i = 0, end = min(element_count(), rhs.element_count()); i < end; ++i)
+            {
+                expr_result_t result = element_at(i) * rhs.element_at(i);
+                array_push(elements, result);
+            }
+            return expr_result_t(expr_eval_list(elements));
         }
 
         FOUNDATION_ASSERT_FAIL("Unsupported");
@@ -583,6 +715,17 @@ struct expr_result_t
 
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value / rhs.as_number(1.0));
+
+        if (is_set())
+        {
+            expr_result_t* elements = nullptr;
+            for (unsigned i = 0, end = element_count(); i < end; ++i)
+            {
+                expr_result_t div = element_at(i) / rhs;
+                array_push_memcpy(elements, &div);
+            }
+            return expr_result_t(expr_eval_list(elements));
+        }
 
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
@@ -648,6 +791,23 @@ struct expr_result_t
         if (type == EXPR_RESULT_ARRAY && index != NO_INDEX)
             return list[index] < rhs;
 
+        if (type == EXPR_RESULT_SYMBOL)
+        {
+            string_const_t s1 = as_string();
+            string_const_t s2 = rhs.as_string();
+            return string_compare_less(STRING_ARGS(s1), STRING_ARGS(s2));
+        }
+
+        if (is_set())
+        {
+            for (auto e : *this)
+            {
+                if (e >= rhs)
+                    return false;
+            }
+            return true;
+        }
+
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
     }
@@ -665,6 +825,17 @@ struct expr_result_t
 
         if (type == EXPR_RESULT_ARRAY && index != NO_INDEX)
             return list[index] > rhs;
+
+        if (is_set())
+        {
+            for (auto e : *this)
+            {
+                if (e <= rhs)
+                    return false;
+            }
+
+            return true;
+        }
 
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
@@ -698,6 +869,17 @@ struct expr_result_t
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value >= rhs.as_number());
 
+        if (is_set())
+        {
+            for (auto e : *this)
+            {
+                if (e < rhs)
+                    return false;
+            }
+
+            return true;
+        }
+
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
     }
@@ -705,11 +887,14 @@ struct expr_result_t
     /*! Returns a boolean result if the current value is equal to the other value. */
     expr_result_t operator==(const expr_result_t& rhs) const
     {
-        if (type == EXPR_RESULT_NULL && rhs.type == EXPR_RESULT_NULL)
+        if (type == EXPR_RESULT_NULL && rhs.is_null())
             return true;
 
         if (type == EXPR_RESULT_NULL && rhs.type == EXPR_RESULT_NUMBER)
             return rhs.as_number(0) == 0;
+
+        if (type == EXPR_RESULT_NULL)
+            return false;
 
         if (type == EXPR_RESULT_TRUE && rhs.type == EXPR_RESULT_TRUE)
             return true;
@@ -883,6 +1068,26 @@ struct expr_result_t
         FOUNDATION_ASSERT(is_set());
         return iterator{ element_count(), this };
     }
+
+    /*! Returns the first element in the set.
+     *  @note Only valid for sets. 
+     *  @return The first element in the set.
+     */
+    FOUNDATION_FORCEINLINE expr_result_t first() const
+    {
+        FOUNDATION_ASSERT(is_set());
+        return element_at(0);
+    }
+
+    /*! Returns the last element in the set.
+     *  @note Only valid for sets. 
+     *  @return The last element in the set.
+     */
+    FOUNDATION_FORCEINLINE expr_result_t last() const
+    {
+        FOUNDATION_ASSERT(is_set());
+        return element_at(element_count() - 1);
+    }
 };
 
 /*! Null value used statically when evaluating an expression */
@@ -1011,14 +1216,6 @@ expr_result_t eval(string_const_t expression);
  *  @return Result of the expression evaluation.
  */
 expr_result_t eval(const char* expression, size_t expression_length = -1);
-
-/*! Create an evaluation list that will be managed by the expression system.
- *
- *  @param list Newly created expression result list that will get disposed next update.
- *
- *  @return Stored expression result list.
- */
-const expr_result_t* expr_eval_list(const expr_result_t* list);
 
 /*! Set a global expression variable to point to an application pointer.
  * 
