@@ -272,7 +272,6 @@ struct database
 
         if (index > array_size(elements))
         {
-            FOUNDATION_ASSERT_FAIL("Index is out of bound");
             mutex.shared_unlock();
             return false;
         }
@@ -357,7 +356,6 @@ struct database
 
         if (index > array_size(elements))
         {
-            FOUNDATION_ASSERT_FAIL("Index is out of bound");
             mutex.exclusive_unlock();
             return false;
         }
@@ -365,7 +363,7 @@ struct database
         const T& value = elements[index - 1];
         if (HASHER(value) != key)
         {
-            FOUNDATION_ASSERT_FAIL("Element has been invalidated");
+            log_debugf(0, STRING_CONST("Element %" PRIhash " has been invalidated"), key);
             mutex.exclusive_unlock();
             return false;
         }
