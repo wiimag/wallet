@@ -2443,6 +2443,12 @@ FOUNDATION_STATIC bool pattern_update_year_after_year_results(pattern_t* pattern
 
 FOUNDATION_STATIC void pattern_update(pattern_t* pattern)
 {
+    if (!pattern->stock->is_resolving(FETCH_ALL))
+    {
+        string_const_t code = string_table_decode_const(pattern->code);
+        stock_update(STRING_ARGS(code), pattern->stock, FETCH_ALL, 8.0);
+    }
+
     pattern_update_year_after_year_results(pattern);
     pattern_compute_years_performance_ratios(pattern);
 }
@@ -2551,8 +2557,6 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
 
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
     string_const_t code = string_table_decode_const(pattern->code);
-    if (!pattern->stock->is_resolving(FETCH_ALL))
-        stock_update(STRING_ARGS(code), pattern->stock, FETCH_ALL, 8.0);
 
     char pattern_id[64];
     string_format(STRING_BUFFER(pattern_id), STRING_CONST("Pattern###%.*s_7"), STRING_FORMAT(code));
@@ -2561,8 +2565,7 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
 
     pattern_update(pattern);
         
-    string_const_t code_str = string_table_decode_const(pattern->code);
-    ImGui::TableSetupColumn(code_str.str, ImGuiTableColumnFlags_WidthFixed, 
+    ImGui::TableSetupColumn(code.str, ImGuiTableColumnFlags_WidthFixed, 
         IM_SCALEF(220), 0U, table_cell_right_aligned_column_label, nullptr);
 
     string_const_t graph_column_title = CTEXT("Graph");

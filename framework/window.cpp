@@ -148,7 +148,12 @@ FOUNDATION_STATIC unsigned int window_index(window_handle_t window_handle)
 
 FOUNDATION_STATIC window_t* window_handle_lookup(window_handle_t window_handle)
 {
-    return _window_module->windows[window_index(window_handle)];
+    if (window_handle == 0)
+        return nullptr;
+    if (window_handle > array_size(_window_module->windows))
+        return nullptr;
+    auto index = window_index(window_handle);
+    return _window_module->windows[index];
 }
 
 FOUNDATION_STATIC window_t* window_allocate(GLFWwindow* glfw_window, window_flags_t flags)
@@ -923,11 +928,18 @@ FOUNDATION_STATIC void window_render(window_t* win)
     bgfx::frame();
 }
 
-FOUNDATION_STATIC void window_update()
+bool window_valid(window_handle_t window_handle)
+{
+    return window_handle_lookup(window_handle) != nullptr;
+}
+
+void window_update()
 {
     const unsigned window_count = array_size(_window_module->windows);
     if (window_count == 0)
         return;
+
+    glfwPollEvents();
 
     // Capture the current contexts
     ImGuiContext* current_imgui_context = ImGui::GetCurrentContext();

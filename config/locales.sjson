@@ -2185,5 +2185,30 @@
 			en = "Copyright (C) 2022-2023 - wallet.wiimag.com - All rights reserved"
 			fr = "Copyright (C) 2022-2023 - wallet.wiimag.com - Tous droits r\xc3\xa9serv\xc3\xa9s"
 		}
+		{
+			hash = "e1b419bf51ff80b3"
+			en = " %s Price: %.2lf $ (%d) "
+			fr = "@TODO"
+		}
+		{
+			hash = "13796fd50b31d911"
+			en = " %s Value: %.2lf $ "
+			fr = "@TODO"
+		}
+		{
+			hash = "db5fae4b427ec53b"
+			en = " Gain Value : %.2lf $ "
+			fr = "@TODO"
+		}
+		{
+			hash = "b6e30125654c5e44"
+			en = " Worth Value (%d x %.2lf $): %.2lf $ "
+			fr = "@TODO"
+		}
+		{
+			hash = "3efbf79b8c43d0a8"
+			en = " Lost Value : %.2lf $ "
+			fr = "@TODO"
+		}
 	]
 }
