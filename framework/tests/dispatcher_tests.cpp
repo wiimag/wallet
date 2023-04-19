@@ -5,7 +5,7 @@
 
 #include <foundation/platform.h>
 
-#if BUILD_DEVELOPMENT
+#if BUILD_TESTS
 
 #include "test_utils.h"
 

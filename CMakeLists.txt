@@ -157,6 +157,14 @@ if(NOT BUILD_ENABLE_LOCALIZATION)
     add_compile_options(-DBUILD_ENABLE_LOCALIZATION=0)
 endif()
 
+# Define BUILD_TESTS if BUILD_ENABLE_TESTS is ON
+if(BUILD_ENABLE_TESTS)
+    add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_TESTS=0>")
+    add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_TESTS=1>")
+else()
+    add_compile_options(-DBUILD_TESTS=0)
+endif()
+
 # Set compiler specific flags
 if(MSVC)
 
