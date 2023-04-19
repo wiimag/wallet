@@ -5,13 +5,12 @@ Update=U
 Overwrite=1
 Setup=@PROJECT_ID@.exe
 Shortcut=D, @PROJECT_ID@.exe, , @PRODUCT_NAME@, @PRODUCT_NAME@, 
-Icon=@PROJECT_ID@.exe, 0
 
 Text
 {
 <h3>@PRODUCT_DESCRIPTION@</h3>
 
-<p><a href="https://eodhistoricaldata.com/register" target="_blank">Get your API Key</a> as you will need one to proceed with the application setup.</p>
+<p>Get your API Key at https://eodhistoricaldata.com/register to as you will need one to proceed with the application setup.</p>
 
 <i>Press Install to download and install the Wallet app.</i>
 

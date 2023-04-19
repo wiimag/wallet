@@ -118,9 +118,8 @@ fi
 "$WIN_RAR_EXE_PATH" \
   a -sfx -z"$SFX_SETUP_SCRIPT" \
   -iicon"$PACKAGE_ICON" -iimg"$SFX_BANNER_LOW_RES" -iimg"$SFX_BANNER_HIGH_RES" \
-  -r -ep1 -m5 -ed \
-  -mt4 -x*.pdb \
-  -ilog"$ZIP_OUTPUT_PATH.log" \
+  -r -ep1 -m5 -ed -cfg- \
+  -mt4 -x*.pdb -xsetup.exe \
   "$ZIP_OUTPUT_PATH" "${FILES_TO_PACKAGE[@]}"
 
 # Check if the zip file was created
