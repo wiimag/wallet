@@ -12,6 +12,10 @@ include(${SHARED_MODULE_PATH})
 # Define project
 project(installer)
 
+# Read PROJECT_ID for the setup.sfx.in file
+read_build_settings_property("PROJECT_ID" PROJECT_ID)
+string(REPLACE " " "_" PROJECT_ID ${PROJECT_ID})
+
 # Load app source files
 file(GLOB INSTALLER_SOURCES
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
@@ -32,6 +36,15 @@ file(GLOB RESOURCES_FILES
     "${ROOT_DIR}/resources/*.ttf"
 )
 source_group("bundle" FILES ${RESOURCES_FILES})
+
+#
+# Configure SFX installer script
+#
+configure_file(
+    "${ROOT_DIR}/resources/setup.sfx.in"
+    "${ROOT_DIR}/resources/setup.sfx"
+    @ONLY
+)
 
 #
 # Create executable

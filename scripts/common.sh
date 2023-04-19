@@ -7,6 +7,12 @@
 # Define a set of bash functions that are shared between the various scripts
 #
 
+# Make sure $CONFIG_DIR is set
+if [ -z "$CONFIG_DIR" ]; then
+  echo "The CONFIG_DIR variable is not set"
+  exit 1
+fi
+
 # Determine running platform
 PLATFORM_NAME="$(uname -s)"
 case "${PLATFORM_NAME}" in
@@ -76,10 +82,44 @@ function convert_path_to_file_link() {
   fi
 }
 
+#
+# @def build_setting <name>
+#
 # Function to read a named value from config/build.settings.
 # Each line is expected to be in the format: NAME=VALUE
+# Example:
+#   SHORT_NAME=$(build_setting "PROJECT_ID")
+#   echo $SHORT_NAME
+#
 function build_setting() {
     local name=$1
     local value=$(awk -F "=" "/$name/ {print \$2}" "$CONFIG_DIR/build.settings")
     echo $value
+}
+
+#
+# @def get_command_line_value <switch>
+#
+# Function to check if the command line contains a given switch (i.e. --run)
+# Example: 
+#   if [ $(has_command_line --run) -eq 0 ]; then
+#     echo "The --run switch was found"
+#   fi
+#
+function has_command_line_arg() {
+  local switch=$1
+  local result=1
+  for var in "$@"
+  do
+    # Check if the var start with the switch
+    if [[ $var == $switch* ]]; then
+      result=0
+    # Check if the form is --$var*
+    elif [[ $var == "--$var"* ]]; then
+      result=0
+    elif [[ $var == "-$var"* ]]; then
+      result=0
+    fi
+  done
+  echo $result
 }

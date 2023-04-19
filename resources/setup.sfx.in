@@ -1,0 +1,89 @@
+Title=@PRODUCT_NAME@ v.@VERSION_MAJOR@.@VERSION_MINOR@
+Path=%LOCALAPPDATA%\@PRODUCT_NAME@
+SavePath
+Update=U
+Overwrite=1
+Setup=@PROJECT_ID@.exe
+Shortcut=D, @PROJECT_ID@.exe, , @PRODUCT_NAME@, @PRODUCT_NAME@, 
+
+Text
+{
+<h3>@PRODUCT_DESCRIPTION@</h3>
+
+<p>Get your API Key at https://eodhistoricaldata.com/register to as you will need one to proceed with the application setup.</p>
+
+<i>Press Install to download and install the Wallet app.</i>
+
+<br/><br/>
+<li>Track your stocks and crypto portfolio</li>
+<li>Get real-time stock quotes</li>
+<li>Get historical stock quotes</li>
+<li>Get stock news</li>
+<li>Get stock charts</li>
+<li>Get stock fundamentals</li>
+
+<br/>
+<p>EOD Historical Data would like to remind you that the data contained in this website and via API is not necessarily real-time nor accurate. All CFDs (stocks, indices, mutual funds, ETFs), and Forex are not provided by exchanges but rather by market makers, and so prices may not be accurate and may differ from the actual market price, meaning prices are indicative and not appropriate for trading purposes. Therefore EOD Historical Data doesn’t bear any responsibility for any trading losses you might incur as a result of using this data. EOD Historical Data or anyone involved with EOD Historical Data will not accept any liability for loss or damage as a result of reliance on the information including data, quotes, charts and buy/sell signals contained within this website. Please be fully informed regarding the risks and costs associated with trading the financial markets, it is one of the riskiest investment forms possible. EOD Historical Data does not give any warranties (including, without limitation, as to merchantability or fitness for a particular purpose or use). Without limitation to this clause, EOD Historical Data does not warrant that access to the Website will not expose the User to viruses or other harmful items and no assurance can be given that the Website or any linked website will not harm or cause loss to the User, or the User’s computer or network.</p>
+
+}
+
+License=@PRODUCT_NAME@ v.@VERSION_MAJOR@.@VERSION_MINOR@ (EODHD Terms and Conditions)
+{
+Please read these Terms and Conditions carefully; they impose legal obligations on you. By using the Services, you are acknowledging that you have read and understood these Terms of Service and agree to be legally bound by them.
+
+<br><h3>1. DEFINITIONS</h3>
+The following terms shall have the following meaning:
+User means a person that has registered to obtain our Services;
+Services mean those of the services provided by EOD Historical Data and selected by the User;
+The Website means eodhistoricaldata.com.
+
+<br><h3>2. PROVISION OF SERVICES</h3>
+2.1 EOD Historical Data shall make commercially reasonable efforts to make the Services always available to the User and shall restore the Services as soon as reasonably possible in the event of any interruption. EOD Historical Data shall not be liable for any failure to provide the Services.
+
+2.2 EOD Historical Data does not warrant that the Services or the EOD Historical Data Information will be error-free or uninterrupted.
+
+<br><h3>3. USE OF INFORMATION</h3>
+The User is permitted to store, manipulate, and analyze the EOD Historical Data Information and use the Services for the User’s private use. In no event shall the User sell, resell, retransmit, redistribute, provide or permit access to any EOD Historical Data Information or the Services as is or with repackage to anyone with any standard subscription. Please contact support@eodhistoricaldata.com for any commercial usage of the data.
+
+<br><h3>4. NO WARRANTIES</h3>
+EOD Historical Data would like to remind you that the data contained in this website and via API is not necessarily real-time nor accurate. All CFDs (stocks, indices, mutual funds, ETFs), cryptocurrencies, and Forex are not provided by exchanges but rather by market makers, and so prices may not be accurate and may differ from the actual market price, meaning prices are indicative and not appropriate for trading purposes. Therefore EOD Historical Data doesn’t bear any responsibility for any trading losses you might incur as a result of using this data.
+
+EOD Historical Data or anyone involved with EOD Historical Data will not accept any liability for loss or damage as a result of reliance on the information including data, quotes, charts, and buy/sell signals contained within this website. Please be fully informed regarding the risks and costs associated with trading the financial markets, it is one of the riskiest investment forms possible.
+
+EOD Historical Data does not give any warranties (including, without limitation, as to merchantability or fitness for a particular purpose or use). Without limitation to this clause, EOD Historical Data does not warrant that access to the Website will not expose the User to viruses or other harmful items and no assurance can be given that the Website or any linked website will not harm or cause loss to the User, or the User’s computer or network.
+
+<br><h3>5. ACCESS TO THE SERVICES</h3>
+5.1 The User shall have a username, password (specified by the User) and private API key that enables the User to access the Services.
+
+5.2 The User is responsible for maintaining the confidentiality of the username and password and is not entitled to disclose the username or password to any other person.
+
+5.3 One API key allows querying 100 000 API requests per day.
+
+5.4 Our subscription is monthly based and the User has no long-term obligations here. The User can cancel subscription anytime, the minimum period of commitment is one month.
+
+<br><h3>6. USE OF PERSONAL INFORMATION</h3>
+6.1 If the User is an individual, EOD Historical Data and its agents are authorized to collect information about the User. This information may be used for enabling access to the Services, statistical analysis, research and marketing purposes.
+
+6.2 The User can request access to and correction of any personal information held by EOD Historical Data about the User. Any such request must be in writing and EOD Historical Data, at its discretion, may charge for any costs reasonably incurred in responding to such a request.
+
+<br><h3>7. TERMINATION</h3>
+Without prejudice to any other rights, EOD Historical Data may without notice terminate its contract with the User immediately if the User fails to comply with any of these terms and conditions, or if EOD Historical Data ceases to supply any Services. Customers wishing to cancel subscription-based services can cancel it anytime.
+
+<br><h3>8. REFUNDS</h3>
+EOD Historical Data does not allow refunds or exchanges on any of its products or subscriptions. All sales are final.
+
+<br><h3>9. EXCLUSION OF LIABILITY</h3>
+To the maximum extent permitted by law, EOD Historical Data excludes all and any liability to the User arising out of the contract between EOD Historical Data and the User. Notwithstanding and without limiting any provision of these terms and conditions, any claim brought by the User against EOD Historical Data must be served within one year following the date on which the cause of action accrued.
+
+<br><h3>10. INDEMNITY</h3>
+The User indemnifies EOD Historical Data against all and any losses, costs (including legal costs on a solicitor-client basis), expenses and damages, whether direct or indirect, arising from or in connection with a claim by a third party against EOD Historical Data relating to Services obtained by the User.
+
+<br><h3>11. ASSIGNMENT</h3>
+The User may not assign its rights under the contract between EOD Historical Data and the User.
+
+<br><h3>12. SEVERABILITY</h3>
+If any provision of these terms and conditions is found to be invalid or unenforceable to any extent, the remainder of the terms and conditions shall not be affected and shall remain enforceable to the greatest extent permitted by law.
+
+<br><h3>13. AMENDMENTS</h3>
+EOD Historical Data reserves the right to alter these terms and conditions at any time. EOD Historical Data will endeavor to provide reasonable notice to the User of any variation by posting the new terms and conditions on the Website and by email to the User at the last postal address, facsimile number or email address which the User has notified to EOD Historical Data.
+}

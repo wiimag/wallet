@@ -5,7 +5,7 @@ PROJECT_ID=wallet
 # Product info
 PRODUCT_NAME=Wallet
 PRODUCT_COMPANY=Wiimag Inc.
-PRODUCT_DESCRIPTION=Wallet - Finance 300K
+PRODUCT_DESCRIPTION=Manage your stock and finance
 PRODUCT_CODE_NAME=Wallet
 PRODUCT_COPYRIGHT=Copyright (C) 2022-2023 - wallet.wiimag.com - All rights reserved
 PRODUCT_URL=https://wallet.wiimag.com
