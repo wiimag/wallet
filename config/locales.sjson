@@ -2210,5 +2210,10 @@
 			en = " Lost Value : %.2lf $ "
 			fr = " Perte : %.2lf $ "
 		}
+		{
+			hash = "4854b1462f676829"
+			en = "Random"
+			fr = "Al\xc3\xa9atoire"
+		}
 	]
 }

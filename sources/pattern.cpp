@@ -2633,6 +2633,9 @@ FOUNDATION_STATIC bool pattern_open_floating_window(pattern_handle_t handle)
         log_warnf(HASH_PATTERN, WARNING_INVALID_VALUE, STRING_CONST("Failed to open pattern window, stock not resolved"));
         return false;
     }
+
+    // When opening a floating window, we want to close the main window pattern view if any.
+    pattern->opened = false;
     
     string_const_t pattern_name = SYMBOL_CONST(stock->name);
     string_const_t pattern_code = SYMBOL_CONST(pattern->code);
@@ -2661,15 +2664,7 @@ FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
         }
 
         if (ImGui::TrMenuItem("Float Window"))
-        {
-            if (pattern_open_floating_window(handle))
-            {
-                // Close the tab if any.
-                pattern_t* pattern = (pattern_t*)pattern_get(handle);
-                if (pattern)
-                    pattern->opened = false;
-            }
-        }
+            pattern_open_floating_window(handle);
 
         ImGui::EndPopup();
     }
