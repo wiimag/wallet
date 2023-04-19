@@ -71,11 +71,11 @@ if [ ! -d "releases" ]; then
   mkdir releases
 fi
 
-# Create a copy of the exe named *_app.exe to provide a standalone exe
-cp "$PROJECT_EXE_PATH" "${PROJECT_EXE_PATH%.*}_app.exe"
-
 # Define today's date as YYYY_MM_DD
 TODAY=$(date +"%Y_%m_%d")
+
+# Create a copy of the exe named *_app.exe to provide a standalone exe
+cp "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${BRANCH_NAME}_portable_${TODAY}.exe"
 
 # Define the zip output path
 ZIP_OUTPUT_PATH="releases/${SHORT_NAME}_${BRANCH_NAME}_${TODAY}.exe"

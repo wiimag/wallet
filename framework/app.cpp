@@ -397,6 +397,9 @@ void app_menu_help(GLFWwindow* window)
         #if BUILD_DEVELOPMENT
         ImGui::MenuItem("BUILD_DEVELOPMENT");
         #endif
+        #if BUILD_TESTS
+        ImGui::MenuItem("BUILD_TESTS");
+        #endif
         #if BUILD_ENABLE_LOG
         ImGui::MenuItem("BUILD_ENABLE_LOG");
         #endif
