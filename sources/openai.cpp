@@ -591,6 +591,9 @@ FOUNDATION_STATIC void openai_run_tests(void* user_data)
 
 bool openai_available()
 {
+    if (backend_is_connected())
+        return true;
+
     const char* key = openai_ensure_key_loaded();
     return key && key[0];
 }
