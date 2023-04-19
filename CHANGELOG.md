@@ -7,6 +7,7 @@
 
 # TODO
 
+- [ ] 2023-04-19: Add Export/Import of reports
 - [ ] 2023-04-19: Add user guide
 - [ ] 2023-04-19: Add user authentication when using the proxy backend
 - [ ] 2023-04-19: Add augmented logo cache from the backend

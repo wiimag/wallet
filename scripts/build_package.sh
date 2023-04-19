@@ -21,7 +21,7 @@ BRANCH_NAME=${BRANCH_NAME//\//_}
 
 # If branch name is empty, use setup
 if [ -z "$BRANCH_NAME" ]; then
-  BRANCH_NAME="setup"
+  BRANCH_NAME="release"
 fi
 
 # If branch name is main, rename to setup
