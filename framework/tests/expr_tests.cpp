@@ -5,7 +5,7 @@
 
 #include <foundation/platform.h>
 
-#if BUILD_DEVELOPMENT
+#if BUILD_TESTS
 
 #include <framework/expr.h>
 #include <framework/tests/test_utils.h>
@@ -929,4 +929,4 @@ TEST_SUITE("Expressions")
     }
 }
 
-#endif // BUILD_DEVELOPMENT
+#endif // BUILD_TESTS

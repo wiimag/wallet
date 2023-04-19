@@ -51,9 +51,9 @@ if [[ "$*" == *-build* ]]; then
 
   # Check if deploy is in the command line
   if [[ "$*" == *deploy* ]]; then
-    ./run generate build deploy
+    ./run build deploy generate -DBUILD_ENABLE_TESTS=OFF
   else
-    ./run generate build
+    ./run build generate -DBUILD_ENABLE_TESTS=OFF
   fi  
 fi
 

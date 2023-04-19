@@ -15,7 +15,7 @@
 #include <framework/dispatcher.h>
 #include <framework/string.h>
 
-#if BUILD_DEVELOPMENT
+#if BUILD_TESTS
 
 #include <doctest/doctest.h>
 

@@ -25,6 +25,7 @@
 #include <framework/window.h>
 #include <framework/array.h>
 #include <framework/system.h>
+#include <framework/shared_mutex.h>
 
 #include <foundation/stream.h>
 #include <foundation/thread.h>
@@ -125,9 +126,9 @@ struct search_result_entry_t
 
 struct search_window_t
 {
-    search_database_t* db{ nullptr };
-    table_t* table{ nullptr };
-    search_result_entry_t* results{ nullptr };
+    search_database_t*             db{ nullptr };
+    table_t*                       table{ nullptr };
+    search_result_entry_t*         results{ nullptr };
     char                           query[1024] = { 0 };
     tick_t                         query_tick{ 0 };
     dispatcher_event_listener_id_t event_db_loaded{ INVALID_DISPATCHER_EVENT_LISTENER_ID };
@@ -150,6 +151,7 @@ static struct SEARCH_MODULE {
 
     /*! Stock exchanges to index. */
     string_t*                   exchanges{ nullptr };
+    shared_mutex                exchanges_lock{};
 
 } *_search;
 
@@ -739,6 +741,7 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
     }
     
     // Fetch all titles from stock exchange market
+    SHARED_READ_LOCK(_search->exchanges_lock);
     bool stop_indexing = false;
     foreach (market, _search->exchanges)
     {
@@ -1588,19 +1591,14 @@ FOUNDATION_STATIC void search_start_indexing()
 {
     FOUNDATION_ASSERT_MSG(!dispatcher_thread_is_running(_search->indexing_thread), "Stop indexing thread before starting it again");
 
-    if (_search->exchanges)
-        string_array_deallocate(_search->exchanges);
-
-    if (session_key_exists(SEARCH_EXCHANGES_SESSION_KEY))
     {
-        _search->exchanges = session_get_string_list(SEARCH_EXCHANGES_SESSION_KEY);
-    }
-    else
-    {
-        array_push(_search->exchanges, string_clone(STRING_CONST("TO")));
-        array_push(_search->exchanges, string_clone(STRING_CONST("US")));
+        SHARED_WRITE_LOCK(_search->exchanges_lock);
+        if (_search->exchanges)
+            string_array_deallocate(_search->exchanges);
     }
 
+    _search->exchanges = (string_t*)search_stock_exchanges();
+    
     // Start indexing thread that query a stock exchange market and then 
     // for each title query its fundamental values to build a search database.
     _search->indexing_thread = dispatch_thread("Search Indexer", search_indexing_thread_fn);
@@ -1645,6 +1643,27 @@ FOUNDATION_STATIC bool search_stop_indexing(bool save_db)
 bool search_available()
 {
     return _search && _search->db;
+}
+
+const string_t* search_stock_exchanges()
+{
+    FOUNDATION_ASSERT(_search);
+
+    if (_search->exchanges)
+        return _search->exchanges;
+
+    SHARED_WRITE_LOCK(_search->exchanges_lock);
+    if (session_key_exists(SEARCH_EXCHANGES_SESSION_KEY))
+    {
+        _search->exchanges = session_get_string_list(SEARCH_EXCHANGES_SESSION_KEY);
+    }
+    else
+    {
+        array_push(_search->exchanges, string_clone(STRING_CONST("TO")));
+        array_push(_search->exchanges, string_clone(STRING_CONST("US")));
+    }
+
+    return _search->exchanges;
 }
 
 bool search_render_settings()

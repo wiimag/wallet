@@ -5,7 +5,7 @@
 
 #include <foundation/platform.h>
 
-#if BUILD_DEVELOPMENT
+#if BUILD_TESTS
  
 #include <framework/tests/test_utils.h>
 
@@ -1046,4 +1046,4 @@ TEST_SUITE("SearchQuery")
     }
 }
 
-#endif // BUILD_DEVELOPMENT
+#endif // BUILD_TESTS

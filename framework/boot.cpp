@@ -22,7 +22,7 @@
 
 #undef ERROR_ACCESS_DENIED
 
-#if BUILD_DEVELOPMENT
+#if BUILD_TESTS
 static bool _run_tests = false;
 #endif
 #if BUILD_ENABLE_PROFILE
@@ -122,7 +122,7 @@ extern int main_initialize()
         log_enable_stdout(system_process_redirect_io_to_console() || environment_argument("build-machine"));
     #endif
     
-    #if BUILD_DEVELOPMENT
+    #if BUILD_TESTS
     _run_tests = environment_argument("run-tests");
     #endif
 
@@ -240,7 +240,7 @@ extern bool main_is_interactive_mode(bool exclude_debugger /*= false*/)
     #if BUILD_APPLICATION
         if (_batch_mode)
             return false;
-        #if BUILD_DEVELOPMENT
+        #if BUILD_TESTS
             if (_run_tests)
                 return false;
         #endif
@@ -258,7 +258,7 @@ extern bool main_is_interactive_mode(bool exclude_debugger /*= false*/)
  */
 extern bool main_is_running_tests()
 {
-    #if BUILD_DEVELOPMENT
+    #if BUILD_TESTS
         return _run_tests;
     #else
         return false;
@@ -446,7 +446,7 @@ extern int main_run(void* context)
 {
     GLFWwindow* current_window = glfw_main_window();
 
-    #if BUILD_APPLICATION && BUILD_DEVELOPMENT
+    #if BUILD_APPLICATION && BUILD_TESTS
     extern int main_tests(void* context, GLFWwindow* window);
     if (_run_tests)
         return main_tests(context, current_window);

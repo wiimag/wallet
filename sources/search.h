@@ -5,6 +5,8 @@
 
 #pragma once
 
+#include <foundation/string.h>
+
 /*! Returns true if the search service is ready to be used. */
 bool search_available();
 
@@ -13,3 +15,9 @@ bool search_available();
  *  @returns True if the settings changed and the search service needs to be restarted.
  */
 bool search_render_settings();
+
+/*! Returns the list of stock exchanges for which the search service is configured. 
+ *
+ *  @returns An array string contains stock markets symbols.
+ */
+const string_t* search_stock_exchanges();

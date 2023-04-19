@@ -13,7 +13,7 @@
 
 #include <foundation/path.h>
 
-#if BUILD_DEVELOPMENT
+#if BUILD_TESTS
 
 #include <doctest/doctest.h>
 

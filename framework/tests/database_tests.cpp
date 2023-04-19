@@ -5,7 +5,7 @@
 
 #include <foundation/platform.h>
 
-#if BUILD_DEVELOPMENT
+#if BUILD_TESTS
 
 #include "test_utils.h"
 
@@ -525,4 +525,4 @@ TEST_SUITE("Database")
     }
 }
 
-#endif // BUILD_DEVELOPMENT
+#endif // BUILD_TESTS

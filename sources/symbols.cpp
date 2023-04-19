@@ -12,6 +12,7 @@
 #include "pattern.h"
 #include "settings.h"
 #include "logo.h"
+#include "search.h"
 
 #include <framework/common.h>
 #include <framework/function.h>
@@ -26,9 +27,11 @@
 #include <framework/string.h>
 #include <framework/localization.h>
 #include <framework/system.h>
+#include <framework/dispatcher.h>
+#include <framework/array.h>
+#include <framework/profiler.h>
 
-#include <foundation/hash.h>
-#include <foundation/array.h>
+#include <foundation/random.h>
 
 struct market_report_t
 {
@@ -72,7 +75,7 @@ FOUNDATION_STATIC  string_table_symbol_t load_symbol_field_value(const json_obje
     return STRING_TABLE_NULL_SYMBOL;
 }
 
-FOUNDATION_STATIC  void symbols_load(int current_symbols_load_id, symbol_t** out_symbols, const json_object_t& data, const char* market, bool filter_null_isin = true)
+FOUNDATION_STATIC void symbols_load(int current_symbols_load_id, symbol_t** out_symbols, const json_object_t& data, const char* market, bool filter_null_isin = true)
 {
     string_const_t market_cstr = string_const(market, string_length(market));
     if (const auto& lock = scoped_mutex_t(_symbols_lock))
@@ -595,6 +598,50 @@ void symbols_render_search(const function<void(string_const_t)>& selector /*= nu
         ImGui::TrTextUnformatted("No search query");
 }
 
+FOUNDATION_STATIC bool symbols_fetch_market_symbols(const char* exchange, size_t exchange_length, string_t*& symbols)
+{
+    return eod_fetch("exchange-symbol-list", exchange, FORMAT_JSON_CACHE, [&symbols](const json_object_t& res)
+    {
+        for (auto e : res)
+        {
+            string_const_t code = e["Code"].as_string();
+            string_const_t exchange = e["Exchange"].as_string();
+            
+            string_t ticker = string_allocate_format(STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+            array_push(symbols, ticker);
+        }
+    });
+}
+
+FOUNDATION_STATIC void symbols_open_random_stock_pattern()
+{
+    FOUNDATION_ASSERT_MSG(!thread_is_main(), "Function is written to run in another thread");
+
+    TIME_TRACKER("symbols_open_random_stock_pattern");
+
+    string_t* symbols = nullptr;
+    const string_t* exchanges = search_stock_exchanges();
+    for (unsigned i = 0, end = array_size(exchanges); i < end; ++i)
+    {
+        const string_t& exchange = exchanges[i];
+        if (!symbols_fetch_market_symbols(STRING_ARGS(exchange), symbols))
+        {
+            log_warnf(HASH_SYMBOLS, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s symbols"), STRING_ARGS(exchange));
+            break;
+        }
+    }
+
+    // Select a random symbol from the list.
+    const unsigned random_symbol_index = random32_range(0, array_size(symbols));
+    string_t random_symbol = string_clone(STRING_ARGS(symbols[random_symbol_index]));
+    dispatch([random_symbol]()
+    {
+        pattern_open_window(STRING_ARGS(random_symbol));
+        string_deallocate(random_symbol.str);
+    });
+    string_array_deallocate(symbols);
+}
+
 FOUNDATION_STATIC void symbols_render_menus()
 {
     if (!ImGui::BeginMenuBar())
@@ -615,6 +662,10 @@ FOUNDATION_STATIC void symbols_render_menus()
         ImGui::MenuItem(tr("CVE Symbols"), nullptr, &SETTINGS.show_symbols_CVE);
         ImGui::MenuItem(tr("NEO Symbols"), nullptr, &SETTINGS.show_symbols_NEO);
         ImGui::MenuItem(tr("US Symbols"), nullptr, &SETTINGS.show_symbols_US);      
+
+        ImGui::Separator();
+        if (ImGui::TrMenuItem("Random"))
+            dispatch_fire(symbols_open_random_stock_pattern);
 
         ImGui::EndMenu();
     }
