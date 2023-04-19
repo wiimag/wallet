@@ -10,6 +10,7 @@
 
 #include <foundation/hash.h>
 #include <foundation/atomic.h>
+#include <foundation/thread.h>
 
 typedef struct GLFWwindow GLFWwindow; // Required by #dispatcher_poll
 

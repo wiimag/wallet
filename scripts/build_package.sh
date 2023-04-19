@@ -24,6 +24,11 @@ if [ -z "$BRANCH_NAME" ]; then
   BRANCH_NAME="setup"
 fi
 
+# If branch name is main, rename to setup
+if [ "$BRANCH_NAME" = "main" ]; then
+  BRANCH_NAME="release"
+fi
+
 # Load the WinRar path from Program Files
 WIN_RAR_EXE_PATH="C:\Program Files\WinRAR\WinRAR.exe"
 
@@ -46,9 +51,9 @@ if [[ "$*" == *-build* ]]; then
 
   # Check if deploy is in the command line
   if [[ "$*" == *deploy* ]]; then
-    ./run generate build deploy
+    ./run build deploy generate -DBUILD_ENABLE_TESTS=OFF
   else
-    ./run generate build
+    ./run build generate -DBUILD_ENABLE_TESTS=OFF
   fi  
 fi
 
@@ -138,7 +143,7 @@ ZIP_OUTPUT_PATH=${ZIP_OUTPUT_PATH//\\/\/}
 echo "Build package: file://$ZIP_OUTPUT_PATH"
 
 # Copy zip file to default .exe
-cp "$ZIP_OUTPUT_PATH" "releases/${SHORT_NAME}.exe" 2>/dev/null
+cp "$ZIP_OUTPUT_PATH" "releases/${SHORT_NAME}_release_latest.exe" 2>/dev/null
 
 # If command line has --run, run the produced exe
 if [[ "$*" == *-run* ]]; then

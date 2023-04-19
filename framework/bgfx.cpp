@@ -273,7 +273,7 @@ void bgfx_new_frame(GLFWwindow* window, int width, int height)
     {
         bWidth = width; bHeight = height;
         bgfx::reset(bWidth, bHeight, 
-        #if BUILD_DEVELOPMENT
+        #if BUILD_TESTS
             main_is_running_tests() ? BGFX_RESET_NONE :
         #endif
             (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI));

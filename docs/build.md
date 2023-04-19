@@ -92,3 +92,15 @@ Then you can run the following command to run the service executable and get the
 ```bash
 ./run build release generate -DBUILD_SERVICE_EXE=OFF
 ```
+
+### `-DBUILD_ENABLE_TESTS=ON|OFF`
+
+**Default: `ON`**
+
+If enabled, the project will be built with tests. If turned off, the project will be built without tests. This is useful if you want to build the project without tests for distribution purposes.
+
+**Note:** When building in deploy mode, the tests will be disabled automatically.
+
+```bash	
+./run build release generate -DBUILD_ENABLE_TESTS=OFF
+```
