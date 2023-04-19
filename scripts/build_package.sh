@@ -21,7 +21,7 @@ BRANCH_NAME=${BRANCH_NAME//\//_}
 
 # If branch name is empty, use setup
 if [ -z "$BRANCH_NAME" ]; then
-  BRANCH_NAME="setup"
+  BRANCH_NAME="release"
 fi
 
 # If branch name is main, rename to setup
@@ -73,6 +73,9 @@ fi
 
 # Define today's date as YYYY_MM_DD
 TODAY=$(date +"%Y_%m_%d")
+
+# Create a copy of the exe named *_app.exe to provide a standalone exe
+cp "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${BRANCH_NAME}_portable_${TODAY}.exe"
 
 # Define the zip output path
 ZIP_OUTPUT_PATH="releases/${SHORT_NAME}_${BRANCH_NAME}_${TODAY}.exe"

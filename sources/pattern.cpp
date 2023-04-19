@@ -2458,11 +2458,13 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
     openai_completion_options_t& options = pattern->analysis_options;
 
     const size_t notes_size = string_length(pattern->notes);
+    bool used_tree_node = false;
 
     ImGui::SetNextItemOpen(notes_size > 0, ImGuiCond_Appearing);
+    ImGui::AlignTextToFramePadding();
     if (pattern->analysis_summary == nullptr || ImGui::TreeNode(tr("Notes")))
     {
-        const bool used_tree_node = pattern->analysis_summary != nullptr;
+        used_tree_node = pattern->analysis_summary != nullptr;
 
         if (used_tree_node)
             ImGui::Unindent();
@@ -2495,6 +2497,8 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
 
     if (pattern->analysis_summary)
     {
+        if (!used_tree_node)
+            ImGui::SameLine();
         if (ImGui::BeginCombo("##Options", tr("Analysis (AI)")/*, ImGuiComboFlags_NoPreview*/))
         {
             float top_p_100 = options.top_p * 100.0f;

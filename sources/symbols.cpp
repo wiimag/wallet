@@ -617,7 +617,7 @@ FOUNDATION_STATIC void symbols_open_random_stock_pattern()
 {
     FOUNDATION_ASSERT_MSG(!thread_is_main(), "Function is written to run in another thread");
 
-    TIME_TRACKER("symbols_open_random_stock_pattern");
+    //TIME_TRACKER("symbols_open_random_stock_pattern");
 
     string_t* symbols = nullptr;
     const string_t* exchanges = search_stock_exchanges();
