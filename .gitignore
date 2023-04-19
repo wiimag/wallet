@@ -20,6 +20,10 @@ DerivedData/
 enc_temp_folder/
 projects/.build
 
+# Installer
+releases/
+resources/setup.sfx
+
 # File patterns
 
 *.a

@@ -107,7 +107,7 @@ endfunction()
 function(read_build_settings_property property_name property_value)
 
     # Read the build.settings file
-    file(READ ${CMAKE_CURRENT_SOURCE_DIR}/config/build.settings BUILD_SETTINGS_FILE)
+    file(READ ${ROOT_DIR}/config/build.settings BUILD_SETTINGS_FILE)
 
     # Find the property in the build.settings file and read the entire line
     string(REGEX MATCH "${property_name}=([^\n\r]*)" PROPERTY_LINE ${BUILD_SETTINGS_FILE})

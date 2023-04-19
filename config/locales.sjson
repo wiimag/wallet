@@ -2188,27 +2188,27 @@
 		{
 			hash = "e1b419bf51ff80b3"
 			en = " %s Price: %.2lf $ (%d) "
-			fr = "@TODO"
+			fr = " %s Prix: %.2lf $ (%d) "
 		}
 		{
 			hash = "13796fd50b31d911"
 			en = " %s Value: %.2lf $ "
-			fr = "@TODO"
+			fr = " %s Valeur: %.2lf $ "
 		}
 		{
 			hash = "db5fae4b427ec53b"
 			en = " Gain Value : %.2lf $ "
-			fr = "@TODO"
+			fr = " Gain : %.2lf $ "
 		}
 		{
 			hash = "b6e30125654c5e44"
 			en = " Worth Value (%d x %.2lf $): %.2lf $ "
-			fr = "@TODO"
+			fr = " Valeur (%d x %.2lf $): %.2lf $ "
 		}
 		{
 			hash = "3efbf79b8c43d0a8"
 			en = " Lost Value : %.2lf $ "
-			fr = "@TODO"
+			fr = " Perte : %.2lf $ "
 		}
 	]
 }
