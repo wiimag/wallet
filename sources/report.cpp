@@ -595,6 +595,30 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
     #endif
 }
 
+FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_handle, table_t* table, const column_t* column, int column_index)
+{
+    string_const_t title = column->get_name();
+    ImGui::Text("%.*s", STRING_FORMAT(title));
+
+    //const float width = ImGui::GetItemRectSize().x;
+    const float available_space = ImGui::GetContentRegionAvail().x;
+    const float button_width = IM_SCALEF(14.0);
+    const float column_right_offset = (ImGui::TableGetColumnFlags(column_index) & ImGuiTableColumnFlags_IsSorted) ? IM_SCALEF(10) : 0.0f;
+    ImGui::SameLine();
+    ImGui::SetCursorPosX(available_space - button_width - column_right_offset);
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+    if (ImGui::SmallButton(ICON_MD_ADD))
+    {
+        report_t* report = report_get(report_handle);
+        FOUNDATION_ASSERT(report);
+
+        report->show_add_title_ui = true;
+    }
+    ImGui::PopStyleColor();
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip(tr("Add title"));
+}
+
 FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, const column_t* column)
 {
     title_t* title = *(title_t**)element;
@@ -1222,6 +1246,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
 {
     table_add_column(table, STRING_CONST("Title"),
         report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
+        .set_header_render_callback(L3(report_column_title_header_render(report_handle, _1, _2, _3)))
         .set_context_menu_callback(L3(report_column_contextual_menu(report_handle, _1, _2, _3)));
 
     table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"),
@@ -1741,6 +1766,7 @@ FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_
     title_t* new_title = report_title_add(report, code);
     new_title->show_buy_ui = true;
     report->show_add_title_ui = false;
+    report_refresh(report);
 }
 
 FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title, string_const_t apply_label, string_const_t initial_value, string_const_t hint, bool* show_ui)
@@ -2435,8 +2461,16 @@ void report_render(report_t* report)
     
     imgui_draw_splitter("Report", [report](const ImRect& rect)
     {
-        report->table->search_filter = string_to_const(SETTINGS.search_filter);
-        table_render(report->table, report->titles, (int)report->active_titles, sizeof(title_t*), 0.0f, 0.0f);
+        if (report->active_titles > 0)
+        {
+            report->table->search_filter = string_to_const(SETTINGS.search_filter);
+            table_render(report->table, report->titles, (int)report->active_titles, sizeof(title_t*), 0.0f, 0.0f);
+        }
+        else
+        {
+            if (ImGui::CenteredButton(tr("Add New Title"), { IM_SCALEF(180), IM_SCALEF(30) }))
+                report->show_add_title_ui = true;
+        }
     }, summary_frame, IMGUI_SPLITTER_HORIZONTAL, 0, (space_left - IM_SCALEF(250.0f)) / space_left);
     
     report_render_dialogs(report);

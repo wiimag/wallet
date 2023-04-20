@@ -12,8 +12,8 @@ PRODUCT_URL=https://wallet.wiimag.com
 
 # Version info
 VERSION_MAJOR=0
-VERSION_MINOR=15
-VERSION_PATCH=4
+VERSION_MINOR=16
+VERSION_PATCH=0
 
 # Build settings (Usually passed to Cmake)
 BUILD_SERVICE_EXE=OFF

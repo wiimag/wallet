@@ -23,6 +23,13 @@
 
 static thread_local ImRect _table_last_cell_rect;
 
+struct table_column_header_render_args_t
+{
+    table_t* table{ nullptr };
+    column_t* column{ nullptr };
+    int column_index{ -1 };
+};
+
 FOUNDATION_FORCEINLINE bool format_is_numeric(column_format_t format)
 {
     return (format == COLUMN_FORMAT_NUMBER || format == COLUMN_FORMAT_CURRENCY || format == COLUMN_FORMAT_PERCENTAGE);
@@ -356,11 +363,36 @@ FOUNDATION_STATIC column_t* table_column_at(table_t* table, size_t column_at)
     return nullptr;
 }
 
+FOUNDATION_STATIC void table_render_column_header(const char* label, void* payload)
+{
+    FOUNDATION_ASSERT(payload);
+    table_column_header_render_args_t* args = (table_column_header_render_args_t*)payload;
+    
+    table_t* table = args->table;
+    FOUNDATION_ASSERT(table);
+
+    const column_t* column = args->column;
+    FOUNDATION_ASSERT(column);
+
+    if (column->header_render)
+        column->header_render(table, column, args->column_index);
+    else if (format_is_numeric(column->format))
+        table_cell_right_aligned_column_label(label, nullptr);
+    else if (column->flags & COLUMN_LEFT_ALIGN)
+        ImGui::TextUnformatted(label);
+    else if (column->flags & COLUMN_RIGHT_ALIGN)
+        table_cell_right_aligned_column_label(label, nullptr);
+    else if (column->flags & COLUMN_CENTER_ALIGN)
+        table_cell_middle_aligned_column_label(label, nullptr);
+}
+
 FOUNDATION_STATIC void table_render_columns(table_t* table, int column_count)
 {
     int column_index = 0;
     bool dragging_columns = ImGui::IsMouseDragging(ImGuiMouseButton_Left, -5.0f);
-    const size_t max_column_count = sizeof(table->columns) / sizeof(table->columns[0]);
+    constexpr const size_t max_column_count = sizeof(table->columns) / sizeof(table->columns[0]);
+
+    table_column_header_render_args_t column_headers_args[max_column_count];
     for (int i = 0; i < max_column_count; ++i)
     {
         column_t& column = table->columns[i];
@@ -398,19 +430,13 @@ FOUNDATION_STATIC void table_render_columns(table_t* table, int column_count)
             table_column_flags |= ImGuiTableColumnFlags_WidthFixed;
         }
 
-        ImGuiTableColumnRenderHandler column_renderer = nullptr;
-        if (format_is_numeric(column.format))
-            column_renderer = table_cell_right_aligned_column_label;
-
-        if (column.flags & COLUMN_LEFT_ALIGN)
-            column_renderer = nullptr;
-        else if (column.flags & COLUMN_RIGHT_ALIGN)
-            column_renderer = table_cell_right_aligned_column_label;
-        else if (column.flags & COLUMN_CENTER_ALIGN)
-            column_renderer = table_cell_middle_aligned_column_label;
-
+        table_column_header_render_args_t* args = &column_headers_args[column_index];
+        args->table = table;
+        args->column = &column;
+        args->column_index = column_index;
         string_const_t column_name = string_table_decode_const(column.name);
-        ImGui::TableSetupColumn(column_name.str, table_column_flags, column.width, 0U, column_renderer, nullptr);
+        ImGui::TableSetupColumn(column_name.str, table_column_flags, column.width, 
+            0U, table_render_column_header, args);
 
         column_index++;
     }

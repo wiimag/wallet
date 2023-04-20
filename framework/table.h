@@ -316,6 +316,13 @@ typedef function<void(table_t* table)> table_context_menu_handler_t;
  */
 typedef function<bool(table_t* table, row_t* row, table_element_ptr_t element)> table_row_handler_t;
 
+/*! Callback invoked when we are about to draw or drawing a table column header. 
+ *  @param table   The table being sorted
+ *  @param column  The column being drawn
+ *  @param element The element associated with the column
+ */
+typedef function<void(table_t* table, const column_t* column, int column_index)> column_header_render_handler_t;
+
 /*! Column data structure */
 struct column_t
 {
@@ -333,6 +340,8 @@ struct column_t
     cell_callback_handler_t tooltip;
     cell_callback_handler_t selected;
     cell_style_handler_t style_formatter;
+
+    column_header_render_handler_t header_render;
 
     hash_t hovered_cell{ 0 };
     tick_t hovered_time{ 0 };
@@ -369,6 +378,12 @@ struct column_t
     FOUNDATION_FORCEINLINE column_t& set_tooltip_callback(const cell_callback_handler_t& handler)
     {
         tooltip = handler;
+        return *this;
+    }
+
+    FOUNDATION_FORCEINLINE column_t& set_header_render_callback(const column_header_render_handler_t& handler)
+    {
+        header_render = handler;
         return *this;
     }
 

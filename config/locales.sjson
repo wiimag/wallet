@@ -2215,5 +2215,10 @@
 			en = "Random"
 			fr = "Al\xc3\xa9atoire"
 		}
+		{
+			hash = "de74c48d4c28ad2"
+			en = "Add New Title"
+			fr = "Ajouter un nouveau titre"
+		}
 	]
 }

@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <foundation/assert.h>
 #include <foundation/memory.h>
 
 /*! Used for #MEM_DELETE and #MEM_DELETE_ARRAY. */
@@ -73,3 +74,37 @@ struct MemoryScope
  *  @param HASH The hash of the memory context to track.
  */
 #define MEMORY_TRACKER(HASH) MEMORY_TRACKER_NAME_COUNTER(HASH, __LINE__)
+
+/*! Template helper to allocate memory for a type.
+ *
+ *  @template T The type to allocate memory for.
+ *
+ *  @param context The memory context to allocate from.
+ *  @param alignment The alignment of the memory to allocate.
+ *  @param flags The flags to pass to the allocator.
+ *
+ *  @return A pointer to the allocated memory.
+ */
+template<typename T>
+FOUNDATION_FORCEINLINE T* memory_allocate(hash_t context = 0, uint32_t alignment = alignof(T), uint32_t flags = MEMORY_PERSISTENT)
+{
+    return (T*)memory_allocate(context, sizeof(T), alignment, flags);
+}
+
+/*! Template helper to allocate temporary memory for a type.
+ *
+ *  @template T The type to allocate memory for.
+ *
+ *  @param context The memory context to allocate from.
+ *  @param alignment The alignment of the memory to allocate.
+ *  @param flags The flags to pass to the allocator.
+ *
+ *  @return A pointer to the allocated memory.
+ */
+template<typename T>
+FOUNDATION_FORCEINLINE T* memory_temporary(hash_t context = 0, uint32_t alignment = alignof(T), uint32_t flags = 0)
+{
+    FOUNDATION_ASSERT_MSG((flags & MEMORY_PERSISTENT) == 0, "Cannot allocate persistent memory as temporary memory.");
+    return (T*)memory_allocate(context, sizeof(T), alignment, MEMORY_TEMPORARY | flags);
+}
+

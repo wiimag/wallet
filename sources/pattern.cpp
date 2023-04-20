@@ -2938,7 +2938,7 @@ FOUNDATION_STATIC void pattern_render_tabs()
         {
             string_const_t code = string_table_decode_const(pattern->code);
             string_const_t tab_id = string_format_static(STRING_CONST(ICON_MD_INSIGHTS " %.*s"), STRING_FORMAT(code));
-            tab_draw(tab_id.str, &(pattern->opened), L0(pattern_render(handle)), L0(pattern_menu(handle)));
+            tab_draw(tab_id.str, &pattern->opened, L0(pattern_render(handle)), L0(pattern_menu(handle)));
         }
     }
 }
@@ -2970,7 +2970,9 @@ pattern_handle_t pattern_load(const char* code, size_t code_length)
     string_table_symbol_t code_symbol = string_table_encode(code, code_length);
     string_const_t code_str = string_table_decode_const(code_symbol);
 
-    array_push(_patterns, (pattern_t{ code_symbol }));
+    pattern_t new_pattern{ code_symbol };
+    new_pattern.opened = false;
+    array_push(_patterns, new_pattern);
     handle = array_size(_patterns) - 1;
     pattern_initialize(handle);
 
