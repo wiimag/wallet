@@ -2057,8 +2057,9 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('6')) pattern->type = PATTERN_LONG_COORDINATED_FLEX;
     if (shortcut_executed('7') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
 
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.10f);
-    if (ImGui::BeginCombo("##Type", GRAPH_TYPES[pattern->type], ImGuiComboFlags_None))
+    ImGui::SetNextItemWidth(IM_SCALEF(100));
+    string_const_t graph_type_label_preview = string_to_const(GRAPH_TYPES[pattern->type]);
+    if (ImGui::BeginCombo("##Type", tr(STRING_ARGS(graph_type_label_preview), true).str, ImGuiComboFlags_None))
     {
         for (int n = 0; n < ARRAY_COUNT(GRAPH_TYPES); n++)
         {

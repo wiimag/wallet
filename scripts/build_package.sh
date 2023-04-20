@@ -124,7 +124,7 @@ fi
 # Command line switches: https://techshelps.github.io/WinRAR/html/HELPSwitches.htm
 #
 "$WIN_RAR_EXE_PATH" \
-  a -sfx -z"$SFX_SETUP_SCRIPT" \
+  a -afzip -sfx -z"$SFX_SETUP_SCRIPT" \
   -iicon"$PACKAGE_ICON" -iimg"$SFX_BANNER_LOW_RES" -iimg"$SFX_BANNER_HIGH_RES" \
   -r -ep1 -m5 -ed -cfg- \
   -mt4 -x*.pdb -xsetup.exe \
