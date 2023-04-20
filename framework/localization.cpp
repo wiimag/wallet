@@ -339,6 +339,14 @@ FOUNDATION_STATIC void localization_dictionary_deallocate(localization_dictionar
 // PUBLIC API
 //
 
+const char* tr_cstr(const char* str, size_t length /*= SIZE_MAX*/)
+{
+    if (length == SIZE_MAX)
+        length = string_length(str);
+
+    return tr(str, length, false).str;
+}
+
 #if BUILD_ENABLE_LOCALIZATION
 string_const_t tr(const char* str, size_t length, bool literal /*= false*/)
 {

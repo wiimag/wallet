@@ -583,7 +583,7 @@ void symbols_render_search(const function<void(string_const_t)>& selector /*= nu
 {
     static float add_button_width = IM_SCALEF(70.0f);
     ImGui::Spacing();
-    ImGui::InputTextEx("##SearchField", "Search...", STRING_BUFFER(SETTINGS.search_terms),
+    ImGui::InputTextEx("##SearchField", tr("Search..."), STRING_BUFFER(SETTINGS.search_terms),
         ImVec2(selector ? -add_button_width : IM_SCALEF(300.0f), 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
 
     string_const_t search_filter{ SETTINGS.search_terms, string_length(SETTINGS.search_terms) };

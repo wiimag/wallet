@@ -212,21 +212,21 @@ FOUNDATION_STATIC int pattern_formatx_label(double value, char* buff, int size, 
     if (value >= 365)
     {
         value = math_round(value / 365);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfY"), value).length;
+        return (int)tr_format(buff, to_size(size), "{0,round}Y", value).length;
     }
     else if (value >= 30)
     {
         value = math_round(value / 30);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfM"), value).length;
+        return (int)tr_format(buff, to_size(size), "{0,round}M", value).length;
     }
     else if (value >= 7)
     {
         value = math_round(value / 7);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfW"), value).length;
+        return (int)tr_format(buff, to_size(size), "{0,round}W", value).length;
     }
 
     value = math_round(value);
-    return (int)string_format(buff, size, STRING_CONST("%.0lfD"), value).length;
+    return (int)tr_format(buff, to_size(size), "{0,round}D", value).length;
 }
 
 FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v1_url, string_const_t v2, string_const_t v3, string_const_t v4, bool translate = false)
@@ -1717,7 +1717,7 @@ FOUNDATION_STATIC void pattern_render_lcf(pattern_t* pattern, pattern_graph_data
     }
     else
     {
-        ImGui::TextUnformatted("Loading data...");
+        ImGui::TrTextUnformatted("Loading data...");
     }
 }
 
@@ -1850,7 +1850,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
             return ImPlotPoint(x, y);
         }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
-
+            
         pattern_compute_trend(c);
         pattern_render_trend(tr("Trend"), c, pattern->x_axis_inverted);
     }
@@ -1861,7 +1861,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
     ImPlot::EndPlot();
 
-    if (ImGui::IsKeyDown((ImGuiKey)341/*GLFW_KEY_LEFT_CONTROL*/))
+    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
     {
         ImGui::SetCursorScreenPos(ImVec2(plot_screen_pos.x + 350, plot_screen_pos.y + 20));
         ImGui::SetNextItemWidth(250.0f);
