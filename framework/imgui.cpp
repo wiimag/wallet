@@ -1007,6 +1007,22 @@ void imgui_shutdown()
     ImGui::DestroyContext();
 }
 
+FOUNDATION_STATIC void imgui_update_localization()
+{
+    const ImGuiLocEntry GLocalizationEntries[] =
+    {
+        { ImGuiLocKey_TableSizeOne,         tr("Size column to fit###SizeOne")          },
+        { ImGuiLocKey_TableSizeAllFit,      tr("Size all columns to fit###SizeAll")     },
+        { ImGuiLocKey_TableSizeAllDefault,  tr("Size all columns to default###SizeAll") },
+        { ImGuiLocKey_TableResetOrder,      tr("Reset order###ResetOrder")              },
+        { ImGuiLocKey_WindowingMainMenuBar, tr("(Main menu bar)")                       },
+        { ImGuiLocKey_WindowingPopup,       tr("(Popup)")                               },
+        { ImGuiLocKey_WindowingUntitled,    tr("(Untitled)")                            },
+    };
+    FOUNDATION_ASSERT(ARRAY_COUNT(GLocalizationEntries) == ARRAY_COUNT(ImGuiContext::LocalizationTable));
+    ImGui::LocalizeRegisterEntries(GLocalizationEntries, ARRAY_COUNT(GLocalizationEntries));
+}
+
 void imgui_initiaize(GLFWwindow* window)
 {
     log_info(HASH_IMGUI, STRING_CONST("Initializing IMGUI..."));
@@ -1042,6 +1058,12 @@ void imgui_initiaize(GLFWwindow* window)
     #else
         ImGui::StyleColorsDark();
     #endif
+
+    dispatcher_register_event_listener(EVENT_LOCALIZATION_LANGUAGE_CHANGED, [](const dispatcher_event_args_t& args)
+    {
+        imgui_update_localization();
+        return true;
+    });
 }
 
 void* imgui_allocate(size_t sz, void* user_data)

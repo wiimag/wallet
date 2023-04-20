@@ -673,7 +673,7 @@
 		{
 			hash = "f70bb285f1575462"
 			en = "  Buy \xee\x95\x8e||\xee\x95\x8e Average Cost"
-			fr = "Achat \xee\x95\x8e||\xee\x95\x8e Co\xc3\xbft moyen"
+			fr = "Achat \xee\x95\x8e||\xee\x95\x8e Co\xc3\xbbt moyen"
 		}
 		{
 			hash = "73d4f924ffbcd287"
@@ -2219,6 +2219,46 @@
 			hash = "de74c48d4c28ad2"
 			en = "Add New Title"
 			fr = "Ajouter un nouveau titre"
+		}
+		{
+			hash = "9caea749abdb1b14"
+			en = "Size column to fit###SizeOne"
+			fr = "Ajuster la taille de la colonne###SizeOne"
+		}
+		{
+			hash = "12537b6e7a3e4ab0"
+			en = "Size all columns to fit###SizeAll"
+			fr = "Ajuster la taille de toutes les colonnes###SizeAll"
+		}
+		{
+			hash = "4fe422eca05ca714"
+			en = "Size all columns to default###SizeAll"
+			fr = "Ajuster la taille de toutes les colonnes par d\xc3\xa9faut###SizeAll"
+		}
+		{
+			hash = "cf89c7ccdba1bbe2"
+			en = "Reset order###ResetOrder"
+			fr = "R\xc3\xa9initialiser l'ordre###ResetOrder"
+		}
+		{
+			hash = "c886ae0db5ddb018"
+			en = "(Main menu bar)"
+			fr = "(Barre de menu principale)"
+		}
+		{
+			hash = "3651d020865e6acd"
+			en = "(Popup)"
+			fr = "(Popup)"
+		}
+		{
+			hash = "a080d5f98fcb59f6"
+			en = "(Untitled)"
+			fr = "(Sans titre)"
+		}
+		{
+			hash = "fbdf5fc3acb3d454"
+			en = "Add title"
+			fr = "@TODO"
 		}
 	]
 }

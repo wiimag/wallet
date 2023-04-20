@@ -374,7 +374,8 @@ FOUNDATION_STATIC void table_render_column_header(const char* label, void* paylo
     const column_t* column = args->column;
     FOUNDATION_ASSERT(column);
 
-    if (column->header_render)
+    ImGui::BeginGroup();
+    if (column->header_render)    
         column->header_render(table, column, args->column_index);
     else if (format_is_numeric(column->format))
         table_cell_right_aligned_column_label(label, nullptr);
@@ -384,6 +385,7 @@ FOUNDATION_STATIC void table_render_column_header(const char* label, void* paylo
         table_cell_right_aligned_column_label(label, nullptr);
     else if (column->flags & COLUMN_CENTER_ALIGN)
         table_cell_middle_aligned_column_label(label, nullptr);
+    ImGui::EndGroup();
 }
 
 FOUNDATION_STATIC void table_render_columns(table_t* table, int column_count)
@@ -908,6 +910,8 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
 {
     //TIME_TRACKER(0.008, "Render table %.*s", STRING_FORMAT(table->name));
 
+    ImGuiTable* imtable = ImGui::GetCurrentTable();
+
     ImGuiListClipper clipper;
     clipper.Begin(table->rows_visible_count, table->row_fixed_height);
     while (clipper.Step())
@@ -947,6 +951,12 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
             {
                 ImGui::BeginGroup();
                 table->context_menu(nullptr, nullptr, nullptr);
+
+                if (imtable)
+                {
+                    ImGui::Separator();
+                    ImGui::TableDrawContextMenu(imtable);
+                }
                 ImGui::EndGroup();
                 ImGui::EndPopup();
             }

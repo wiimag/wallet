@@ -437,6 +437,9 @@ FOUNDATION_STATIC void localization_initialize()
 
     // Load translation tables
     _localization_module->locales = localization_load_system_locales();
+
+    string_const_t locales_lang = localization_current_language();
+    dispatcher_post_event(EVENT_LOCALIZATION_LANGUAGE_CHANGED, (void*)locales_lang.str, locales_lang.length, DISPATCHER_EVENT_OPTION_COPY_DATA);
 }
 
 FOUNDATION_STATIC void localization_shutdown()
