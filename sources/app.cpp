@@ -84,7 +84,7 @@ FOUNDATION_STATIC void app_tabs_content_filter()
 {
     if (shortcut_executed(true, ImGuiKey_F))
         ImGui::SetKeyboardFocusHere();
-    ImGui::InputTextEx("##SearchFilter", "Filter... " ICON_MD_FILTER_LIST_ALT, STRING_BUFFER(SETTINGS.search_filter),
+    ImGui::InputTextEx("##SearchFilter", tr("Filter... " ICON_MD_FILTER_LIST_ALT), STRING_BUFFER(SETTINGS.search_filter),
         ImVec2(IM_SCALEF(150.0f), 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
 }
 

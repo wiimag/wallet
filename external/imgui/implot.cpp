@@ -144,6 +144,11 @@ You can read releases logs https://github.com/epezent/implot/releases for more d
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"    // warning: format not a string literal, format string not checked
 #endif
 
+////////////////////////
+// This functions comes from the Infineis Framework to translate ImGui labels
+extern const char* tr_cstr(const char* str, size_t length = SIZE_MAX);
+////////////////////////
+
 // Global plot context
 #ifndef GImPlot
 ImPlotContext* GImPlot = NULL;
@@ -1404,7 +1409,7 @@ void ShowAxisContextMenu(ImPlotAxis& axis, ImPlotAxis* equal_axis, bool /*time_a
 
     ImGui::Separator();
 
-    ImGui::CheckboxFlags("Auto-Fit",(unsigned int*)&axis.Flags, ImPlotAxisFlags_AutoFit);
+    ImGui::CheckboxFlags(tr_cstr("Auto-Fit"),(unsigned int*)&axis.Flags, ImPlotAxisFlags_AutoFit);
     // TODO
     // BeginDisabledControls(axis.IsTime() && time_allowed);
     // ImGui::CheckboxFlags("Log Scale",(unsigned int*)&axis.Flags, ImPlotAxisFlags_LogScale);
@@ -1415,18 +1420,18 @@ void ShowAxisContextMenu(ImPlotAxis& axis, ImPlotAxis* equal_axis, bool /*time_a
     //     EndDisabledControls(axis.IsLog() || axis.IsSymLog());
     // }
     ImGui::Separator();
-    ImGui::CheckboxFlags("Invert",(unsigned int*)&axis.Flags, ImPlotAxisFlags_Invert);
-    ImGui::CheckboxFlags("Opposite",(unsigned int*)&axis.Flags, ImPlotAxisFlags_Opposite);
+    ImGui::CheckboxFlags(tr_cstr("Invert"),(unsigned int*)&axis.Flags, ImPlotAxisFlags_Invert);
+    ImGui::CheckboxFlags(tr_cstr("Opposite"),(unsigned int*)&axis.Flags, ImPlotAxisFlags_Opposite);
     ImGui::Separator();
     BeginDisabledControls(axis.LabelOffset == -1);
-    if (ImGui::Checkbox("Label", &label))
+    if (ImGui::Checkbox(tr_cstr("Label"), &label))
         ImFlipFlag(axis.Flags, ImPlotAxisFlags_NoLabel);
     EndDisabledControls(axis.LabelOffset == -1);
-    if (ImGui::Checkbox("Grid Lines", &grid))
+    if (ImGui::Checkbox(tr_cstr("Grid Lines"), &grid))
         ImFlipFlag(axis.Flags, ImPlotAxisFlags_NoGridLines);
-    if (ImGui::Checkbox("Tick Marks", &ticks))
+    if (ImGui::Checkbox(tr_cstr("Tick Marks"), &ticks))
         ImFlipFlag(axis.Flags, ImPlotAxisFlags_NoTickMarks);
-    if (ImGui::Checkbox("Tick Labels", &labels))
+    if (ImGui::Checkbox(tr_cstr("Tick Labels"), &labels))
         ImFlipFlag(axis.Flags, ImPlotAxisFlags_NoTickLabels);
 
 }
@@ -1434,51 +1439,51 @@ void ShowAxisContextMenu(ImPlotAxis& axis, ImPlotAxis* equal_axis, bool /*time_a
 bool ShowLegendContextMenu(ImPlotLegend& legend, bool visible) {
     const float s = ImGui::GetFrameHeight();
     bool ret = false;
-    if (ImGui::Checkbox("Show",&visible))
+    if (ImGui::Checkbox(tr_cstr("Show"),&visible))
         ret = true;
     if (legend.CanGoInside)
-        ImGui::CheckboxFlags("Outside",(unsigned int*)&legend.Flags, ImPlotLegendFlags_Outside);
-    if (ImGui::RadioButton("H", ImHasFlag(legend.Flags, ImPlotLegendFlags_Horizontal)))
+        ImGui::CheckboxFlags(tr_cstr("Outside"),(unsigned int*)&legend.Flags, ImPlotLegendFlags_Outside);
+    if (ImGui::RadioButton(tr_cstr("H"), ImHasFlag(legend.Flags, ImPlotLegendFlags_Horizontal)))
         legend.Flags |= ImPlotLegendFlags_Horizontal;
     ImGui::SameLine();
-    if (ImGui::RadioButton("V", !ImHasFlag(legend.Flags, ImPlotLegendFlags_Horizontal)))
+    if (ImGui::RadioButton(tr_cstr("V"), !ImHasFlag(legend.Flags, ImPlotLegendFlags_Horizontal)))
         legend.Flags &= ~ImPlotLegendFlags_Horizontal;
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2,2));
-    if (ImGui::Button("NW",ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_NorthWest; } ImGui::SameLine();
-    if (ImGui::Button("N", ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_North;     } ImGui::SameLine();
-    if (ImGui::Button("NE",ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_NorthEast; }
-    if (ImGui::Button("W", ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_West;      } ImGui::SameLine();
-    if (ImGui::InvisibleButton("C", ImVec2(1.5f*s,s))) {     } ImGui::SameLine();
-    if (ImGui::Button("E", ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_East;      }
-    if (ImGui::Button("SW",ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_SouthWest; } ImGui::SameLine();
-    if (ImGui::Button("S", ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_South;     } ImGui::SameLine();
-    if (ImGui::Button("SE",ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_SouthEast; }
+    if (ImGui::Button(tr_cstr("NW"),ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_NorthWest; } ImGui::SameLine();
+    if (ImGui::Button(tr_cstr("N"), ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_North;     } ImGui::SameLine();
+    if (ImGui::Button(tr_cstr("NE"),ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_NorthEast; }
+    if (ImGui::Button(tr_cstr("W"), ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_West;      } ImGui::SameLine();
+    if (ImGui::InvisibleButton(tr_cstr("C"), ImVec2(1.5f*s,s))) {     } ImGui::SameLine();
+    if (ImGui::Button(tr_cstr("E"), ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_East;      }
+    if (ImGui::Button(tr_cstr("SW"),ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_SouthWest; } ImGui::SameLine();
+    if (ImGui::Button(tr_cstr("S"), ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_South;     } ImGui::SameLine();
+    if (ImGui::Button(tr_cstr("SE"),ImVec2(1.5f*s,s))) { legend.Location = ImPlotLocation_SouthEast; }
     ImGui::PopStyleVar();
     return ret;
 }
 
 void ShowSubplotsContextMenu(ImPlotSubplot& subplot) {
-    if ((ImGui::BeginMenu("Linking"))) {
-        if (ImGui::MenuItem("Link Rows",NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_LinkRows)))
+    if ((ImGui::BeginMenu(tr_cstr("Linking")))) {
+        if (ImGui::MenuItem(tr_cstr("Link Rows"),NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_LinkRows)))
             ImFlipFlag(subplot.Flags, ImPlotSubplotFlags_LinkRows);
-        if (ImGui::MenuItem("Link Cols",NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_LinkCols)))
+        if (ImGui::MenuItem(tr_cstr("Link Cols"),NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_LinkCols)))
             ImFlipFlag(subplot.Flags, ImPlotSubplotFlags_LinkCols);
-        if (ImGui::MenuItem("Link All X",NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_LinkAllX)))
+        if (ImGui::MenuItem(tr_cstr("Link All X"),NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_LinkAllX)))
             ImFlipFlag(subplot.Flags, ImPlotSubplotFlags_LinkAllX);
-        if (ImGui::MenuItem("Link All Y",NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_LinkAllY)))
+        if (ImGui::MenuItem(tr_cstr("Link All Y"),NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_LinkAllY)))
             ImFlipFlag(subplot.Flags, ImPlotSubplotFlags_LinkAllY);
         ImGui::EndMenu();
     }
-    if ((ImGui::BeginMenu("Settings"))) {
+    if ((ImGui::BeginMenu(tr_cstr("Settings")))) {
         BeginDisabledControls(!subplot.HasTitle);
-        if (ImGui::MenuItem("Title",NULL,subplot.HasTitle && !ImHasFlag(subplot.Flags, ImPlotSubplotFlags_NoTitle)))
+        if (ImGui::MenuItem(tr_cstr("Title"),NULL,subplot.HasTitle && !ImHasFlag(subplot.Flags, ImPlotSubplotFlags_NoTitle)))
             ImFlipFlag(subplot.Flags, ImPlotSubplotFlags_NoTitle);
         EndDisabledControls(!subplot.HasTitle);
-        if (ImGui::MenuItem("Resizable",NULL,!ImHasFlag(subplot.Flags, ImPlotSubplotFlags_NoResize)))
+        if (ImGui::MenuItem(tr_cstr("Resizable"),NULL,!ImHasFlag(subplot.Flags, ImPlotSubplotFlags_NoResize)))
             ImFlipFlag(subplot.Flags, ImPlotSubplotFlags_NoResize);
-        if (ImGui::MenuItem("Align",NULL,!ImHasFlag(subplot.Flags, ImPlotSubplotFlags_NoAlign)))
+        if (ImGui::MenuItem(tr_cstr("Align"),NULL,!ImHasFlag(subplot.Flags, ImPlotSubplotFlags_NoAlign)))
             ImFlipFlag(subplot.Flags, ImPlotSubplotFlags_NoAlign);
-        if (ImGui::MenuItem("Share Items",NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_ShareItems)))
+        if (ImGui::MenuItem(tr_cstr("Share Items"),NULL,ImHasFlag(subplot.Flags, ImPlotSubplotFlags_ShareItems)))
             ImFlipFlag(subplot.Flags, ImPlotSubplotFlags_ShareItems);
         ImGui::EndMenu();
     }
@@ -1495,7 +1500,7 @@ void ShowPlotContextMenu(ImPlotPlot& plot) {
         if (!x_axis.Enabled || !x_axis.HasMenus())
             continue;
         ImGui::PushID(i);
-        ImFormatString(buf, sizeof(buf) - 1, i == 0 ? "X-Axis" : "X-Axis %d", i + 1);
+        ImFormatString(buf, sizeof(buf) - 1, i == 0 ? tr_cstr("X-Axis") : tr_cstr("X-Axis %d"), i + 1);
         if (ImGui::BeginMenu(x_axis.HasLabel() ? plot.GetAxisLabel(x_axis) : buf)) {
             ShowAxisContextMenu(x_axis, equal ? x_axis.OrthoAxis : NULL, false);
             ImGui::EndMenu();
@@ -1508,7 +1513,7 @@ void ShowPlotContextMenu(ImPlotPlot& plot) {
         if (!y_axis.Enabled || !y_axis.HasMenus())
             continue;
         ImGui::PushID(i);
-        ImFormatString(buf, sizeof(buf) - 1, i == 0 ? "Y-Axis" : "Y-Axis %d", i + 1);
+        ImFormatString(buf, sizeof(buf) - 1, i == 0 ? tr_cstr("Y-Axis") : tr_cstr("Y-Axis %d"), i + 1);
         if (ImGui::BeginMenu(y_axis.HasLabel() ? plot.GetAxisLabel(y_axis) : buf)) {
             ShowAxisContextMenu(y_axis, equal ? y_axis.OrthoAxis : NULL, false);
             ImGui::EndMenu();
@@ -1518,7 +1523,7 @@ void ShowPlotContextMenu(ImPlotPlot& plot) {
 
     ImGui::Separator();
     if (!ImHasFlag(GImPlot->CurrentItems->Legend.Flags, ImPlotLegendFlags_NoMenus)) {
-        if ((ImGui::BeginMenu("Legend"))) {
+        if ((ImGui::BeginMenu(tr_cstr("Legend")))) {
             if (owns_legend) {
                 if (ShowLegendContextMenu(plot.Items.Legend, !ImHasFlag(plot.Flags, ImPlotFlags_NoLegend)))
                     ImFlipFlag(plot.Flags, ImPlotFlags_NoLegend);
@@ -1530,24 +1535,25 @@ void ShowPlotContextMenu(ImPlotPlot& plot) {
             ImGui::EndMenu();
         }
     }
-    if ((ImGui::BeginMenu("Settings"))) {
-        if (ImGui::MenuItem("Equal", NULL, ImHasFlag(plot.Flags, ImPlotFlags_Equal)))
+
+    if ((ImGui::BeginMenu(tr_cstr("Settings")))) {
+        if (ImGui::MenuItem(tr_cstr("Equal"), NULL, ImHasFlag(plot.Flags, ImPlotFlags_Equal)))
             ImFlipFlag(plot.Flags, ImPlotFlags_Equal);
-        if (ImGui::MenuItem("Box Select",NULL,!ImHasFlag(plot.Flags, ImPlotFlags_NoBoxSelect)))
+        if (ImGui::MenuItem(tr_cstr("Box Select"),NULL,!ImHasFlag(plot.Flags, ImPlotFlags_NoBoxSelect)))
             ImFlipFlag(plot.Flags, ImPlotFlags_NoBoxSelect);
         BeginDisabledControls(plot.TitleOffset == -1);
-        if (ImGui::MenuItem("Title",NULL,plot.HasTitle()))
+        if (ImGui::MenuItem(tr_cstr("Title"),NULL,plot.HasTitle()))
             ImFlipFlag(plot.Flags, ImPlotFlags_NoTitle);
         EndDisabledControls(plot.TitleOffset == -1);
-        if (ImGui::MenuItem("Mouse Position",NULL,!ImHasFlag(plot.Flags, ImPlotFlags_NoMouseText)))
+        if (ImGui::MenuItem(tr_cstr("Mouse Position"),NULL,!ImHasFlag(plot.Flags, ImPlotFlags_NoMouseText)))
             ImFlipFlag(plot.Flags, ImPlotFlags_NoMouseText);
-        if (ImGui::MenuItem("Crosshairs",NULL,ImHasFlag(plot.Flags, ImPlotFlags_Crosshairs)))
+        if (ImGui::MenuItem(tr_cstr("Crosshairs"),NULL,ImHasFlag(plot.Flags, ImPlotFlags_Crosshairs)))
             ImFlipFlag(plot.Flags, ImPlotFlags_Crosshairs);
         ImGui::EndMenu();
     }
     if (GImPlot->CurrentSubplot != NULL && !ImHasFlag(GImPlot->CurrentPlot->Flags, ImPlotSubplotFlags_NoMenus)) {
         ImGui::Separator();
-        if ((ImGui::BeginMenu("Subplots"))) {
+        if ((ImGui::BeginMenu(tr_cstr("Subplots")))) {
             ShowSubplotsContextMenu(*GImPlot->CurrentSubplot);
             ImGui::EndMenu();
         }

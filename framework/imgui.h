@@ -510,4 +510,20 @@ namespace ImGui
         ImGui::SetNextItemWidth(space_used);
         return space_used;
     }
+
+    /*! Render a button that is centered in the available space. 
+     * 
+     *  @param label The button label.
+     *  @param size  The button size.
+     * 
+     *  @return True if the button was pressed.
+     */
+    FOUNDATION_FORCEINLINE bool CenteredButton(const char* label, const ImVec2& size)
+    {
+        const ImVec2 avail = ImGui::GetContentRegionAvail();
+        const ImVec2 pos = ImGui::GetCursorPos();
+        const ImVec2 center = ImVec2(pos.x + avail.x * 0.5f, pos.y + avail.y * 0.5f);
+        ImGui::SetCursorPos(center - size * 0.5f);
+        return ImGui::ButtonEx(label, size, ImGuiButtonFlags_AlignTextBaseLine);
+    }
 }

@@ -60,15 +60,38 @@ string_const_t system_app_data_local_path();
  * @param dialog_title              Dialog window title label
  * @param extension                 Set of extensions used in the dialog window (i.e. "DICOM (*.dcm)|*.dcm")
  * @param current_file_path         Current file path to open the dialog window at.
- * @param selected_file_callback    Callback invoked when a file is selected.
+ * @param selected_file_callback    Callback invoked when a file is selected (#bool(string_const_t)).
+ *
+ * @remark The '|' separator is used to separate the extension name from the extension itself. The ';' separator is used to separate multiple extensions.
  * 
  * @return Returns true if the dialog window opened successfully.
+ *
+ * @example
+ *  system_open_file_dialog("Import Report...", "Reports (*.reports, *.json)|*.report;*.json|SJSON Files (*.sjson)|*.json", nullptr, report_import_dialog_callback);
  */
 bool system_open_file_dialog(
     const char* dialog_title,
     const char* extension,
     const char* current_file_path,
-    function<bool(string_const_t)> selected_file_callback);
+    const function<bool(string_const_t)>& selected_file_callback);
+
+/*! Open a system save file dialog window. 
+ * 
+ * @param dialog_title          Dialog window title label
+ * @param extension             Set of extensions used in the dialog window (i.e. "Text Files (*.txt)|*.txt")
+ * @param current_file_path     Current file path to open the dialog window at.
+ * @param save_file_callback    Callback invoked when a file is selected. Caller returns true if the file path was used to save the stream. (#bool(string_const_t)).
+ * 
+ * @return Returns true if the selected file path was valid.
+ *
+ * @example
+ *  system_save_file_dialog("Export Report...", "Reports (*.reports)", nullptr, report_export_dialog_callback);
+ */
+bool system_save_file_dialog(
+    const char* dialog_title,
+    const char* extension,
+    const char* current_file_path,
+    const function<bool(string_const_t)>& selected_file_callback);
 
 /*! Acquire console resources for the application.
  * 

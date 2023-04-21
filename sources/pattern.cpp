@@ -212,21 +212,21 @@ FOUNDATION_STATIC int pattern_formatx_label(double value, char* buff, int size, 
     if (value >= 365)
     {
         value = math_round(value / 365);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfY"), value).length;
+        return (int)tr_format(buff, to_size(size), "{0,round}Y", value).length;
     }
     else if (value >= 30)
     {
         value = math_round(value / 30);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfM"), value).length;
+        return (int)tr_format(buff, to_size(size), "{0,round}M", value).length;
     }
     else if (value >= 7)
     {
         value = math_round(value / 7);
-        return (int)string_format(buff, size, STRING_CONST("%.0lfW"), value).length;
+        return (int)tr_format(buff, to_size(size), "{0,round}W", value).length;
     }
 
     value = math_round(value);
-    return (int)string_format(buff, size, STRING_CONST("%.0lfD"), value).length;
+    return (int)tr_format(buff, to_size(size), "{0,round}D", value).length;
 }
 
 FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v1_url, string_const_t v2, string_const_t v3, string_const_t v4, bool translate = false)
@@ -1717,7 +1717,7 @@ FOUNDATION_STATIC void pattern_render_lcf(pattern_t* pattern, pattern_graph_data
     }
     else
     {
-        ImGui::TextUnformatted("Loading data...");
+        ImGui::TrTextUnformatted("Loading data...");
     }
 }
 
@@ -1850,7 +1850,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
             return ImPlotPoint(x, y);
         }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
-
+            
         pattern_compute_trend(c);
         pattern_render_trend(tr("Trend"), c, pattern->x_axis_inverted);
     }
@@ -1861,7 +1861,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
     ImPlot::EndPlot();
 
-    if (ImGui::IsKeyDown((ImGuiKey)341/*GLFW_KEY_LEFT_CONTROL*/))
+    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
     {
         ImGui::SetCursorScreenPos(ImVec2(plot_screen_pos.x + 350, plot_screen_pos.y + 20));
         ImGui::SetNextItemWidth(250.0f);
@@ -2057,8 +2057,9 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('6')) pattern->type = PATTERN_LONG_COORDINATED_FLEX;
     if (shortcut_executed('7') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
 
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.10f);
-    if (ImGui::BeginCombo("##Type", GRAPH_TYPES[pattern->type], ImGuiComboFlags_None))
+    ImGui::SetNextItemWidth(IM_SCALEF(100));
+    string_const_t graph_type_label_preview = string_to_const(GRAPH_TYPES[pattern->type]);
+    if (ImGui::BeginCombo("##Type", tr(STRING_ARGS(graph_type_label_preview), true).str, ImGuiComboFlags_None))
     {
         for (int n = 0; n < ARRAY_COUNT(GRAPH_TYPES); n++)
         {
@@ -2937,7 +2938,7 @@ FOUNDATION_STATIC void pattern_render_tabs()
         {
             string_const_t code = string_table_decode_const(pattern->code);
             string_const_t tab_id = string_format_static(STRING_CONST(ICON_MD_INSIGHTS " %.*s"), STRING_FORMAT(code));
-            tab_draw(tab_id.str, &(pattern->opened), L0(pattern_render(handle)), L0(pattern_menu(handle)));
+            tab_draw(tab_id.str, &pattern->opened, L0(pattern_render(handle)), L0(pattern_menu(handle)));
         }
     }
 }
@@ -2969,7 +2970,9 @@ pattern_handle_t pattern_load(const char* code, size_t code_length)
     string_table_symbol_t code_symbol = string_table_encode(code, code_length);
     string_const_t code_str = string_table_decode_const(code_symbol);
 
-    array_push(_patterns, (pattern_t{ code_symbol }));
+    pattern_t new_pattern{ code_symbol };
+    new_pattern.opened = false;
+    array_push(_patterns, new_pattern);
     handle = array_size(_patterns) - 1;
     pattern_initialize(handle);
 

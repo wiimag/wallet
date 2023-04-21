@@ -339,6 +339,14 @@ FOUNDATION_STATIC void localization_dictionary_deallocate(localization_dictionar
 // PUBLIC API
 //
 
+const char* tr_cstr(const char* str, size_t length /*= SIZE_MAX*/)
+{
+    if (length == SIZE_MAX)
+        length = string_length(str);
+
+    return tr(str, length, false).str;
+}
+
 #if BUILD_ENABLE_LOCALIZATION
 string_const_t tr(const char* str, size_t length, bool literal /*= false*/)
 {
@@ -437,6 +445,9 @@ FOUNDATION_STATIC void localization_initialize()
 
     // Load translation tables
     _localization_module->locales = localization_load_system_locales();
+
+    string_const_t locales_lang = localization_current_language();
+    dispatcher_post_event(EVENT_LOCALIZATION_LANGUAGE_CHANGED, (void*)locales_lang.str, locales_lang.length, DISPATCHER_EVENT_OPTION_COPY_DATA);
 }
 
 FOUNDATION_STATIC void localization_shutdown()

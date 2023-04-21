@@ -10,6 +10,7 @@
 #include "resource.h"
 
 #include <framework/string.h>
+#include <framework/localization.h>
 
 #include <foundation/fs.h>
 #include <foundation/path.h>
@@ -130,7 +131,7 @@ const char* system_platform_name(platform_t platform)
 }
 
 #if FOUNDATION_PLATFORM_WINDOWS
-bool system_open_file_dialog(const char* dialog_title, const char* extension, const char* current_file_path, function<bool(string_const_t)> selected_file_callback)
+bool system_open_file_dialog(const char* dialog_title, const char* extension, const char* current_file_path, const function<bool(string_const_t)>& selected_file_callback)
 {
     string_t file_path_buffer = string_static_buffer(1024, true);
     if (current_file_path != nullptr)
@@ -149,15 +150,14 @@ bool system_open_file_dialog(const char* dialog_title, const char* extension, co
     ofn.nMaxFile = (DWORD)file_path_buffer.length;
     if (extension == nullptr)
     {
-        ofn.lpstrFilter = "All\0*.*\0";
+        ofn.lpstrFilter = tr("All Files\0*.*\0");
     }
     else
     {
         char file_extensions_buffer[1024] = { '\0' };
-        string_t extension_filters = string_format(STRING_BUFFER(file_extensions_buffer),
-            STRING_CONST("%s|All Files (*.*)|*.*"), extension);
-        extension_filters = string_replace(STRING_ARGS(extension_filters), sizeof(file_extensions_buffer),
-            STRING_CONST("|"), "\0", 1, true);
+        string_const_t fmttr = RTEXT("%s|All Files (*.*)|*.*");
+        string_t extension_filters = string_format(STRING_BUFFER(file_extensions_buffer), STRING_ARGS(fmttr), extension);
+        extension_filters = string_replace(STRING_ARGS(extension_filters), sizeof(file_extensions_buffer), STRING_CONST("|"), "\0", 1, true);
         extension_filters.str[extension_filters.length + 1] = '\0';
         ofn.lpstrFilter = extension_filters.str;
     }
@@ -169,12 +169,76 @@ bool system_open_file_dialog(const char* dialog_title, const char* extension, co
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST;
     if (GetOpenFileNameA(&ofn))
     {
-        selected_file_callback(string_const(file_path_buffer.str, string_length(file_path_buffer.str)));
+        selected_file_callback(string_to_const(file_path_buffer.str));
         return true;
     }
 
     return false;
 }
+
+bool system_save_file_dialog(
+    const char* dialog_title,
+    const char* extension,
+    const char* current_file_path,
+    const function<bool(string_const_t)>& selected_file_callback)
+{
+    static thread_local wchar_t file_path_buffer[BUILD_MAX_PATHLEN] = {0};
+
+    wstring_from_string(STRING_BUFFER(file_path_buffer), current_file_path, string_length(current_file_path));
+
+    // Setup Windows save file dialog
+    OPENFILENAME ofn;
+    ZeroMemory(&ofn, sizeof(ofn));
+    ofn.lStructSize = sizeof(ofn);
+    ofn.hwndOwner = (HWND)_window_handle;
+    ofn.lpstrFile = file_path_buffer;
+    ofn.nMaxFile = (DWORD)sizeof(file_path_buffer)/sizeof(file_path_buffer[0]);
+    if (extension == nullptr)
+    {
+        ofn.lpstrFilter = L"All Files\0*.*\0";
+    }
+    else
+    {
+        char filters_buffer[BUILD_MAX_PATHLEN] = { '\0' };
+        string_t extension_filters = string_copy(STRING_BUFFER(filters_buffer), extension, string_length(extension));
+        extension_filters = string_replace(STRING_ARGS(extension_filters), sizeof(filters_buffer), STRING_CONST("|"), "\0", 1, true);
+        extension_filters.str[extension_filters.length + 1] = '\0';
+
+        wchar_t wchar_filters_buffer[BUILD_MAX_PATHLEN] = { '\0' };
+        wstring_from_string(STRING_BUFFER(wchar_filters_buffer), STRING_ARGS(extension_filters));
+        ofn.lpstrFilter = ofn.lpstrDefExt = wchar_filters_buffer;
+    }
+
+    string_const_t current_file_name = path_file_name(current_file_path, string_length(current_file_path));
+    string_const_t current_file_dir = path_directory_name(current_file_path, string_length(current_file_path));
+
+    static thread_local wchar_t current_file_dir_buffer[BUILD_MAX_PATHLEN] = {0};
+    wstring_from_string(STRING_BUFFER(current_file_dir_buffer), STRING_ARGS(current_file_dir));
+    
+    static thread_local wchar_t file_name_buffer[BUILD_MAX_PATHLEN] = {0};
+    wstring_from_string(STRING_BUFFER(file_name_buffer), STRING_ARGS(current_file_name));
+
+    static thread_local wchar_t dialog_title_buffer[BUILD_MAX_PATHLEN] = {0};
+    wstring_from_string(STRING_BUFFER(dialog_title_buffer), dialog_title, string_length(dialog_title));
+
+    ofn.nFilterIndex = 1;
+    ofn.lpstrFileTitle = file_name_buffer;
+    ofn.nMaxFileTitle = BUILD_MAX_PATHLEN;
+    ofn.lpstrTitle = dialog_title_buffer;
+    ofn.lpstrInitialDir = current_file_dir_buffer;
+    
+    ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN;
+
+    if (::GetSaveFileName(&ofn))
+    {
+        static thread_local char file_path_cstr_buffer[BUILD_MAX_PATHLEN] = {0};
+        string_convert_utf16(STRING_BUFFER(file_path_cstr_buffer), (const uint16_t*)file_path_buffer, wstring_length(file_path_buffer));
+        return selected_file_callback(string_to_const(file_path_cstr_buffer));
+    }
+
+    return false;
+}
+
 #elif FOUNDATION_PLATFORM_MACOS
 // See system.mm
 #else

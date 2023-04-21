@@ -126,6 +126,16 @@ report_handle_t report_load(const char* name, size_t name_length);
  */
 void report_save(report_t* report);
 
+/*! Saves a report to a specific file path. 
+ * 
+ * @param report            The report to save.
+ * @param file_path         The path to the file to save the report to.
+ * @param file_path_length  The length of the file path.
+ *
+ * @return                  True if the report was saved successfully.
+ */
+bool report_save(report_t* report, const char* file_path, size_t file_path_length);
+
 /*! Render the report table.
  * 
  * @param report    The report to render.
