@@ -581,8 +581,10 @@ void symbols_render(const char* market, bool filter_null_isin /*= true*/)
 
 void symbols_render_search(const function<void(string_const_t)>& selector /*= nullptr*/)
 {
-    ImGui::InputTextEx("##SearchField", "Search...", STRING_BUFFER(SETTINGS.search_terms),
-        ImVec2(selector ? -100.0f : 300.0f, 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
+    static float add_button_width = IM_SCALEF(70.0f);
+    ImGui::Spacing();
+    ImGui::InputTextEx("##SearchField", tr("Search..."), STRING_BUFFER(SETTINGS.search_terms),
+        ImVec2(selector ? -add_button_width : IM_SCALEF(300.0f), 0), ImGuiInputTextFlags_AutoSelectAll, 0, 0);
 
     string_const_t search_filter{ SETTINGS.search_terms, string_length(SETTINGS.search_terms) };
     if (selector)
@@ -590,6 +592,7 @@ void symbols_render_search(const function<void(string_const_t)>& selector /*= nu
         ImGui::SameLine();
         if (ImGui::Button(tr("Add")))
             selector(search_filter);
+        add_button_width = ImGui::GetItemRectSize().x + IM_SCALEF(8.0f);
     }
 
     if (SETTINGS.search_terms[0] != '\0')
@@ -617,7 +620,7 @@ FOUNDATION_STATIC void symbols_open_random_stock_pattern()
 {
     FOUNDATION_ASSERT_MSG(!thread_is_main(), "Function is written to run in another thread");
 
-    TIME_TRACKER("symbols_open_random_stock_pattern");
+    //TIME_TRACKER("symbols_open_random_stock_pattern");
 
     string_t* symbols = nullptr;
     const string_t* exchanges = search_stock_exchanges();

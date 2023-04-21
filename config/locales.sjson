@@ -673,7 +673,7 @@
 		{
 			hash = "f70bb285f1575462"
 			en = "  Buy \xee\x95\x8e||\xee\x95\x8e Average Cost"
-			fr = "Achat \xee\x95\x8e||\xee\x95\x8e Co\xc3\xbft moyen"
+			fr = "Achat \xee\x95\x8e||\xee\x95\x8e Co\xc3\xbbt moyen"
 		}
 		{
 			hash = "73d4f924ffbcd287"
@@ -2214,6 +2214,261 @@
 			hash = "4854b1462f676829"
 			en = "Random"
 			fr = "Al\xc3\xa9atoire"
+		}
+		{
+			hash = "de74c48d4c28ad2"
+			en = "Add New Title"
+			fr = "Ajouter un nouveau titre"
+		}
+		{
+			hash = "9caea749abdb1b14"
+			en = "Size column to fit###SizeOne"
+			fr = "Ajuster la taille de la colonne###SizeOne"
+		}
+		{
+			hash = "12537b6e7a3e4ab0"
+			en = "Size all columns to fit###SizeAll"
+			fr = "Ajuster la taille de toutes les colonnes###SizeAll"
+		}
+		{
+			hash = "4fe422eca05ca714"
+			en = "Size all columns to default###SizeAll"
+			fr = "Ajuster la taille de toutes les colonnes par d\xc3\xa9faut###SizeAll"
+		}
+		{
+			hash = "cf89c7ccdba1bbe2"
+			en = "Reset order###ResetOrder"
+			fr = "R\xc3\xa9initialiser l'ordre###ResetOrder"
+		}
+		{
+			hash = "c886ae0db5ddb018"
+			en = "(Main menu bar)"
+			fr = "(Barre de menu principale)"
+		}
+		{
+			hash = "3651d020865e6acd"
+			en = "(Popup)"
+			fr = "(Popup)"
+		}
+		{
+			hash = "a080d5f98fcb59f6"
+			en = "(Untitled)"
+			fr = "(Sans titre)"
+		}
+		{
+			hash = "fbdf5fc3acb3d454"
+			en = "Add title"
+			fr = "Ajouter un titre"
+		}
+		{
+			hash = "1cee14950094ec47"
+			en = "Search..."
+			fr = "Rechercher..."
+		}
+		{
+			hash = "509049e365873d67"
+			en = "{0,round}Y"
+			fr = "{0,round}A"
+		}
+		{
+			hash = "8e1e673c719a2c54"
+			en = "{0,round}D"
+			fr = "{0,round}J"
+		}
+		{
+			hash = "6d5969f3757dc4c7"
+			en = "{0,round}W"
+			fr = "{0,round}S"
+		}
+		{
+			hash = "52f0cfe89ae56907"
+			en = "{0,round}M"
+			fr = "{0,round}M"
+		}
+		{
+			hash = "f2bfe55514f4fa30"
+			en = "Legend"
+			fr = "L\xc3\xa9gende"
+		}
+		{
+			hash = "eec4980ac42e0113"
+			en = "Settings"
+			fr = "Param\xc3\xa8tres"
+		}
+		{
+			hash = "eed58f11f764f676"
+			en = "X-Axis"
+			fr = "Axe X"
+		}
+		{
+			hash = "89166b747d3938d"
+			en = "Y-Axis"
+			fr = "Axe Y"
+		}
+		{
+			hash = "4ddd64e916d86c6c"
+			en = "Invert"
+			fr = "Inverser"
+		}
+		{
+			hash = "a50e3ef5598b041a"
+			en = "Opposite"
+			fr = "Oppos\xc3\xa9"
+		}
+		{
+			hash = "1aa133af20b5e3f9"
+			en = "Label"
+			fr = "\xc3\x89tiquette"
+		}
+		{
+			hash = "8cfda49587e840c0"
+			en = "Grid Lines"
+			fr = "Lignes de grille"
+		}
+		{
+			hash = "64a4051b7d8163d6"
+			en = "Tick Marks"
+			fr = "Marques de graduation"
+		}
+		{
+			hash = "14d11867b7429c21"
+			en = "Tick Labels"
+			fr = "\xc3\x89tiquettes de graduation"
+		}
+		{
+			hash = "a64a299451adb6e"
+			en = "Show"
+			fr = "Afficher"
+		}
+		{
+			hash = "eb0ac525689c48d8"
+			en = "Outside"
+			fr = "Ext\xc3\xa9rieur"
+		}
+		{
+			hash = "6bae1b16031a7012"
+			en = "H"
+			fr = "H"
+		}
+		{
+			hash = "ecae93b2487d6f1d"
+			en = "V"
+			fr = "V"
+		}
+		{
+			hash = "5f039e9aede98b"
+			en = "NW"
+			fr = "NO"
+		}
+		{
+			hash = "4e5891a5d36190ca"
+			en = "N"
+			fr = "N"
+		}
+		{
+			hash = "e74b2d7a067177c0"
+			en = "NE"
+			fr = "NE"
+		}
+		{
+			hash = "5e5b1e74beb02a73"
+			en = "W"
+			fr = "O"
+		}
+		{
+			hash = "9116aec10b2a74d2"
+			en = "C"
+			fr = "C"
+		}
+		{
+			hash = "251cbe429e77f49c"
+			en = "E"
+			fr = "E"
+		}
+		{
+			hash = "ab7094e64f19c455"
+			en = "SW"
+			fr = "SO"
+		}
+		{
+			hash = "7c730ccdcfedabe6"
+			en = "S"
+			fr = "S"
+		}
+		{
+			hash = "63f38bd8383eb972"
+			en = "SE"
+			fr = "SE"
+		}
+		{
+			hash = "5fb1cf13610e83ca"
+			en = "Equal"
+			fr = "Proportionnel"
+		}
+		{
+			hash = "9522c07b7534c379"
+			en = "Box Select"
+			fr = "S\xc3\xa9lection de bo\xc3\xaete"
+		}
+		{
+			hash = "a2c38523e56c6cf9"
+			en = "Mouse Position"
+			fr = "Position de la souris"
+		}
+		{
+			hash = "210f70518f1dc7ae"
+			en = "Crosshairs"
+			fr = "Croix"
+		}
+		{
+			hash = "ab0fcdcb0eee0bd6"
+			en = "Auto-Fit"
+			fr = "Ajustement automatique"
+		}
+		{
+			hash = "c60ebcf661bb73d9"
+			en = "Filter... \xee\xa5\x8e"
+			fr = "Filtrer... \xee\xa5\x8e"
+		}
+		{
+			hash = "c41582dc200cbf61"
+			en = "Export..."
+			fr = "Exporter..."
+		}
+		{
+			hash = "9ae86c7c8de54761"
+			en = "Import..."
+			fr = "Importer..."
+		}
+		{
+			hash = "f8984c5eb24202e"
+			en = "\xee\xad\xa0 Export..."
+			fr = "\xee\xad\xa0 Exporter..."
+		}
+		{
+			hash = "d663c09ae46b44c"
+			en = "Import Report..."
+			fr = "Importer rapport..."
+		}
+		{
+			hash = "6d6a0da5c7b98d9f"
+			en = "Reports (*.report)|*.report;*.json|SJSON Files (*.sjson)|*.sjson"
+			fr = "Rapports (*.report)|*.report;*.json|Fichiers SJSON (*.sjson)|*.sjson"
+		}
+		{
+			hash = "d9ff4a65746600ff"
+			en = "%s|All Files (*.*)|*.*"
+			fr = "%s|Tous les fichiers (*.*)|*.*"
+		}
+		{
+			hash = "768897141c0cc44f"
+			en = "Reports (*.report)|*.report"
+			fr = "Rapports (*.report)|*.report"
+		}
+		{
+			hash = "d0a77c6eb8a8bc45"
+			en = "Export Report..."
+			fr = "Exporter rapport..."
 		}
 	]
 }

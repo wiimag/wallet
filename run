@@ -295,6 +295,9 @@ if [ $GENERATE -ge 1 ]; then
     # Skip lines that do not start with BUILD_
     [[ $name != BUILD_* ]] && continue
 
+    # Skip if -D$name* is already POSTIONAL_ARGS
+    [[ " ${POSITIONAL_ARGS[@]} " =~ " -D$name" ]] && continue
+
     CMAKE_ARGS+=("-D$name=$value")
   done < $CONFIG_DIR/build.settings
 
@@ -303,6 +306,13 @@ if [ $GENERATE -ge 1 ]; then
   for arg in "${CMAKE_ARGS[@]}"; do
     echo "  $arg" >> cmake.args
   done
+
+  # Print cmake.args if CMAKE_ARGS non empty
+  if [ ${#CMAKE_ARGS[@]} -gt 0 ]; then
+    echo -ne "${dark_gray}"
+    cat cmake.args
+    echo -e "${normal}"
+  fi
 
   if [ $machine == "MinGw" ]; then
     cmake -G "Visual Studio 17 2022" -A x64 ../.. ${CMAKE_ARGS[@]}

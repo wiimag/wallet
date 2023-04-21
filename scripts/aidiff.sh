@@ -59,7 +59,6 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-
 # Define a set of colors if NO_COLOR is not set
 if [ $NO_COLOR -eq 0 ]; then
   bold=$(tput bold)
@@ -93,6 +92,12 @@ else
   italic=''
   underline=''
   reset=''
+fi
+
+# Check if OPENAI_API_KEY is set
+if [ -z "$OPENAI_API_KEY" ]; then
+  echo -e "${red}The OPENAI_API_KEY environment variable is not set${nc}"
+  exit 1
 fi
 
 # Set the revision to use

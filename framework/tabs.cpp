@@ -104,7 +104,10 @@ void tab_draw(
         }
 
         if (!tb->tab_init_selected && current_tab == tab_index)
+        {
             tb->tab_init_selected = true;
+            array_insert(tb->tab_selection_queue, 0, tab_index);
+        }
         else if (tb->tab_init_selected && current_tab != tab_index)
         {
             // Remove current_tab in selection queue.

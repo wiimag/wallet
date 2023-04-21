@@ -118,8 +118,10 @@ extern void app_render_3rdparty_libs()
     
 }
 
+#if BUILD_TESTS
 extern int main_tests(void* _context, GLFWwindow* window)
 {
     FOUNDATION_ASSERT_FAIL("Not implemented");
     return -1;
 }
+#endif

@@ -16,9 +16,9 @@
 extern void* _window_handle;
 
 bool system_open_file_dialog(const char* dialog_title,
-                                const char* extension,
-                                const char* current_file_path,
-                                function<bool(string_const_t)> selected_file_callback)
+                             const char* extension,
+                             const char* current_file_path,
+                             const function<bool(string_const_t)>& selected_file_callback)
 {
     NSWindow* app_window = (NSWindow*)_window_handle;
     if (!app_window)
@@ -48,7 +48,7 @@ bool system_open_file_dialog(const char* dialog_title,
         openPanel.allowedFileTypes = @[@"dcm"];
         
         [openPanel beginSheetModalForWindow: app_window completionHandler:^(NSInteger result)
-            {
+        {
             // If the result is NSOKButton the user selected a file
             if (result == NSModalResponseOK)
             {
@@ -59,8 +59,7 @@ bool system_open_file_dialog(const char* dialog_title,
                 NSString* path = [[selection path] stringByResolvingSymlinksInPath];
                 
                 static char selected_file_path_buffer[BUILD_MAX_PATHLEN];
-                string_t selected_file_path = string_copy(STRING_BUFFER(selected_file_path_buffer),
-                                                            path.UTF8String, path.length);
+                string_t selected_file_path = string_copy(STRING_BUFFER(selected_file_path_buffer), path.UTF8String, path.length);
                 selected_file_callback(string_to_const(selected_file_path));
             }
         }];

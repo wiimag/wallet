@@ -20,6 +20,10 @@
 
 #include <foundation/foundation.h>
 
+#if !BUILD_TESTS
+#pragma message("BUILD_TESTS is not defined, tests will not be available")
+#endif
+
 #undef ERROR_ACCESS_DENIED
 
 #if BUILD_TESTS

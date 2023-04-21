@@ -48,6 +48,15 @@ extern thread_local size_t _tr_out_size;
  */
 string_const_t tr(const char* str, size_t length, bool literal = false);
 
+/*! Translate a string and return the translated string.
+ * 
+ *  @param str String to translate.
+ *  @param length Length of the string.
+ * 
+ *  @return Translated string object.
+ */
+const char* tr_cstr(const char* str, size_t length = SIZE_MAX);
+
 #else
 
 #define RTEXT(str) CTEXT(str)
