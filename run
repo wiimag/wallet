@@ -39,6 +39,7 @@ OPEN=0
 OPEN_WORKSPACE=0
 GENERATE=0
 GENERATED=0
+PACKAGE=0
 START=0
 PRINT=0
 PRINT_LARGEFILES=0
@@ -111,6 +112,11 @@ while [[ $# -gt 0 ]]; do
       GENERATE=$COMMAND_COUNTER
       shift # past argument
       ;;  
+    p|package)
+      COMMAND_COUNTER=$((COMMAND_COUNTER+1))
+      PACKAGE=$COMMAND_COUNTER
+      shift # past argument
+      ;;
     o|open)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
       OPEN=$COMMAND_COUNTER
@@ -390,6 +396,29 @@ if [ $BUILD -ge 1 ]; then
   echo -e "${dark_gray}Build log: ${normal}$(convert_path_to_file_link $BUILD_LOG_PATH)"
   
   cd ../../
+  RUN=0
+fi
+
+#
+# Build package
+#
+if [ $PACKAGE -ge 1 ]; then
+
+  # Run script to build the package
+  echo 
+  echo -e "${green}Building ${APP_NAME} package...${normal}"
+  echo
+
+  ./scripts/build-package.sh --build ${POSITIONAL_ARGS[@]}
+  retval=$?
+
+  if [ $retval -ne 0 ]; then
+    echo
+    echo -e "${red}===PACKAGE FAILED ($retval)===${normal}"
+    echo
+    exit $retval
+  fi
+
   RUN=0
 fi
 

@@ -105,10 +105,10 @@ fi
 TODAY=$(date +"%Y_%m_%d")
 
 # Create a copy of the exe named *_app.exe to provide a standalone exe
-cp "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${BRANCH_NAME}_portable_${TODAY}.exe"
+cp "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}_portable.exe"
 
 # Define the zip output path
-ZIP_OUTPUT_PATH="releases/${SHORT_NAME}_${BRANCH_NAME}_${TODAY}.exe"
+ZIP_OUTPUT_PATH="releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.exe"
 
 # Define sfx banner low and high res
 SFX_BANNER_LOW_RES="resources/banner_low_93_302.png"
@@ -141,6 +141,12 @@ FILES_TO_PACKAGE=()
 FILES_TO_PACKAGE+=("$BUILD_FOLDER_PATH/*.exe")
 FILES_TO_PACKAGE+=("$BUILD_FOLDER_PATH/*.dll")
 FILES_TO_PACKAGE+=("$BUILD_FOLDER_PATH/*.pdb")
+
+# Add root CHANGELOG.md
+FILES_TO_PACKAGE+=("CHANGELOG.md")
+
+# Add locales.sjson
+FILES_TO_PACKAGE+=("config/locales.sjson")
 
 # Print the files to be packaged
 echo "Files to be packaged:"

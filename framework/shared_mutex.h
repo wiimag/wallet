@@ -182,51 +182,50 @@ struct shared_mutex_write_lock
 class event_handle
 {
 public:
-    /// <summary>
-    /// Initializes the specified signal instance, preparing it for use. A signal works like a flag, which can be waited on by
-    /// one thread, until it is raised from another thread.
-    /// </summary>
+    /*! Initializes the specified signal instance, preparing it for use. A signal works like a flag, which can be waited on by
+        one thread, until it is raised from another thread.
+     */
     event_handle()
     {
-#if FOUNDATION_PLATFORM_WINDOWS
+        #if FOUNDATION_PLATFORM_WINDOWS
 
-#if _WIN32_WINNT >= 0x0600
-        InitializeCriticalSectionAndSpinCount(&mutex, 32);
-        InitializeConditionVariable(&condition);
-        value = 0;
-#else 
-        event = CreateEvent(NULL, FALSE, FALSE, NULL);
-#endif 
+        #if _WIN32_WINNT >= 0x0600
+            InitializeCriticalSectionAndSpinCount(&mutex, 32);
+            InitializeConditionVariable(&condition);
+            value = 0;
+        #else 
+            event = CreateEvent(NULL, FALSE, FALSE, NULL);
+        #endif 
 
-#elif FOUNDATION_PLATFORM_LINUX || FOUNDATION_PLATFORM_MACOS || FOUNDATION_PLATFORM_ANDROID
+        #elif FOUNDATION_PLATFORM_LINUX || FOUNDATION_PLATFORM_MACOS || FOUNDATION_PLATFORM_ANDROID
 
-        pthread_mutex_init(&mutex, NULL);
-        pthread_cond_init(&condition, NULL);
-        value = 0;
+            pthread_mutex_init(&mutex, NULL);
+            pthread_cond_init(&condition, NULL);
+            value = 0;
 
-#else 
-#error Unknown platform.
-#endif
+        #else 
+            #error Unknown platform.
+        #endif
     }
 
     ~event_handle()
     {
-#if FOUNDATION_PLATFORM_WINDOWS
+        #if FOUNDATION_PLATFORM_WINDOWS
 
-#if _WIN32_WINNT >= 0x0600
-        DeleteCriticalSection(&mutex);
-#else 
-        CloseHandle(event);
-#endif 
+            #if _WIN32_WINNT >= 0x0600
+                DeleteCriticalSection(&mutex);
+            #else 
+                CloseHandle(event);
+            #endif 
 
-#elif FOUNDATION_PLATFORM_LINUX || FOUNDATION_PLATFORM_MACOS || FOUNDATION_PLATFORM_ANDROID
+        #elif FOUNDATION_PLATFORM_LINUX || FOUNDATION_PLATFORM_MACOS || FOUNDATION_PLATFORM_ANDROID
 
-        pthread_mutex_destroy(&mutex);
-        pthread_cond_destroy(&condition);
+            pthread_mutex_destroy(&mutex);
+            pthread_cond_destroy(&condition);
 
-#else 
-#error Unknown platform.
-#endif
+        #else 
+            #error Unknown platform.
+        #endif
     }
 
     void signal()
@@ -335,3 +334,7 @@ private:
     #error Unknown platform.
     #endif
 };
+
+
+typedef event_handle event_handle_t;
+typedef shared_mutex shared_mutex_t;

@@ -151,6 +151,7 @@ struct search_window_t
     tick_t                         delayed_tick{ 0 };
     bool                           delayed_input{ false };
 
+    shared_mutex_t                 lock;
     window_handle_t                handle{0};
 };
 
@@ -821,6 +822,66 @@ FOUNDATION_STATIC void search_save_query(const char* search_text, size_t search_
     }
 }
 
+FOUNDATION_STATIC string_const_t search_entry_resolve_symbol(const search_result_entry_t* entry)
+{
+    if (entry->db && entry->doc)
+        return search_database_document_name(entry->db, entry->doc);
+
+    return string_to_const(entry->symbol);   
+}
+
+FOUNDATION_STATIC bool search_insert_symbol_result(window_handle_t window_handle, hash_t query_hash, string_const_t symbol)
+{
+    search_result_entry_t entry{};
+    entry.db = nullptr;
+    entry.doc = 0;
+    entry.source_type = SearchResultSourceType::EODApi;
+    string_copy(STRING_BUFFER(entry.symbol), STRING_ARGS(symbol));
+
+    search_window_t* sw = (search_window_t*)window_get_user_data(window_handle);
+    if (sw == nullptr)
+        return false;
+
+    {
+        SHARED_READ_LOCK(sw->lock);
+        hash_t search_window_query_hash = string_hash(STRING_LENGTH(sw->query));
+        if (search_window_query_hash != query_hash)
+            return false;
+
+        // Check that we do not already have this symbol in the list
+        for (unsigned i = 0, end = array_size(sw->results); i < end; ++i)
+        {
+            const search_result_entry_t* re = sw->results + i;
+            string_const_t re_symbol = search_entry_resolve_symbol(re);
+            if (string_equal(STRING_ARGS(re_symbol), STRING_ARGS(symbol)))
+                return false;
+        }
+    }
+
+    {
+        SHARED_WRITE_LOCK(sw->lock);
+        entry.window = sw;
+        array_push_memcpy(sw->results, &entry);
+    }
+    return true;
+}
+
+FOUNDATION_STATIC void search_fetch_single_symbol_callback(hash_t query_hash, window_handle_t window_handle, const json_object_t& json)
+{
+    if (!json.resolved())
+        return;
+
+    auto price = json["close"].as_number();
+    if (math_real_is_nan(price))
+        return;
+
+    string_const_t code = json["code"].as_string();
+    if (string_is_null(code))
+        return;
+
+    search_insert_symbol_result(window_handle, query_hash, code);
+}
+
 FOUNDATION_STATIC void search_fetch_search_api_results_callback(hash_t query_hash, window_handle_t window_handle, const json_object_t& json)
 {
     if (!json.resolved())
@@ -831,22 +892,13 @@ FOUNDATION_STATIC void search_fetch_search_api_results_callback(hash_t query_has
         string_const_t code = e["Code"].as_string();
         string_const_t exchange = e["Exchange"].as_string();
 
-        search_result_entry_t entry{};
-        entry.db = nullptr;
-        entry.doc = 0;
-        entry.source_type = SearchResultSourceType::EODApi;
-        string_format(STRING_BUFFER(entry.symbol), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
-
         search_window_t* sw = (search_window_t*)window_get_user_data(window_handle);
         if (sw == nullptr)
             break;
 
-        hash_t search_window_query_hash = string_hash(STRING_LENGTH(sw->query));
-        if (search_window_query_hash != query_hash)
-            break;
-
-        entry.window = sw;
-        array_push_memcpy(sw->results, &entry);
+        char symbol_buffer[16];
+        string_t symbol = string_format(STRING_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+        search_insert_symbol_result(window_handle, query_hash, string_to_const(symbol));
     }        
 }
 
@@ -860,7 +912,11 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
     // Clear any previous errors
     sw->error[0] = 0;
 
-    array_clear(sw->results);
+    {
+        SHARED_WRITE_LOCK(sw->lock);
+        array_clear(sw->results);
+    }
+
     if (search_text == nullptr || search_text_length == 0)
         return;
 
@@ -873,10 +929,20 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
         eod_fetch_async("search", search_text, FORMAT_JSON, "limit", "5", 
             LC1(search_fetch_search_api_results_callback(search_query_hash, sw_handle, _1)));
 
+        // If the search text looks like a symbol, i.e. GFL.TO, then lets query the real-time value to see if it resolves.
+        if (search_text_length > 3 && search_text_length < 16 && 
+            search_text[search_text_length] != '.' &&
+            string_find(search_text, search_text_length, '.', 1) != STRING_NPOS)
+        {
+            eod_fetch_async("real-time", search_text, FORMAT_JSON, LC1(search_fetch_single_symbol_callback(search_query_hash, sw_handle, _1)));
+        }
+
         // Meanwhile query the indexed database
         search_query_handle_t query = search_database_query(db, search_text, search_text_length);
         if (search_database_query_is_completed(db, query))
         {
+            SHARED_WRITE_LOCK(sw->lock);
+
             const search_result_t* results = search_database_query_results(db, query);
 
             foreach(r, results)
@@ -966,7 +1032,10 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
         sw->delayed_input = false;
     }
 
-    table_render(sw->table, sw->results, 0.0f, -ImGui::GetFontSize() - 8.0f);
+    {
+        SHARED_READ_LOCK(sw->lock);
+        table_render(sw->table, sw->results, 0.0f, -ImGui::GetFontSize() - 8.0f);
+    }
 
     if (sw->error[0] != 0)
     {
@@ -992,14 +1061,6 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
             ImGui::SetTooltip(" Symbols: %u \n Properties: %u ", search_database_document_count(sw->db), search_database_index_count(sw->db));
         }
     }
-}
-
-FOUNDATION_STATIC string_const_t search_entry_resolve_symbol(const search_result_entry_t* entry)
-{
-    if (entry->db && entry->doc)
-        return search_database_document_name(entry->db, entry->doc);
-
-    return string_to_const(entry->symbol);   
 }
 
 FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry_t* entry, const column_t* column, fetch_level_t fetch_levels)
@@ -1496,8 +1557,12 @@ FOUNDATION_STATIC void search_window_deallocate(void* window)
     dispatcher_unregister_event_listener(search_window->event_db_loaded);
     dispatcher_unregister_event_listener(search_window->event_query_updated);
     
-    table_deallocate(search_window->table);
-    array_deallocate(search_window->results);
+    {
+        SHARED_WRITE_LOCK(search_window->lock);
+        search_window->handle = 0;
+        table_deallocate(search_window->table);
+        array_deallocate(search_window->results);
+    }
 
     MEM_DELETE(search_window);
 }
