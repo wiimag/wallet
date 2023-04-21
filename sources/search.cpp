@@ -75,7 +75,6 @@ constexpr string_const_t COMMON_STOCK_WORDS[] = {
     CTEXT("area"), CTEXT("areas"),
     CTEXT("state"), CTEXT("states"),
     CTEXT("street"), CTEXT("avenue"), CTEXT("road"), CTEXT("boulevard"), CTEXT("drive"), CTEXT("lane"), CTEXT("court"),
-
 };
 
 static const ImU32 SEARCH_PATTERN_VIEWED_COLOR = (ImU32)ImColor::HSV(0.6f, 0.3f, 0.9f);
@@ -165,6 +164,8 @@ static struct SEARCH_MODULE {
     /*! Stock exchanges to index. */
     string_t*                   exchanges{ nullptr };
     shared_mutex                exchanges_lock{};
+
+    search_window_t*            global_view{ nullptr };
 
 } *_search;
 
@@ -1099,13 +1100,13 @@ FOUNDATION_STATIC void search_table_column_symbol_selected(table_element_ptr_con
     const search_result_entry_t* entry = (const search_result_entry_t*)element;
     FOUNDATION_ASSERT(entry);
 
-    if (entry->window == nullptr || entry->window->handle == 0)
+    if (entry->window == nullptr)
         return;
 
     if (const stock_t* s = entry->stock)
     {
         string_const_t code = SYMBOL_CONST(s->code);
-        if (pattern_open(STRING_ARGS(code)))
+        if (pattern_open(STRING_ARGS(code)) && entry->window->handle != 0)
             window_close(entry->window->handle);
     }
 }
@@ -1788,6 +1789,14 @@ const string_t* search_stock_exchanges()
     return _search->exchanges;
 }
 
+void search_render_global_view()
+{
+    if (_search->global_view == nullptr)
+        _search->global_view = search_window_allocate();
+
+    search_window_render(_search->global_view);
+}
+
 bool search_render_settings()
 {
     bool updated = false;
@@ -1842,6 +1851,8 @@ FOUNDATION_STATIC void search_initialize()
 
 FOUNDATION_STATIC void search_shutdown()
 {   
+    MEM_DELETE(_search->global_view);
+
     session_set_string("search_query", _search->query, string_length(_search->query));
 
     // Save queries to queries.json

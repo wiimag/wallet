@@ -687,7 +687,7 @@ FOUNDATION_STATIC void symbols_render_tabs()
     if (SETTINGS.show_symbols_US) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (US)", &SETTINGS.show_symbols_US, L0(symbols_render("US")));
     if (SETTINGS.show_symbols_INDX) tab_draw(ICON_MD_TRENDING_UP " Indexes", &SETTINGS.show_symbols_INDX, L0(symbols_render("INDX", false)));
 
-    tab_draw(tr(ICON_MD_MANAGE_SEARCH " Search ##Search"), nullptr, ImGuiTabItemFlags_Trailing, []() { symbols_render_search(nullptr); }, nullptr);
+    tab_draw(tr(ICON_MD_MANAGE_SEARCH " Search ##Search"), nullptr, ImGuiTabItemFlags_Trailing, search_render_global_view, nullptr);
 }
 
 //

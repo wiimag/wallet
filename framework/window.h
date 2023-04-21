@@ -11,7 +11,7 @@
  /*! Window user handle. */
 typedef object_t window_handle_t;
 
-/*! Window application callback. */
+/*! @typedef Window application callback. */
 typedef function<void(window_handle_t)> window_event_handler_t;
 typedef function<void(window_handle_t, int, int)> window_resize_callback_t;
 
@@ -135,7 +135,7 @@ void window_set_close_callback(window_handle_t window_handle, const window_event
 /*! Sets the window menu render callback. The callback is called when the window menu is rendered.
  *
  *  @param window_handle The handle of the window.
- *  @param callback      The callback to be called when the window menu is rendered.
+ *  @param callback      The callback to be called when the window menu is rendered. (#void(window_handle_t))
  */
 void window_set_menu_render_callback(window_handle_t window_handle, const window_event_handler_t& callback);
 

@@ -1,9 +1,10 @@
 # Changelog
 
-## [0.18.0] - 2023-04-21
+## [0.18.2] - 2023-04-21
 - Add support to add titles from the search window to a report.
 - Add support to export and import reports.
 - Improve search window results by combining EOD /api/search endpoint search results.
+- Improve the search tab by using the new search window view.
 
 ## [0.17.1] - 2023-04-20
 - Add many missing french translations.

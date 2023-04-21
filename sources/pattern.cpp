@@ -2631,6 +2631,119 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     }
 }
 
+FOUNDATION_STATIC bool pattern_render_summarized_news_dialog(void* context)
+{
+    const openai_response_t* response = (const openai_response_t*)context;
+    if (response->output.length)
+        ImGui::TextWrapped("%.*s", STRING_FORMAT(response->output));
+    else
+        ImGui::TrTextWrapped("Please wait, reading the news for you...");
+    return true;
+}
+
+FOUNDATION_STATIC void pattern_menu_items(pattern_handle_t handle)
+{
+    if (!ImGui::TrBeginMenu("Pattern"))
+        return;
+    pattern_t* pattern = (pattern_t*)pattern_get(handle);
+    string_const_t code = string_table_decode_const(pattern->code);
+
+    if (ImGui::TrMenuItem("Read News"))
+        news_open_window(STRING_ARGS(code));
+
+    #if BUILD_DEVELOPMENT
+    if (ImGui::TrMenuItem("EOD", nullptr, nullptr, true))
+        system_execute_command(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
+
+    if (ImGui::TrMenuItem("Trends", nullptr, nullptr, true))
+        system_execute_command(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
+
+    if (ImGui::TrMenuItem("Earnings", nullptr, nullptr, true))
+    {
+        time_t since_last_year = time_add_days(time_now(), -465);
+        string_const_t date_str = string_from_date(since_last_year);
+        system_execute_command(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
+    }
+
+    if (ImGui::TrMenuItem("Technical", nullptr, nullptr, true))
+        system_execute_command(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);
+
+    if (ImGui::TrMenuItem("Fundamentals", nullptr, nullptr, true))
+        system_execute_command(eod_build_url("fundamentals", code.str, FORMAT_JSON).str);
+
+    if (ImGui::TrMenuItem("Real-time", nullptr, nullptr, true))
+        system_execute_command(eod_build_url("real-time", code.str, FORMAT_JSON).str);
+
+    if (openai_available())
+    {
+        ImGui::Separator();
+        if (ImGui::TrMenuItem("Generate OpenAI Summary Prompt"))
+        {
+            string_const_t prompt = openai_generate_summary_prompt(STRING_ARGS(code));
+            ImGui::SetClipboardText(prompt.str);
+        }
+
+        const char* title_summarize_news = tr("Summarize news URL for me...");
+        if (ImGui::MenuItem(title_summarize_news))
+        {
+            struct pattern_news_dialog_t
+            {
+                char url[2048] = { 0 };
+                pattern_t* pattern{ nullptr };
+                const openai_response_t* response{ nullptr };
+            };
+
+            pattern_news_dialog_t* dialog = (pattern_news_dialog_t*)memory_allocate(HASH_PATTERN, sizeof(pattern_news_dialog_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+            dialog->pattern = (pattern_t*)pattern_get(handle);
+            dialog->response = nullptr;
+            dialog->url[0] = 0;
+
+            app_open_dialog(title_summarize_news, [](void* context)
+            {
+                        
+                pattern_news_dialog_t* dialog = (pattern_news_dialog_t*)context;
+
+                ImGui::ExpandNextItem();
+                ImGui::InputTextWithHint("##URL", tr("Enter the URL of news to summarize for you..."), STRING_BUFFER(dialog->url));
+
+                ImGui::Spacing();
+                ImGui::Spacing();
+
+                if (dialog->response)
+                {
+                    if (dialog->response->output.length)
+                        ImGui::TextWrapped("%.*s", STRING_FORMAT(dialog->response->output));
+                    else
+                        ImGui::TrTextWrapped("Please wait, reading the news for you...");
+                }
+                else
+                {
+                    ImGui::Dummy(ImVec2(0.0f, 0.0f));
+                    ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(94.0f));
+                    if (ImGui::Button(tr("Summarize"), { IM_SCALEF(100.0f), 0.0f }))
+                    {
+                        openai_completion_options_t options{};
+                        options.best_of = 3;
+                        options.max_tokens = 1000;
+                        string_const_t code = string_table_decode_const(dialog->pattern->code);
+                        dialog->response = openai_generate_news_sentiment(STRING_ARGS(code), time_now(), STRING_LENGTH(dialog->url), options);
+                    }
+                }
+
+                return true;
+            }, IM_SCALEF(400), IM_SCALEF(500), true, dialog, [](void* context)
+            {
+                pattern_news_dialog_t* dialog = (pattern_news_dialog_t*)context;
+                memory_deallocate(dialog);
+            });
+        }
+    }
+
+    #endif
+
+    ImGui::EndMenu();
+}
+
 FOUNDATION_STATIC bool pattern_open_floating_window(pattern_handle_t handle)
 {
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
@@ -2653,17 +2766,23 @@ FOUNDATION_STATIC bool pattern_open_floating_window(pattern_handle_t handle)
     string_const_t pattern_name = SYMBOL_CONST(stock->name);
     string_const_t pattern_code = SYMBOL_CONST(pattern->code);
     const char* pattern_window_title = string_format_static_const("%.*s (%.*s)", STRING_FORMAT(pattern_name), STRING_FORMAT(pattern_code));
-    return window_open(pattern_window_title, L1(pattern_render(handle, PatternRenderFlags::HideTableHeaders)), WindowFlags::InitialProportionalSize);
-}
+    auto pattern_window_handle = window_open(pattern_window_title, 
+        L1(pattern_render(handle, PatternRenderFlags::HideTableHeaders)), 
+        WindowFlags::InitialProportionalSize);
 
-FOUNDATION_STATIC bool pattern_render_summarized_news_dialog(void* context)
-{
-    const openai_response_t* response = (const openai_response_t*)context;
-    if (response->output.length)
-        ImGui::TextWrapped("%.*s", STRING_FORMAT(response->output));
-    else
-        ImGui::TrTextWrapped("Please wait, reading the news for you...");
-    return true;
+    window_set_menu_render_callback(pattern_window_handle, [handle](window_handle_t wh)
+    {
+        if (ImGui::TrBeginMenu("File"))
+        {
+            if (ImGui::TrMenuItem("Close"))
+                window_close(wh);
+            ImGui::EndMenu();
+        }
+
+        pattern_menu_items(handle);
+    });
+
+    return pattern_window_handle;
 }
 
 FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
@@ -2684,106 +2803,7 @@ FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
 
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::TrBeginMenu("Pattern"))
-        {
-            pattern_t* pattern = (pattern_t*)pattern_get(handle);
-            string_const_t code = string_table_decode_const(pattern->code);
-
-            if (ImGui::TrMenuItem("Read News"))
-                news_open_window(STRING_ARGS(code));
-
-            #if BUILD_DEVELOPMENT
-            if (ImGui::TrMenuItem("EOD", nullptr, nullptr, true))
-                system_execute_command(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
-
-            if (ImGui::TrMenuItem("Trends", nullptr, nullptr, true))
-                system_execute_command(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
-
-            if (ImGui::TrMenuItem("Earnings", nullptr, nullptr, true))
-            {
-                time_t since_last_year = time_add_days(time_now(), -465);
-                string_const_t date_str = string_from_date(since_last_year);
-                system_execute_command(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
-            }
-
-            if (ImGui::TrMenuItem("Technical", nullptr, nullptr, true))
-                system_execute_command(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);
-
-            if (ImGui::TrMenuItem("Fundamentals", nullptr, nullptr, true))
-                system_execute_command(eod_build_url("fundamentals", code.str, FORMAT_JSON).str);
-
-            if (ImGui::TrMenuItem("Real-time", nullptr, nullptr, true))
-                system_execute_command(eod_build_url("real-time", code.str, FORMAT_JSON).str);
-
-            if (openai_available())
-            {
-                ImGui::Separator();
-                if (ImGui::TrMenuItem("Generate OpenAI Summary Prompt"))
-                {
-                    string_const_t prompt = openai_generate_summary_prompt(STRING_ARGS(code));
-                    ImGui::SetClipboardText(prompt.str);
-                }
-
-                const char* title_summarize_news = tr("Summarize news URL for me...");
-                if (ImGui::MenuItem(title_summarize_news))
-                {
-                    struct pattern_news_dialog_t
-                    {
-                        char url[2048] = { 0 };
-                        pattern_t* pattern{ nullptr };
-                        const openai_response_t* response{ nullptr };
-                    };
-
-                    pattern_news_dialog_t* dialog = (pattern_news_dialog_t*)memory_allocate(HASH_PATTERN, sizeof(pattern_news_dialog_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
-                    dialog->pattern = (pattern_t*)pattern_get(handle);
-                    dialog->response = nullptr;
-                    dialog->url[0] = 0;
-
-                    app_open_dialog(title_summarize_news, [](void* context)
-                    {
-                        
-                        pattern_news_dialog_t* dialog = (pattern_news_dialog_t*)context;
-
-                        ImGui::ExpandNextItem();
-                        ImGui::InputTextWithHint("##URL", tr("Enter the URL of news to summarize for you..."), STRING_BUFFER(dialog->url));
-
-                        ImGui::Spacing();
-                        ImGui::Spacing();
-
-                        if (dialog->response)
-                        {
-                            if (dialog->response->output.length)
-                                ImGui::TextWrapped("%.*s", STRING_FORMAT(dialog->response->output));
-                            else
-                                ImGui::TrTextWrapped("Please wait, reading the news for you...");
-                        }
-                        else
-                        {
-                            ImGui::Dummy(ImVec2(0.0f, 0.0f));
-                            ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(94.0f));
-                            if (ImGui::Button(tr("Summarize"), { IM_SCALEF(100.0f), 0.0f }))
-                            {
-                                openai_completion_options_t options{};
-                                options.best_of = 3;
-                                options.max_tokens = 1000;
-                                string_const_t code = string_table_decode_const(dialog->pattern->code);
-                                dialog->response = openai_generate_news_sentiment(STRING_ARGS(code), time_now(), STRING_LENGTH(dialog->url), options);
-                            }
-                        }
-
-                        return true;
-                    }, IM_SCALEF(400), IM_SCALEF(500), true, dialog, [](void* context)
-                    {
-                        pattern_news_dialog_t* dialog = (pattern_news_dialog_t*)context;
-                        memory_deallocate(dialog);
-                    });
-                }
-            }
-
-            #endif
-
-            ImGui::EndMenu();
-        }
+        pattern_menu_items(handle);
         ImGui::EndMenuBar();
     }
 }
