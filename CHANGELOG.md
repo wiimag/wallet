@@ -1,11 +1,10 @@
 # Changelog
 
-## [1.0.0@next] - 2023-04-20
-- Add many missing french translations.
+## [1.0.0@next] - 2023-04-21
 - Add support to export and import reports.
+- Add many missing french translations.
 - Fix OpenAI analysis generation when using proxy backend.
 - Add Symbols/Random to open the pattern view of a random stock (just for fun!)
-- First release
 
 # TODO
 
@@ -14,7 +13,6 @@
 - [ ] 2023-04-20: Use the new search window to add a new title
 - [ ] 2023-04-20: Add a + button on the report table background to add a new title
 - [ ] 2023-04-20: Check if we can download a first search index database from the backend
-- [ ] 2023-04-19: Add Export/Import of reports
 - [ ] 2023-04-19: Add user guide
 - [ ] 2023-04-19: Add user authentication when using the proxy backend
 - [ ] 2023-04-19: Add augmented logo cache from the backend
