@@ -1,6 +1,7 @@
 # Changelog
 
 ## [1.0.0@next] - 2023-04-21
+- Improve wallet history edit dialog.
 - Add support to build the application with or without the proxy backend using `-DBUILD_ENABLE_BACKEND=ON`.
 - Fix OpenAI analysis generation when using proxy backend.
 - Add support to export and import reports.
@@ -10,6 +11,7 @@
 
 # TODO
 
+- [ ] 2023-04-21: Add interface to update stock banner and logo icons.
 - [ ] 2023-04-20: The search window should also use the /api/search endpoint to search for symbols combine to the search index
 - [ ] 2023-04-20: The search window should allow to add a symbol to a report
 - [ ] 2023-04-20: Use the new search window to add a new title

@@ -2325,7 +2325,7 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
     ImPlot::EndPlot();
 }
 
-FOUNDATION_STATIC void pattern_add_to_report_menu(pattern_handle_t handle)
+FOUNDATION_STATIC void pattern_add_to_report_menu(const char* symbol, size_t symbol_length)
 {
     // Gather all reports and sort them by alphabetical order
     report_t** reports = report_sort_alphabetically();
@@ -2337,13 +2337,21 @@ FOUNDATION_STATIC void pattern_add_to_report_menu(pattern_handle_t handle)
         string_const_t report_name = string_table_decode_const(report->name);
         if (ImGui::MenuItem(report_name.str))
         {
-            pattern_t* pattern = (pattern_t*)pattern_get(handle);
-            string_const_t title_code = string_table_decode_const(pattern->code);
+            string_const_t title_code = string_const(symbol, symbol_length);
             report_add_title(report, STRING_ARGS(title_code));
             report->opened = true;
         }
     }
     array_deallocate(reports);
+}
+
+FOUNDATION_STATIC void pattern_add_to_report_menu(pattern_handle_t handle)
+{
+    pattern_t* pattern = (pattern_t*)pattern_get(handle);
+    if (pattern == nullptr)
+        return;
+    string_const_t title_code = string_table_decode_const(pattern->code);
+    pattern_add_to_report_menu(STRING_ARGS(title_code));
 }
 
 FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
@@ -3047,6 +3055,13 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
             }
         }
         
+    }
+
+    ImGui::Separator();
+    if (ImGui::TrBeginMenu("Add to report"))
+    {
+        pattern_add_to_report_menu(symbol, symbol_length);
+        ImGui::EndMenu();
     }
 
     ImGui::EndGroup();

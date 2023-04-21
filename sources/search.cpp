@@ -13,6 +13,7 @@
 #include "logo.h"
 #include "news.h"
 #include "imwallet.h"
+#include "report.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -112,16 +113,27 @@ constexpr string_const_t SEARCH_SKIP_FIELDS_FOR_INDEXING[] = {
 
 struct search_window_t;
 
+typedef enum class SearchResultSourceType {
+
+    Undefined = 0,
+    EODApi,
+    Database,
+
+} search_result_source_type_t;
+
 struct search_result_entry_t
 {
-    search_database_t* db{ nullptr };
-    search_document_handle_t doc{ SEARCH_DOCUMENT_INVALID_ID };
+    search_result_source_type_t source_type{ SearchResultSourceType::Undefined };
 
-    stock_handle_t           stock{};
-    tick_t                   uptime{ 0 };
-    bool                     viewed{ false };
+    search_database_t*          db{ nullptr };
+    search_document_handle_t    doc{ SEARCH_DOCUMENT_INVALID_ID };
 
-    search_window_t*         window{ nullptr };
+    char                        symbol[16];
+    stock_handle_t              stock{};
+    tick_t                      uptime{ 0 };
+    bool                        viewed{ false };
+                                
+    search_window_t*            window{ nullptr };
 };
 
 struct search_window_t
@@ -809,6 +821,35 @@ FOUNDATION_STATIC void search_save_query(const char* search_text, size_t search_
     }
 }
 
+FOUNDATION_STATIC void search_fetch_search_api_results_callback(hash_t query_hash, window_handle_t window_handle, const json_object_t& json)
+{
+    if (!json.resolved())
+        return;
+
+    for (auto e : json)
+    {
+        string_const_t code = e["Code"].as_string();
+        string_const_t exchange = e["Exchange"].as_string();
+
+        search_result_entry_t entry{};
+        entry.db = nullptr;
+        entry.doc = 0;
+        entry.source_type = SearchResultSourceType::EODApi;
+        string_format(STRING_BUFFER(entry.symbol), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+
+        search_window_t* sw = (search_window_t*)window_get_user_data(window_handle);
+        if (sw == nullptr)
+            break;
+
+        hash_t search_window_query_hash = string_hash(STRING_LENGTH(sw->query));
+        if (search_window_query_hash != query_hash)
+            break;
+
+        entry.window = sw;
+        array_push_memcpy(sw->results, &entry);
+    }        
+}
+
 FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const char* search_text, size_t search_text_length)
 {
     FOUNDATION_ASSERT(sw);
@@ -826,6 +867,13 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
     sw->query_tick = time_current();
     try
     {
+        // Start with a query to EOD /api/search
+        window_handle_t sw_handle = sw->handle;
+        hash_t search_query_hash = string_hash(search_text, search_text_length);
+        eod_fetch_async("search", search_text, FORMAT_JSON, "limit", "5", 
+            LC1(search_fetch_search_api_results_callback(search_query_hash, sw_handle, _1)));
+
+        // Meanwhile query the indexed database
         search_query_handle_t query = search_database_query(db, search_text, search_text_length);
         if (search_database_query_is_completed(db, query))
         {
@@ -833,10 +881,11 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
 
             foreach(r, results)
             {
-                search_result_entry_t entry;
+                search_result_entry_t entry{};
                 entry.db = db;
                 entry.doc = (search_document_handle_t)r->id;
                 entry.window = sw;
+                entry.source_type = SearchResultSourceType::Database;
                 array_push_memcpy(sw->results, &entry);
             }
 
@@ -945,6 +994,14 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
     }
 }
 
+FOUNDATION_STATIC string_const_t search_entry_resolve_symbol(const search_result_entry_t* entry)
+{
+    if (entry->db && entry->doc)
+        return search_database_document_name(entry->db, entry->doc);
+
+    return string_to_const(entry->symbol);   
+}
+
 FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry_t* entry, const column_t* column, fetch_level_t fetch_levels)
 {
     if (entry->stock.initialized() && entry->stock->has_resolve(fetch_levels))
@@ -964,7 +1021,7 @@ FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry
 
     if (!entry->stock.initialized())
     {
-        string_const_t symbol = search_database_document_name(entry->db, entry->doc);
+        string_const_t symbol = search_entry_resolve_symbol(entry);
         entry->stock = stock_request(STRING_ARGS(symbol), fetch_levels);
         entry->viewed = pattern_find(STRING_ARGS(symbol)) >= 0;
     }
@@ -1022,7 +1079,7 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
         return code;
     }
 
-    string_const_t symbol = search_database_document_name(entry->db, entry->doc);
+    string_const_t symbol = search_entry_resolve_symbol(entry);
     FOUNDATION_ASSERT(!string_is_null(symbol));
 
     if (column->flags & COLUMN_RENDER_ELEMENT)
@@ -1285,7 +1342,7 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::NONE);
-    string_const_t symbol = search_database_document_name(entry->db, entry->doc);
+    string_const_t symbol = search_entry_resolve_symbol(entry);
 
     if (s == nullptr && string_is_null(symbol))
         return;

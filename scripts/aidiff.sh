@@ -178,11 +178,23 @@ HEADER_JSON="Content-Type: application/json"
 HEADER_AUTHORIZATION="Authorization: Bearer $OPENAI_API_KEY"
 
 # Define the diff arguments
-DIFF_ARGUMENTS=(--unified=0 --minimal --no-color -b -w --ignore-blank-lines)
+DIFF_ARGUMENTS=(--unified=2 --minimal --no-color -b -w --ignore-blank-lines)
 
 # For each file get the diff and pass it to OpenAI
 for MODIFIED_FILE in "${MODIFIED_FILES_ARRAY[@]}"
 do
+
+    # Skip *.md files
+    if [[ $MODIFIED_FILE == *.md ]]; then
+        echo -e "${bold}Skipping markdown file:${normal} $MODIFIED_FILE"
+        continue
+    fi
+
+    # Skip *.json files
+    if [[ $MODIFIED_FILE == *.*json ]]; then
+        echo -e "${bold}Skipping json file:${normal} $MODIFIED_FILE"
+        continue
+    fi
 
     # Run command to check if the file is binary or text.
     # If the file is binary then skip it

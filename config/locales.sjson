@@ -1168,7 +1168,7 @@
 		{
 			hash = "c646d329b21a905c"
 			en = "Search stocks... \xee\xa5\x8e"
-			fr = "Rechercher des actions... \xee\xa5\x8e"
+			fr = "Rechercher des titres... \xee\xa5\x8e"
 		}
 		{
 			hash = "9a1120bb0338ec05"
@@ -2489,6 +2489,21 @@
 			hash = "82712b9cd807cf5f"
 			en = "Assets Value"
 			fr = "Valeur des actifs"
+		}
+		{
+			hash = "b38dcfc0b1ac652b"
+			en = "Add to report"
+			fr = "Ajouter au rapport"
+		}
+		{
+			hash = "cc7c35f4345415e"
+			en = "Manage your stock and finance"
+			fr = "G\xc3\xa9rez vos actions et finances"
+		}
+		{
+			hash = "d505e0004f3ebff1"
+			en = "Copyright (C) 2022-2023 - https://wallet.wiimag.com - All rights reserved"
+			fr = "Copyright (C) 2022-2023 - https://wallet.wiimag.com - Tous droits r\xc3\xa9serv\xc3\xa9s"
 		}
 	]
 }

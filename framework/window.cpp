@@ -982,8 +982,8 @@ void window_update()
 void* window_get_user_data(window_handle_t window_handle)
 {
     window_t* window = window_handle_lookup(window_handle);
-    FOUNDATION_ASSERT(window);
-
+    if (window == nullptr)
+        return nullptr;
     return window->user_data;
 }
 

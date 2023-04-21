@@ -826,7 +826,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             ImGui::PopStyleColor();
 
         // Handle tooltip
-        if (ImGui::IsItemHovered()/* && ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)*/)
+        if (ImGui::IsItemHovered())
         {
             if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             {
