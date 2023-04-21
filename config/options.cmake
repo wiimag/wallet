@@ -7,17 +7,20 @@
 
 cmake_minimum_required (VERSION 3.0)
 
-# Set the build info option to OFF by default and do not cache it.
+# Set the build info option to OFF by default.
 option(BUILD_INFO "Build info" OFF)
 
-# Set the build localization option to ON by default and cache it.
+# Set the build localization option to ON by default.
 option(BUILD_ENABLE_LOCALIZATION "Enable localization" ON)
 
-# Set the build service executable option to OFF by default and do not cache it.
+# Set the build service executable option to OFF by default.
 option(BUILD_SERVICE_EXE "Build service executable" OFF)
 
 # Defines how many threads to use for the query system.
 option(BUILD_MAX_QUERY_THREADS "Build max query threads" 4)
 
-# Set the build tests option to OFF by default and do not cache it.
+# Set the build tests option to OFF by default.
 option(BUILD_ENABLE_TESTS "Build tests" ON)
+
+# Set the build backend option to OFF by default.
+option(BUILD_ENABLE_BACKEND "Build backend" OFF)

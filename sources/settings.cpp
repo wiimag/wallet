@@ -11,6 +11,7 @@
 #include "openai.h"
 #include "backend.h"
 #include "search.h"
+#include "news.h"
 
 #include <framework/imgui.h>
 #include <framework/string.h>
@@ -98,7 +99,21 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
-    #if !BUILD_BACKEND
+	#if !BUILD_BACKEND
+    // Google API KEY
+    {
+        ImGui::NextColumn();
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextURL(tr("Google API Key"), nullptr, STRING_CONST("https://developers.google.com/webmaster-tools/search-console-api/v1/configure?hl=fr"));
+
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        string_t google_search_api_key = news_google_search_api_key();
+        if (ImGui::InputTextWithHint("##GoogleAPIKey", "", google_search_api_key.str, google_search_api_key.length - 1, ImGuiInputTextFlags_Password))
+            news_set_google_search_api_key(google_search_api_key.str);
+        ImGui::NextColumn();
+    }
+
     // Open AI API KEY
     {
         ImGui::NextColumn();

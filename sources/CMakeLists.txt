@@ -179,7 +179,11 @@ endif()
 
 #
 # Define custom application build target
-add_compile_options(-DBUILD_BACKEND=1)
+if (BUILD_ENABLE_BACKEND)
+    add_compile_options(-DBUILD_BACKEND=1)
+else()
+    add_compile_options(-DBUILD_BACKEND=0)
+endif()
 
 # Write the executable file to the build folder directly without any configuration sub folder
 if (MSVC)

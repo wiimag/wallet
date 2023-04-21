@@ -27,6 +27,10 @@
 
 #define HASH_NEWS static_hash_string("news", 4, 0xc804eb289c3e1658ULL)
 
+#if !BUILD_BACKEND
+static char NEWS_GOOGLE_SEARCH_API_KEY[64] = { 0 };
+#endif
+
 struct news_t
 {
     time_t date;
@@ -210,6 +214,66 @@ FOUNDATION_STATIC bool string_try_convert_date_long(const char* str, size_t leng
     return true;
 }
 
+FOUNDATION_STATIC void news_fetch_entry_callback(news_window_t* news_window, const json_object_t& res)
+{
+    if (!res.resolved())
+        return;
+
+    for (auto e : res["items"])
+    {
+        news_t t{};
+
+        t.date = time_now();
+        t.date_string = {};
+        t.headline = e["title"].as_string_clone();
+        t.url = e["link"].as_string_clone();
+
+        string_const_t snippet = e["snippet"].as_string();
+
+        // Find first ...
+        size_t ddd_pos = string_find_string(STRING_ARGS(snippet), STRING_CONST("..."), 0);
+        if (ddd_pos != STRING_NPOS)
+        {
+            string_const_t date = {snippet.str, ddd_pos};
+            date = string_trim(date);
+
+            string_const_t content = {snippet.str + ddd_pos + 3, snippet.length - ddd_pos - 3};
+            content = string_trim(content);
+
+            if (string_try_convert_date_long(STRING_ARGS(date), t.date))
+            {
+                t.date_string = string_clone(STRING_ARGS(date));
+                t.summary = string_clone(STRING_ARGS(content));
+            }
+            else
+            {
+                t.summary = string_clone(STRING_ARGS(snippet));
+            }
+        }
+        else
+        {
+            t.summary = string_clone(STRING_ARGS(snippet));
+        }
+                
+        t.sentiment_negative = 0;
+        t.sentiment_polarity = 0;
+        t.sentiment_positive = 0;
+        t.sentiment_neutral = 1;
+
+        t.tags = nullptr;
+        t.related = nullptr;
+        t.openai_response = nullptr;
+
+        t.change_p = news_fetch_change_p(STRING_LENGTH(news_window->symbol), t.date);
+
+        SHARED_WRITE_LOCK(news_window->news_mutex);
+        int insert_at = array_binary_search_compare(news_window->news, t.date, LC2(_2 - _1.date));
+        if (insert_at < 0)
+            insert_at = ~insert_at;
+        array_insert_memcpy(news_window->news, insert_at, &t);
+    }
+}
+
 FOUNDATION_STATIC news_window_t* news_window_allocate(const char* symbol, size_t symbol_length)
 {
     news_window_t* news_window = MEM_NEW(HASH_NEWS, news_window_t);
@@ -228,65 +292,25 @@ FOUNDATION_STATIC news_window_t* news_window_allocate(const char* symbol, size_t
         string_ends_with(symbol, symbol_length, STRING_CONST(".TO")) ||
         string_ends_with(symbol, symbol_length, STRING_CONST(".NEO")))
     {
-        backend_execute_news_search_query(symbol, symbol_length, [news_window](const json_object_t& res)
+		#if !BUILD_BACKEND
+		string_const_t google_apis_key = string_to_const(NEWS_GOOGLE_SEARCH_API_KEY);
+        if (!string_is_null(google_apis_key))
         {
-            if (!res.resolved())
-                return;
+            string_const_t name = stock_get_short_name(symbol, symbol_length);
 
-            for (auto e : res["items"])
-            {
-                news_t t{};
+            char google_search_query_buffer[2048];
+            string_t google_search_query = string_format(STRING_BUFFER(google_search_query_buffer), 
+                STRING_CONST("https://www.googleapis.com/customsearch/v1?key=%.*s&cx=7363b4123b9a84885&dateRestrict=d30&q=%.*s"),
+                STRING_FORMAT(google_apis_key), STRING_FORMAT(name));
 
-                t.date = time_now();
-                t.date_string = {};
-                t.headline = e["title"].as_string_clone();
-                t.url = e["link"].as_string_clone();
+            char google_search_query_escaped_buffer[2048];
+            string_t google_search_query_escaped = string_escape_url(STRING_BUFFER(google_search_query_escaped_buffer), STRING_ARGS(google_search_query));
 
-                string_const_t snippet = e["snippet"].as_string();
-
-                // Find first ...
-                size_t ddd_pos = string_find_string(STRING_ARGS(snippet), STRING_CONST("..."), 0);
-                if (ddd_pos != STRING_NPOS)
-                {
-                    string_const_t date = {snippet.str, ddd_pos};
-                    date = string_trim(date);
-
-                    string_const_t content = {snippet.str + ddd_pos + 3, snippet.length - ddd_pos - 3};
-                    content = string_trim(content);
-
-                    if (string_try_convert_date_long(STRING_ARGS(date), t.date))
-                    {
-                        t.date_string = string_clone(STRING_ARGS(date));
-                        t.summary = string_clone(STRING_ARGS(content));
-                    }
-                    else
-                    {
-                        t.summary = string_clone(STRING_ARGS(snippet));
-                    }
-                }
-                else
-                {
-                    t.summary = string_clone(STRING_ARGS(snippet));
-                }
-                
-                t.sentiment_negative = 0;
-                t.sentiment_polarity = 0;
-                t.sentiment_positive = 0;
-                t.sentiment_neutral = 1;
-
-                t.tags = nullptr;
-                t.related = nullptr;
-                t.openai_response = nullptr;
-
-                t.change_p = news_fetch_change_p(STRING_LENGTH(news_window->symbol), t.date);
-
-                SHARED_WRITE_LOCK(news_window->news_mutex);
-                int insert_at = array_binary_search_compare(news_window->news, t.date, LC2(_2 - _1.date));
-                if (insert_at < 0)
-                    insert_at = ~insert_at;
-                array_insert_memcpy(news_window->news, insert_at, &t);
-            }
-        });
+            query_execute_async_json(google_search_query_escaped.str, FORMAT_JSON, LC1(news_fetch_entry_callback(news_window, _1)));
+        }
+		#else
+        backend_execute_news_search_query(symbol, symbol_length, LC1(news_fetch_entry_callback(news_window, _1)));
+		#endif
     }
 
     return news_window;
@@ -444,12 +468,65 @@ void news_open_window(const char* symbol, size_t symbol_length)
     app_open_dialog(news_window->title, news_window_render, 900, 1200, true, news_window, news_window_deallocate);
 }
 
+#if !BUILD_BACKEND
+string_t news_google_search_api_key()
+{
+    return {STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY)};
+}
+
+string_t news_set_google_search_api_key(const char* apikey)
+{
+    string_t k = string_copy(STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY), apikey, string_length(apikey));
+    if (NEWS_GOOGLE_SEARCH_API_KEY[0])
+        console_add_secret_key_token(STRING_LENGTH(NEWS_GOOGLE_SEARCH_API_KEY));
+
+    string_const_t key_file_path = session_get_user_file_path(STRING_CONST("google.key"));
+    stream_t* key_stream = fs_open_file(STRING_ARGS(key_file_path), STREAM_CREATE | STREAM_OUT | STREAM_TRUNCATE);
+    if (key_stream == nullptr)
+        return k;
+
+    log_infof(0, STRING_CONST("Writing key file %.*s"), STRING_FORMAT(key_file_path));
+    stream_write_string(key_stream, STRING_ARGS(k));
+    stream_deallocate(key_stream);
+
+    return k;
+}
+#endif
+
 //
 // # SYSTEM
 //
 
 FOUNDATION_STATIC void news_initialize()
 {
+	#if !BUILD_BACKEND
+    string_const_t google_apis_key{};
+    if (environment_argument("google-apis-key", &google_apis_key))
+    {
+        string_copy(STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY), STRING_ARGS(google_apis_key));
+        console_add_secret_key_token(STRING_ARGS(google_apis_key));
+    }
+    else
+    {
+        string_const_t key_file_path = session_get_user_file_path(STRING_CONST("google.key"));
+        stream_t* key_stream = fs_open_file(STRING_ARGS(key_file_path), STREAM_IN);
+        if (key_stream)
+        {
+            string_t key = stream_read_string(key_stream);
+            string_copy(STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY), STRING_ARGS(key));
+            string_deallocate(key.str);
+            stream_deallocate(key_stream);
+        }
+        else
+        {
+            // Clear key
+            NEWS_GOOGLE_SEARCH_API_KEY[0] = 0;
+        }
+    }
+
+    if (NEWS_GOOGLE_SEARCH_API_KEY[0])
+        console_add_secret_key_token(STRING_LENGTH(NEWS_GOOGLE_SEARCH_API_KEY));
+	#endif
 }
 
 FOUNDATION_STATIC void news_shutdown()

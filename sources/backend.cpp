@@ -15,6 +15,12 @@
 
 #define HASH_BACKEND static_hash_string("backend", 7, 0x22e7c7ffddbc5debULL)
 
+#if BUILD_BACKEND
+#   pragma message("Backend module is enabled")
+#else
+#   pragma message("Backend module is disabled")
+#endif
+
 static struct BACKEND_MODULE {
 
     string_t url{};
