@@ -554,6 +554,13 @@ column_t& table_add_column(table_t* table,
  */
 void table_clear_columns(table_t* table);
 
+/*! Render a table column header left aligned. 
+ * 
+ *  @param label        The column label
+ *  @param payload      Payload passed from the table column handler
+ */
+void table_cell_left_aligned_column_label(const char* label, void* payload);
+
 /*! Render a table cell aligned to the right. 
  * 
  *  @param label        The cell label

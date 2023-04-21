@@ -2470,5 +2470,25 @@
 			en = "Export Report..."
 			fr = "Exporter rapport..."
 		}
+		{
+			hash = "5867220f6a2c9627"
+			en = "\xee\xa3\x9f Date        "
+			fr = "\xee\xa3\x9f Date        "
+		}
+		{
+			hash = "9af7d4f0eb644bcf"
+			en = "Edit History (%.*s)###EH20"
+			fr = "Historique d'\xc3\xa9dition (%.*s)###EH20"
+		}
+		{
+			hash = "f2e4512ab2f8633f"
+			en = "Broker Value"
+			fr = "Valeur courtier"
+		}
+		{
+			hash = "82712b9cd807cf5f"
+			en = "Assets Value"
+			fr = "Valeur des actifs"
+		}
 	]
 }

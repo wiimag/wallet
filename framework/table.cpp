@@ -197,7 +197,7 @@ void table_cell_middle_aligned_label(const char* label, size_t label_length)
 
 void table_cell_right_aligned_label(const char* label, size_t label_length, const char* url /*= nullptr*/, size_t url_length /*= 0*/, float offset /*= 0.0f*/)
 {
-    const char* end_label = label_length > 0 ? label + label_length : label + strlen(label);
+    const char* end_label = label_length > 0 ? label + label_length : label + string_length(label);
     const char* text_display_end = label;
     while (text_display_end < end_label && *text_display_end != '\0' &&
         (text_display_end[0] != '|' || text_display_end[1] != '|'))
@@ -211,6 +211,21 @@ void table_cell_right_aligned_label(const char* label, size_t label_length, cons
         ImGui::TextURL(label, text_display_end, url, url_length);
     else
         ImGui::TextUnformatted(label, text_display_end);
+    if (ImGui::IsItemHovered() && tx > ImGui::GetColumnWidth() * 1.05f)
+        ImGui::SetTooltip(" %.*s ", (int)label_length, label);
+}
+
+void table_cell_left_aligned_column_label(const char* label, void* payload)
+{
+    const size_t label_length = string_length(label);
+    const char* end_label = label_length > 0 ? label + label_length : label + string_length(label);
+    const char* text_display_end = label;
+    while (text_display_end < end_label && *text_display_end != '\0' &&
+        (text_display_end[0] != '|' || text_display_end[1] != '|'))
+        text_display_end++;
+
+    auto tx = ImGui::CalcTextSize(label, text_display_end).x;
+    ImGui::TextUnformatted(label, text_display_end);
     if (ImGui::IsItemHovered() && tx > ImGui::GetColumnWidth() * 1.05f)
         ImGui::SetTooltip(" %.*s ", (int)label_length, label);
 }
@@ -379,12 +394,12 @@ FOUNDATION_STATIC void table_render_column_header(const char* label, void* paylo
         column->header_render(table, column, args->column_index);
     else if (format_is_numeric(column->format))
         table_cell_right_aligned_column_label(label, nullptr);
-    else if (column->flags & COLUMN_LEFT_ALIGN)
-        ImGui::TextUnformatted(label);
     else if (column->flags & COLUMN_RIGHT_ALIGN)
         table_cell_right_aligned_column_label(label, nullptr);
     else if (column->flags & COLUMN_CENTER_ALIGN)
         table_cell_middle_aligned_column_label(label, nullptr);
+    else
+        table_cell_left_aligned_column_label(label, nullptr);
     ImGui::EndGroup();
 }
 

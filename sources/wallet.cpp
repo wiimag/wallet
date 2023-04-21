@@ -10,6 +10,7 @@
 #include "settings.h"
 #include "stock.h"
 
+#include <framework/glfw.h>
 #include <framework/imgui.h>
 #include <framework/table.h>
 #include <framework/common.h>
@@ -553,7 +554,7 @@ FOUNDATION_STATIC table_t* wallet_history_create_table(report_t* report)
         ImGuiTableFlags_NoHostExtendY | ImGuiTableFlags_SizingFixedFit | TABLE_LOCALIZATION_CONTENT);
     history_table->selected = wallet_history_edit_value;
 
-    table_add_column(history_table, STRING_CONST(ICON_MD_TODAY " Date      "), wallet_history_column_date, COLUMN_FORMAT_DATE, COLUMN_CUSTOM_DRAWING);
+    table_add_column(history_table, STRING_CONST(ICON_MD_TODAY " Date        "), wallet_history_column_date, COLUMN_FORMAT_DATE, COLUMN_CUSTOM_DRAWING);
     table_add_column(history_table, STRING_CONST("      " ICON_MD_WALLET " Funds||" ICON_MD_WALLET " Funds"), wallet_history_column_funds, COLUMN_FORMAT_CURRENCY, COLUMN_ZERO_USE_DASH);
     table_add_column(history_table, STRING_CONST("     " ICON_MD_REAL_ESTATE_AGENT " Broker||" ICON_MD_REAL_ESTATE_AGENT " Brokerage Value"), wallet_history_column_broker_value, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT);
     table_add_column(history_table, STRING_CONST(" " ICON_MD_SAVINGS " Investments||" ICON_MD_SAVINGS " Investments"), wallet_history_column_investments, COLUMN_FORMAT_CURRENCY, COLUMN_ZERO_USE_DASH);
@@ -570,24 +571,28 @@ FOUNDATION_STATIC table_t* wallet_history_create_table(report_t* report)
 
 FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, history_t* h)
 {
-    ImGui::SetNextWindowSize(ImVec2(IM_SCALEF(235), IM_SCALEF(230)), ImGuiCond_Once);
-    string_const_t fmttr = RTEXT("Edit History (%.*s)###EH19");
+    ImGui::SetNextWindowSize(ImVec2(IM_SCALEF(255), IM_SCALEF(240)), ImGuiCond_FirstUseEver);
+    string_const_t fmttr = RTEXT("Edit History (%.*s)###EH20");
     string_const_t popup_id = string_format_static(STRING_ARGS(fmttr), STRING_FORMAT(string_from_date(h->date)));
-    if (!report_render_dialog_begin(popup_id, &h->show_edit_ui, ImGuiWindowFlags_NoResize))
+    if (!report_render_dialog_begin(popup_id, &h->show_edit_ui, ImGuiWindowFlags_AlwaysUseWindowPadding))
         return;
 
     if (ImGui::IsWindowAppearing())
         ImGui::SetKeyboardFocusHere();
 
     ImGui::MoveCursor(10, 10);
-    if (ImGui::BeginChild("##Content", ImVec2(0, 0)))
+    ImGui::BeginGroup();
     {
-        const float control_width = IM_SCALEF(130.0f);
+        ImGui::Columns(2, "##EH20", true);
+        const float control_width = IM_SCALEF(110.0f);
 
         bool updated = false;
         time_t now = time_now();
         tm tm_date = *localtime(h->date != 0 ? &h->date : &now);
-        ImGui::SetNextItemWidth(control_width);
+
+        ImGui::TrTextWrapped("Date");
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem(IM_SCALEF(20));
         if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true))
         {
             h->date = mktime(&tm_date);
@@ -596,61 +601,82 @@ FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, histo
 
         ImGui::PushStyleColor(ImGuiCol_Button, BACKGROUND_CRITITAL_COLOR);
         ImGui::SameLine();
-        if (ImGui::Button(tr("Delete"), { IM_SCALEF(80), IM_SCALEF(20) }))
+        if (ImGui::Button(ICON_MD_DELETE_FOREVER))
             wallet_history_delete_entry(report, h);
         ImGui::PopStyleColor(1);
 
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputDouble("Funds", &h->funds, 0, 0, "%.2lf $"))
+        ImGui::NextColumn();
+        ImGui::TrTextWrapped("Funds");
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        if (ImGui::InputDouble("##Funds", &h->funds, 0, 0, "%.2lf $"))
             updated = true;
 
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputDouble("Investments", &h->investments, 0, 0, "%.2lf $"))
+        ImGui::NextColumn();
+        ImGui::TrTextWrapped("Investments");
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        if (ImGui::InputDouble("##Investments", &h->investments, 0, 0, "%.2lf $"))
             updated = true;
 
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputDouble("Total Value", &h->total_value, 0, 0, "%.2lf $"))
+        ImGui::NextColumn();
+        ImGui::TrTextWrapped("Total Value");
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        if (ImGui::InputDouble("##Total Value", &h->total_value, 0, 0, "%.2lf $"))
             updated = true;
 
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputDouble("Total Gain", &h->gain, 0, 0, "%.2lf $"))
+        ImGui::NextColumn();
+        ImGui::TrTextWrapped("Total Gain");
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        if (ImGui::InputDouble("##Total Gain", &h->gain, 0, 0, "%.2lf $"))
             updated = true;
 
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputDouble("Broker Value", &h->broker_value, 0, 0, "%.2lf $"))
+        ImGui::NextColumn();
+        ImGui::TrTextWrapped("Broker Value");
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        if (ImGui::InputDouble("##Broker Value", &h->broker_value, 0, 0, "%.2lf $"))
             updated = true;
 
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputDouble("Assets Value", &h->other_assets, 0, 0, "%.2lf $"))
+        ImGui::NextColumn();
+        ImGui::TrTextWrapped("Assets Value");
+        ImGui::NextColumn();
+        ImGui::ExpandNextItem();
+        if (ImGui::InputDouble("##Assets Value", &h->other_assets, 0, 0, "%.2lf $"))
             updated = true;
 
         ImGui::Spacing();
-        ImGui::BeginGroup();
 
         if (h->source && (h - &h->source->history[0]) == 0)
         {
+            ImGui::NextColumn();
             if (ImGui::Button(tr("Update"), { IM_SCALEF(80), IM_SCALEF(20) }))
                 wallet_history_update_entry(report, h->source, *h);
 
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(88));
+            ImGui::NextColumn();
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(80));
             if (ImGui::Button(tr("Close"), { IM_SCALEF(80), IM_SCALEF(20) }))
                 h->show_edit_ui = false;
         }
         else
         {
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(88));
+            ImGui::NextColumn();
+            ImGui::NextColumn();
+            ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(80));
             if (ImGui::Button(tr("Close"), { IM_SCALEF(80), IM_SCALEF(20) }))
                 h->show_edit_ui = false;
         }
             
-        ImGui::EndGroup();
-
         if (updated)
         {
+            WAIT_CURSOR;
             wallet_history_sort(h->source);
             report_summary_update(report);
         }
-    } ImGui::EndChild();
+    }
+    ImGui::EndGroup();
 
     report_render_dialog_end();
 }
