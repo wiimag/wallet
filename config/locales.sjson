@@ -2430,5 +2430,45 @@
 			en = "Filter... \xee\xa5\x8e"
 			fr = "Filtrer... \xee\xa5\x8e"
 		}
+		{
+			hash = "c41582dc200cbf61"
+			en = "Export..."
+			fr = "Exporter..."
+		}
+		{
+			hash = "9ae86c7c8de54761"
+			en = "Import..."
+			fr = "Importer..."
+		}
+		{
+			hash = "f8984c5eb24202e"
+			en = "\xee\xad\xa0 Export..."
+			fr = "\xee\xad\xa0 Exporter..."
+		}
+		{
+			hash = "d663c09ae46b44c"
+			en = "Import Report..."
+			fr = "Importer rapport..."
+		}
+		{
+			hash = "6d6a0da5c7b98d9f"
+			en = "Reports (*.report)|*.report;*.json|SJSON Files (*.sjson)|*.sjson"
+			fr = "Rapports (*.report)|*.report;*.json|Fichiers SJSON (*.sjson)|*.sjson"
+		}
+		{
+			hash = "d9ff4a65746600ff"
+			en = "%s|All Files (*.*)|*.*"
+			fr = "%s|Tous les fichiers (*.*)|*.*"
+		}
+		{
+			hash = "768897141c0cc44f"
+			en = "Reports (*.report)|*.report"
+			fr = "Rapports (*.report)|*.report"
+		}
+		{
+			hash = "d0a77c6eb8a8bc45"
+			en = "Export Report..."
+			fr = "Exporter rapport..."
+		}
 	]
 }

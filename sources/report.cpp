@@ -40,6 +40,8 @@
 #include <foundation/uuid.h>
 #include <foundation/path.h>
 
+#include <stdexcept>
+
 #define E32(FN, P1, P2, P3) L2(FN(P1, P2, P3))
 
 static const ImU32 BACKGROUND_WATCH_COLOR = ImColor::HSV(120 / 360.0f, 0.30f, 0.61f);
@@ -1588,6 +1590,7 @@ FOUNDATION_STATIC void report_rename(report_t* report, string_const_t name)
 FOUNDATION_STATIC void report_delete(report_t* report)
 {
     report->save = false;
+    report->opened = false;
     string_const_t report_save_file = report_get_save_file_path(report);
     if (fs_is_file(STRING_ARGS(report_save_file)))
         fs_remove_file(STRING_ARGS(report_save_file));
@@ -2010,6 +2013,99 @@ FOUNDATION_STATIC void report_render_windows()
     report_render_create_dialog(&SETTINGS.show_create_report_ui);
 }
 
+FOUNDATION_STATIC report_handle_t report_load(config_handle_t data)
+{
+    string_const_t report_name = data["name"].as_string();
+    report_handle_t report_handle = report_allocate(STRING_ARGS(report_name), data);
+    report_t* report = report_get(report_handle);
+    report->save = true;
+    return report_handle;
+}
+
+FOUNDATION_STATIC bool report_import_dialog_callback(string_const_t filepath)
+{
+    if (string_is_null(filepath))
+        return false;
+
+    config_handle_t report_data = nullptr;
+
+    try
+    {
+        report_data = config_parse_file(STRING_ARGS(filepath));
+    }
+    catch (const std::runtime_error& err)
+    {
+        log_errorf(HASH_REPORT, ERROR_INVALID_VALUE, 
+            STRING_CONST("Failed to parse report %.*s.\nReason: %s"), 
+            STRING_FORMAT(filepath), err.what());
+        return false;
+    }
+
+    if (!report_data)
+    {
+        log_errorf(HASH_REPORT, ERROR_INVALID_VALUE, STRING_CONST("Invalid report data %.*s"), STRING_FORMAT(filepath));
+        return false;
+    }
+
+    // Check that we have a valid report
+    config_handle_t wallet_data = report_data["wallet"];
+    if (config_value_type(wallet_data) != CONFIG_VALUE_OBJECT)
+    {
+        log_errorf(HASH_REPORT, ERROR_INVALID_VALUE, 
+            STRING_CONST("Report %.*s is missing wallet information"), STRING_FORMAT(filepath));
+        config_deallocate(report_data);
+        return false;
+    }
+
+    config_handle_t titles_data = report_data["titles"];
+    if (config_value_type(titles_data) != CONFIG_VALUE_OBJECT)
+    {
+        log_errorf(HASH_REPORT, ERROR_INVALID_VALUE,
+            STRING_CONST("Report %.*s is missing title information"), STRING_FORMAT(filepath));
+        config_deallocate(report_data);
+        return false;
+    }
+
+    string_const_t report_name = report_data["name"].as_string();
+    if (string_is_null(report_name))
+    {
+        report_name = path_base_file_name(STRING_ARGS(filepath));
+        config_set_string(report_data, STRING_CONST("name"), STRING_ARGS(report_name));
+    }
+
+    report_handle_t report_handle = report_load(report_data);
+    report_t* report = report_get(report_handle);
+    if (!report)
+        return false;
+
+    report->save = true;
+    report->dirty = true;
+    report->opened = true;
+
+    return report_refresh(report);
+}
+
+FOUNDATION_STATIC bool report_export_dialog_callback(string_const_t filepath)
+{
+    return false;
+}
+
+FOUNDATION_STATIC void report_open_import_dialog()
+{
+    system_open_file_dialog(tr("Import Report..."), 
+        tr("Reports (*.report)|*.report;*.json|SJSON Files (*.sjson)|*.sjson"), 
+        nullptr, report_import_dialog_callback);
+}
+
+FOUNDATION_STATIC void report_open_export_dialog(report_t* report)
+{
+    string_const_t report_name = SYMBOL_CONST(report->name);
+    system_save_file_dialog(
+        tr("Export Report..."),  
+        tr("Reports (*.report)|*.report"), 
+        report_name.str, report_export_dialog_callback);
+}
+
 FOUNDATION_STATIC void report_render_menus()
 {
     if (shortcut_executed(ImGuiKey_F2))
@@ -2027,10 +2123,10 @@ FOUNDATION_STATIC void report_render_menus()
             ImGui::EndMenu();
         }
 
-        if (ImGui::BeginMenu(tr("Open")))
+        if (ImGui::TrBeginMenu("Open"))
         {
-            if (ImGui::MenuItem(tr("Report..."), nullptr, nullptr))
-                log_warnf(HASH_REPORT, WARNING_UNSUPPORTED, STRING_CONST("TODO"));
+            if (ImGui::TrMenuItem("Import...", nullptr, nullptr))
+                report_open_import_dialog();
 
             bool first_report_that_can_be_opened = true;
             report_t** reports = report_sort_alphabetically();
@@ -2260,13 +2356,18 @@ void report_menu(report_t* report)
 
     if (ImGui::BeginPopupContextItem())
     {
-        if (report->dirty && ImGui::MenuItem(tr("Save")))
+        if (report->dirty && ImGui::TrMenuItem("Save"))
             report_save(report);
 
-        if (ImGui::MenuItem(tr("Rename")))
+        if (ImGui::TrMenuItem("Export..."))
+            report_open_export_dialog(report);
+
+        ImGui::Separator();
+
+        if (ImGui::TrMenuItem("Rename"))
             report->show_rename_ui = true;
 
-        if (ImGui::MenuItem(tr("Delete")))
+        if (ImGui::TrMenuItem("Delete"))
             report_delete(report);
 
         ImGui::EndPopup();
@@ -2274,8 +2375,13 @@ void report_menu(report_t* report)
 
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu(tr("Report")))
+        if (ImGui::TrBeginMenu("Report"))
         {
+            if (ImGui::TrMenuItem(ICON_MD_REFRESH " Refresh", "F5"))
+                report_refresh(report);
+
+            ImGui::Separator();
+
             if (ImGui::MenuItem(tr(ICON_MD_ADD " Add Title")))
                 report->show_add_title_ui = true;
 
@@ -2314,8 +2420,8 @@ void report_menu(report_t* report)
                     report_save(report);
             }
 
-            if (ImGui::TrMenuItem(ICON_MD_REFRESH " Refresh", "F5"))
-                report_refresh(report);
+            if (ImGui::TrMenuItem(ICON_MD_SAVE_AS " Export..."))
+                report_open_export_dialog(report);
 
             ImGui::EndMenu();
         }
