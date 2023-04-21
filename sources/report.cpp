@@ -2085,9 +2085,14 @@ FOUNDATION_STATIC bool report_import_dialog_callback(string_const_t filepath)
     return report_refresh(report);
 }
 
-FOUNDATION_STATIC bool report_export_dialog_callback(string_const_t filepath)
+FOUNDATION_STATIC bool report_export_dialog_callback(report_handle_t report_handle, string_const_t filepath)
 {
-    return false;
+    // Check if we can restore the report pointer.
+    report_t* report = report_get(report_handle);
+    if (!report)
+        return false;
+
+    return report_save(report, STRING_ARGS(filepath));
 }
 
 FOUNDATION_STATIC void report_open_import_dialog()
@@ -2099,11 +2104,12 @@ FOUNDATION_STATIC void report_open_import_dialog()
 
 FOUNDATION_STATIC void report_open_export_dialog(report_t* report)
 {
+    report_handle_t report_handle = report->id;
     string_const_t report_name = SYMBOL_CONST(report->name);
     system_save_file_dialog(
         tr("Export Report..."),  
         tr("Reports (*.report)|*.report"), 
-        report_name.str, report_export_dialog_callback);
+        report_name.str, L1(report_export_dialog_callback(report_handle, _1)));
 }
 
 FOUNDATION_STATIC void report_render_menus()
@@ -2509,7 +2515,7 @@ report_handle_t report_load(const char* name, size_t name_length)
     return report_load(report_file_path);
 }
 
-void report_save(report_t* report)
+bool report_save(report_t* report, const char* file_path, size_t file_path_length)
 {
     // Replicate some memory fields
     config_set(report->data, "name", string_table_decode_const(report->name));
@@ -2531,11 +2537,16 @@ void report_save(report_t* report)
 
     wallet_save(report->wallet, config_set_object(report->data, STRING_CONST("wallet")));
 
+    string_const_t report_file_path = string_const(file_path, file_path_length);
+    return config_write_file(report_file_path, report->data,
+        CONFIG_OPTION_WRITE_SKIP_NULL | CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
+}
+
+void report_save(report_t* report)
+{
     string_const_t report_file_path = report_get_save_file_path(report);
-    if (config_write_file(report_file_path, report->data,
-        CONFIG_OPTION_WRITE_SKIP_NULL | CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS | CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL)) {
+    if (report_save(report, STRING_ARGS(report_file_path)))
         report->dirty = false;
-    }
 }
 
 void report_render(report_t* report)

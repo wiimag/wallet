@@ -61,6 +61,8 @@ string_const_t system_app_data_local_path();
  * @param extension                 Set of extensions used in the dialog window (i.e. "DICOM (*.dcm)|*.dcm")
  * @param current_file_path         Current file path to open the dialog window at.
  * @param selected_file_callback    Callback invoked when a file is selected (#bool(string_const_t)).
+ *
+ * @remark The '|' separator is used to separate the extension name from the extension itself. The ';' separator is used to separate multiple extensions.
  * 
  * @return Returns true if the dialog window opened successfully.
  *
@@ -76,7 +78,7 @@ bool system_open_file_dialog(
 /*! Open a system save file dialog window. 
  * 
  * @param dialog_title          Dialog window title label
- * @param extension             Set of extensions used in the dialog window (i.e. "DICOM (*.dcm)|*.dcm")
+ * @param extension             Set of extensions used in the dialog window (i.e. "Text Files (*.txt)|*.txt")
  * @param current_file_path     Current file path to open the dialog window at.
  * @param save_file_callback    Callback invoked when a file is selected. Caller returns true if the file path was used to save the stream. (#bool(string_const_t)).
  * 

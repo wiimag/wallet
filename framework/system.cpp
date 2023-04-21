@@ -182,20 +182,20 @@ bool system_save_file_dialog(
     const char* current_file_path,
     const function<bool(string_const_t)>& selected_file_callback)
 {
-    static thread_local char file_path_buffer[BUILD_MAX_PATHLEN] = {0};
+    static thread_local wchar_t file_path_buffer[BUILD_MAX_PATHLEN] = {0};
 
-    string_t file_path = string_copy(STRING_BUFFER(file_path_buffer), current_file_path, string_length(current_file_path));
+    wstring_from_string(STRING_BUFFER(file_path_buffer), current_file_path, string_length(current_file_path));
 
     // Setup Windows save file dialog
-    OPENFILENAMEA ofn;
+    OPENFILENAME ofn;
     ZeroMemory(&ofn, sizeof(ofn));
     ofn.lStructSize = sizeof(ofn);
     ofn.hwndOwner = (HWND)_window_handle;
     ofn.lpstrFile = file_path_buffer;
-    ofn.nMaxFile = (DWORD)sizeof(file_path_buffer);
+    ofn.nMaxFile = (DWORD)sizeof(file_path_buffer)/sizeof(file_path_buffer[0]);
     if (extension == nullptr)
     {
-        ofn.lpstrFilter = tr("All Files\0*.*\0");
+        ofn.lpstrFilter = L"All Files\0*.*\0";
     }
     else
     {
@@ -203,25 +203,38 @@ bool system_save_file_dialog(
         string_t extension_filters = string_copy(STRING_BUFFER(filters_buffer), extension, string_length(extension));
         extension_filters = string_replace(STRING_ARGS(extension_filters), sizeof(filters_buffer), STRING_CONST("|"), "\0", 1, true);
         extension_filters.str[extension_filters.length + 1] = '\0';
-        ofn.lpstrFilter = ofn.lpstrDefExt = extension_filters.str;
+
+        wchar_t wchar_filters_buffer[BUILD_MAX_PATHLEN] = { '\0' };
+        wstring_from_string(STRING_BUFFER(wchar_filters_buffer), STRING_ARGS(extension_filters));
+        ofn.lpstrFilter = ofn.lpstrDefExt = wchar_filters_buffer;
     }
 
-    string_const_t current_file_name = path_file_name(STRING_ARGS(file_path));
-    string_const_t current_file_dir = path_directory_name(STRING_ARGS(file_path));
+    string_const_t current_file_name = path_file_name(current_file_path, string_length(current_file_path));
+    string_const_t current_file_dir = path_directory_name(current_file_path, string_length(current_file_path));
+
+    static thread_local wchar_t current_file_dir_buffer[BUILD_MAX_PATHLEN] = {0};
+    wstring_from_string(STRING_BUFFER(current_file_dir_buffer), STRING_ARGS(current_file_dir));
     
-    static thread_local char file_name_buffer[BUILD_MAX_PATHLEN] = {0};
-    string_t file_name = string_copy(STRING_BUFFER(file_name_buffer), STRING_ARGS(current_file_name));
+    static thread_local wchar_t file_name_buffer[BUILD_MAX_PATHLEN] = {0};
+    wstring_from_string(STRING_BUFFER(file_name_buffer), STRING_ARGS(current_file_name));
+
+    static thread_local wchar_t dialog_title_buffer[BUILD_MAX_PATHLEN] = {0};
+    wstring_from_string(STRING_BUFFER(dialog_title_buffer), dialog_title, string_length(dialog_title));
 
     ofn.nFilterIndex = 1;
     ofn.lpstrFileTitle = file_name_buffer;
     ofn.nMaxFileTitle = BUILD_MAX_PATHLEN;
-    ofn.lpstrTitle = dialog_title;
-    ofn.lpstrInitialDir = current_file_dir.str;
+    ofn.lpstrTitle = dialog_title_buffer;
+    ofn.lpstrInitialDir = current_file_dir_buffer;
     
     ofn.Flags = OFN_PATHMUSTEXIST | OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN;
 
-    if (::GetSaveFileNameA(&ofn))
-        return selected_file_callback(string_to_const(file_path_buffer));
+    if (::GetSaveFileName(&ofn))
+    {
+        static thread_local char file_path_cstr_buffer[BUILD_MAX_PATHLEN] = {0};
+        string_convert_utf16(STRING_BUFFER(file_path_cstr_buffer), (const uint16_t*)file_path_buffer, wstring_length(file_path_buffer));
+        return selected_file_callback(string_to_const(file_path_cstr_buffer));
+    }
 
     return false;
 }
