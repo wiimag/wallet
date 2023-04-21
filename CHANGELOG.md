@@ -1,6 +1,8 @@
 # Changelog
 
 ## [1.0.0@next] - 2023-04-21
+- Add support to build the application with or without the proxy backend using `-DBUILD_ENABLE_BACKEND=ON`.
+- Fix OpenAI analysis generation when using proxy backend.
 - Add support to export and import reports.
 - Add many missing french translations.
 - Fix OpenAI analysis generation when using proxy backend.

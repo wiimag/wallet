@@ -7,6 +7,7 @@
 
 #include "eod.h"
 #include "stock.h"
+#include "backend.h"
 
 #include <framework/app.h>
 #include <framework/imgui.h>
@@ -128,6 +129,9 @@ static struct OPENAI_MODULE
 
 FOUNDATION_STATIC string_t* openai_ensure_http_headers()
 {
+    if (backend_is_connected())
+        return nullptr;
+
     string_array_deallocate(_openai_module->http_headers);
 
     string_t Authorization = string_allocate_format(STRING_CONST("Authorization: Bearer %.*s"), STRING_FORMAT(_openai_module->apikey));
@@ -214,6 +218,9 @@ FOUNDATION_STATIC void openai_save_api_key()
 
 FOUNDATION_STATIC string_const_t openai_api_url()
 {
+    if (backend_is_connected())
+        return backend_url();
+
     return CTEXT("https://api.openai.com");
 }
 
@@ -584,6 +591,9 @@ FOUNDATION_STATIC void openai_run_tests(void* user_data)
 
 bool openai_available()
 {
+    if (backend_is_connected())
+        return true;
+
     const char* key = openai_ensure_key_loaded();
     return key && key[0];
 }

@@ -9,8 +9,9 @@
 #include "stock.h"
 #include "logo.h"
 #include "openai.h"
-#include "news.h"
+#include "backend.h"
 #include "search.h"
+#include "news.h"
 
 #include <framework/imgui.h>
 #include <framework/string.h>
@@ -98,6 +99,7 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
+	#if !BUILD_BACKEND
     // Google API KEY
     {
         ImGui::NextColumn();
@@ -143,6 +145,7 @@ void settings_draw()
             openai_set_organization(openai_org.str);
         ImGui::NextColumn();
     }
+    #endif
 
     // Default currency for reports
     {
