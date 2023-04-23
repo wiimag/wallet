@@ -2107,9 +2107,11 @@ FOUNDATION_STATIC void report_open_export_dialog(report_t* report)
     report_handle_t report_handle = report->id;
     string_const_t report_name = SYMBOL_CONST(report->name);
     system_save_file_dialog(
-        tr("Export Report..."),  
-        tr("Reports (*.report)|*.report"), 
-        report_name.str, L1(report_export_dialog_callback(report_handle, _1)));
+        tr("Export Report..."),
+        tr("Reports (*.report)|*.report"), report_name.str, [report_handle](string_const_t _1)
+    {
+        return report_export_dialog_callback(report_handle, _1);
+    });
 }
 
 FOUNDATION_STATIC void report_render_menus()

@@ -34,10 +34,12 @@ template<typename T> using alias = T;
  *  @brief Deallocate memory for an object and invoking the destructor.
  *  @param ptr The pointer to the object to deallocate.
  */
-#define MEM_DELETE(ptr) {   \
-    ptr->~alias<std::remove_reference<decltype(*ptr)>::type>(); \
-    memory_deallocate(ptr); \
-    ptr = nullptr;          \
+#define MEM_DELETE(ptr) {                                           \
+    if (ptr) {                                                      \
+        ptr->~alias<std::remove_reference<decltype(*ptr)>::type>(); \
+        memory_deallocate(ptr);                                     \
+        ptr = nullptr;                                              \
+    }                                                               \
 }
 
 /*! @def MEM_DELETE_ARRAY 

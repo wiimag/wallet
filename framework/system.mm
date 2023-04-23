@@ -24,14 +24,17 @@ bool system_open_file_dialog(const char* dialog_title,
     if (!app_window)
         return false;
     
+    string_t file_path = {};
     string_t file_path_buffer = string_static_buffer(1024, true);
     if (current_file_path != nullptr)
     {
-        string_t file_path = string_format(STRING_ARGS(file_path_buffer), STRING_CONST("%s"), current_file_path);
+        file_path = string_format(STRING_ARGS(file_path_buffer), STRING_CONST("%s"), current_file_path);
         file_path = path_clean(STRING_ARGS(file_path), file_path_buffer.length);
         file_path = string_replace(STRING_ARGS(file_path), file_path_buffer.length,
             STRING_CONST("/"), STRING_CONST("\\"), true);
     }
+
+    string_const_t filename = path_file_name(STRING_ARGS(file_path));
     
     @autoreleasepool 
     {    
@@ -45,7 +48,51 @@ bool system_open_file_dialog(const char* dialog_title,
         openPanel.canCreateDirectories = YES;
         openPanel.allowsMultipleSelection = NO;
 
-        openPanel.allowedFileTypes = @[@"dcm"];
+        if (extension)
+        {
+            // Split extension string into array
+            string_t* exts = string_split(string_to_const(extension), CTEXT("|"));
+            
+            // Add extension to savePanel.allowedFileTypes
+            for (unsigned int i = 0; i < array_size(exts); ++i)
+            {
+                // Skip description
+                if (i % 2 == 0)
+                    continue;
+                string_t ext = exts[i];
+                // Remove *. from extension
+                ext.str += 2;
+                ext.length -= 2;
+
+                NSString* ns_ext = [NSString stringWithUTF8String:ext.str];
+                [openPanel setAllowedFileTypes:[openPanel.allowedFileTypes arrayByAddingObject:ns_ext]];
+
+                // Add default extension to savePanel.nameFieldStringValue
+                if (filename.length != 0 && string_find(STRING_ARGS(filename), '.', 0))
+                {
+                    NSString* ns_filename = [NSString stringWithUTF8String:filename.str];
+                    openPanel.nameFieldStringValue = ns_filename;
+
+                    // Append . to filename
+                    ns_filename = [ns_filename stringByAppendingString:@"."];
+                    
+                    // Add .extension to filename
+                    NSString* ns_ext = [NSString stringWithUTF8String:ext.str];
+                    openPanel.nameFieldStringValue = [ns_filename stringByAppendingString:ns_ext];
+                }
+            }
+            
+            string_array_deallocate(exts);
+
+            openPanel.allowsOtherFileTypes = NO;
+        }
+        else
+        {
+            openPanel.allowsOtherFileTypes = YES;
+        }
+
+        // Create a local copy of the callback for the async call to the save panel
+        function<bool(string_const_t)> selected_file_callback_copy = selected_file_callback;
         
         [openPanel beginSheetModalForWindow: app_window completionHandler:^(NSInteger result)
         {
@@ -60,7 +107,113 @@ bool system_open_file_dialog(const char* dialog_title,
                 
                 static char selected_file_path_buffer[BUILD_MAX_PATHLEN];
                 string_t selected_file_path = string_copy(STRING_BUFFER(selected_file_path_buffer), path.UTF8String, path.length);
-                selected_file_callback(string_to_const(selected_file_path));
+                selected_file_callback_copy(string_to_const(selected_file_path));
+            }
+        }];
+    }
+
+    return true;
+}
+
+bool system_save_file_dialog(
+    const char* dialog_title,
+    const char* extension,
+    const char* current_file_path,
+    const function<bool(string_const_t)>& selected_file_callback)
+{
+    NSWindow* app_window = (NSWindow*)_window_handle;
+    if (!app_window)
+        return false;
+    
+    string_t file_path = {};
+    string_t file_path_buffer = string_static_buffer(1024, true);
+    if (current_file_path != nullptr)
+    {
+        file_path = string_format(STRING_ARGS(file_path_buffer), STRING_CONST("%s"), current_file_path);
+        file_path = path_clean(STRING_ARGS(file_path), file_path_buffer.length);
+        file_path = string_replace(STRING_ARGS(file_path), file_path_buffer.length,
+            STRING_CONST("/"), STRING_CONST("\\"), true);
+    }
+
+    string_const_t filename = path_file_name(STRING_ARGS(file_path));
+    
+    @autoreleasepool 
+    {
+        // Open save dialog
+        NSSavePanel* savePanel = [NSSavePanel savePanel];
+
+        savePanel.title = [NSString stringWithUTF8String:dialog_title];
+
+        savePanel.showsHiddenFiles = NO;
+        savePanel.showsResizeIndicator = YES;
+        savePanel.canCreateDirectories = YES;
+
+        if (filename.length > 0)
+        {
+            NSString* ns_filename = [NSString stringWithUTF8String:filename.str];
+            savePanel.nameFieldStringValue = ns_filename;
+        }
+
+        if (extension)
+        {
+            // Split extension string into array
+            string_t* exts = string_split(string_to_const(extension), CTEXT("|"));
+            
+            // Add extension to savePanel.allowedFileTypes
+            for (unsigned int i = 0; i < array_size(exts); ++i)
+            {
+                // Skip description
+                if (i % 2 == 0)
+                    continue;
+                string_t ext = exts[i];
+                // Remove *. from extension
+                ext.str += 2;
+                ext.length -= 2;
+
+                NSString* ns_ext = [NSString stringWithUTF8String:ext.str];
+                [savePanel setAllowedFileTypes:[savePanel.allowedFileTypes arrayByAddingObject:ns_ext]];
+
+                // Add default extension to savePanel.nameFieldStringValue
+                if (filename.length != 0 && string_find(STRING_ARGS(filename), '.', 0))
+                {
+                    NSString* ns_filename = [NSString stringWithUTF8String:filename.str];
+                    savePanel.nameFieldStringValue = ns_filename;
+
+                    // Append . to filename
+                    ns_filename = [ns_filename stringByAppendingString:@"."];
+                    
+                    // Add .extension to filename
+                    NSString* ns_ext = [NSString stringWithUTF8String:ext.str];
+                    savePanel.nameFieldStringValue = [ns_filename stringByAppendingString:ns_ext];
+                }
+            }
+            
+            string_array_deallocate(exts);
+
+            savePanel.allowsOtherFileTypes = NO;
+        }
+        else
+        {
+            savePanel.allowsOtherFileTypes = YES;
+        }
+
+        // Create a local copy of the callback for the async call to the save panel
+        function<bool(string_const_t)> selected_file_callback_copy = selected_file_callback;
+
+        [savePanel beginSheetModalForWindow: app_window completionHandler:^(NSInteger result)
+        {
+            // If the result is NSOKButton the user selected a file
+            if (result == NSModalResponseOK)
+            {
+                // Get the save path file
+                NSURL *selection = savePanel.URL;
+
+                //finally store the selected file path as a string
+                NSString* path = [[selection path] stringByResolvingSymlinksInPath];
+
+                static char selected_file_path_buffer[BUILD_MAX_PATHLEN];
+                string_t selected_file_path = string_copy(STRING_BUFFER(selected_file_path_buffer), path.UTF8String, path.length);
+                selected_file_callback_copy(string_to_const(selected_file_path));
             }
         }];
     }

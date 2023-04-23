@@ -167,6 +167,16 @@ elseif(APPLE)
     # Enable openmp support
     target_compile_definitions(framework PUBLIC _OPENMP)
 
+    # Ignore -Wshorten-64-to-32
+    target_compile_options(framework PUBLIC -Wno-shorten-64-to-32)
+
+    # Ignore -Wunused-value
+    target_compile_options(framework PUBLIC -Wno-unused-value)
+
+    # Ignore -Wformat-security
+    target_compile_options(framework PUBLIC -Wno-format)
+    target_compile_options(framework PUBLIC -Wno-format-security)
+
 endif()
 
 #

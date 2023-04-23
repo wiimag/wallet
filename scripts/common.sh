@@ -93,8 +93,33 @@ function convert_path_to_file_link() {
 #
 function build_setting() {
     local name=$1
-    local value=$(awk -F "=" "/$name/ {print \$2}" "$CONFIG_DIR/build.settings")
-    echo $value
+    
+    # Check if the file exists
+    if [ ! -f "$CONFIG_DIR/build.settings" ]; then
+        echo "The file $CONFIG_DIR/build.settings does not exist"
+        exit 1
+    fi
+
+    # Read the file line by line
+    while IFS= read -r line
+    do
+        # Check if the line starts with the name
+        if [[ $line == ${name}* ]]; then
+            # Split the line into an array
+            IFS='=' read -ra array <<< "$line"
+            # Capture the value
+            local result=${array[1]}
+            # Remove trailing line return \r and \n
+            result="${result%$'\r'}"
+            result="${result%$'\n'}"
+            echo $result
+            return
+        fi
+    done < "$CONFIG_DIR/build.settings"
+
+    # If we get here, the name was not found
+    echo "The name $name was not found in $CONFIG_DIR/build.settings"
+    exit 1
 }
 
 #

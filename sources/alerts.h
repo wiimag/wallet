@@ -6,6 +6,10 @@
  * We use expressions to determine if an alert condition is met.
  */
 
+#pragma once
+
+#include <foundation/types.h>
+
 /*! Make the alerts configuration window visible. */
 void alerts_show_window();
 

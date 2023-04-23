@@ -165,7 +165,7 @@ fi
 if [ $NO_COLOR -eq 0 ]; then
   bold=$(tput bold)
   normal=$(tput sgr0)
-  green='\033[0;32m'
+  green=$(tput setaf 2)
   dark_gray='\033[1;30m'
   light_gray='\033[0;37m'
   red='\033[0;31m'
@@ -368,6 +368,11 @@ if [ $BUILD -ge 1 ]; then
     fi
     CMAKE_ARGS+=("-fileLogger")
     CMAKE_ARGS+=("-fileLoggerParameters:logfile=cmake-build.log;verbosity=Normal")
+  elif [ ${machine} == "Mac" ]; then
+    # Use -quiet if verbose is not enabled
+    if [ $VERBOSE -eq 0 ]; then
+      CMAKE_ARGS+=("-quiet")
+    fi
   fi
 
   ADDITIONAL_ARGS=()
@@ -376,11 +381,11 @@ if [ $BUILD -ge 1 ]; then
   fi
 
   if [ $BUILD_DEBUG -eq 1 ]; then
-    cmake --build . --parallel 7 --config Debug ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
+    cmake --build . --parallel 7 --config Debug --target ${SHORT_NAME} ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
   elif  [ $BUILD_DEPLOY -eq 1 ]; then
-    cmake --build . --parallel 7 --config Deploy ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
+    cmake --build . --parallel 7 --config Deploy --target ${SHORT_NAME} ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
   else
-    cmake --build . --parallel 7 --config Release ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
+    cmake --build . --parallel 7 --config Release --target ${SHORT_NAME} ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
   fi
 
   retval=$?
@@ -454,7 +459,7 @@ fi
 if [ $OPEN -ge 1 ]; then
 
   echo 
-  echo -e "${green}Opening IDE...${normal}"
+  echo -e "${green}Opening ${SHORT_NAME} in IDE...${normal}"
   echo
 
   if [ $OPEN_WORKSPACE -eq 1 ]; then

@@ -2149,7 +2149,7 @@ bool string_try_convert_number(const char* str, size_t length, double& out_value
 bool string_try_convert_number(const char* str, size_t length, int& out_value, const int radix /*= 10*/)
 {
     // Make sure the string starts with a digit or a sign
-    if (length == 0 || !isdigit(str[0]) && str[0] != '-')
+    if (length == 0 || (!isdigit(str[0]) && str[0] != '-'))
         return false;
 
     char* end = (char*)str + length;

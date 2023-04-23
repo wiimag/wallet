@@ -1063,7 +1063,7 @@ string_t* openai_generate_summary_sentiment(
         }
 
         config_deallocate(data);
-        return nullptr;
+        return 0;
     }, nullptr, JOB_DEALLOCATE_AFTER_EXECUTION);
 
     return response;

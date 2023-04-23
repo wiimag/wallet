@@ -53,7 +53,7 @@ template<size_t N> FOUNDATION_FORCEINLINE expr_result_t test_expr(const char(&ex
     return result;
 }
 
-template<size_t N> FOUNDATION_FORCEINLINE expr_result_t test_expr(const char(&expr)[N], int expected)
+template<size_t N> FOUNDATION_FORCEINLINE expr_result_t test_expr(const char(&expr)[N], int32_t expected)
 {
     expr_result_t result = eval({expr, N - 1});
 
@@ -150,9 +150,9 @@ TEST_SUITE("Expressions")
         test_expr("3/2", 3.0 / 2.0);
         test_expr("(3/2)|0", 3 / 2);
         test_expr("(3/0)", INFINITY);
-        test_expr("(3/0)|0", -2147483648i32);
+        test_expr("(3/0)|0", (int32_t)INT32_C(-2147483648));
         test_expr("(3%0)", NAN);
-        test_expr("(3%0)|0", -2147483648i32);
+        test_expr("(3%0)|0", (int32_t)INT32_C(-2147483648));
         test_expr("2**3", 8);
         test_expr("9**(1/2)", 3);
         test_expr("1+2<<3", (1 + 2) << 3);
@@ -795,7 +795,7 @@ TEST_SUITE("Expressions")
 
          expr_register_function("ptr_i64", [](const expr_func_t* f, vec_expr_t* args, void* c) -> expr_result_t 
         { 
-            static constexpr int64_t n[] = {INT64_MIN, INT64_MAX, 0i64};
+            static constexpr int64_t n[] = {INT64_MIN, INT64_MAX, (int64_t)0};
             return expr_result_t((void*)&n, sizeof(n[0]), ARRAY_COUNT(n), EXPR_POINTER_ARRAY | EXPR_POINTER_ARRAY_INTEGER);
         });
 

@@ -286,6 +286,9 @@ elseif(XCODE)
         add_compile_options(-Wno-tautological-constant-compare -Wno-unguarded-availability-new)
     endif()
 
+    # Define -Wno-varargs
+    add_compile_options(-Wno-varargs)
+
 endif()
 
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} ${CMAKE_FLAGS_RELEASE}")
