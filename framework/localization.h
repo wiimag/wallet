@@ -61,7 +61,7 @@ const char* tr_cstr(const char* str, size_t length = SIZE_MAX);
 
 #define RTEXT(str) CTEXT(str)
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL const char* tr(const char* str, size_t length, bool literal = false) 
+FOUNDATION_FORCEINLINE const char* tr(const char* str, size_t length, bool literal = false) 
 { 
     return string_const(str, length); 
 }

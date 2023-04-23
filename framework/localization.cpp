@@ -85,7 +85,7 @@ static struct LOCALIZATION_MODULE
 
 } *_localization_module = nullptr;
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL int localization_string_locale_key_compare(const string_locale_t& lc, const hash_t& key)
+FOUNDATION_FORCEINLINE int localization_string_locale_key_compare(const string_locale_t& lc, const hash_t& key)
 {
     if (lc.key < key)
         return -1;

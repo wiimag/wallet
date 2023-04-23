@@ -169,43 +169,43 @@ struct string_template_arg_value_t
     string_template_stream_handler_t stream;
 };
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(bool t) { return StringArgumentType::BOOL; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(int t, std::true_type) { return StringArgumentType::INT32; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(long t, std::true_type) { return StringArgumentType::INT32; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(unsigned int t, std::true_type) { return StringArgumentType::UINT32; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(unsigned long t, std::true_type) { return StringArgumentType::UINT32; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(int64_t t, std::true_type) { return StringArgumentType::INT64; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(uint64_t t, std::true_type) { return StringArgumentType::UINT64; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(float t, std::true_type) { return StringArgumentType::FLOAT; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(double t, std::false_type) { return StringArgumentType::DOUBLE; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(const char* t, std::false_type) { return StringArgumentType::CSTRING; }
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(std::nullptr_t t, std::false_type) { return StringArgumentType::POINTER; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(bool t) { return StringArgumentType::BOOL; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(int t, std::true_type) { return StringArgumentType::INT32; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(long t, std::true_type) { return StringArgumentType::INT32; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(unsigned int t, std::true_type) { return StringArgumentType::UINT32; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(unsigned long t, std::true_type) { return StringArgumentType::UINT32; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(int64_t t, std::true_type) { return StringArgumentType::INT64; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(uint64_t t, std::true_type) { return StringArgumentType::UINT64; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(float t, std::true_type) { return StringArgumentType::FLOAT; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(double t, std::false_type) { return StringArgumentType::DOUBLE; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(const char* t, std::false_type) { return StringArgumentType::CSTRING; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(std::nullptr_t t, std::false_type) { return StringArgumentType::POINTER; }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(const string_t& t) 
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(const string_t& t) 
 { 
     return StringArgumentType::STRING; 
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(const string_const_t& t) 
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(const string_const_t& t) 
 { 
     return StringArgumentType::STRING; 
 }
 
 template<class T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(T* arr, std::false_type) 
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(T* arr, std::false_type) 
 { 
     return StringArgumentType::POINTER; 
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(string_template_stream_handler_t func) 
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(string_template_stream_handler_t func) 
 { 
     return StringArgumentType::STREAM; 
 }
 
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(int* arr) { return StringArgumentType::ARRAY_INT; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(int* arr) { return StringArgumentType::ARRAY_INT; }
 
 template<typename T>
-FOUNDATION_FORCEINLINE FOUNDATION_CONSTCALL string_argument_type_t string_template_type(const T& t) 
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(const T& t) 
 { 
     return string_template_type(t, typename std::is_integral<T>::type());
 }
