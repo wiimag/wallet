@@ -28,33 +28,34 @@ FULL_SOLUTION_DIR=$(convert_path_to_platform $(pwd)/$SOLUTION_DIR)
 #
 # Parse common command line arguments
 #
-POSITIONAL_ARGS=()
+unset POSITIONAL_ARGS
 RUN=1 # Indicate if the default build should be run at the end
-BUILD=0
+BUILD=()
 BUILD_DEBUG=0
 BUILD_RELEASE=1
 BUILD_DEPLOY=0
-TESTS=0
+TESTS=()
 OPEN=0
 OPEN_WORKSPACE=0
-GENERATE=0
-GENERATED=0
-PACKAGE=0
-START=0
-PRINT=0
+GENERATE=()
+PACKAGE=()
+START=()
+PRINT=()
 PRINT_LARGEFILES=0
 HELP=0
 VERBOSE=0
-DIFF=0
+DIFF=()
 NO_COLOR=0
 
+NO=0
+YES=1
 COMMAND_COUNTER=0
 
 # Check if project/.build is present, if not, then we need to generate the project
 # Also check if the project/.build/CMakeCache.txt is present, if not, then we need to generate the project
 if [ ! -d "$SOLUTION_DIR" ] || [ ! -f "$SOLUTION_DIR/CMakeCache.txt" ]; then
-  BUILD=1
-  GENERATE=1
+  BUILD=($YES)
+  GENERATE=($YES)
 fi
 
 while [[ $# -gt 0 ]]; do
@@ -66,7 +67,6 @@ while [[ $# -gt 0 ]]; do
       ;;
     --verbose)
       VERBOSE=1
-      #POSITIONAL_ARGS+=("$1") # save positional arg
       shift # past argument
       ;;
     --no-color)
@@ -76,7 +76,8 @@ while [[ $# -gt 0 ]]; do
     b|build)
       # Update the command counter
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
-      BUILD=$COMMAND_COUNTER
+      BUILD=($YES)
+      declare -g -n POSITIONAL_ARGS=BUILD
       shift # past argument
 
       # The release argument is the default, but remove it if it was specified
@@ -98,7 +99,8 @@ while [[ $# -gt 0 ]]; do
       ;;
     p|print)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
-      PRINT=$COMMAND_COUNTER
+      PRINT=($YES)
+      declare -g -n POSITIONAL_ARGS=PRINT
       shift # past argument
 
       # The release argument is the default, but remove it if it was specified
@@ -109,12 +111,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     g|generate)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
-      GENERATE=$COMMAND_COUNTER
+      GENERATE=($YES)
+      declare -g -n POSITIONAL_ARGS=GENERATE
       shift # past argument
       ;;  
     p|package)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
-      PACKAGE=$COMMAND_COUNTER
+      PACKAGE=($YES)
+      declare -g -n POSITIONAL_ARGS=PACKAGE
       shift # past argument
       ;;
     o|open)
@@ -126,7 +130,7 @@ while [[ $# -gt 0 ]]; do
       if [ $# -ne 0 ] && ([ $1 == "workspace" ] || [ $1 == "w" ]); then
         
         # Always generate the project if we are opening the workspace
-        GENERATE=1
+        GENERATE=($GENERATE)
         OPEN_WORKSPACE=1
         shift
       fi
@@ -134,23 +138,33 @@ while [[ $# -gt 0 ]]; do
       ;;
     t|tests)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
-      TESTS=$COMMAND_COUNTER
+      TESTS=($YES)
+      declare -g -n POSITIONAL_ARGS=TESTS
       shift # past argument
       ;;
     d|diff)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
-      DIFF=$COMMAND_COUNTER
+      DIFF=($YES)
+      declare -g -n POSITIONAL_ARGS=DIFF
       shift # past argument
       ;;
     s|start)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
-      START=$COMMAND_COUNTER
+      START=($YES)
+      declare -g -n POSITIONAL_ARGS=START
       RUN=1
 
       shift # past argument
       ;;
     *)
-      POSITIONAL_ARGS+=("$1") # save positional arg
+
+      if [ $POSITIONAL_ARGS ]; then
+        POSITIONAL_ARGS+=("$1") # Append to current command positional arguments
+      elif [ ${#START[@]} -eq 0 ]; then
+        START=($YES $1)
+      else
+        START+=("$1") # Assume this is a positional argument for the start command
+      fi
       shift # past argument
       ;;
   esac
@@ -158,7 +172,9 @@ done
 
 # If there is not arguments to ./run, then lets force start to be the default command
 if [ $COMMAND_COUNTER -eq 0 ]; then
-  START=1
+  if [ ${#START[@]} -eq 0 ]; then
+    START=($YES)
+  fi
 fi
 
 # Define a set of colors if NO_COLOR is not set
@@ -253,18 +269,18 @@ if [ $VERBOSE -ge 1 ]; then
   # Print all set variables
   echo "APP_NAME: $APP_NAME"
   echo "SHORT_NAME: $SHORT_NAME"
-  echo "BUILD: $BUILD"
+  echo "BUILD: ${BUILD[@]}"
   echo "  BUILD_DEBUG: $BUILD_DEBUG"
   echo "  BUILD_RELEASE: $BUILD_RELEASE"
   echo "  BUILD_DEPLOY: $BUILD_DEPLOY"
   echo "OPEN: $OPEN"
   echo "  OPEN_WORKSPACE: $OPEN_WORKSPACE"
-  echo "GENERATE: $GENERATE"
-  echo "PRINT: $PRINT"
+  echo "GENERATE: ${GENERATE[@]}"
+  echo "PRINT: ${PRINT[@]}"
   echo "  PRINT_LARGEFILES: $PRINT_LARGEFILES"
-  echo "TESTS: $TESTS"
-  echo "DIFF: $DIFF"
-  echo "START: $START"
+  echo "TESTS: ${TESTS[@]}"
+  echo "DIFF: ${DIFF[@]}"
+  echo "START: ${START[@]}"
   echo "HELP: $HELP"
   echo "VERBOSE: $VERBOSE"
 
@@ -275,7 +291,7 @@ fi
 #
 # Generate the CMAKE solution
 #
-if [ $GENERATE -ge 1 ]; then
+if [ ${#GENERATE[@]} -ge 1 ] && [ ${GENERATE[0]} -ge 1 ]; then
 
   echo 
   echo -e "${green}Generating ${APP_NAME} solution...${normal}"
@@ -285,11 +301,9 @@ if [ $GENERATE -ge 1 ]; then
   mkdir -p $SOLUTION_DIR 2>/dev/null
   cd $SOLUTION_DIR
 
-  CMAKE_ARGS=()
-  if [ $GENERATE -eq $COMMAND_COUNTER ]; then
-    CMAKE_ARGS=(${POSITIONAL_ARGS[@]})
-  fi
-
+  # Copy second to last parameters to CMAKE_ARGS
+  CMAKE_ARGS=("${GENERATE[@]:1}")
+  
   # Read build.settings and add all the name=value pairs to the CMAKE_ARGS array as -Dname=value
   while IFS='=' read -r name value; do
     # Skip comments
@@ -302,7 +316,7 @@ if [ $GENERATE -ge 1 ]; then
     [[ $name != BUILD_* ]] && continue
 
     # Skip if -D$name* is already POSTIONAL_ARGS
-    [[ " ${POSITIONAL_ARGS[@]} " =~ " -D$name" ]] && continue
+    [[ " ${GENERATE[@]} " =~ " -D$name" ]] && continue
 
     CMAKE_ARGS+=("-D$name=$value")
   done < $CONFIG_DIR/build.settings
@@ -336,7 +350,6 @@ if [ $GENERATE -ge 1 ]; then
 
   # Keep track of it the solution was generated or not.
   # We will use this to determine if we need to build the solution or not.
-  GENERATED=1
   cd ../../
 
   # Print the path of the generated solution
@@ -350,7 +363,7 @@ fi
 #
 # Build solution
 #
-if [ $BUILD -ge 1 ]; then
+if [ ${#BUILD[@]} -ge 1 ] && [ ${BUILD[0]} -ge 1 ]; then
 
   # Print building message in green
   echo 
@@ -375,11 +388,9 @@ if [ $BUILD -ge 1 ]; then
     fi
   fi
 
-  ADDITIONAL_ARGS=()
-  if [ $BUILD -eq $COMMAND_COUNTER ]; then
-    ADDITIONAL_ARGS=(${POSITIONAL_ARGS[@]})
-  fi
-
+  # Copy second to last parameters to CMAKE_ARGS
+  ADDITIONAL_ARGS=("${BUILD[@]:1}")
+  
   if [ $BUILD_DEBUG -eq 1 ]; then
     cmake --build . --parallel 7 --config Debug --target ${SHORT_NAME} ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
   elif  [ $BUILD_DEPLOY -eq 1 ]; then
@@ -407,14 +418,18 @@ fi
 #
 # Build package
 #
-if [ $PACKAGE -ge 1 ]; then
+if [ ${#PACKAGE[@]} -ge 1 ] && [ ${PACKAGE[0]} -ge 1 ]; then
 
   # Run script to build the package
   echo 
   echo -e "${green}Building ${APP_NAME} package...${normal}"
   echo
 
-  ./scripts/build-package.sh --build ${POSITIONAL_ARGS[@]}
+  # Capture all additional arguments
+  ADDITIONAL_ARGS=("${PACKAGE[@]:1}")
+
+  # Run the packaging script
+  ./scripts/build-package.sh --build ${ADDITIONAL_ARGS[@]}
   retval=$?
 
   if [ $retval -ne 0 ]; then
@@ -430,16 +445,19 @@ fi
 #
 # GIT DIFF
 #
-if [ $DIFF -ge 1 ]; then
+if [ ${#DIFF[@]} -ge 1 ] && [ ${DIFF[0]} -ge 1 ]; then
+
+  # Capture all additional arguments
+  ADDITIONAL_ARGS=("${DIFF[@]:1}")
 
   # Check if we have a remote branch to diff against and make sure the argument doesn't start with -- or -
-  if [ ${#POSITIONAL_ARGS[@]} -eq 0 ] || [[ ${POSITIONAL_ARGS[0]} == --* ]] || [[ ${POSITIONAL_ARGS[0]} == -* ]]; then
+  if [ ${#ADDITIONAL_ARGS[@]} -eq 0 ] || [[ ${ADDITIONAL_ARGS[0]} == --* ]] || [[ ${ADDITIONAL_ARGS[0]} == -* ]]; then
     # Insert main at position 0 and push other arguments
-    POSITIONAL_ARGS=("${POSITIONAL_ARGS[@]:0:0}" "main" "${POSITIONAL_ARGS[@]:0}")
+    ADDITIONAL_ARGS=("${ADDITIONAL_ARGS[@]:0:0}" "main" "${ADDITIONAL_ARGS[@]:0}")
   fi
   
   # Diff the current branch with the specified remote branch
-  git difftool -d "origin/${POSITIONAL_ARGS[0]}" ${POSITIONAL_ARGS[@]:1}
+  git difftool -d "origin/${ADDITIONAL_ARGS[0]}" ${ADDITIONAL_ARGS[@]:1}
 
   # Check return value
   retval=$?
@@ -485,13 +503,16 @@ fi
 #
 # Print various solution information
 #
-if [ $PRINT -ge 1 ]; then
+if [ ${#PRINT[@]} -ge 1 ] && [ ${PRINT[0]} -ge 1 ]; then
+
+  # Capture all additional arguments
+  ADDITIONAL_ARGS=("${PRINT[@]:1}")
 
   if [ $PRINT_LARGEFILES -eq 1 ]; then
 
     TOP_COUNT=20
-    if is_number ${POSITIONAL_ARGS[0]}; then
-      TOP_COUNT=${POSITIONAL_ARGS[0]}
+    if is_number ${ADDITIONAL_ARGS[0]}; then
+      TOP_COUNT=${ADDITIONAL_ARGS[0]}
     fi
 
     while read -r largefile; do
@@ -513,16 +534,14 @@ fi
 #
 # Run tests
 #
-if [ $TESTS -ge 1 ]; then
+if [ ${#TESTS[@]} -ge 1 ] && [ ${TESTS[0]} -ge 1 ]; then
 
-  ADDITIONAL_ARGS=()
-  if [ $TESTS -eq $COMMAND_COUNTER ]; then
-    ADDITIONAL_ARGS=(${POSITIONAL_ARGS[@]})
-
-    # If VERBOSE is defined, add it to POSITIONAL_ARGS
-    if [ $VERBOSE -eq 1 ]; then
-      ADDITIONAL_ARGS=("${ADDITIONAL_ARGS[@]:0:0}" "--verbose" "${ADDITIONAL_ARGS[@]:0}")
-    fi
+  # Capture all additional arguments
+  ADDITIONAL_ARGS=("${TESTS[@]:1}")
+  
+  # If VERBOSE is defined, add it to the arguments
+  if [ $VERBOSE -eq 1 ]; then
+    ADDITIONAL_ARGS=("${ADDITIONAL_ARGS[@]:0:0}" "--verbose" "${ADDITIONAL_ARGS[@]:0}")
   fi
 
   echo 
@@ -559,26 +578,28 @@ if [ $TESTS -ge 1 ]; then
 fi
 
 # Check if we have an explicit command to run/start the application
-if [ $START -ge 1 ]; then
+if [ ${#START[@]} -ge 1 ] && [ ${START[0]} -ge 1 ]; then
   RUN=1
 fi
 
 # Finally run the application if requested.
 if [ $RUN -eq 1 ]; then
 
+  ADDITIONAL_ARGS=("${START[@]:1}")
+
   # If VERBOSE is defined, add it to POSITIONAL_ARGS
   if [ $VERBOSE -eq 1 ]; then
-    POSITIONAL_ARGS=("${POSITIONAL_ARGS[@]:0:0}" "--verbose" "${POSITIONAL_ARGS[@]:0}")
+    ADDITIONAL_ARGS=("${ADDITIONAL_ARGS[@]:0:0}" "--verbose" "${ADDITIONAL_ARGS[@]:0}")
   fi
 
   echo 
-  echo -e "${green}${italic}Running ${APP_NAME} with arguments: ${POSITIONAL_ARGS[@]}${normal}"
+  echo -e "${green}${italic}Running ${APP_NAME} with arguments: ${ADDITIONAL_ARGS[@]}${normal}"
   echo
 
   if [ ${machine} == "MinGw" ]; then
-    ./build/${SHORT_NAME}.exe ${POSITIONAL_ARGS[@]}
+    ./build/${SHORT_NAME}.exe ${ADDITIONAL_ARGS[@]}
   elif [ ${machine} == "Mac" ]; then
-    ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} ${POSITIONAL_ARGS[@]}
+    ./build/${APP_NAME}.app/Contents/MacOS/${APP_NAME} ${ADDITIONAL_ARGS[@]}
   fi
 
   retval=$?
