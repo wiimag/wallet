@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.18.3] - 2023-04-23
+- Fix OSX compilation issues.
+
 ## [0.18.2] - 2023-04-21
 - Add support to add titles from the search window to a report.
 - Add support to export and import reports.
@@ -18,7 +21,6 @@
 
 - [ ] 2023-04-21: Add interface to update stock banner and logo icons.
 - [ ] 2023-04-20: Use the new search window to add a new title
-- [ ] 2023-04-20: Add a + button on the report table background to add a new title
 - [ ] 2023-04-20: Check if we can download a first search index database from the backend
 - [ ] 2023-04-19: Add user guide
 - [ ] 2023-04-19: Add user authentication when using the proxy backend
