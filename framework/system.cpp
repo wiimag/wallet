@@ -63,7 +63,7 @@ bool system_execute_command(const char* command)
         #endif
         char command_buffer[2048];
         snprintf(command_buffer, 2048, "%s \"%s\"", open_executable, command);
-        system(command);
+        system(command_buffer);
 
         return true;
     #endif

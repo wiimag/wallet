@@ -171,11 +171,12 @@ struct string_template_arg_value_t
 
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(bool t) { return StringArgumentType::BOOL; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(int t, std::true_type) { return StringArgumentType::INT32; }
-FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(long t, std::true_type) { return StringArgumentType::INT32; }
+//FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(long t, std::true_type) { return StringArgumentType::INT32; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(unsigned int t, std::true_type) { return StringArgumentType::UINT32; }
-FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(unsigned long t, std::true_type) { return StringArgumentType::UINT32; }
+//FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(unsigned long t, std::true_type) { return StringArgumentType::UINT32; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(int64_t t, std::true_type) { return StringArgumentType::INT64; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(uint64_t t, std::true_type) { return StringArgumentType::UINT64; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(time_t t, std::true_type) { return StringArgumentType::INT64; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(float t, std::true_type) { return StringArgumentType::FLOAT; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(double t, std::false_type) { return StringArgumentType::DOUBLE; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(const char* t, std::false_type) { return StringArgumentType::CSTRING; }

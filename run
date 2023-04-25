@@ -130,7 +130,9 @@ while [[ $# -gt 0 ]]; do
       if [ $# -ne 0 ] && ([ $1 == "workspace" ] || [ $1 == "w" ]); then
         
         # Always generate the project if we are opening the workspace
-        GENERATE=($GENERATE)
+        if [ ${#GENERATE[@]} -eq 0 ]; then
+          GENERATE=($YES)
+        fi
         OPEN_WORKSPACE=1
         shift
       fi
