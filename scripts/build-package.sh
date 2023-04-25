@@ -162,7 +162,7 @@ done
   a -afzip -sfx -z"$SFX_SETUP_SCRIPT" \
   -iicon"$PACKAGE_ICON" -iimg"$SFX_BANNER_LOW_RES" -iimg"$SFX_BANNER_HIGH_RES" \
   -r -ep1 -m5 -ed -cfg- \
-  -mt4 -xsetup.* \
+  -mt4 -xsetup.* -x*.pdb \
   "$ZIP_OUTPUT_PATH" ${FILES_TO_PACKAGE[@]}
 
 # Use Winrar to print the file list contained in the zip file

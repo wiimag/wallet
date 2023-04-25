@@ -11,6 +11,8 @@
 
 #if BUILD_APPLICATION
 
+constexpr const char EVENT_CHECK_NEW_VERSIONS[] = "CHECK_NEW_VERSIONS";
+
 /*! Initialize about module.
  *
  *  We use #FOUNDATION_LINKER_INCLUDE in order to force the linker to include the #about module.

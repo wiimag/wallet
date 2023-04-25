@@ -19,3 +19,5 @@ bool backend_is_connected();
 string_const_t backend_url();
 
 bool backend_execute_news_search_query(const char* symbol, size_t symbol_length, const query_callback_t& callback);
+
+void backend_check_new_version(void* context);
