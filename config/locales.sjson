@@ -298,7 +298,7 @@
 		{
 			hash = "97f9befa718bf86"
 			en = "Earnings"
-			fr = "R\xc3\xa9sultats"
+			fr = "R\xc3\xa9sultats (1 an)"
 		}
 		{
 			hash = "5ffd55d600dabe55"
@@ -853,7 +853,7 @@
 		{
 			hash = "931f26f4ee2bc6e8"
 			en = "      \xef\xa3\xbf Funds||\xef\xa3\xbf Funds"
-			fr = "      \xef\xa3\xbf Fonds||\xef\xa3\xbf Fonds"
+			fr = "      \xef\xa3\xbf Fonds||\xef\xa3\xbf Fonds Investis"
 		}
 		{
 			hash = "fe7174ee8cf52220"
@@ -1108,7 +1108,7 @@
 		{
 			hash = "e759c6094559eab2"
 			en = " Total Value      %12s "
-			fr = " Valeur Totale    %12s "
+			fr = "        Valeur Totale %12s "
 		}
 		{
 			hash = "6c57b260e920bd0b"
@@ -1193,7 +1193,7 @@
 		{
 			hash = "eb4f96ff1e5e7a8e"
 			en = " Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
-			fr = " R\xc3\xa9sultats:  1 Ann\xc3\xa9e /  R\xc3\xa9el /  Estim\xc3\xa9 /  Diff.  / Surprise /   Gain \n\t\t   %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
+			fr = " R\xc3\xa9sultats:  1 Ann\xc3\xa9e /    R\xc3\xa9el /   Estim\xc3\xa9 /  Diff.  /  Surprise /   Gain \n\t\t    %6.2lf $ / %5.2lf $ /  %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
 		}
 		{
 			hash = "eb1fdec0022d23c3"
@@ -2504,6 +2504,51 @@
 			hash = "d505e0004f3ebff1"
 			en = "Copyright (C) 2022-2023 - https://wallet.wiimag.com - All rights reserved"
 			fr = "Copyright (C) 2022-2023 - https://wallet.wiimag.com - Tous droits r\xc3\xa9serv\xc3\xa9s"
+		}
+		{
+			hash = "7b85af3d09cd39b9"
+			en = "Add To"
+			fr = "Ajouter \xc3\xa0"
+		}
+		{
+			hash = "bf49f03299b10641"
+			en = "Check for new version..."
+			fr = "V\xc3\xa9rifier les mise \xc3\xa0 jour..."
+		}
+		{
+			hash = "4dd758bd40dd596c"
+			en = " Bought Price Gain: %.3g %% \n Current Price Gain: %.3g %% (\xee\x8f\x8a %.2lf $) \n Ask Safe Price Gain: %.2lf $ (\xee\x8f\x8a %.3g %%) \n"
+			fr = " Prix d'achat Gain: %.3g %% \n Prix actuel Gain: %.3g %% (\xee\x8f\x8a %.2lf $) \n Prix Prix S\xc3\xa9cure Gain: %.2lf $ (\xee\x8f\x8a %.3g %%) \n"
+		}
+		{
+			hash = "a615bb82ef228020"
+			en = " %s (%s) \n %.*s \n\tPrice %.2lf $\n\tOpen: %.2lf $\n\tChange: %.2lf $ (%.3g %%)\n\tYesterday: %.2lf $ (%.3g %%)\n\tLow %.2lf $\n\tHigh %.2lf $ (%.3g %%)\n\tDMA (50d) %.2lf $ (%.3g %%)\n\tDMA (200d) %.2lf $ (%.3g %%)\n\tVolume %.6g (%.*s)"
+			fr = " %s (%s) \n %.*s \n\tPrix %.2lf $\n\tOuverture: %.2lf $\n\tChangement: %.2lf $ (%.3g %%)\n\tHier: %.2lf $ (%.3g %%)\n\tBas %.2lf $\n\tHaut %.2lf $ (%.3g %%)\n\tDMA (50j) %.2lf $ (%.3g %%)\n\tDMA (200j) %.2lf $ (%.3g %%)\n\tVolume %.6g (%.*s)"
+		}
+		{
+			hash = "56a36325da836055"
+			en = " (%s $) Bought Price: %.2lf $ "
+			fr = " (%s $) Prix d'achat: %.2lf $ "
+		}
+		{
+			hash = "f4252214f1feda6"
+			en = " (%.*s $) Average Cost: %.3lf $ "
+			fr = " (%.*s $) Co\xc3\xbbt moyen: %.3lf $ "
+		}
+		{
+			hash = "6af151e806d1b0c6"
+			en = " (Split) Adjusted Price: %.2lf $ "
+			fr = " (Split) Prix ajust\xc3\xa9: %.2lf $ "
+		}
+		{
+			hash = "8a0981d5911637bd"
+			en = "A new version is available"
+			fr = "Une nouvelle version est disponible"
+		}
+		{
+			hash = "59ce81420a405840"
+			en = "Currently you are using version {1}\n\nDo you want to download version {0} and install it?\n\nThis will close the application to launch the installer.\n\nSource: {2}"
+			fr = "Vous utilisez actuellement la version {1}\n\nVoulez-vous telecharger la version {0} et l'installer?\n\nCela fermera l'application pour lancer l'installateur.\n\nSource: {2}"
 		}
 	]
 }

@@ -109,6 +109,16 @@ void about_open_window()
 
 void about_initialize()
 {
+    string_const_t versions_url = CTEXT(PRODUCT_VERSIONS_URL);
+    if (versions_url.length)
+    {
+        app_register_menu(HASH_ABOUT, STRING_CONST("Help/Check for new version..."), 
+            nullptr, 0, AppMenuFlags::Append, [](void* context)
+        {
+            dispatcher_post_event(EVENT_CHECK_NEW_VERSIONS, nullptr, 0);
+        }, nullptr);
+    }
+
     app_register_menu(HASH_ABOUT, 
         STRING_CONST("Help/About"), 
         STRING_CONST("F1"), AppMenuFlags::Append, about_menu_open_dialog);

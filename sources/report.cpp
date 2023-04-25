@@ -18,6 +18,7 @@
 #include "news.h"
 #include "financials.h"
 #include "alerts.h"
+#include "events.h"
 
 #include <framework/app.h>
 #include <framework/glfw.h>
@@ -399,19 +400,19 @@ FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_con
         {
             const double sell_gain_diff = (t->sell_adjusted_price - t->stock->current.adjusted_close) * t->sell_total_adjusted_qty;
             ImGui::TextColored(ImColor(sell_gain_diff < 0 ? TEXT_BAD_COLOR : TOOLTIP_TEXT_COLOR), " %s %.*s ",
-                sell_gain_diff > 0 ? "Saved" : "Lost", STRING_FORMAT(string_from_currency(math_abs(sell_gain_diff), "999 999 999 $")));
+                sell_gain_diff > 0 ? tr("Saved") : tr("Lost"), STRING_FORMAT(string_from_currency(math_abs(sell_gain_diff), "999 999 999 $")));
         }
         ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-            " Bought Price Gain: %.3g %% \n"
+            tr(" Bought Price Gain: %.3g %% \n"
             " Current Price Gain: %.3g %% (" ICON_MD_EXPOSURE " %.2lf $) \n"
-            " Ask Safe Price Gain: %.2lf $ (" ICON_MD_EXPOSURE " %.3g %%) \n",
+            " Ask Safe Price Gain: %.2lf $ (" ICON_MD_EXPOSURE " %.3g %%) \n"),
             (cell->number - avg) / avg * 100.0,
             (cell->number - c_avg) / c_avg * 100.0, (cell->number - c_avg),
             if_gain_price, (cell->number - if_gain_price) / if_gain_price * -100.0);
     }
     else
     {
-        ImGui::TextUnformatted("Data not available");
+        ImGui::TrTextUnformatted("Data not available");
     }
 }
 
@@ -1012,7 +1013,7 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
         stock_index_t stock_index = ::stock_index(title->code, title->code_length);
         stock_read_real_time_results(stock_index, json, d);
         
-        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), " %s (%s) \n %.*s \n"
+        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), tr(" %s (%s) \n %.*s \n"
             "\tPrice %.2lf $\n"
             "\tOpen: %.2lf $\n"
             "\tChange: %.2lf $ (%.3g %%)\n"
@@ -1021,7 +1022,7 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
             "\tHigh %.2lf $ (%.3g %%)\n"
             "\tDMA (50d) %.2lf $ (%.3g %%)\n"
             "\tDMA (200d) %.2lf $ (%.3g %%)\n"
-            "\tVolume %.6g (%.*s)", title->code, string_table_decode(s->name), STRING_FORMAT(time_str),
+            "\tVolume %.6g (%.*s)"), title->code, string_table_decode(s->name), STRING_FORMAT(time_str),
             d.close,
             d.open,
             d.close - d.open, (d.close - d.open) / d.open * 100.0,
@@ -1167,17 +1168,17 @@ FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_con
 
     const double bought_price = title_get_bought_price(t);
     ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-        " (%s $) Bought Price: %.2lf $ ",
+        tr(" (%s $) Bought Price: %.2lf $ "),
         string_table_decode(t->stock->currency), bought_price);
 
     ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-        " (%.*s $) Average Cost: %.3lf $ ",
+        tr(" (%.*s $) Average Cost: %.3lf $ "),
         STRING_FORMAT(t->wallet->preferred_currency), math_ifzero(t->average_price_rated, 0));
 
     if (t->buy_adjusted_price != bought_price)
     {
         ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-            " (Split) Adjusted Price: %.2lf $ ",
+            tr(" (Split) Adjusted Price: %.2lf $ "),
             math_ifzero(t->buy_adjusted_price, 0));
     }
 }
@@ -1922,7 +1923,20 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
         return false;
 
     foreach (title, report->titles)
+    {
         title_refresh(*title);
+
+        #if 1
+        stock_realtime_t realtime;
+        realtime.price = (*title)->stock->current.price;
+        realtime.volume = (*title)->stock->current.volume;
+        realtime.timestamp = (*title)->stock->current.date;
+        string_copy(realtime.code, sizeof(realtime.code), (*title)->code, (*title)->code_length);
+
+        dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)&realtime, sizeof(realtime), DISPATCHER_EVENT_OPTION_COPY_DATA);
+        #endif
+    }
+
     report_summary_update(report);
     log_infof(HASH_REPORT, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
     if (report->table)

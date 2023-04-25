@@ -71,7 +71,7 @@ void settings_draw()
         ImGui::NextColumn();
         #endif
         ImGui::AlignTextToFramePadding();
-        ImGui::TextURL(tr("EOD API Service URL"), nullptr, STRING_ARGS(eod_web_site_url));
+        ImGui::TextURL(tr("EOD API Service URL"), nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
 
         char* eod_api_url = eod_api_url_buffer();
         size_t eod_api_url_capacity = eod_api_url_buffer_capacity();
@@ -90,7 +90,7 @@ void settings_draw()
         ImGui::NextColumn();
         string_t eod_key = eod_get_key();
         ImGui::AlignTextToFramePadding();
-        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_ARGS(eod_web_site_url));
+        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
 
         ImGui::NextColumn();
         ImGui::ExpandNextItem();

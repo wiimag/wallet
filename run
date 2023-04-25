@@ -16,6 +16,13 @@ CONFIG_DIR=$(cd $(dirname $0)/config; pwd)
 # Load the scripts/common.sh file
 source $SCRIPT_DIR/common.sh
 
+# Make sure version of bash is 4.0 or higher
+if [ ${BASH_VERSINFO[0]} -lt 4 ]; then
+  CURRENT_BASH_VERSION_FULL_STRING=$(bash --version | head -n 1)
+  echo "The version of bash is too old (${CURRENT_BASH_VERSION_FULL_STRING}), please update to version 4.0 or higher."
+  exit 1
+fi
+
 # Set the default values for the parameters
 APP_NAME=$(build_setting "APP_NAME")
 SHORT_NAME=$(build_setting "PROJECT_ID")

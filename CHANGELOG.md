@@ -1,14 +1,13 @@
 # Changelog
 
+## [0.19.0] - 2023-04-25
+- Add support to check for new releases.
+
 ## [0.18.4] - 2023-04-24
-- Fix random symbol menu item exchange encoding.
-
-## [0.18.3] - 2023-04-23
-- Fix OSX compilation issues.
-
-## [0.18.2] - 2023-04-21
 - Add support to add titles from the search window to a report.
 - Add support to export and import reports.
+- Fix OSX compilation issues.
+- Fix random symbol menu item exchange encoding.
 - Improve search window results by combining EOD /api/search endpoint search results.
 - Improve the search tab by using the new search window view.
 

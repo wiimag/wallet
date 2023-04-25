@@ -26,7 +26,7 @@ struct installer_version_t
     string_t* changelogs{ nullptr };
 };
 
-constexpr const char* MANIFEST_URL = "https://gist.githubusercontent.com/jschmidt42/cb4948480930c48a3116b1c9408919b9/raw/803418392d0e0fe3dca0291deea1739f89456e3e/wallet.installer.manifest.json";
+constexpr const char* MANIFEST_URL = PRODUCT_VERSIONS_URL;
 
 struct INSTALLER_MODULE {
     bool initialized{ false };

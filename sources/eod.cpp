@@ -379,7 +379,7 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
 
 FOUNDATION_STATIC void eod_update_window_title()
 {
-    if (main_is_batch_mode())
+    if (EOD == nullptr || main_is_batch_mode())
         return;
         
     GLFWwindow* window = glfw_main_window();
@@ -427,7 +427,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
     app_open_dialog("Enter EOD API KEY", [](void*)->bool
     {     
         // Explain that the EOD api needs to be set
-        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST(EOD_URL));
+        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
         ImGui::TextWrapped(tr("EOD API Key is required to use this application."));
         ImGui::NewLine();
         ImGui::TrTextWrapped("You can get a free API key by registering at the link above. Please enter your API key below and press Continue");
@@ -525,7 +525,7 @@ FOUNDATION_STATIC void eod_main_menu_status()
             eod_refresh();
 
         ImGui::Separator();
-        ImGui::TextURL("EOD API Key", nullptr, STRING_CONST(EOD_URL));
+        ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
         if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length,
             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_Password))
         {

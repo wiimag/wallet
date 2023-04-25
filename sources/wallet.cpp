@@ -790,6 +790,22 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
 
     plot_context_t c{ time_now(), history_count, 1, wallet->history };
 
+    if (wallet->show_extra_charts)
+    {    
+        if (array_last(wallet->history)->funds > 0)
+        {
+            ImPlot::SetAxis(ImAxis_Y2);
+            ImPlot::PlotLineG(ICON_MD_WALLET "##Funds", [](int idx, void* user_data)->ImPlotPoint
+            {
+                const plot_context_t* c = (plot_context_t*)user_data;
+                const history_t& h = c->history[idx];
+                const double x = (double)h.date;
+                const double y = h.funds;
+                return ImPlotPoint(x, y);
+            }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+        }
+    }
+
     ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::PlotBarsG(ICON_MD_SAVINGS "##Investments", [](int idx, void* user_data)->ImPlotPoint
     {
@@ -824,19 +840,6 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
                 const history_t& h = c->history[idx];
                 const double x = (double)h.date;
                 const double y = h.broker_value;
-                return ImPlotPoint(x, y);
-            }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
-        }
-    
-        if (array_last(wallet->history)->funds > 0)
-        {
-            ImPlot::SetAxis(ImAxis_Y2);
-            ImPlot::PlotLineG(ICON_MD_WALLET "##Funds", [](int idx, void* user_data)->ImPlotPoint
-            {
-                const plot_context_t* c = (plot_context_t*)user_data;
-                const history_t& h = c->history[idx];
-                const double x = (double)h.date;
-                const double y = h.funds;
                 return ImPlotPoint(x, y);
             }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
         }

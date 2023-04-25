@@ -2651,7 +2651,13 @@ FOUNDATION_STATIC void pattern_menu_items(pattern_handle_t handle)
     if (ImGui::TrMenuItem("Read News"))
         news_open_window(STRING_ARGS(code));
 
+    if (ImGui::TrMenuItem("Show Financials"))
+        financials_open_window(STRING_ARGS(code));
+
     #if BUILD_DEVELOPMENT
+
+    ImGui::Separator();
+
     if (ImGui::TrMenuItem("EOD", nullptr, nullptr, true))
         system_execute_command(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
 
@@ -2677,11 +2683,6 @@ FOUNDATION_STATIC void pattern_menu_items(pattern_handle_t handle)
     if (openai_available())
     {
         ImGui::Separator();
-        if (ImGui::TrMenuItem("Generate OpenAI Summary Prompt"))
-        {
-            string_const_t prompt = openai_generate_summary_prompt(STRING_ARGS(code));
-            ImGui::SetClipboardText(prompt.str);
-        }
 
         const char* title_summarize_news = tr("Summarize news URL for me...");
         if (ImGui::MenuItem(title_summarize_news))
@@ -2737,11 +2738,41 @@ FOUNDATION_STATIC void pattern_menu_items(pattern_handle_t handle)
                 memory_deallocate(dialog);
             });
         }
+
+        if (BUILD_DEBUG && ImGui::TrMenuItem("Generate OpenAI Summary Prompt"))
+        {
+            string_const_t prompt = openai_generate_summary_prompt(STRING_ARGS(code));
+            ImGui::SetClipboardText(prompt.str);
+        }
     }
 
     #endif
 
     ImGui::EndMenu();
+}
+
+FOUNDATION_STATIC void pattern_render_floating_window_main_menu(pattern_handle_t handle, window_handle_t wh)
+{
+    if (ImGui::TrBeginMenu("File"))
+    {
+        if (ImGui::TrMenuItem("Close"))
+            window_close(wh);
+        ImGui::EndMenu();
+    }
+
+    pattern_menu_items(handle);
+
+    if (ImGui::TrBeginMenu("Report"))
+    {
+        if (ImGui::TrBeginMenu("Add To"))
+        {
+            pattern_t* pattern = (pattern_t*)pattern_get(handle);
+            string_const_t code = string_table_decode_const(pattern->code);
+            pattern_add_to_report_menu(code.str, code.length);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenu();
+    }
 }
 
 FOUNDATION_STATIC bool pattern_open_floating_window(pattern_handle_t handle)
@@ -2770,17 +2801,7 @@ FOUNDATION_STATIC bool pattern_open_floating_window(pattern_handle_t handle)
         L1(pattern_render(handle, PatternRenderFlags::HideTableHeaders)), 
         WindowFlags::InitialProportionalSize);
 
-    window_set_menu_render_callback(pattern_window_handle, [handle](window_handle_t wh)
-    {
-        if (ImGui::TrBeginMenu("File"))
-        {
-            if (ImGui::TrMenuItem("Close"))
-                window_close(wh);
-            ImGui::EndMenu();
-        }
-
-        pattern_menu_items(handle);
-    });
+    window_set_menu_render_callback(pattern_window_handle, L1(pattern_render_floating_window_main_menu(handle, _1)));
 
     return pattern_window_handle;
 }
