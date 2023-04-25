@@ -679,6 +679,10 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         if (string_is_null(exchange))
             continue;
 
+        // Skip some (speculative) exchanges
+        if (string_equal(STRING_ARGS(exchange), STRING_CONST("PINK")))
+            continue;
+
         string_const_t isin = e["Isin"].as_string();
         string_const_t type = e["Type"].as_string();
 

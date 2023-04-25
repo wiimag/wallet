@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.18.4] - 2023-04-24
+- Fix random symbol menu item exchange encoding.
+
 ## [0.18.3] - 2023-04-23
 - Fix OSX compilation issues.
 

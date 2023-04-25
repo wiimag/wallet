@@ -19,6 +19,9 @@ option(BUILD_SERVICE_EXE "Build service executable" OFF)
 # Defines how many threads to use for the query system.
 option(BUILD_MAX_QUERY_THREADS "Build max query threads" 4)
 
+# Defines how many threads to use for the job system.
+option(BUILD_MAX_JOB_THREADS "Build max job threads" 4)
+
 # Set the build tests option to OFF by default.
 option(BUILD_ENABLE_TESTS "Build tests" ON)
 

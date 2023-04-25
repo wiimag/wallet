@@ -601,16 +601,25 @@ void symbols_render_search(const function<void(string_const_t)>& selector /*= nu
         ImGui::TrTextUnformatted("No search query");
 }
 
-FOUNDATION_STATIC bool symbols_fetch_market_symbols(const char* exchange, size_t exchange_length, string_t*& symbols)
+FOUNDATION_STATIC bool symbols_fetch_market_symbols(const char* market, size_t market_length, string_t*& symbols)
 {
-    return eod_fetch("exchange-symbol-list", exchange, FORMAT_JSON_CACHE, [&symbols](const json_object_t& res)
+    return eod_fetch("exchange-symbol-list", market, FORMAT_JSON_CACHE, [market, market_length, &symbols](const json_object_t& res)
     {
         for (auto e : res)
         {
-            string_const_t code = e["Code"].as_string();
+            string_const_t type = e["Type"].as_string();
+
+            // Skip FUND and INDEX symbols
+            if (string_equal(STRING_ARGS(type), STRING_CONST("FUND")) || string_equal(STRING_ARGS(type), STRING_CONST("Currency")))
+                continue;
+
+            // Skip stock from the PINK market
             string_const_t exchange = e["Exchange"].as_string();
-            
-            string_t ticker = string_allocate_format(STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+            if (string_equal(STRING_ARGS(exchange), STRING_CONST("PINK")))
+                continue;
+
+            string_const_t code = e["Code"].as_string();   
+            string_t ticker = string_allocate_format(STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), (int)market_length, market);
             array_push(symbols, ticker);
         }
     });
