@@ -183,10 +183,11 @@ FOUNDATION_STATIC window_t* window_allocate(GLFWwindow* glfw_window, window_flag
 
 FOUNDATION_STATIC void window_bgfx_invalidate_device_objects(window_t* win)
 {
-    if (bgfx::isValid(win->bgfx_imgui_attrib_location_tex))
-        bgfx::destroy(win->bgfx_imgui_attrib_location_tex);
     if (bgfx::isValid(win->bgfx_imgui_shader_handle))
         bgfx::destroy(win->bgfx_imgui_shader_handle);
+
+    if (bgfx::isValid(win->bgfx_imgui_attrib_location_tex))
+        bgfx::destroy(win->bgfx_imgui_attrib_location_tex);
 
     if (bgfx::isValid(win->bgfx_imgui_font_texture))
     {

@@ -91,7 +91,7 @@ struct BgfxCallbackHandler : bgfx::CallbackI
     {
         log_errorf(HASH_BGFX, ERROR_INTERNAL_FAILURE, STRING_CONST("BGFX Failure (%d): %s\n\t%s(%hu)"), _code, _str, _filePath, _line);
         FOUNDATION_ASSERT_FAIL(_str);
-        process_exit(_code);
+        //process_exit(_code);
     }
 
     virtual void traceVargs(const char* _filePath, uint16_t _line, const char* _format, va_list _argList) override
@@ -185,14 +185,6 @@ FOUNDATION_STATIC bool bgfx_create_fonts_texture(GLFWwindow* window)
         io.Fonts->AddFontDefault(&config);
     }
 
-//    // Load emoji font if never done
-//    static ImWchar ranges[] = { 0x1, (ImWchar)0x1FFFF, 0 };
-//    static ImFontConfig cfg;
-//    cfg.OversampleH = cfg.OversampleV = 1;
-//    cfg.MergeMode = true;
-//    //cfg.FontBuilderFlags |= ImGuiFreeTypeBuilderFlags_LoadColor;
-//    ImGui::GetIO().Fonts->AddFontFromFileTTF("C:\\work\\wallet\\resources\\seguiemj.ttf", 16.0f, &cfg, ranges);
-
     // Build texture atlas
     int width, height;
     unsigned char* pixels;
@@ -223,23 +215,23 @@ FOUNDATION_STATIC bool bgfx_create_device_objects(GLFWwindow* window)
         .add(bgfx::Attrib::Color0, 4, bgfx::AttribType::Uint8, true)
         .end();
 
-    _bgfx_imgui_attrib_location_tex =
-        bgfx::createUniform("g_AttribLocationTex", bgfx::UniformType::Sampler);
+    _bgfx_imgui_attrib_location_tex = bgfx::createUniform("g_AttribLocationTex", bgfx::UniformType::Sampler);
 
     return bgfx_create_fonts_texture(window);
 }
 
 FOUNDATION_STATIC void bgfx_invalidate_device_objects()
 {
-    if (bgfx::isValid(_bgfx_imgui_attrib_location_tex))
-        bgfx::destroy(_bgfx_imgui_attrib_location_tex);
     if (bgfx::isValid(_bgfx_imgui_shader_handle))
         bgfx::destroy(_bgfx_imgui_shader_handle);
 
+    if (bgfx::isValid(_bgfx_imgui_attrib_location_tex))
+        bgfx::destroy(_bgfx_imgui_attrib_location_tex);
+
     if (bgfx::isValid(_bgfx_imgui_font_texture))
     {
-        bgfx::destroy(_bgfx_imgui_font_texture);
         ImGui::GetIO().Fonts->TexID = 0;
+        bgfx::destroy(_bgfx_imgui_font_texture);
         _bgfx_imgui_font_texture.idx = bgfx::kInvalidHandle;
     }
 }
@@ -316,7 +308,8 @@ void bgfx_render_draw_lists(ImDrawData* draw_data, int fb_width, int fb_height)
     bgfx::setViewRect(_bgfx_imgui_view, 0, 0, fb_width, fb_height);
 
     // Render command lists
-    for (int n = 0; n < draw_data->CmdListsCount; n++) {
+    for (int n = 0; n < draw_data->CmdListsCount; n++) 
+    {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
 
         bgfx::TransientVertexBuffer tvb;
@@ -327,8 +320,7 @@ void bgfx_render_draw_lists(ImDrawData* draw_data, int fb_width, int fb_height)
 
         if (numIndices != 0 && numVertices != 0)
         {
-            if ((numVertices != bgfx::getAvailTransientVertexBuffer(
-                numVertices, _bgfx_imgui_vertex_layout)) ||
+            if ((numVertices != bgfx::getAvailTransientVertexBuffer(numVertices, _bgfx_imgui_vertex_layout)) ||
                 (numIndices != bgfx::getAvailTransientIndexBuffer(numIndices))) {
                 // not enough space in transient buffer, quit drawing the rest...
                 break;
@@ -410,6 +402,7 @@ void bgfx_initialize(GLFWwindow* window)
     bgfxInit.resolution.width = (uint32_t)width;
     bgfxInit.resolution.height = (uint32_t)height;
     bgfxInit.resolution.reset = main_is_running_tests() ? BGFX_RESET_NONE : (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI);
+    bgfxInit.debug = false;
     
     log_infof(HASH_BGFX, STRING_CONST("Initializing BGFX (%d)..."), (int)bgfxInit.type);
     if (!bgfx::init(bgfxInit))

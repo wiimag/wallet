@@ -647,7 +647,7 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
 
     for(auto e : data)
     {   
-        if (thread_try_wait(250))
+        if (thread_try_wait(50))
         {
             *stop_indexing = true;
             break;

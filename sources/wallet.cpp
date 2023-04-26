@@ -795,7 +795,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
         if (array_last(wallet->history)->funds > 0)
         {
             ImPlot::SetAxis(ImAxis_Y2);
-            ImPlot::PlotLineG(ICON_MD_WALLET "##Funds", [](int idx, void* user_data)->ImPlotPoint
+            ImPlot::PlotLineG(tr(ICON_MD_WALLET " Funds"), [](int idx, void* user_data)->ImPlotPoint
             {
                 const plot_context_t* c = (plot_context_t*)user_data;
                 const history_t& h = c->history[idx];
@@ -807,7 +807,8 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     }
 
     ImPlot::SetAxis(ImAxis_Y2);
-    ImPlot::PlotBarsG(ICON_MD_SAVINGS "##Investments", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::HideNextItem(true, ImPlotCond_Once);
+    ImPlot::PlotBarsG(tr(ICON_MD_SAVINGS " Investments"), [](int idx, void* user_data)->ImPlotPoint
     {
         const plot_context_t* c = (plot_context_t*)user_data;
         const history_t& h = c->history[idx];
@@ -818,7 +819,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
 
     ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 3);
-    ImPlot::PlotLineG(ICON_MD_ACCOUNT_BALANCE_WALLET "##Value", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotLineG(tr(ICON_MD_ACCOUNT_BALANCE_WALLET " Value"), [](int idx, void* user_data)->ImPlotPoint
     {
         const plot_context_t* c = (plot_context_t*)user_data;
         const history_t& h = c->history[idx];
@@ -834,7 +835,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
         {
             ImPlot::SetAxis(ImAxis_Y2);
             ImPlot::HideNextItem(true, ImPlotCond_Once);
-            ImPlot::PlotLineG(ICON_MD_REAL_ESTATE_AGENT "##Broker", [](int idx, void* user_data)->ImPlotPoint
+            ImPlot::PlotLineG(tr(ICON_MD_REAL_ESTATE_AGENT " Broker"), [](int idx, void* user_data)->ImPlotPoint
             {
                 const plot_context_t* c = (plot_context_t*)user_data;
                 const history_t& h = c->history[idx];
@@ -846,7 +847,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     }
 
     ImPlot::SetAxis(ImAxis_Y1);
-    ImPlot::PlotLineG(ICON_MD_PRICE_CHANGE " %##Gain %", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotLineG(tr(ICON_MD_PRICE_CHANGE " Gain %"), [](int idx, void* user_data)->ImPlotPoint
     {
         const plot_context_t* c = (plot_context_t*)user_data;
         const history_t& h = c->history[idx];

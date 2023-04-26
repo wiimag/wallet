@@ -2550,5 +2550,30 @@
 			en = "Currently you are using version {1}\n\nDo you want to download version {0} and install it?\n\nThis will close the application to launch the installer.\n\nSource: {2}"
 			fr = "Vous utilisez actuellement la version {1}\n\nVoulez-vous telecharger la version {0} et l'installer?\n\nCela fermera l'application pour lancer l'installateur.\n\nSource: {2}"
 		}
+		{
+			hash = "db8f25e36d3b07d5"
+			en = "\xee\x8b\xab Investments"
+			fr = "\xee\x8b\xab Investissements"
+		}
+		{
+			hash = "949b983d5764ad03"
+			en = "\xee\xa1\x90 Value"
+			fr = "\xee\xa1\x90 Valeur"
+		}
+		{
+			hash = "4b56536fc2054d44"
+			en = "\xef\xa3\xbf Funds"
+			fr = "\xef\xa3\xbf Fonds"
+		}
+		{
+			hash = "a87153a1b0b113e0"
+			en = "\xee\x9c\xba Broker"
+			fr = "\xee\x9c\xba Courtier"
+		}
+		{
+			hash = "471b1463382124af"
+			en = "\xef\x81\x8a Gain %"
+			fr = "\xef\x81\x8a Gain %"
+		}
 	]
 }
