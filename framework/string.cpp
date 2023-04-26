@@ -2834,3 +2834,31 @@ string_t string_format_allocate_template(const char* format, size_t length, stri
 	return {buffer, to_size(n)};
 }
 
+version_t string_to_version_short(const char* str, size_t length)
+{
+    // Split the string using '.' as separator
+    version_t v;
+    v.sub.major = UINT16_MAX;
+    v.sub.minor = UINT16_MAX;
+    v.sub.revision = UINT32_MAX;
+    v.sub.build = 0;
+    v.sub.control = 0;
+
+    string_const_t l, r;
+    string_split(str, length, STRING_CONST("."), &l, &r, false);
+    while (l.length)
+    {
+        if (v.sub.major == UINT16_MAX)
+            v.sub.major = (uint16_t)string_to_uint(STRING_ARGS(l), 0);
+        else if (v.sub.minor == UINT16_MAX)
+            v.sub.minor = (uint16_t)string_to_uint(STRING_ARGS(l), 0);
+        else if (v.sub.revision == UINT32_MAX)
+            v.sub.revision = string_to_uint(STRING_ARGS(l), 0);
+        else
+            v.sub.build = string_to_uint(STRING_ARGS(l), 0);
+        
+        string_split(r.str, r.length, STRING_CONST("."), &l, &r, false);
+    }
+
+    return v;
+}

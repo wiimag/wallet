@@ -42,6 +42,19 @@ static struct BACKEND_MODULE {
 // ## PRIVATE
 //
 
+FOUNDATION_STATIC const char* backend_platform_name_for_package()
+{
+    #if FOUNDATION_PLATFORM_WINDOWS
+        return "windows";
+    #elif FOUNDATION_PLATFORM_MACOS
+        return "osx";
+    #elif FOUNDATION_PLATFORM_LINUX
+        return "linux";
+    #else
+        #error Unknown platform
+    #endif
+}
+
 FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
 {
     if (!res.resolved())
@@ -71,10 +84,10 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
     
     // Scan versions for the most recent one
     auto versions = res["versions"];
-    for (auto e : versions)
+    for (const auto e : versions)
     {
         string_const_t versionstr = e["version"].as_string();
-        version_t version = string_to_version(STRING_ARGS(versionstr));
+        version_t version = string_to_version_short(STRING_ARGS(versionstr));
 
         if (app->version.sub.major > version.sub.major)
             continue;
@@ -82,11 +95,13 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
         if (app->version.sub.major == version.sub.major && app->version.sub.minor > version.sub.minor)
             continue;
 
-        if (app->version.sub.major == version.sub.major && app->version.sub.minor == version.sub.minor && app->version.sub.revision > version.sub.revision)
+        if (app->version.sub.major == version.sub.major && app->version.sub.minor == version.sub.minor && app->version.sub.revision >= version.sub.revision)
             continue;
 
+        const char* package_platform = backend_platform_name_for_package();
+
         // We got a new version
-        string_const_t url = e["package"]["windows"]["url"].as_string();
+        string_const_t url = e["package"][package_platform]["url"].as_string();
         if (url.length == 0)
             continue;
 
@@ -129,9 +144,11 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
                 }
             }
 
-            break;
+            return;
         }
     }
+
+    log_infof(HASH_BACKEND, STRING_CONST("Current version is %.*s is up-to-date."), STRING_FORMAT(myversionstr));
 }
 
 FOUNDATION_STATIC void backend_establish_connection()

@@ -632,3 +632,10 @@ string_const_t string_remove_trailing_whitespaces(const char* str, size_t length
  */
 string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_t url_length);
     
+/*! Parse version string with the format 0.0.0[.0] into a version_t struct.
+ *
+ * @param str The version string.
+ * @param length The length of the version string.
+ * @return The parsed version.
+ */
+version_t string_to_version_short(const char* str, size_t length);

@@ -4,7 +4,7 @@ PROJECT_ID=wallet
 
 # Product info
 PRODUCT_NAME=Wallet
-PRODUCT_COMPANY=Wiimag Inc.
+PRODUCT_COMPANY=Wiimag Inc
 PRODUCT_DESCRIPTION=Manage your stock and finance
 PRODUCT_CODE_NAME=Wallet
 PRODUCT_COPYRIGHT=Copyright (C) 2022-2023 - https://wallet.wiimag.com - All rights reserved
@@ -14,7 +14,7 @@ PRODUCT_VERSIONS_URL=https://wallet.wiimag.com/versions
 # Version info
 VERSION_MAJOR=0
 VERSION_MINOR=19
-VERSION_PATCH=1
+VERSION_PATCH=2
 
 # Build settings (Usually passed to Cmake)
 BUILD_SERVICE_EXE=OFF

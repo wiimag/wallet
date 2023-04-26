@@ -1193,7 +1193,7 @@
 		{
 			hash = "eb4f96ff1e5e7a8e"
 			en = " Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
-			fr = " R\xc3\xa9sultats:  1 Ann\xc3\xa9e /    R\xc3\xa9el /   Estim\xc3\xa9 /  Diff.  /  Surprise /   Gain \n\t\t    %6.2lf $ / %5.2lf $ /  %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "
+			fr = " R\xc3\xa9sultats:  1 Ann\xc3\xa9e /    R\xc3\xa9el /   Estim\xc3\xa9 /  Diff.  /  Surprise /   Gain \n\t\t    %6.2lf $ / %5.2lf $ /  %5.2lf $ / %5.2lf $ / %5.3lg %% / %5.3lg %% "
 		}
 		{
 			hash = "eb1fdec0022d23c3"

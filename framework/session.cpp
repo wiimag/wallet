@@ -194,8 +194,7 @@ string_const_t session_get_user_dir()
 
     string_const_t app_dir = environment_application_directory();
 
-    string_t unformatted_user_dir = string_copy(STRING_BUFFER(user_dir_buffer), STRING_ARGS(app_dir));
-    string_t user_dir = string_replace(STRING_ARGS(unformatted_user_dir), BUILD_MAX_PATHLEN, STRING_CONST("."), STRING_CONST(""), true);
+    string_t user_dir = string_copy(STRING_BUFFER(user_dir_buffer), STRING_ARGS(app_dir));
 
     if (main_is_running_tests())
         user_dir = string_concat(STRING_BUFFER(user_dir_buffer), STRING_ARGS(user_dir), STRING_CONST("_tests"));

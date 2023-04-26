@@ -1,9 +1,10 @@
 # Changelog
 
-## [0.19.1] - 2023-04-25
+## [0.19.2] - 2023-04-26
 - Add support to check for new releases.
 - Fix `system_execute_command` on OSX.
 - Fix `time_t` parsing as short date on OSX with `string_template`
+- Fix backend version string parsing using `string_to_version_short`
 
 ## [0.18.4] - 2023-04-24
 - Add support to add titles from the search window to a report.
@@ -29,4 +30,3 @@
 - [ ] 2023-04-19: Add user guide
 - [ ] 2023-04-19: Add user authentication when using the proxy backend
 - [ ] 2023-04-19: Add augmented logo cache from the backend
-- [ ] 2023-04-19: Add backend to query available releases and versions
