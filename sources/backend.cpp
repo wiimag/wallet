@@ -26,8 +26,6 @@
 
 #if BUILD_BACKEND
 #   pragma message("Backend module is enabled")
-#else
-#   pragma message("Backend module is disabled")
 #endif
 
 static struct BACKEND_MODULE {
@@ -151,6 +149,12 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
     log_infof(HASH_BACKEND, STRING_CONST("Current version is %.*s is up-to-date."), STRING_FORMAT(myversionstr));
 }
 
+FOUNDATION_STATIC bool backend_check_new_version_event(const dispatcher_event_args_t& args)
+{
+    backend_check_new_version(args.user_data);
+    return true;
+}
+
 FOUNDATION_STATIC void backend_establish_connection()
 {
     string_const_t url{};
@@ -170,13 +174,11 @@ FOUNDATION_STATIC void backend_establish_connection()
         }
 
         _backend_module->connected = true;
-        log_infof(HASH_BACKEND, STRING_CONST("Connected to backend"));
 
-        dispatcher_register_event_listener(EVENT_CHECK_NEW_VERSIONS, [](const dispatcher_event_args_t& args)
-        {
-            backend_check_new_version(args.user_data);
-            return true;
-        });
+        dispatcher_post_event(EVENT_BACKEND_CONNECTED);
+        dispatcher_register_event_listener(EVENT_CHECK_NEW_VERSIONS, backend_check_new_version_event);
+
+        log_infof(HASH_BACKEND, STRING_CONST("Connected to backend"));
     });
 }
 

@@ -20,7 +20,7 @@
 #include <framework/string_builder.h>
 #include <framework/localization.h>
 #include <framework/jobs.h>
-#include <framework/console.h>
+#include <framework/dispatcher.h>
 
 #include <foundation/stream.h>
 #include <foundation/environment.h>
@@ -28,9 +28,6 @@
 #include <ctype.h>
 
 #define HASH_OPENAI static_hash_string("openai", 6, 0x6ce8d96f30f6bd41ULL)
-
-constexpr size_t OPENAI_API_KEY_CAPACITY = 256;
-constexpr size_t OPENAI_ORGANIZATION_CAPACITY = 256;
 
 constexpr string_const_t PROMPT_JSON_SKIP_FIELDS[] = {
     CTEXT("date"),
@@ -115,106 +112,11 @@ struct openai_prompt_t
 
 static struct OPENAI_MODULE 
 {
-    string_t            apikey{};
-    string_t            organization{};
-
-    string_t*           http_headers{ nullptr };
-
     bool                connected{ false };
-
     openai_prompt_t*    prompts{ nullptr };
     openai_response_t** responses{ nullptr };
 
 } *_openai_module;
-
-FOUNDATION_STATIC string_t* openai_ensure_http_headers()
-{
-    if (backend_is_connected())
-        return nullptr;
-
-    string_array_deallocate(_openai_module->http_headers);
-
-    string_t Authorization = string_allocate_format(STRING_CONST("Authorization: Bearer %.*s"), STRING_FORMAT(_openai_module->apikey));
-    string_t Organization = string_allocate_format(STRING_CONST("OpenAI-Organization: %.*s"), STRING_FORMAT(_openai_module->organization));
-
-    array_push(_openai_module->http_headers, Authorization);
-    array_push(_openai_module->http_headers, Organization);
-
-    return _openai_module->http_headers;
-}
-
-FOUNDATION_STATIC const char* openai_ensure_key_loaded()
-{
-    FOUNDATION_ASSERT_MSG(_openai_module, "OpenAI module not initialized");
-
-    if (_openai_module->apikey.length)
-        return _openai_module->apikey.str;
-
-    string_deallocate(_openai_module->apikey.str);
-    string_deallocate(_openai_module->organization.str);
-
-    _openai_module->apikey = string_allocate(0, OPENAI_API_KEY_CAPACITY);
-    _openai_module->organization = string_allocate(0, OPENAI_ORGANIZATION_CAPACITY);
-
-    _openai_module->apikey.str[0] = '\0';
-    _openai_module->organization.str[0] = '\0';
-
-    string_const_t key_file_path = session_get_user_file_path(STRING_CONST("openai.key"));
-    if (fs_is_file(STRING_ARGS(key_file_path)))
-    {
-        stream_t* key_stream = fs_open_file(STRING_ARGS(key_file_path), STREAM_IN);
-        if (key_stream)
-        {
-            string_t key = stream_read_string(key_stream);
-            string_t organization = stream_read_string(key_stream);
-
-            _openai_module->apikey = string_copy(_openai_module->apikey.str, OPENAI_API_KEY_CAPACITY, STRING_ARGS(key));
-            _openai_module->organization = string_copy(_openai_module->organization.str, OPENAI_ORGANIZATION_CAPACITY, STRING_ARGS(organization));
-
-            string_deallocate(key.str);
-            string_deallocate(organization.str);
-
-            stream_deallocate(key_stream);
-        }
-    }
-
-    // Check if the key is specified on the command line
-    string_const_t cmdline_key;
-    if (environment_argument("openai-api-key", &cmdline_key))
-        _openai_module->apikey = string_copy(_openai_module->apikey.str, OPENAI_API_KEY_CAPACITY, STRING_ARGS(cmdline_key));
-
-    string_const_t cmdline_organization;
-    if (environment_argument("openai-organization", &cmdline_organization))
-        _openai_module->organization = string_copy(_openai_module->organization.str, OPENAI_ORGANIZATION_CAPACITY, STRING_ARGS(cmdline_organization));
-
-    console_add_secret_key_token(STRING_ARGS(_openai_module->apikey));
-    console_add_secret_key_token(STRING_ARGS(_openai_module->organization));
-
-    openai_ensure_http_headers();
-    return _openai_module->apikey.str;
-}
-
-FOUNDATION_STATIC void openai_save_api_key()
-{
-    FOUNDATION_ASSERT_MSG(_openai_module, "OpenAI module not initialized");
-    
-    // Save the API key to a file
-    if (_openai_module->apikey.length)
-    {
-        string_const_t key_file_path = session_get_user_file_path(STRING_CONST("openai.key"));
-        stream_t* key_stream = fs_open_file(STRING_ARGS(key_file_path), STREAM_CREATE | STREAM_OUT | STREAM_TRUNCATE);
-        if (key_stream)
-        {
-            stream_write_string(key_stream, STRING_ARGS(_openai_module->apikey));
-            stream_write_endl(key_stream);
-            stream_write_string(key_stream, STRING_ARGS(_openai_module->organization));
-            stream_write_endl(key_stream);
-            stream_deallocate(key_stream);
-        }
-
-        openai_ensure_http_headers();
-    }
-}
 
 FOUNDATION_STATIC string_const_t openai_api_url()
 {
@@ -249,20 +151,17 @@ FOUNDATION_STATIC const char* openai_build_url(const char* api, const char* fmt 
 
 FOUNDATION_STATIC bool openai_execute_query(const char* query, const query_callback_t& callback)
 {
-    string_t* headers = openai_ensure_http_headers();
-    return query_execute_json(query, headers, callback);
+    return query_execute_json(query, nullptr, callback);
 }
 
 FOUNDATION_STATIC bool openai_execute_query(const char* query, config_handle_t data, const query_callback_t& callback)
 {
-    string_t* headers = openai_ensure_http_headers();
-    return query_execute_json(query, headers, data, callback);
+    return query_execute_json(query, nullptr, data, callback);
 }
 
 FOUNDATION_STATIC void openai_check_connectivity()
 {
-    string_t* headers = openai_ensure_http_headers();
-    query_execute_json(openai_build_url("models"), headers, [](const json_object_t& res)
+    query_execute_json(openai_build_url("models"), nullptr, [](const json_object_t& res)
     {
         _openai_module->connected = res.is_valid();
         if (_openai_module->connected)
@@ -585,67 +484,7 @@ FOUNDATION_STATIC void openai_run_tests(void* user_data)
         openai_window_allocate(), WindowFlags::Singleton);
 }
 
-//
-// # PUBLIC API
-//
-
-bool openai_available()
-{
-    if (backend_is_connected())
-        return true;
-
-    const char* key = openai_ensure_key_loaded();
-    return key && key[0];
-}
-
-string_t openai_get_api_key()
-{
-    return _openai_module->apikey;
-}
-
-size_t openai_get_api_key_capacity()
-{
-    return OPENAI_API_KEY_CAPACITY-1;
-}
-
-string_t openai_get_organization()
-{
-    return _openai_module->organization;
-}
-
-size_t openai_get_organization_capacity()
-{
-    return OPENAI_ORGANIZATION_CAPACITY-1;
-}
-
-void openai_set_api_key(const char* key, const char* organization)
-{
-    FOUNDATION_ASSERT_MSG(key, "Key cannot be null");
-    FOUNDATION_ASSERT_MSG(_openai_module, "OpenAI module not initialized");
-
-    _openai_module->apikey = string_copy(_openai_module->apikey.str, OPENAI_API_KEY_CAPACITY, key, min(OPENAI_API_KEY_CAPACITY, string_length(key)));
-
-    if (organization)
-        openai_set_organization(organization);
-    else
-        openai_save_api_key();
-
-    console_add_secret_key_token(STRING_ARGS(_openai_module->apikey));
-    console_add_secret_key_token(STRING_ARGS(_openai_module->organization));
-}
-
-void openai_set_organization(const char* organization)
-{
-    FOUNDATION_ASSERT_MSG(organization, "Organization cannot be null");
-    FOUNDATION_ASSERT_MSG(_openai_module, "OpenAI module not initialized");
-
-    _openai_module->organization = string_copy(_openai_module->organization.str, OPENAI_ORGANIZATION_CAPACITY, 
-        organization, min(OPENAI_ORGANIZATION_CAPACITY, string_length(organization)));
-
-    openai_save_api_key();
-}
-
-FOUNDATION_STATIC string_const_t string_camel_case_to_lowercase_phrase(const char* expression, size_t expression_length)
+FOUNDATION_STATIC string_const_t openai_camel_case_to_lowercase_phrase(const char* expression, size_t expression_length)
 {
     // Ignore expression that are all uppercase
     bool all_uppercase = true;
@@ -732,11 +571,29 @@ FOUNDATION_STATIC void openai_generate_json_object_prompt(string_builder_t* sb, 
             value.length-=5;
 
         string_builder_append(sb, STRING_CONST("- "));
-        string_builder_append(sb, string_camel_case_to_lowercase_phrase(STRING_ARGS(field_name)));
+        string_builder_append(sb, openai_camel_case_to_lowercase_phrase(STRING_ARGS(field_name)));
         string_builder_append(sb, STRING_CONST(": "));
         string_builder_append(sb, value);
         string_builder_append_new_line(sb);
     }
+}
+
+FOUNDATION_STATIC bool openai_backend_connected_event(const dispatcher_event_args_t& args)
+{
+    // Check connectivity to OpenAI
+    openai_check_connectivity();
+    return true;
+}
+
+//
+// # PUBLIC API
+//
+
+bool openai_available()
+{
+    if (_openai_module == nullptr)
+        return false;
+    return _openai_module->connected && backend_is_connected();
 }
 
 string_const_t openai_generate_summary_prompt(
@@ -1076,12 +933,10 @@ string_t* openai_generate_summary_sentiment(
 FOUNDATION_STATIC void openai_initialize()
 {
     _openai_module = MEM_NEW(HASH_OPENAI, OPENAI_MODULE);
-    openai_ensure_key_loaded();
 
     log_infof(HASH_OPENAI, STRING_CONST("OpenAI module initialized"));
 
-    // Check connectivity to OpenAI
-    openai_check_connectivity();
+    dispatcher_register_event_listener(EVENT_BACKEND_CONNECTED, openai_backend_connected_event);
 
     #if BUILD_DEBUG
     app_register_menu(HASH_OPENAI, STRING_CONST("Modules/" ICON_MD_PSYCHOLOGY " OpenAI"), 
@@ -1110,9 +965,6 @@ FOUNDATION_STATIC void openai_shutdown()
     }
     array_deallocate(_openai_module->responses);
 
-    string_deallocate(_openai_module->apikey.str);
-    string_deallocate(_openai_module->organization.str);
-    string_array_deallocate(_openai_module->http_headers);
     MEM_DELETE(_openai_module);
 }
 

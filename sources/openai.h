@@ -38,35 +38,6 @@ struct openai_response_t
  */
 bool openai_available();
 
-/*! Get the OpenAI API key from the environment variable OPENAI_API_KEY. */
-string_t openai_get_api_key();
-
-/*! Get the capacity of the OpenAI API key. */
-size_t openai_get_api_key_capacity();
-
-/*! Get the OpenAI organization from the environment variable OPENAI_ORGANIZATION. */
-string_t openai_get_organization();
-
-/*! Get the capacity of the OpenAI organization. */
-size_t openai_get_organization_capacity();
-
-/*! Set the OpenAI API key. 
- * 
- *  This will save the key to a file in the user's home directory.
- * 
- *  @param[in] key              The API key to set.
- *  @param[opt] organization    The organization to set.
- */
-void openai_set_api_key(const char* key, const char* organization = nullptr);
-
-/*! Set the OpenAI organization. 
- * 
- *  This will save the organization to a file in the user's home directory.
- * 
- *  @param[in] organization     The organization to set.
- */
-void openai_set_organization(const char* organization);
-
 /*! Generate a summary prompt to ask OpenAI to summarize stock symbol financial results.
  * 
  *  @param[in] symbol           The symbol to generate a summary for.

@@ -99,40 +99,6 @@ void settings_draw()
         ImGui::NextColumn();
     }
 
-	#if !BUILD_BACKEND
-    // Open AI API KEY
-    {
-        ImGui::NextColumn();
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextURL(tr("Open AI API Key"), nullptr, STRING_CONST("https://platform.openai.com/account/api-keys"));
-
-        string_t openai_key = openai_get_api_key();
-        size_t openai_key_capacity = openai_get_api_key_capacity();
-
-        ImGui::NextColumn();
-        ImGui::ExpandNextItem();
-        if (ImGui::InputTextWithHint("##OpenAIKey", "demo", openai_key.str, openai_key_capacity, ImGuiInputTextFlags_Password))
-            openai_set_api_key(openai_key.str);
-        ImGui::NextColumn();
-    }
-
-    // Open AI Organization
-    {
-        ImGui::NextColumn();
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextURL(tr("Open AI Organization"), nullptr, STRING_CONST("https://platform.openai.com/account/org-settings"));
-
-        string_t openai_org = openai_get_organization();
-        size_t openai_org_capacity = openai_get_organization_capacity();
-
-        ImGui::NextColumn();
-        ImGui::ExpandNextItem();
-        if (ImGui::InputTextWithHint("##OpenAIOrg", "", openai_org.str, openai_org_capacity, ImGuiInputTextFlags_Password))
-            openai_set_organization(openai_org.str);
-        ImGui::NextColumn();
-    }
-    #endif
-
     // Default currency for reports
     {
         ImGui::NextColumn();

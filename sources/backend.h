@@ -10,6 +10,9 @@
 
 #include <foundation/string.h>
 
+/*! Event propagated when the backend connection is established. */
+constexpr const char EVENT_BACKEND_CONNECTED[] = "BACKEND_CONNECTED";
+
 #ifndef BUILD_BACKEND
 #  define BUILD_BACKEND 0
 #endif
