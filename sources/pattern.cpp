@@ -411,8 +411,30 @@ FOUNDATION_STATIC void pattern_render_stats_line(const stock_t* s, string_const_
     ImGui::TableNextColumn();
     ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 15.0f);
 
+    // Split v1 with ||
+    string_const_t label, tooltip;
     string_const_t trv1 = translate && v1.length > 1 ? tr(STRING_ARGS(v1), false) : v1;
-    ImGui::TextWrapped("%.*s", STRING_FORMAT(trv1));
+    string_split(STRING_ARGS(trv1), STRING_CONST("||"), &label, &tooltip, false);
+    if (tooltip.length > 0)
+    {
+        ImGui::TextWrapped("%.*s", STRING_FORMAT(label));
+
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && ImGui::BeginTooltip())
+        {
+            ImGui::Dummy(ImVec2(IM_SCALEF(405), IM_SCALEF(4)));
+            ImGui::MoveCursor(IM_SCALEF(5), IM_SCALEF(0));
+            ImGui::PushTextWrapPos(IM_SCALEF(400));
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("%.*s", STRING_FORMAT(tooltip));
+            ImGui::PopTextWrapPos();
+            ImGui::Dummy(ImVec2(IM_SCALEF(405), IM_SCALEF(8)));
+            ImGui::EndTooltip();
+        }
+    }
+    else
+    {
+        ImGui::TextWrapped("%.*s", STRING_FORMAT(label));
+    }
 
     pattern_render_stats_value(s, v2);
     pattern_render_stats_value(s, v3);
@@ -772,8 +794,8 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
             ImGui::EndTooltip();
         }
         
-        pattern_render_stats_line(nullptr, CTEXT("Market Cap"),
-            string_template_static("{1,translate} {0,abbreviate}", s->shares_count, "units:"),
+        pattern_render_stats_line(nullptr, CTEXT("Market Cap|| Units / Value $"),
+            string_template_static("{0,abbreviate}", s->shares_count),
             string_template_static("{0,currency}", s->market_cap), true);
 
         pattern_render_stats_line(s, CTEXT("High 52"), 
@@ -787,7 +809,7 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         const double performance_ratio = pattern->yy_ratio.get_or_default(pattern->performance_ratio.get_or_default(0.0));
         const double performance_ratio_combined = max(pattern->yy_ratio.get_or_default(pattern->performance_ratio.fetch()), yielding);
 
-        string_const_t fmttr = RTEXT("Yield %s");
+        string_const_t fmttr = RTEXT("Yield %s||Dividends / Yield Year after Year");
         string_const_t yield_label = string_format_static(STRING_ARGS(fmttr), 
             pattern->yy_ratio.fetch() >= performance_ratio ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
         ImGui::PushStyleColor(ImGuiCol_Text, performance_ratio <= 0 || performance_ratio_combined < SETTINGS.good_dividends_ratio * 100.0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
@@ -797,8 +819,8 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip(tr(" Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) "), 
-                pattern->performance_ratio.fetch(), pattern->years.fetch());
+            ImGui::SetTooltip(tr(" Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) \n Adjusted Yield based on last year data: %.3g %% (" ICON_MD_CHANGE_HISTORY " %.3g%%) "), 
+                pattern->yy_ratio.fetch(), pattern->years.fetch(), pattern->performance_ratio.fetch(), pattern->performance_ratio.fetch() - pattern->yy_ratio.fetch());
         }
 
         pattern_render_stats_line(nullptr, CTEXT("Beta"), 
@@ -808,7 +830,9 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
         const double eps_diff = s->earning_trend_difference.fetch();
         const double eps_percent = s->earning_trend_percent.fetch();
         ImGui::PushStyleColor(ImGuiCol_Text, eps_diff <= 0.1 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
-        pattern_render_stats_line(nullptr, CTEXT("Earnings"),
+        pattern_render_stats_line(nullptr, CTEXT("Earnings / Share||EPS stands for earnings per share. "
+            "It is a financial metric that measures the amount of profit that a company has generated on a per-share basis over a "
+            "specific period, usually a quarter or a year. EPS is calculated by dividing a company's total earnings by the number of shares outstanding."),
             pattern_format_currency(s->diluted_eps_ttm),
             pattern_format_percentage(eps_percent), true);
         ImGui::PopStyleColor();
@@ -818,12 +842,18 @@ FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
                 s->diluted_eps_ttm, s->earning_trend_actual.fetch(), s->earning_trend_estimate.fetch(), s->earning_trend_difference.fetch(), eps_percent, 
                 s->diluted_eps_ttm / s->current.close * 100.0);
         
-        if (s->pe != 0)
+        if (math_real_is_finite(s->pe) || math_real_is_finite(s->peg))
         {
-            pattern_render_stats_line(nullptr,
-                pattern_format_number(STRING_CONST("P/E (%.3g)"), s->pe, 0.0),
-                pattern_format_percentage(s->current.change / s->pe * 100.0),
-                pattern_format_percentage(math_average(&pattern->marks[7].change_p, 5, sizeof(pattern_mark_t)) * 100.0));
+            pattern_render_stats_line(nullptr, CTEXT("Price Earnings||Price Earnings / To Growth\n\n"
+                "The P/E ratio, or price-to-earnings ratio, compares a company's current stock price to its earnings per share (EPS). "
+                "It is calculated by dividing the stock price by the EPS. The P/E ratio provides a snapshot of how much investors are "
+                "willing to pay for each dollar of earnings generated by the company.\n\nThe PEG ratio, or price-to-earnings-to-growth ratio, "
+                "takes into account a company's expected earnings growth rate in addition to its P/E ratio. "
+                "The PEG ratio is calculated by dividing the P/E ratio by the expected earnings growth rate for the company. "
+                "The PEG ratio is a more comprehensive measure of a company's valuation compared to the P/E ratio, "
+                "because it considers both the company's current earnings and its expected future growth potential."), 
+                pattern_format_percentage(s->pe),
+                pattern_format_percentage(s->peg), true);
         }
 
         double flex_low_p = pattern->flex_low.fetch();

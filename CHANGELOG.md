@@ -1,10 +1,11 @@
 # Changelog
 
-## [0.19.2] - 2023-04-26
+## [0.19.3] - 2023-04-26
 - Add support to check for new releases.
 - Fix `system_execute_command` on OSX.
 - Fix `time_t` parsing as short date on OSX with `string_template`
 - Fix backend version string parsing using `string_to_version_short`
+- Improve pattern stats by adding more tooltip information.
 
 ## [0.18.4] - 2023-04-24
 - Add support to add titles from the search window to a report.

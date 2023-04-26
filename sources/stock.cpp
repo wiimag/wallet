@@ -278,7 +278,7 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     entry.trailing_pe = valuation["TrailingPE"].as_number();
     entry.forward_pe = valuation["ForwardPE"].as_number();
 
-    entry.pe = math_ifnan(entry.pe, entry.peg);
+    //entry.pe = math_ifnan(entry.pe, entry.peg);
 
     const json_object_t& SharesStats = json["SharesStats"];
     entry.shares_count = SharesStats["SharesFloat"].as_number();

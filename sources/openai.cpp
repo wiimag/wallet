@@ -343,7 +343,7 @@ FOUNDATION_STATIC openai_completions_t openai_window_execute_prompt(openai_windo
     config_handle_t data = config_allocate();
     config_set(data, "model", STRING_ARGS(window->selected_model->id));
     config_set(data, "temperature", 0.7);
-    config_set(data, "n", 3.0);
+    config_set(data, "n", 1.0);
 
     {
         config_handle_t cvmessages = config_set_array(data, STRING_CONST("messages"));

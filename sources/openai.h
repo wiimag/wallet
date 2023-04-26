@@ -11,10 +11,10 @@
 
 struct openai_completion_options_t
 {
-    int best_of = 3;
-    int max_tokens = 2500;
+    int best_of = 1;
+    int max_tokens = 2000;
     float temperature = 0.7f;
-    float top_p = 0.9f;
+    float top_p = 0.8f;
     float presence_penalty = 1.56f;
     float frequency_penalty = 0.48f;
 };
