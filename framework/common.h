@@ -140,6 +140,28 @@ string_t path_normalize_name(char* buff, size_t capacity, const char* path, size
  */
 string_t fs_read_text(const char* path, size_t path_length);
 
+/*! Get last modification time (last write) in milliseconds since the epoch (UNIX time)
+ * 
+ *  @param path   File path
+ *
+ *  @return       File modification time, 0 if not an existing file 
+ */
+template<typename T> FOUNDATION_FORCEINLINE tick_t fs_last_modified(const T& path)
+{
+    return fs_last_modified(STRING_ARGS(path));
+}
+
+/*! Remove a file from disk.
+ *
+ *  @param path   File path
+ *
+ *  @return       True if file was removed, false if not
+ */
+template<typename T> FOUNDATION_FORCEINLINE bool fs_remove_file(const T& path)
+{
+    return fs_remove_file(STRING_ARGS(path));
+}
+
 /*! Clean the file name, removing any illegal chars.
  * 
  *  @remark The returned string is a static buffer, so it will be overwritten on the next call.

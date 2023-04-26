@@ -139,7 +139,7 @@ void session_setup(const char* root_path)
     _session_working_dir = string_clone_string(environment_current_working_directory());
 
     // Make sure user dir is created
-    const string_const_t& user_dir = session_get_user_dir();
+    string_const_t user_dir = session_get_user_dir();
 
     // Load config// Attempt to backup the active session if not running tests.
     if (!main_is_running_tests() && fs_is_directory(STRING_ARGS(user_dir)))
@@ -172,7 +172,7 @@ void session_save()
     if (main_is_running_tests())
         return;
 
-    const string_const_t& user_dir = session_get_user_dir();
+    string_const_t user_dir = session_get_user_dir();
     if (!fs_is_directory(STRING_ARGS(user_dir)))
         return;
 
@@ -213,8 +213,7 @@ string_const_t session_get_user_dir()
 string_const_t session_get_user_file_path(const char* filename, size_t length, const char* prefix, size_t prefix_length, const char* extension, size_t extension_length, bool mkdir /*= false*/)
 {
     string_t user_file_path_buffer = string_static_buffer(BUILD_MAX_PATHLEN);
-
-    const string_const_t& user_dir = session_get_user_dir();
+    string_const_t user_dir = session_get_user_dir();
 
     string_t user_file_path = string_copy(STRING_ARGS(user_file_path_buffer), STRING_ARGS(user_dir));
     if (prefix != nullptr && prefix_length > 0)

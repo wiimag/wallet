@@ -106,6 +106,76 @@ FOUNDATION_STATIC void query_curl_cleanup()
     }
 }
 
+FOUNDATION_STATIC void* query_curl_malloc_cb(size_t size)
+{
+    return memory_allocate(HASH_CURL, size, 0, MEMORY_PERSISTENT);
+}
+
+FOUNDATION_STATIC void query_curl_free_cb(void* ptr)
+{
+    memory_deallocate(ptr);
+}
+
+FOUNDATION_STATIC void* query_curl_realloc_cb(void* ptr, size_t size)
+{
+    memory_context_push(HASH_CURL);
+    size_t oldsize = memory_size(ptr);
+    void* curl_mem = memory_reallocate(ptr, size, 0, oldsize, MEMORY_PERSISTENT);
+    memory_context_pop();
+    return curl_mem;
+}
+
+FOUNDATION_STATIC char* query_curl_strdup_cb(const char* str)
+{
+    const size_t len = string_length(str);
+    const size_t capacity = len + 1;
+    char* curl_str = (char*)memory_allocate(HASH_CURL, capacity, 0, MEMORY_PERSISTENT);
+    return string_copy(curl_str, capacity, str, len).str;
+}
+
+FOUNDATION_STATIC void* query_curl_calloc_cb(size_t nmemb, size_t size)
+{
+    return memory_allocate(HASH_CURL, nmemb * size, min(8U, to_uint(nmemb)), MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+}
+
+FOUNDATION_STATIC void query_start_job_to_cleanup_cache()
+{
+    TIME_TRACKER("query_start_job_to_cleanup_cache");
+
+    dispatch_fire([]()
+    {
+        // List all files under cache
+        string_const_t cache_dir = session_get_user_file_path(STRING_CONST("cache"));
+        if (!fs_is_directory(STRING_ARGS(cache_dir)))
+            return;
+        
+        string_t* cache_file_names = fs_matching_files(STRING_ARGS(cache_dir), STRING_CONST("*.json"), false);
+        for (unsigned i = 0, end = array_size(cache_file_names); i < end; ++i)
+        {
+            if (thread_try_wait(0))
+                break;
+
+            char cache_path_buffer[BUILD_MAX_PATHLEN];
+            const string_t& cache_file_name = cache_file_names[i];
+            string_t cache_path = path_concat(STRING_BUFFER(cache_path_buffer), STRING_ARGS(cache_dir), STRING_ARGS(cache_file_name));
+
+            const double EXPIRE_AFTER_DAYS = 31;
+            const tick_t last_modified = fs_last_modified(cache_path);
+            const tick_t system_time = time_system();
+            const uint64_t elapsed_seconds = (uint64_t)((system_time - last_modified) / 1000.0);
+            const double days_old = elapsed_seconds / 86400.0;
+            if (days_old > EXPIRE_AFTER_DAYS)
+            {
+                if (fs_remove_file(cache_path))
+                {
+                    log_debugf(HASH_QUERY, STRING_CONST("File %.*s was removed from query cache (%.0lf days old)"), STRING_FORMAT(cache_path), days_old);
+                }                
+            }
+        }
+        string_array_deallocate(cache_file_names);
+    });
+}
+
 FOUNDATION_STATIC curl_slist* query_create_user_agent_header_list()
 {
     char user_agent_header[256];
@@ -814,47 +884,15 @@ stream_t* query_execute_download_file(const char* query)
 // # SYSTEM
 //
 
-FOUNDATION_STATIC void* curl_malloc_cb(size_t size)
-{
-    return memory_allocate(HASH_CURL, size, 0, MEMORY_PERSISTENT);
-}
-
-FOUNDATION_STATIC void curl_free_cb(void* ptr)
-{
-    memory_deallocate(ptr);
-}
-
-FOUNDATION_STATIC void* curl_realloc_cb(void* ptr, size_t size)
-{
-    memory_context_push(HASH_CURL);
-    size_t oldsize = memory_size(ptr);
-    void* curl_mem = memory_reallocate(ptr, size, 0, oldsize, MEMORY_PERSISTENT);
-    memory_context_pop();
-    return curl_mem;
-}
-
-FOUNDATION_STATIC char* curl_strdup_cb(const char* str)
-{
-    const size_t len = string_length(str);
-    const size_t capacity = len + 1;
-    char* curl_str = (char*)memory_allocate(HASH_CURL, capacity, 0, MEMORY_PERSISTENT);
-    return string_copy(curl_str, capacity, str, len).str;
-}
-
-FOUNDATION_STATIC void* curl_calloc_cb(size_t nmemb, size_t size)
-{
-    return memory_allocate(HASH_CURL, nmemb * size, min(8U, to_uint(nmemb)), MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
-}
-
 void query_initialize()
 {
     if (_initialized)
         return;
         
     #if BUILD_ENABLE_MEMORY_TRACKER
-    curl_global_init_mem(CURL_GLOBAL_DEFAULT, curl_malloc_cb,
-        curl_free_cb, curl_realloc_cb,
-        curl_strdup_cb, curl_calloc_cb);
+    curl_global_init_mem(CURL_GLOBAL_DEFAULT, query_curl_malloc_cb,
+        query_curl_free_cb, query_curl_realloc_cb,
+        query_curl_strdup_cb, query_curl_calloc_cb);
     #endif
 
     CURLcode res = curl_global_init(CURL_GLOBAL_DEFAULT);
@@ -888,6 +926,8 @@ void query_initialize()
     #if !BUILD_DEBUG
         log_set_suppress(HASH_QUERY, ERRORLEVEL_INFO);
     #endif
+
+    query_start_job_to_cleanup_cache();
 }
 
 void query_shutdown()

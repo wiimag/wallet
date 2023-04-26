@@ -27,10 +27,6 @@
 
 #define HASH_NEWS static_hash_string("news", 4, 0xc804eb289c3e1658ULL)
 
-#if !BUILD_BACKEND
-static char NEWS_GOOGLE_SEARCH_API_KEY[64] = { 0 };
-#endif
-
 struct news_t
 {
     time_t date;
@@ -288,29 +284,12 @@ FOUNDATION_STATIC news_window_t* news_window_allocate(const char* symbol, size_t
         log_warnf(HASH_NEWS, WARNING_RESOURCE, STRING_CONST("Failed to fetch news for symbol %*.s"), (int)symbol_length, symbol);
     }
 
-    if (string_ends_with(symbol, symbol_length, STRING_CONST(".V")) ||
-        string_ends_with(symbol, symbol_length, STRING_CONST(".TO")) ||
-        string_ends_with(symbol, symbol_length, STRING_CONST(".NEO")))
+    if (backend_is_connected() && 
+        (string_ends_with(symbol, symbol_length, STRING_CONST(".V")) ||
+         string_ends_with(symbol, symbol_length, STRING_CONST(".TO")) ||
+         string_ends_with(symbol, symbol_length, STRING_CONST(".NEO"))))
     {
-		#if !BUILD_BACKEND
-		string_const_t google_apis_key = string_to_const(NEWS_GOOGLE_SEARCH_API_KEY);
-        if (!string_is_null(google_apis_key))
-        {
-            string_const_t name = stock_get_short_name(symbol, symbol_length);
-
-            char google_search_query_buffer[2048];
-            string_t google_search_query = string_format(STRING_BUFFER(google_search_query_buffer), 
-                STRING_CONST("https://www.googleapis.com/customsearch/v1?key=%.*s&cx=7363b4123b9a84885&dateRestrict=d30&q=%.*s"),
-                STRING_FORMAT(google_apis_key), STRING_FORMAT(name));
-
-            char google_search_query_escaped_buffer[2048];
-            string_t google_search_query_escaped = string_escape_url(STRING_BUFFER(google_search_query_escaped_buffer), STRING_ARGS(google_search_query));
-
-            query_execute_async_json(google_search_query_escaped.str, FORMAT_JSON, LC1(news_fetch_entry_callback(news_window, _1)));
-        }
-		#else
         backend_execute_news_search_query(symbol, symbol_length, LC1(news_fetch_entry_callback(news_window, _1)));
-		#endif
     }
 
     return news_window;
@@ -468,65 +447,12 @@ void news_open_window(const char* symbol, size_t symbol_length)
     app_open_dialog(news_window->title, news_window_render, 900, 1200, true, news_window, news_window_deallocate);
 }
 
-#if !BUILD_BACKEND
-string_t news_google_search_api_key()
-{
-    return {STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY)};
-}
-
-string_t news_set_google_search_api_key(const char* apikey)
-{
-    string_t k = string_copy(STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY), apikey, string_length(apikey));
-    if (NEWS_GOOGLE_SEARCH_API_KEY[0])
-        console_add_secret_key_token(STRING_LENGTH(NEWS_GOOGLE_SEARCH_API_KEY));
-
-    string_const_t key_file_path = session_get_user_file_path(STRING_CONST("google.key"));
-    stream_t* key_stream = fs_open_file(STRING_ARGS(key_file_path), STREAM_CREATE | STREAM_OUT | STREAM_TRUNCATE);
-    if (key_stream == nullptr)
-        return k;
-
-    log_infof(0, STRING_CONST("Writing key file %.*s"), STRING_FORMAT(key_file_path));
-    stream_write_string(key_stream, STRING_ARGS(k));
-    stream_deallocate(key_stream);
-
-    return k;
-}
-#endif
-
 //
 // # SYSTEM
 //
 
 FOUNDATION_STATIC void news_initialize()
 {
-	#if !BUILD_BACKEND
-    string_const_t google_apis_key{};
-    if (environment_argument("google-apis-key", &google_apis_key))
-    {
-        string_copy(STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY), STRING_ARGS(google_apis_key));
-        console_add_secret_key_token(STRING_ARGS(google_apis_key));
-    }
-    else
-    {
-        string_const_t key_file_path = session_get_user_file_path(STRING_CONST("google.key"));
-        stream_t* key_stream = fs_open_file(STRING_ARGS(key_file_path), STREAM_IN);
-        if (key_stream)
-        {
-            string_t key = stream_read_string(key_stream);
-            string_copy(STRING_BUFFER(NEWS_GOOGLE_SEARCH_API_KEY), STRING_ARGS(key));
-            string_deallocate(key.str);
-            stream_deallocate(key_stream);
-        }
-        else
-        {
-            // Clear key
-            NEWS_GOOGLE_SEARCH_API_KEY[0] = 0;
-        }
-    }
-
-    if (NEWS_GOOGLE_SEARCH_API_KEY[0])
-        console_add_secret_key_token(STRING_LENGTH(NEWS_GOOGLE_SEARCH_API_KEY));
-	#endif
 }
 
 FOUNDATION_STATIC void news_shutdown()

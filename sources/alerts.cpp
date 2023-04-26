@@ -62,7 +62,7 @@ FOUNDATION_STATIC expr_evaluator_t* alerts_load_evaluators(const config_handle_t
         string_copy(STRING_BUFFER(e.description), STRING_ARGS(cv["label"].as_string()));
         string_copy(STRING_BUFFER(e.expression), STRING_ARGS(cv["expression"].as_string()));
         
-        e.frequency = cv["frequency"].as_number(60.0);
+        e.frequency = cv["frequency"].as_number(60.0 * 15.0);
         e.last_run_time = (time_t)cv["last_run_time"].as_number((double)time_now());
         e.triggered_time = (time_t)cv["triggered_time"].as_number(0);
         e.discarded = cv["discarded"].as_boolean(false);
@@ -515,7 +515,7 @@ bool alerts_add_price_change(const char* title, size_t title_length, double pric
     // Generate the expression to evaluate
     string_format(STRING_BUFFER(new_alert.expression), STRING_CONST("%.*s%lf"), STRING_FORMAT(expression_prefix), price);
 
-    new_alert.frequency = 60.0;
+    new_alert.frequency = 60.0 * 5.0;
     new_alert.last_run_time = 0.0;
     new_alert.triggered_time = 0.0;
     new_alert.discarded = false;
