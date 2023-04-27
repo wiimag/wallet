@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.19.6] - 2023-04-27
+## [0.19.7] - 2023-04-27
 - Add basic fundamental pattern analysis.
 - Add support to check for new releases.
 - Add support to update symbol icon and banner logo images.
@@ -8,6 +8,7 @@
 - Fix table currency value rounding.
 - Fix timestamp parsing on MacOS.
 - Improve pattern stats by adding more tooltip information.
+- Open financial reports in a new window.
 - Remove from query cache files that are 31 days old.
 - Update how report titles days help is computed. We weight each transaction dates based on the bought price compared to the total title buy price.
 

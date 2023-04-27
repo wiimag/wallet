@@ -2665,5 +2665,465 @@
 			en = "Select image banner (i.e. 200x32) for {0}..."
 			fr = "Selectionnez l'image de banniere (200x32) pour {0}..."
 		}
+		{
+			hash = "b9f4382789031cba"
+			en = "Balance"
+			fr = "Balance"
+		}
+		{
+			hash = "68ddcf7cda1e1fd7"
+			en = "Total Assets"
+			fr = "Total des actifs"
+		}
+		{
+			hash = "41c26b25999289aa"
+			en = "Cash"
+			fr = "Argent"
+		}
+		{
+			hash = "cc39d87f3a19056c"
+			en = "Short Long Term Debt Total"
+			fr = "Total de la dette \xc3\xa0 court et \xc3\xa0 long terme"
+		}
+		{
+			hash = "d5e0cfd87c607433"
+			en = "Accounts Payable"
+			fr = "Comptes \xc3\xa0 payer"
+		}
+		{
+			hash = "e6db1cc85692b6e4"
+			en = "Accumulated Amortization"
+			fr = "Amortissement accumul\xc3\xa9"
+		}
+		{
+			hash = "2f1dfe02922c88e4"
+			en = "Accumulated Other Comprehensive Income"
+			fr = "Autres revenus \xc3\xa9tendus accumul\xc3\xa9s"
+		}
+		{
+			hash = "306822626810b7db"
+			en = "Capital Lease Obligations"
+			fr = "Obligations de location-financement"
+		}
+		{
+			hash = "c3e9dc9c8ebb8f33"
+			en = "Capital Stock"
+			fr = "Capital-actions"
+		}
+		{
+			hash = "5ad661b6f0a8a685"
+			en = "Capital Surpluse"
+			fr = "Surplus de capital"
+		}
+		{
+			hash = "773a363b8cf36f8a"
+			en = "Cash and Equivalents"
+			fr = "Argent et \xc3\xa9quivalents"
+		}
+		{
+			hash = "d1c3541a0f3e0173"
+			en = "Cash And Short Term Investments"
+			fr = "@TODO"
+		}
+		{
+			hash = "3447649bfe7a36be"
+			en = "Common Stock"
+			fr = "Stock commun"
+		}
+		{
+			hash = "b1c221c922e2ed6b"
+			en = "Common Stock Shares Outstanding"
+			fr = "Stock commun en circulation"
+		}
+		{
+			hash = "8d8a8cf9c542c594"
+			en = "Common Stock Total Equity"
+			fr = "Total des capitaux propres en actions ordinaires"
+		}
+		{
+			hash = "aedfaa2fd62ef609"
+			en = "Good Will"
+			fr = "Bonne volont\xc3\xa9"
+		}
+		{
+			hash = "7fd633489ae68c46"
+			en = "Intangible Assets"
+			fr = "Actifs incorporels"
+		}
+		{
+			hash = "dab798d1ceb11d7e"
+			en = "Inventory"
+			fr = "Inventaire"
+		}
+		{
+			hash = "9087ab395ee90258"
+			en = "Liabilities And Stockholders Equity"
+			fr = "Passifs et capitaux propres"
+		}
+		{
+			hash = "27a32824720b5a2a"
+			en = "Long Term Debt"
+			fr = "Dette \xc3\xa0 long terme"
+		}
+		{
+			hash = "2150cf5c6822b59b"
+			en = "Long Term Debt Total"
+			fr = "Total de la dette \xc3\xa0 long terme"
+		}
+		{
+			hash = "e357ab74ae2c91e0"
+			en = "Net Debt"
+			fr = "Dette nette"
+		}
+		{
+			hash = "50aa4b3ab6565cab"
+			en = "Net Invested Capital"
+			fr = "Capital investi net"
+		}
+		{
+			hash = "31a931a682268c34"
+			en = "Net Receivables"
+			fr = "Comptes d\xc3\xa9biteurs nets"
+		}
+		{
+			hash = "1bf754e2e507752b"
+			en = "Net Tangible Assets"
+			fr = "Actifs corporels nets"
+		}
+		{
+			hash = "7b3c897a239e0822"
+			en = "Net Working Capital"
+			fr = "Fonds de roulement net"
+		}
+		{
+			hash = "ce3627903360d5d5"
+			en = "Non Current Assets Total"
+			fr = "Total des actifs non courants"
+		}
+		{
+			hash = "68bd03bcd4330e8c"
+			en = "Non Current Liabilities Other"
+			fr = "Autres passifs non courants"
+		}
+		{
+			hash = "8915812903ff01c"
+			en = "Non Current Liabilities Total"
+			fr = "Total des passifs non courants"
+		}
+		{
+			hash = "cf700093c0617ece"
+			en = "Non Current Assets Other"
+			fr = "Autres actifs non courants"
+		}
+		{
+			hash = "45cc40555418ff66"
+			en = "Other Assets"
+			fr = "Autres actifs"
+		}
+		{
+			hash = "e58c276ad05e960f"
+			en = "Other Current Assets"
+			fr = "Autres actifs courants"
+		}
+		{
+			hash = "26fa129b7906f985"
+			en = "Other Current Liabilities"
+			fr = "Autres passifs courants"
+		}
+		{
+			hash = "f400f3de4c3bb1a"
+			en = "Other Liabilities"
+			fr = "Autres passifs"
+		}
+		{
+			hash = "c22cd05a08217dc3"
+			en = "Other Stockholder Equity"
+			fr = "Autres capitaux propres"
+		}
+		{
+			hash = "5a511d0d6b6d9a4d"
+			en = "Property Plant And Equipment Gross"
+			fr = "Immobilisations corporelles brutes"
+		}
+		{
+			hash = "172f3ea9dbd8876f"
+			en = "Property Plant Equipment"
+			fr = "Immobilisations corporelles"
+		}
+		{
+			hash = "ef94d0f80f5eb50f"
+			en = "Retained Earnings"
+			fr = "B\xc3\xa9n\xc3\xa9fices non r\xc3\xa9partis"
+		}
+		{
+			hash = "5693b9494e609c59"
+			en = "Short Long Term Debt"
+			fr = "Dette \xc3\xa0 court et \xc3\xa0 long terme"
+		}
+		{
+			hash = "f75ca67ca6b1b309"
+			en = "Short Term Debt"
+			fr = "Dette \xc3\xa0 court terme"
+		}
+		{
+			hash = "b539728734b384de"
+			en = "Short Term Investments"
+			fr = "Placements \xc3\xa0 court terme"
+		}
+		{
+			hash = "f5ca09a6de3092e6"
+			en = "Total Current Assets"
+			fr = "Total des actifs courants"
+		}
+		{
+			hash = "e466830e7aa2db4a"
+			en = "Total Current Liabilities"
+			fr = "Total des passifs courants"
+		}
+		{
+			hash = "cab3505029a955f7"
+			en = "Total Liabilities"
+			fr = "Total des passifs"
+		}
+		{
+			hash = "740e1dc5737856e7"
+			en = "Total Stockholder Equity"
+			fr = "Total des capitaux propres"
+		}
+		{
+			hash = "6ec7a9190ef2600a"
+			en = "Incomes"
+			fr = "Revenus"
+		}
+		{
+			hash = "1d5e9e57e6521cc1"
+			en = "Net Income"
+			fr = "B\xc3\xa9n\xc3\xa9fice net"
+		}
+		{
+			hash = "129c9397c8dab953"
+			en = "Gross Profit"
+			fr = "B\xc3\xa9n\xc3\xa9fice brut"
+		}
+		{
+			hash = "b5a93b4ce375ddd5"
+			en = "Total Revenue"
+			fr = "Total des revenus"
+		}
+		{
+			hash = "64aa7a0134d68c98"
+			en = "Cash Flow"
+			fr = "Flux de tr\xc3\xa9sorerie"
+		}
+		{
+			hash = "d9ebb2c32f80045d"
+			en = "Free Cash Flow"
+			fr = "Flux de tr\xc3\xa9sorerie disponible"
+		}
+		{
+			hash = "1af53d461d668e80"
+			en = "Total Cashflows From Investing Activities"
+			fr = "Total des flux de tr\xc3\xa9sorerie li\xc3\xa9s aux activit\xc3\xa9s d'investissement"
+		}
+		{
+			hash = "4efe7db740b96789"
+			en = "Total Operating Expenses"
+			fr = "Total des frais d'exploitation"
+		}
+		{
+			hash = "8a96c5e402acaef3"
+			en = "Cost Of Revenue"
+			fr = "Co\xc3\xbbt des revenus"
+		}
+		{
+			hash = "dd926c412354c833"
+			en = "Depreciation And Amortization"
+			fr = "D\xc3\xa9pr\xc3\xa9ciation et amortissement"
+		}
+		{
+			hash = "acd811d7d1318c4f"
+			en = "EBIT"
+			fr = "EBIT"
+		}
+		{
+			hash = "ec4639f9fe4090ad"
+			en = "EBITDA"
+			fr = "EBITDA"
+		}
+		{
+			hash = "f626b76015e883e5"
+			en = "Income Before Tax"
+			fr = "B\xc3\xa9n\xc3\xa9fice avant imp\xc3\xb4t"
+		}
+		{
+			hash = "4f2cc16f6b04b6bb"
+			en = "Income Tax Expense"
+			fr = "Imp\xc3\xb4t sur le revenu"
+		}
+		{
+			hash = "79b9e2bf1b3ef3e1"
+			en = "Interest Expense"
+			fr = "Frais d'int\xc3\xa9r\xc3\xaats"
+		}
+		{
+			hash = "f0d7c5f03e277fa0"
+			en = "Interest Income"
+			fr = "Revenu d'int\xc3\xa9r\xc3\xaats"
+		}
+		{
+			hash = "5d13b7e94e5689da"
+			en = "Net Income Applicable To Common Shares"
+			fr = "B\xc3\xa9n\xc3\xa9fice net applicable aux actions ordinaires"
+		}
+		{
+			hash = "9aae449eec843396"
+			en = "Net Income From Continuing Ops"
+			fr = "B\xc3\xa9n\xc3\xa9fice net des op\xc3\xa9rations poursuivies"
+		}
+		{
+			hash = "4f644b875ccfb1eb"
+			en = "Net Interest Income"
+			fr = "Revenu net d'int\xc3\xa9r\xc3\xaats"
+		}
+		{
+			hash = "d58dd4a2bd8dcdb4"
+			en = "Operating Income"
+			fr = "B\xc3\xa9n\xc3\xa9fice d'exploitation"
+		}
+		{
+			hash = "60940aa38c343de1"
+			en = "Other Operating Expenses"
+			fr = "B\xc3\xa9n\xc3\xa9fice d'exploitation (Autre)"
+		}
+		{
+			hash = "ae989e59fd318f92"
+			en = "Reconciled Depreciation"
+			fr = "D\xc3\xa9pr\xc3\xa9ciation r\xc3\xa9concili\xc3\xa9e"
+		}
+		{
+			hash = "6618acd8cf58dd3b"
+			en = "Selling And Marketing Expenses"
+			fr = "Frais de vente et de marketing"
+		}
+		{
+			hash = "995df4e77f9fa4b9"
+			en = "Selling General Administrative"
+			fr = "Vente g\xc3\xa9n\xc3\xa9rale administrative"
+		}
+		{
+			hash = "30dad1fd4c7eabb9"
+			en = "Tax Provision"
+			fr = "Provision fiscale"
+		}
+		{
+			hash = "b4a3ee76433d67ad"
+			en = "Total Other Income Expense Net"
+			fr = "Total des autres revenus (charges) nets"
+		}
+		{
+			hash = "e0648dab8404ee11"
+			en = "Investiments"
+			fr = "Investissements"
+		}
+		{
+			hash = "e57e5ab1790fbb86"
+			en = "Begin Period Cash Flow"
+			fr = "D\xc3\xa9but de la p\xc3\xa9riode de flux de tr\xc3\xa9sorerie"
+		}
+		{
+			hash = "bd36f28ffcb57bf8"
+			en = "Capital Expenditures"
+			fr = "D\xc3\xa9penses en capital"
+		}
+		{
+			hash = "338f9a775aac9ec2"
+			en = "Change In Cash"
+			fr = "Changement de tr\xc3\xa9sorerie"
+		}
+		{
+			hash = "edaa070dd7f5e0c3"
+			en = "Change In Working Capital"
+			fr = "Changement du fonds de roulement"
+		}
+		{
+			hash = "cd85804fcbc30ce7"
+			en = "Change To Account Receivables"
+			fr = "Changement des comptes d\xc3\xa9biteurs"
+		}
+		{
+			hash = "bbdf71f3ce6b4960"
+			en = "Change To Inventory"
+			fr = "Changement de l'inventaire"
+		}
+		{
+			hash = "7a47df35d32caf80"
+			en = "Change To Liabilities"
+			fr = "Changement des passifs"
+		}
+		{
+			hash = "c9f10dba1e34ebba"
+			en = "Change To Netincome"
+			fr = "@TODO"
+		}
+		{
+			hash = "cfdd1e43793fe262"
+			en = "Change To Operating Activities"
+			fr = "Changement aux activit\xc3\xa9s d'exploitation"
+		}
+		{
+			hash = "bd7da79def3b9f36"
+			en = "Depreciation"
+			fr = "D\xc3\xa9pr\xc3\xa9ciation"
+		}
+		{
+			hash = "7e27dd6331b27f0f"
+			en = "Dividends Paid"
+			fr = "Dividendes pay\xc3\xa9s"
+		}
+		{
+			hash = "9762c73f70c06ee8"
+			en = "End Period Cash Flow"
+			fr = "Fin de la p\xc3\xa9riode de flux de tr\xc3\xa9sorerie"
+		}
+		{
+			hash = "9025608f3da4e300"
+			en = "Issuance Of Capital Stock"
+			fr = "Emission d'actions"
+		}
+		{
+			hash = "52f791d57c8e8b36"
+			en = "Net Borrowings"
+			fr = "Emprunts nets"
+		}
+		{
+			hash = "36bb6b77d55c8101"
+			en = "Other Cashflows From Financing Activities"
+			fr = "Autres flux de tr\xc3\xa9sorerie des activit\xc3\xa9s de financement"
+		}
+		{
+			hash = "9445fb187e1cdcfa"
+			en = "Other Non Cash Items"
+			fr = "Autres \xc3\xa9l\xc3\xa9ments non mon\xc3\xa9taires"
+		}
+		{
+			hash = "3745d5f520fc7a2f"
+			en = "Sale Purchase Of Stock"
+			fr = "Vente achat d'actions"
+		}
+		{
+			hash = "a9bfdaee14cad63a"
+			en = "Stock Based Compensation"
+			fr = "R\xc3\xa9mun\xc3\xa9ration fond\xc3\xa9e sur des actions"
+		}
+		{
+			hash = "4c617f6039025440"
+			en = "Total Cash From Financing Activities"
+			fr = "Total des flux de tr\xc3\xa9sorerie des activit\xc3\xa9s de financement"
+		}
+		{
+			hash = "2d75781dec835459"
+			en = "Total Cash From Operating Activities"
+			fr = "Total des flux de tr\xc3\xa9sorerie des activit\xc3\xa9s d'exploitation"
+		}
 	]
 }

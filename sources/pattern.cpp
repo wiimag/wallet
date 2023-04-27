@@ -2659,8 +2659,10 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
     const size_t notes_size = string_length(pattern->notes);
     bool used_tree_node = false;
 
-    ImGui::SetNextItemOpen(notes_size > 0, ImGuiCond_Appearing);
+    ImGui::Spacing();
+
     ImGui::AlignTextToFramePadding();
+    ImGui::SetNextItemOpen(notes_size > 0, ImGuiCond_Appearing);
     if (pattern->analysis_summary == nullptr || ImGui::TreeNode(tr("Notes")))
     {
         used_tree_node = pattern->analysis_summary != nullptr;
@@ -2723,7 +2725,7 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
         }
 
         ImGui::SameLine();
-        if (ImGui::Button(tr("Generate"), { -1, 0 }))
+        if (ImGui::Button(tr("Generate"), { -10, 0 }))
         {
             if (pattern->analysis_summary)
             {
@@ -2739,6 +2741,7 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
         ImGui::Separator();
         if (ImGui::BeginChild("##Summary", ImGui::GetContentRegionAvail()))
         {
+            ImGui::AlignTextToFramePadding();
             if (pattern->analysis_summary && pattern->analysis_summary->length)
                 ImGui::TextWrapped("%.*s", STRING_FORMAT(*pattern->analysis_summary));
             else
@@ -2813,11 +2816,13 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     {
         const char* title = string_format_static_const("%.*s Notes", STRING_FORMAT(code));
         ImGui::SetNextWindowSize({IM_SCALEF(400), IM_SCALEF(500)}, ImGuiCond_Appearing);
-        if (ImGui::Begin(title, &pattern->notes_opened))
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(6), IM_SCALEF(2)));
+        if (ImGui::Begin(title, &pattern->notes_opened, 0))
         {
             static bool focus_notes = false;
             pattern_render_notes_and_analysis(pattern, focus_notes);
         } ImGui::End();
+        ImGui::PopStyleVar();
     }
 }
 

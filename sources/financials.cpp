@@ -17,6 +17,7 @@
 #include <framework/string_table.h>
 #include <framework/profiler.h>
 #include <framework/array.h>
+#include <framework/window.h>
 
 #define HASH_FINANCIALS static_hash_string("financials", 10, 0x3b2f926a5f4bff66ULL)
 
@@ -519,6 +520,9 @@ struct financials_window_t
     financial_income_sheet_t* incomes{ nullptr };
 
     time_t min_date{ 0 }, max_date{ 0 };
+
+    bool auto_fit{ true };
+    bool rendered_once{ false };
 };
 
 FOUNDATION_STATIC financial_balance_sheet_t* financials_fetch_balance_sheets(const json_object_t& json)
@@ -728,8 +732,7 @@ FOUNDATION_STATIC void financials_fetch_data(financials_window_t* window, const 
     {
         window->min_date = window->balances[0].date;
         window->max_date = window->balances[num_sheets - 1].date;
-
-        dispatch(L0(ImPlot::SetNextAxesToFit()));
+        window->auto_fit = true;
     }
 }
 
@@ -749,9 +752,9 @@ FOUNDATION_STATIC financials_window_t* financials_window_allocate(const char* sy
     return window;
 }
 
-FOUNDATION_STATIC void financials_window_deallocate(void* _window)
+FOUNDATION_STATIC void financials_window_deallocate(window_handle_t win)
 {
-    financials_window_t* window = (financials_window_t*)_window;
+    auto* window = (financials_window_t*)window_get_user_data(win);
     FOUNDATION_ASSERT(window);
 
     array_deallocate(window->balances);
@@ -790,14 +793,15 @@ FOUNDATION_STATIC bool financials_render_sheet_selector(const char* label, const
         if (!c.selected)
             continue;
 
+        string_const_t nametr = tr(STRING_ARGS(c.name), false);
         if (added == 0)
         {
-            preview = string_copy(STRING_BUFFER(preview_buffer), STRING_ARGS(c.name));
+            preview = string_copy(STRING_BUFFER(preview_buffer), STRING_ARGS(nametr));
         }
         else
         {
             preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_CONST(", "));
-            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(c.name));
+            preview = string_concat(STRING_BUFFER(preview_buffer), STRING_ARGS(preview), STRING_ARGS(nametr));
         }
 
         added++;
@@ -810,7 +814,6 @@ FOUNDATION_STATIC bool financials_render_sheet_selector(const char* label, const
     ImGui::TextUnformatted(label);
 
     ImGui::SameLine();
-    //ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.8f);
     if (ImGui::BeginCombo(string_format_static_const("##%s", label), preview.str, ImGuiComboFlags_None))
     {
         bool focused = false;
@@ -824,12 +827,9 @@ FOUNDATION_STATIC bool financials_render_sheet_selector(const char* label, const
             if (!financials_sheet_has_data_for_field(sheets, c.field_offset))
                 continue;
                 
-            string_const_t ex_id = string_format_static(STRING_CONST("%.*s"), STRING_FORMAT(c.name));
+            string_const_t ex_id = tr(STRING_ARGS(c.name), false);
             if (ImGui::Checkbox(ex_id.str, &c.selected))
                 updated = true;
-
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("%.*s", STRING_FORMAT(c.name));
 
             if (!focused && c.selected)
             {
@@ -843,37 +843,40 @@ FOUNDATION_STATIC bool financials_render_sheet_selector(const char* label, const
     return updated;
 }
 
-FOUNDATION_STATIC bool financials_window_render(void* obj)
+FOUNDATION_STATIC void financials_window_render(window_handle_t win)
 {
-    auto* window = (financials_window_t*)obj;
+    auto* window = (financials_window_t*)window_get_user_data(win);
     FOUNDATION_ASSERT(window);
 
     if (array_empty(window->balances))
-    {
-        ImGui::TextWrapped(tr("No financial sheets to display"));
-        return true;
-    }
+        return ImGui::TrTextWrapped("No financial sheets to display");
 
     if (ImGui::Checkbox("##BalanceCheck", &window->show_balance_values))
-        ImPlot::SetNextAxesToFit();
+        window->auto_fit = true;
     ImGui::SameLine();
-    if (financials_render_sheet_selector("Balance", window->balances, BALANCE_FIELDS))
-        ImPlot::SetNextAxesToFit();
+    if (financials_render_sheet_selector(tr("Balance"), window->balances, BALANCE_FIELDS))
+        window->auto_fit = true;
 
     if (ImGui::Checkbox("##IncomeCheck", &window->show_income_values))
-        ImPlot::SetNextAxesToFit();
+        window->auto_fit = true;
     ImGui::SameLine();
-    if (financials_render_sheet_selector("Incomes", window->incomes, INCOME_FIELDS))
-        ImPlot::SetNextAxesToFit();
+    if (financials_render_sheet_selector(tr("Incomes"), window->incomes, INCOME_FIELDS))
+        window->auto_fit = true;
 
     if (ImGui::Checkbox("##CashFlowCheck", &window->show_cash_flow_values))
-        ImPlot::SetNextAxesToFit();
+        window->auto_fit = true;
     ImGui::SameLine();
-    if (financials_render_sheet_selector("Cash Flow", window->cash_flows, CASH_FLOW_FIELDS))
+    if (financials_render_sheet_selector(tr("Cash Flow"), window->cash_flows, CASH_FLOW_FIELDS))
+        window->auto_fit = true;
+
+    if (window->auto_fit && window->rendered_once)
+    {
         ImPlot::SetNextAxesToFit();
+        window->auto_fit = false;
+    }
 
     if (!ImPlot::BeginPlot("Financials", ImVec2(-1, -1), ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
-        return false;
+        return;
 
     ImPlot::SetupAxis(ImAxis_X1, "##Date", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, (double)window->min_date, (double)window->max_date);
@@ -985,8 +988,8 @@ FOUNDATION_STATIC bool financials_window_render(void* obj)
         }
     }
     
+    window->rendered_once = true;
     ImPlot::EndPlot();
-    return true;
 }
 
 //
@@ -996,7 +999,8 @@ FOUNDATION_STATIC bool financials_window_render(void* obj)
 void financials_open_window(const char* symbol, size_t symbol_length)
 {
     auto* window = financials_window_allocate(symbol, symbol_length);
-    app_open_dialog(window->title, financials_window_render, 1600, 1200, true, window, financials_window_deallocate);
+    window_open("financials", STRING_LENGTH(window->title), 
+        financials_window_render, financials_window_deallocate, window);
 }
 
 //
