@@ -1,11 +1,14 @@
 # Changelog
 
-## [0.19.4] - 2023-04-26
+## [0.19.5] - 2023-04-26
+- Add basic fundamental pattern analysis.
 - Add support to check for new releases.
 - Fix opening URL links on MacOS.
+- Fix table currency value rounding.
 - Fix timestamp parsing on MacOS.
 - Improve pattern stats by adding more tooltip information.
 - Remove from query cache files that are 31 days old.
+- Update how report titles days help is computed. We weight each transaction dates based on the bought price compared to the total title buy price.
 
 ## [0.18.4] - 2023-04-24
 - Add support to add titles from the search window to a report.

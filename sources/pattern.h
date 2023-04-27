@@ -8,6 +8,8 @@
 #include "stock.h"
 #include "openai.h"
 
+#include <framework/config.h>
+
 struct bulk_t;
 
 typedef int pattern_handle_t;
@@ -121,6 +123,8 @@ struct pattern_t
     openai_completion_options_t analysis_options{};
 
     bool notes_opened{ false };
+
+    config_handle_t fundamentals;
 };
 
 pattern_handle_t pattern_find(const char* symbol, size_t symbol_length);

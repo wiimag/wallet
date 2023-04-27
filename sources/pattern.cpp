@@ -64,6 +64,7 @@ enum PatternType : int {
     PATTERN_SIMULATION_BEGIN,
     PATTERN_LONG_COORDINATED_FLEX,
     PATTERN_ACTIVITY,
+    PATTERN_FUNDAMENTALS,
     PATTERN_SIMULATION_END,
 
     PATTERN_ALL_END = PATTERN_SIMULATION_END
@@ -78,7 +79,8 @@ constexpr const char* GRAPH_TYPES[PATTERN_ALL_END] = {
     nullptr,
     nullptr,
     "LCF",
-    "Activity"
+    "Activity",
+    "Fundamentals"
 };
 
 typedef enum class PatternRenderFlags : int {
@@ -2086,8 +2088,9 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('5') || shortcut_executed('Y')) pattern->type = PATTERN_GRAPH_YOY;
     if (shortcut_executed('6')) pattern->type = PATTERN_LONG_COORDINATED_FLEX;
     if (shortcut_executed('7') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
+    if (shortcut_executed('8')) pattern->type = PATTERN_FUNDAMENTALS;
 
-    ImGui::SetNextItemWidth(IM_SCALEF(100));
+    ImGui::SetNextItemWidth(IM_SCALEF(120));
     string_const_t graph_type_label_preview = string_to_const(GRAPH_TYPES[pattern->type]);
     if (ImGui::BeginCombo("##Type", tr(STRING_ARGS(graph_type_label_preview), true).str, ImGuiComboFlags_None))
     {
@@ -2110,51 +2113,54 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
 
     if (previous_graph_type != pattern->type)
     {
-        pattern->autofit = false;
         graph.refresh = true;
+        pattern->autofit = false;
     }
 
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
-    if (ImGui::SliderInt("##Range", &pattern->range, (int)graph.min_d, (int)graph.max_d, tr("%d days"), ImGuiSliderFlags_Logarithmic))
-    {
-        if (pattern->type == PATTERN_GRAPH_TRENDS)
-            graph.refresh = true;
-    }
-
-    if (shortcut_executed(ImGuiKey_Z))
-        pattern_render_graph_zoom(pattern, graph);
-    if (pattern->type == PATTERN_GRAPH_DEFAULT && ImGui::BeginPopupContextItem())
-    {
-        if (ImGui::MenuItem(tr("Zoom")))
-            pattern_render_graph_zoom(pattern, graph);
-        ImGui::EndPopup();
-    }
-
-    if (pattern->type >= PATTERN_GRAPH_BEGIN && pattern->type < PATTERN_GRAPH_END)
-    {
-        ImGui::SameLine();
-        if (ImGui::Checkbox(tr("Limits"), &pattern->show_limits))
-            graph.refresh = true;
-
-        if (pattern->type != PATTERN_GRAPH_YOY)
-        {
-            ImGui::SameLine();
-            if (ImGui::Checkbox(tr("Extra Charts"), &pattern->extra_charts))
-                graph.refresh = true;
-
-            ImGui::SameLine();
-            if (ImGui::Checkbox(tr("Invert Time"), &pattern->x_axis_inverted))
-                graph.refresh = true;
-        }
-    }
-    else if (pattern->type == PATTERN_LONG_COORDINATED_FLEX)
+    if (pattern->type != PATTERN_FUNDAMENTALS)
     {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
-        if (ImGui::SliderFloat("##Percent", &pattern->percent, 0, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
+        if (ImGui::SliderInt("##Range", &pattern->range, (int)graph.min_d, (int)graph.max_d, tr("%d days"), ImGuiSliderFlags_Logarithmic))
         {
-            graph.refresh = true;
+            if (pattern->type == PATTERN_GRAPH_TRENDS)
+                graph.refresh = true;
+        }
+
+        if (shortcut_executed(ImGuiKey_Z))
+            pattern_render_graph_zoom(pattern, graph);
+        if (pattern->type == PATTERN_GRAPH_DEFAULT && ImGui::BeginPopupContextItem())
+        {
+            if (ImGui::MenuItem(tr("Zoom")))
+                pattern_render_graph_zoom(pattern, graph);
+            ImGui::EndPopup();
+        }
+
+        if (pattern->type >= PATTERN_GRAPH_BEGIN && pattern->type < PATTERN_GRAPH_END)
+        {
+            ImGui::SameLine();
+            if (ImGui::Checkbox(tr("Limits"), &pattern->show_limits))
+                graph.refresh = true;
+
+            if (pattern->type != PATTERN_GRAPH_YOY)
+            {
+                ImGui::SameLine();
+                if (ImGui::Checkbox(tr("Extra Charts"), &pattern->extra_charts))
+                    graph.refresh = true;
+
+                ImGui::SameLine();
+                if (ImGui::Checkbox(tr("Invert Time"), &pattern->x_axis_inverted))
+                    graph.refresh = true;
+            }
+        }
+        else if (pattern->type == PATTERN_LONG_COORDINATED_FLEX)
+        {
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
+            if (ImGui::SliderFloat("##Percent", &pattern->percent, 0, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
+            {
+                graph.refresh = true;
+            }
         }
     }
 
@@ -2226,6 +2232,155 @@ FOUNDATION_STATIC int pattern_activity_format_date(double value, char* buff, int
 
     string_const_t date_str = string_from_date(d);
     return (int)string_copy(buff, size, STRING_ARGS(date_str)).length;
+}
+
+FOUNDATION_STATIC void pattern_render_fundamentals_object(pattern_t* pattern, config_handle_t obj, int level = 0)
+{
+    for (auto e : obj)
+    {
+        auto type = config_value_type(e);
+        if (type == CONFIG_VALUE_OBJECT || type == CONFIG_VALUE_ARRAY)
+        {
+            if (config_size(e) == 0)
+                continue;
+
+            char id_buffer[64];
+            string_const_t cv_id = config_name(e);
+            string_t id = string_copy(STRING_BUFFER(id_buffer), STRING_ARGS(cv_id));
+
+            double d;
+            if (string_try_convert_number(STRING_ARGS(cv_id), d))
+            {
+                auto cv_name = e["Name"];
+                if (cv_name)
+                {
+                    string_const_t cv_name_str = cv_name.as_string();
+                    id = string_copy(STRING_BUFFER(id_buffer), STRING_ARGS(cv_name_str));
+                }
+                else
+                {
+                    cv_name = e["name"];
+                    if (cv_name)
+                    {
+                        string_const_t cv_name_str = cv_name.as_string();
+                        id = string_copy(STRING_BUFFER(id_buffer), STRING_ARGS(cv_name_str));
+                    }
+                }
+            }
+
+            if (ImGui::TreeNode(id.str))
+            {
+                ImGui::NextColumn();
+                ImGui::NextColumn();
+                pattern_render_fundamentals_object(pattern, e, level + 1);
+                ImGui::TreePop();
+            }
+            ImGui::NextColumn();
+
+            ImGui::Dummy({0,0});
+            ImGui::NextColumn();
+        }
+    }
+
+    char section_buffer[64];
+    string_const_t cvsection = config_name(obj);
+    string_t section = string_copy(STRING_BUFFER(section_buffer), STRING_ARGS(cvsection));
+    int lines = 0;
+    //ImGui::Columns(2, section.str, true);
+    for (auto e : obj)
+    {
+        auto type = config_value_type(e);
+
+        if (type == CONFIG_VALUE_ARRAY || type == CONFIG_VALUE_OBJECT)
+            continue;
+
+        if (config_is_null(e))
+            continue;
+
+        string_const_t cv_id = config_name(e);
+        // Skip field id with "name"
+        if (string_equal_nocase(STRING_ARGS(cv_id), STRING_CONST("name")))
+            continue;
+
+        string_const_t cv_value = e.as_string();
+
+        ImGui::BeginGroup();
+        ImGui::TextUnformatted(STRING_RANGE(cv_id));
+        ImGui::NextColumn();        
+        
+        ImGui::TextWrapped("%.*s", STRING_FORMAT(cv_value));
+        ImGui::NextColumn();
+        ImGui::EndGroup();
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && openai_available())
+        {
+            char value_copy_buffer[128];
+            string_t value_copy = string_copy(STRING_BUFFER(value_copy_buffer), STRING_ARGS(cv_value));
+
+            char buffer[2048];
+            string_const_t company_name = stock_get_name(pattern->stock);
+            string_t p1 = tr_format(STRING_BUFFER(buffer), 
+                "Can you explain what the value {0} for {1} means given that this is associated to the public company {2}. "
+                "Also please explain briefly what {1} means for an investor and if it is good or not regarding {2}. "
+                "Please reword any \"CamelCase\" words to something understandable and convert numerical values into the appropriate unit, i.e. $, %, etc.---\n",
+                value_copy, cv_id, company_name);
+
+            openai_completion_options_t options{};
+            options.max_tokens = 250;
+            options.temperature = 0.4f;
+            options.frequency_penalty = -0.4f;
+            openai_complete_prompt(STRING_ARGS(p1), options, [](string_t response)
+            {
+                log_info(HASH_PATTERN, STRING_ARGS(response));
+
+                char title[256];
+                static int occ = 0;
+                string_const_t fmttr = RTEXT("Field Description##%d");
+                string_format(STRING_BUFFER(title), STRING_ARGS(fmttr), ++occ);
+
+                app_open_dialog(title, [](void* context)
+                {
+                    ImGui::TextWrapped("%s", (const char*)context);
+                    return true;
+                }, IM_SCALEF(400), IM_SCALEF(300), true, response.str, [](void* context)
+                {
+                    string_deallocate((char*)context);
+                });
+            });;
+        }
+
+        lines++;
+    }
+
+   // ImGui::Columns(1, "##STOP", false);
+}
+
+FOUNDATION_STATIC void pattern_render_fundamentals(pattern_t* pattern)
+{
+    if (!pattern->fundamentals)
+    {
+        const char* symbol = string_table_decode(pattern->code);
+        eod_fetch_async("fundamentals", symbol, FORMAT_JSON_CACHE, [pattern](const json_object_t& json)
+        {
+            if (json.resolved())
+                pattern->fundamentals = config_parse(STRING_LENGTH(json.buffer), CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+            else
+                pattern->fundamentals = config_allocate();
+        });
+    }
+    else if (config_size(pattern->fundamentals) == 0)
+    {
+        ImGui::TrTextUnformatted("No data available");
+    }
+    else
+    {
+        if (ImGui::BeginChild("Fundamentals"))
+        {
+            ImGui::Columns(2, "FC##1", true);
+            pattern_render_fundamentals_object(pattern, pattern->fundamentals);
+            ImGui::Columns(1, "##STOP", false);
+        }
+        ImGui::EndChild();
+    }
 }
 
 FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph_data_t& graph)
@@ -2416,6 +2571,10 @@ FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
 
         case PATTERN_ACTIVITY:
             pattern_render_activity(pattern, graph_data);
+            break;
+
+        case PATTERN_FUNDAMENTALS:
+            pattern_render_fundamentals(pattern);
             break;
 
         default: // PATTERN_GRAPH_PRICE
@@ -3187,6 +3346,8 @@ FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
         memory_deallocate(pattern->analysis_summary);
         pattern->analysis_summary = nullptr;
     }
+
+    config_deallocate(pattern->fundamentals);
 }
 
 FOUNDATION_STATIC void pattern_shutdown()

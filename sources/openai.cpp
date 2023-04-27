@@ -833,6 +833,67 @@ const openai_response_t* openai_generate_news_sentiment(
     return response;
 }
 
+bool openai_complete_prompt(const char* prompt, size_t length, const openai_completion_options_t& options, const function<void(string_t)>& completed)
+{
+    string_t promptstr = string_clone(prompt, length);
+    
+    // Start a job to fetch the data
+    return job_execute([promptstr, options, completed](void* context)
+    {
+        const char* query_url = openai_build_url("completions");
+
+        config_handle_t data = config_allocate();
+        config_set(data, "model", STRING_CONST("text-davinci-003"));
+        config_set(data, "temperature", options.temperature);
+        config_set(data, "max_tokens", options.max_tokens);
+        config_set(data, "top_p", options.top_p);
+        config_set(data, "best_of", options.best_of);
+        config_set(data, "presence_penalty", options.presence_penalty);
+        config_set(data, "frequency_penalty", options.frequency_penalty);
+        config_set(data, "stop", STRING_CONST("---\n"));
+        config_set(data, "prompt", STRING_ARGS(promptstr));
+
+        if (!openai_execute_query(query_url, data, [completed](const auto& res)
+        {
+            if (!res.resolved())
+            {
+                string_const_t error_message = res["error"]["message"].as_string();
+                log_errorf(HASH_OPENAI, ERROR_EXCEPTION, STRING_CONST("Failed to complete summary prompt: %.*s"), STRING_FORMAT(error_message));
+                return;
+            }
+
+            string_const_t payload = res.to_string();
+            log_debugf(HASH_OPENAI, STRING_CONST("Response: %.*s"), STRING_FORMAT(payload));
+
+            string_const_t first_choice = res["choices"].get(0ULL)["text"].as_string();
+            
+            // Skip the first \\n if any
+            if (string_starts_with(STRING_ARGS(first_choice), STRING_CONST("\\n")))
+            {
+                first_choice.str += 2;
+                first_choice.length -= 2;
+            }
+
+            string_t response = string_clone(STRING_ARGS(first_choice));
+
+            // Replace all occurrences of \\n with \n
+            response = string_replace(STRING_ARGS_CAPACITY(response), STRING_CONST("\\n"), STRING_CONST("\n"), true);
+
+            // Replace all occurrences of \xe2\x80\x99 with '
+            response = string_replace(STRING_ARGS_CAPACITY(response), STRING_CONST("\xe2\x80\x99"), STRING_CONST("'"), true);
+
+            completed(response);
+        }))
+        {
+            log_errorf(HASH_OPENAI, ERROR_EXCEPTION, STRING_CONST("Failed to execute OpenAI query"));
+        }
+
+        config_deallocate(data);
+        string_deallocate(promptstr.str);
+        return 0;
+    }, nullptr, JOB_DEALLOCATE_AFTER_EXECUTION) != nullptr;
+}
+
 string_t* openai_generate_summary_sentiment(
     const char* symbol, size_t symbol_length, 
     const char* user_prompt, size_t user_prompt_length,

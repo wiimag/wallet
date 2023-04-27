@@ -89,6 +89,7 @@ FOUNDATION_ALIGNED_STRUCT(title_t, 8)
     double_option_t today_exchange_rate{ 1.0 };
     double_option_t ps{ DNAN };
     double_option_t ask_price{ DNAN };
+    mutable double_option_t average_days_held{ DNAN };
 
     bool show_buy_ui{ false };
     bool show_sell_ui{ false };
@@ -339,3 +340,11 @@ double title_get_ask_price(const title_t* title);
  *  @return The current price or NAN if not yet available.
  */
 double title_current_price(const title_t* title);
+
+/*! Returns the average amount of days the title is held. 
+ *
+ *  @param title The title to get the average amount of days for.
+ *
+ *  @return The average amount of days the title is held.
+ */
+double title_average_days_held(const title_t* title);

@@ -2610,5 +2610,25 @@
 			en = " Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) \n Adjusted Yield based on last year data: %.3g %% (\xee\xa1\xab %.3g%%) "
 			fr = " Ann\xc3\xa9e apr\xc3\xa8s Ann\xc3\xa9e (Ratio global %.3g %%) (%.0lf derni\xc3\xa8res ann\xc3\xa9es) \n Rendement ajust\xc3\xa9 sur la base des donn\xc3\xa9es de l'ann\xc3\xa9e derni\xc3\xa8re: %.3g %% (\xee\xa1\xab %.3g%%) "
 		}
+		{
+			hash = "2723091a1422288f"
+			en = "%s\n\nYou exceeded your daily EOD API requests limit.\nPlease contact support@eodhistoricaldata.com.\n\nAll request will use the local cache if available."
+			fr = "%s\n\nVous avez d\xc3\xa9pass\xc3\xa9 votre limite quotidienne de demandes d'API EOD.\nVeuillez contacter"
+		}
+		{
+			hash = "97f9befa718bf86"
+			en = "Earnings"
+			fr = "B\xc3\xa9n\xc3\xa9fices"
+		}
+		{
+			hash = "ce64ba1d9b51dfca"
+			en = "Field Description##%d"
+			fr = "Description du champ##%d"
+		}
+		{
+			hash = "b2a74ff59535ec42"
+			en = "Can you explain what the value {0} for {1} means given that this is associated to the public company {2}. Also please explain briefly what {1} means for an investor and if it is good or not regarding {2}. Please reword any \"CamelCase\" words to something understandable and convert numerical values into the appropriate unit, i.e. $, %, etc.---\n"
+			fr = "Pouvez-vous expliquer ce que signifie la valeur {0} pour {1} \xc3\xa9tant donn\xc3\xa9 que celle-ci est associ\xc3\xa9e \xc3\xa0 la soci\xc3\xa9t\xc3\xa9 publique {2}. Veuillez \xc3\xa9galement expliquer bri\xc3\xa8vement ce que {1} signifie pour un investisseur et si c'est bon ou non par rapport \xc3\xa0 {2}. Veuillez reformuler tous les mots \"CamelCase\" en quelque chose de compr\xc3\xa9hensible et convertir les valeurs num\xc3\xa9riques en l'unit\xc3\xa9 appropri\xc3\xa9e, c'est-\xc3\xa0-dire $, %, etc.---\n"
+		}
 	]
 }

@@ -201,7 +201,6 @@ FOUNDATION_STATIC void alerts_run_evaluators()
 
         // Evaluate one expression per frame
         _alerts_module->last_evaluation = time_current();
-        break;
     }
 }
 

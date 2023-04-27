@@ -119,6 +119,7 @@ struct config_handle_t
     double as_number(double default_value = NAN) const;
     string_const_t as_string(const char* default_string = nullptr, size_t default_string_length = 0, const char* fmt = nullptr) const;
     template<typename T = int> T as_integer(int default_value = 0) const { return (T)math_trunc(as_number((double)default_value)); }
+    time_t as_time(time_t default_value = 0) const;
 };
 
 config_handle_t config_null();
@@ -166,6 +167,7 @@ FOUNDATION_FORCEINLINE config_handle_t config_set_string(config_handle_t obj, co
 }
 
 template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], bool value) { return config_set(v, key, N-1, value); }
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], int number) { return config_set(v, key, N -1, (double)number); }
 template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], double number) { return config_set(v, key, N -1, number); }
 template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], const void* data) { return config_set(v, key, N -1, data); }
 template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], string_const_t string_value) { return config_set(v, key, N -1, string_value); }

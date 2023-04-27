@@ -67,8 +67,9 @@ FOUNDATION_STATIC double title_compute_ps(const title_t* t, const stock_t* s)
 
     double M = 0;
     double average_fg = (t->average_price + s->current.adjusted_close) / 2.0;
-    if (t->elapsed_days >= 30)
-        M = max(t->average_price, average_fg) * (1.0 + profit_ask - ((t->elapsed_days - average_days) / 20 / 100));
+    const double days_held = title_average_days_held(t);
+    if (days_held >= 30)
+        M = max(t->average_price, average_fg) * (1.0 + profit_ask - ((days_held - average_days) / 20 / 100));
     else
         M = max(t->average_price, average_fg) * max(1.2, 1 + target_ask);
     double K = M / t->average_price - 1.0;
@@ -136,12 +137,13 @@ FOUNDATION_STATIC bool title_fetch_ask_price(const title_t* t, double& value)
     const double average_days = t->wallet->average_days;
     const double target_ask = t->wallet->target_ask;
 
+    const double days_held = title_average_days_held(t);
     const double average_fg = (t->average_price + s->current.adjusted_close) / 2.0;
-    if (t->elapsed_days > 30)
+    if (days_held > 30)
     {
         unsigned samples = 0;
         double sampling_average_fg = 0.0f;
-        unsigned max_samping_days = math_floor(t->elapsed_days / 2.0f);
+        unsigned max_samping_days = math_floor(days_held / 2.0f);
         for (unsigned i = 2, end = array_size(s->history); i < end && samples < max_samping_days; ++i)
         {
             if (s->history[i].date > t->date_average)
@@ -161,7 +163,7 @@ FOUNDATION_STATIC bool title_fetch_ask_price(const title_t* t, double& value)
             sampling_average_fg = max(t->average_price, average_fg);
         }
 
-        value = sampling_average_fg * (1.0 + profit_ask - (t->elapsed_days - average_days) / 20.0 / 100.0);
+        value = sampling_average_fg * (1.0 + profit_ask - (days_held - average_days) / 20.0 / 100.0);
     }
     else
     {
@@ -467,6 +469,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     t->ps.reset([t](double& value){ return title_fetch_ps(t, value); });
     t->ask_price.reset([t](double& value){ return title_fetch_ask_price(t, value); });
     t->today_exchange_rate.reset([t](double& value){ return title_fetch_today_exchange_rate(t, value); });
+    t->average_days_held.reset();
 
     FOUNDATION_ASSERT(math_real_is_finite(t->sell_total_adjusted_qty));
 }
@@ -583,7 +586,7 @@ time_t title_get_first_transaction_date(const title_t* t, time_t* out_date /*= n
             first_date = odate;
     }
 
-    if (out_date&& first_date != INT64_MAX)
+    if (out_date && first_date != INT64_MAX)
         *out_date = first_date;
 
     return first_date;
@@ -627,4 +630,61 @@ double title_current_price(const title_t* title)
         return NAN;
 
     return stock->current.price;
+}
+
+double title_average_days_held(const title_t* title)
+{
+    double average_days_held = 0;
+    if (title->average_days_held.try_get(average_days_held))
+        return average_days_held;
+
+    const time_t start_date = title_get_first_transaction_date(title);
+    if (start_date == 0 || start_date == INT64_MAX)
+    {
+        title->average_days_held = DNAN;
+        return DNAN;
+    }
+
+    auto orders = title->data["orders"];
+    double buy_total_price = title->buy_total_price;
+
+    #if 0
+    // Exclude from the buy total the first day
+    for (auto e : orders)
+    {
+        if (!e["buy"].as_boolean())
+            continue;
+
+        const time_t order_date = e["date"].as_time();
+        if (order_date == start_date)
+        {
+            const double qty = e["qty"].as_number();
+            const double price = e["price"].as_number();
+            const double total_price = qty * price;
+            buy_total_price -= total_price;
+        }
+    }
+    #endif
+
+    // Compute in average how many days the title is help.
+    // We weight each transaction total price by the title total transaction price.
+    for (auto e : orders)
+    {
+        if (!e["buy"].as_boolean())
+            continue;
+
+        const time_t order_date = e["date"].as_time();
+        //if (order_date == 0 || order_date == start_date)
+          //  continue;
+
+        const double qty = e["qty"].as_number();
+        const double price = e["price"].as_number();
+        const double total_price = qty * price;
+
+        const double ratio = total_price / buy_total_price;
+        average_days_held += order_date * ratio;
+    }
+
+    title->average_days_held = time_elapsed_days(average_days_held, time_now());
+    return title->average_days_held.fetch();
 }

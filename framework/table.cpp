@@ -65,8 +65,8 @@ FOUNDATION_STATIC string_const_t cell_number_value_to_string(const cell_t& cell,
                 return string_format_static(STRING_CONST("%.3gK" THIN_SPACE "$"), value / 1e3);
         }
         if (flags & COLUMN_ROUND_NUMBER)
-            return string_from_currency(value, STRING_CONST("9" THIN_SPACE "999" THIN_SPACE "999" THIN_SPACE "$"));
-        return string_from_currency(math_round(value), STRING_CONST("9" THIN_SPACE "999" THIN_SPACE "999.99" THIN_SPACE "$"));
+            return string_from_currency(math_round(value), STRING_CONST("9" THIN_SPACE "999" THIN_SPACE "999" THIN_SPACE "$"));
+        return string_from_currency(value, STRING_CONST("9" THIN_SPACE "999" THIN_SPACE "999.99" THIN_SPACE "$"));
     }
 
     if (flags & COLUMN_ROUND_NUMBER)
@@ -392,12 +392,12 @@ FOUNDATION_STATIC void table_render_column_header(const char* label, void* paylo
     ImGui::BeginGroup();
     if (column->header_render)    
         column->header_render(table, column, args->column_index);
-    else if (format_is_numeric(column->format))
-        table_cell_right_aligned_column_label(label, nullptr);
     else if (column->flags & COLUMN_RIGHT_ALIGN)
         table_cell_right_aligned_column_label(label, nullptr);
     else if (column->flags & COLUMN_CENTER_ALIGN)
         table_cell_middle_aligned_column_label(label, nullptr);
+    else if (format_is_numeric(column->format))
+        table_cell_right_aligned_column_label(label, nullptr);
     else
         table_cell_left_aligned_column_label(label, nullptr);
     ImGui::EndGroup();
@@ -609,8 +609,8 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
             switch (sc.format)
             {
                 case COLUMN_FORMAT_CURRENCY:
-                case COLUMN_FORMAT_NUMBER:
                 case COLUMN_FORMAT_PERCENTAGE:
+                case COLUMN_FORMAT_NUMBER:
                     if (!math_real_is_nan(cell.number))
                     {
                         sc.number += cell.number;
@@ -649,7 +649,7 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
             if ((column.flags & COLUMN_SUMMARY_AVERAGE) || column.format == COLUMN_FORMAT_PERCENTAGE)
             {
                 sc.number /= (double)sc.length;
-                if (math_abs(sc.number) > 9.5)
+                if (column.format == COLUMN_FORMAT_PERCENTAGE && math_abs(sc.number) > 9.5)
                     sc.number = (double)math_round(sc.number);
             }
         }

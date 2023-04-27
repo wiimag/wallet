@@ -204,8 +204,12 @@ FOUNDATION_STATIC void string_table_rebuild_hash_table(const string_table_t* st,
     {
         const string_table_hash_length_t& hl = string_table_calc_hash_and_length(s);
         int i = hl.hash % st->num_hash_slots;
+        int itr = 0;
         while (ht[i])
+        {
             i = (i + 1) % st->num_hash_slots;
+            FOUNDATION_ASSERT_MSG(++itr <= st->num_hash_slots, "String table hash table full, unable to add string");
+        }
         ht[i] = (T)(s - strs);
         s = s + hl.length + 1;
     }

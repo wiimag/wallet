@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include <framework/function.h>
+
 #include <foundation/string.h>
 
 struct openai_completion_options_t
@@ -95,3 +97,5 @@ const openai_response_t* openai_generate_news_sentiment(
     const char* symbol, size_t symbol_length, 
     time_t news_date, const char* news_url, size_t news_url_length,
     const openai_completion_options_t& options);
+
+bool openai_complete_prompt(const char* prompt, size_t length, const openai_completion_options_t& options, const function<void(string_t)>& completed);

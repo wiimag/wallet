@@ -157,6 +157,21 @@ string_const_t config_handle_t::as_string(const char* default_string /*= nullptr
     return string_const(default_string, default_string_length);
 }
 
+time_t config_handle_t::as_time(time_t default_value /*= 0*/) const
+{
+    auto type = config_value_type(*this);
+    if (type == CONFIG_VALUE_STRING)
+    {
+        string_const_t string_data = config_value_as_string(*this);
+        return string_to_date(STRING_ARGS(string_data));
+    }
+
+    else if (type == CONFIG_VALUE_NUMBER)
+        return (time_t)config_value_as_number(*this);
+    
+    return default_value;
+}
+
 static string_table_symbol_t config_add_symbol(config_t* root, const char* s, size_t length)
 {
     //auto lock = scoped_mutex_t(root->guard);

@@ -58,7 +58,6 @@ typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_TOTAL_GAIN,
     REPORT_FORMULA_TOTAL_GAIN_P,
     REPORT_FORMULA_TOTAL_FUNDAMENTAL,
-    REPORT_FORMULA_ELAPSED_DAYS,
     REPORT_FORMULA_EXCHANGE_RATE,
     REPORT_FORMULA_TYPE,
     REPORT_FORMULA_PS,
@@ -341,6 +340,15 @@ FOUNDATION_STATIC cell_t report_column_get_day_gain(table_element_ptr_t element,
     return title_get_day_change(t, s);
 }
 
+FOUNDATION_STATIC cell_t report_column_average_days_held(table_element_ptr_t element, const column_t* column)
+{
+    title_t* t = *(title_t**)element;
+    if (t == nullptr)
+        return nullptr;
+
+    return title_average_days_held(t);
+}
+
 FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element, const column_t* column)
 {
     title_t* t = *(title_t**)element;
@@ -363,7 +371,8 @@ FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element
     const double avg = math_ifzero(t->average_price, t->stock->current.adjusted_close);
     const double c_avg = t->stock->current.adjusted_close;
     const double average_fg = (t->average_price + t->stock->current.adjusted_close) / 2.0;
-    const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (t->elapsed_days - t->wallet->average_days) / 20.0 / 100.0);
+    const double days_held = title_average_days_held(t);
+    const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (days_held - t->wallet->average_days) / 20.0 / 100.0);
 
     if (!math_real_is_nan(ask_price) && ask_price < t->average_price)
     {
@@ -393,7 +402,8 @@ FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_con
     const double avg = math_ifzero(t->average_price, t->stock->current.adjusted_close);
     const double c_avg = t->stock->current.adjusted_close;
     const double average_fg = (t->average_price + t->stock->current.adjusted_close) / 2.0;
-    const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (t->elapsed_days - t->wallet->average_days) / 20.0 / 100.0);
+    const double days_held = title_average_days_held(t);
+    const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (days_held - t->wallet->average_days) / 20.0 / 100.0);
     if (!math_real_is_nan(avg))
     {
         if (t->average_quantity == 0 && math_ifnan(t->sell_total_adjusted_qty, 0) > 0)
@@ -465,9 +475,6 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
 
     case REPORT_FORMULA_BUY_QUANTITY:
         return (double)math_round(t->average_quantity);
-
-    case REPORT_FORMULA_ELAPSED_DAYS:
-        return t->elapsed_days;
 
     case REPORT_FORMULA_PS:
         return t->ps.fetch();
@@ -603,12 +610,13 @@ FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_
     string_const_t title = column->get_name();
     ImGui::Text("%.*s", STRING_FORMAT(title));
 
-    //const float width = ImGui::GetItemRectSize().x;
-    const float available_space = ImGui::GetContentRegionAvail().x;
     const float button_width = IM_SCALEF(14.0);
+    const float available_space = ImGui::GetColumnWidth();
     const float column_right_offset = (ImGui::TableGetColumnFlags(column_index) & ImGuiTableColumnFlags_IsSorted) ? IM_SCALEF(10) : 0.0f;
     ImGui::SameLine();
-    ImGui::SetCursorPosX(available_space - button_width - column_right_offset);
+
+    const float horizontal_scroll_offset = ImGui::GetScrollX();
+    ImGui::SetCursorPosX(available_space - button_width - column_right_offset + horizontal_scroll_offset);
     ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
     if (ImGui::SmallButton(ICON_MD_ADD))
     {
@@ -1336,7 +1344,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .width = 200.0f;
 
     table_add_column(table, STRING_CONST(ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"),
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_ELAPSED_DAYS), COLUMN_FORMAT_NUMBER,
+        report_column_average_days_held, COLUMN_FORMAT_NUMBER,
         COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER | COLUMN_MIDDLE_ALIGN);
 
     // Add custom expression columns
@@ -2237,7 +2245,9 @@ void report_summary_update(report_t* report)
 
         if (t->average_quantity > 0)
         {
-            total_days += t->elapsed_days;
+            const double days_held = title_average_days_held(t);
+            
+            total_days += days_held;
             total_active_titles++;
         }
 
