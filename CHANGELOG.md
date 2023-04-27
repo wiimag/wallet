@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.19.5] - 2023-04-26
+## [0.19.5] - 2023-04-27
 - Add basic fundamental pattern analysis.
 - Add support to check for new releases.
 - Fix opening URL links on MacOS.
