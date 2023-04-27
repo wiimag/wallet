@@ -598,7 +598,7 @@
 		{
 			hash = "c197a757a1510aa2"
 			en = "Capital"
-			fr = "Capitale"
+			fr = "Capital"
 		}
 		{
 			hash = "9588b18155b69105"
@@ -2513,7 +2513,7 @@
 		{
 			hash = "bf49f03299b10641"
 			en = "Check for new version..."
-			fr = "V\xc3\xa9rifier les mise \xc3\xa0 jour..."
+			fr = "V\xc3\xa9rifier les mises \xc3\xa0 jour..."
 		}
 		{
 			hash = "4dd758bd40dd596c"
