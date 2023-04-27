@@ -180,8 +180,8 @@ FOUNDATION_STATIC curl_slist* query_create_user_agent_header_list()
 {
     char user_agent_header[256];
     const application_t* app = environment_application();
-    string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu"),
-        STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor);
+    string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu.%u (%s)"),
+        STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor, app->version.sub.revision, FOUNDATION_PLATFORM_DESCRIPTION);
     curl_slist* header_chunk = curl_slist_append(nullptr, user_agent_header);
     return header_chunk;
 }
