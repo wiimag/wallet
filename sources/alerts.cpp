@@ -45,6 +45,8 @@ static struct ALERTS_MODULE {
     bool                new_notifications{ false };
 
     tick_t              last_evaluation{ 0 };
+
+    unsigned            async_index{ 0 };
 } *_alerts_module;
 
 FOUNDATION_STATIC string_const_t alerts_config_file_path()
@@ -166,9 +168,9 @@ FOUNDATION_STATIC void alerts_run_evaluators()
         return;
 
     expr_evaluator_t* evaluators = _alerts_module->evaluators;
-    for (unsigned i = 0; i < array_size(evaluators); ++i)
+    for (;_alerts_module->async_index < array_size(evaluators);)
     {
-        expr_evaluator_t& e = evaluators[i];
+        expr_evaluator_t& e = evaluators[_alerts_module->async_index++];
 
         // Check if expression has already triggered
         if (e.triggered_time || e.discarded)
@@ -201,7 +203,11 @@ FOUNDATION_STATIC void alerts_run_evaluators()
 
         // Evaluate one expression per frame
         _alerts_module->last_evaluation = time_current();
+        break;
     }
+
+    if (_alerts_module->async_index >= array_size(evaluators))
+        _alerts_module->async_index = 0;
 }
 
 FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)

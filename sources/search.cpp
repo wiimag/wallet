@@ -1126,6 +1126,7 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
         string_const_t code = SYMBOL_CONST(s->code);
         if (column->flags & COLUMN_RENDER_ELEMENT)
         {
+            ImGui::BeginGroup();
             if (entry->viewed)
                 ImGui::PushStyleColor(ImGuiCol_Text, SEARCH_PATTERN_VIEWED_COLOR);
             
@@ -1138,8 +1139,14 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
             #if BUILD_APPLICATION
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - font_size, 0.0f);
             ImVec2 logo_size{ font_size, font_size };
-            logo_render_icon(STRING_ARGS(code), logo_size, false, true, nullptr);
+            ImRect logo_rect{};
+            if (logo_render_icon(STRING_ARGS(code), logo_size, false, true, &logo_rect))
+            {
+                ImGui::SetCursorScreenPos(logo_rect.Min);
+                ImGui::Dummy(logo_size);
+            }
             #endif
+            ImGui::EndGroup();
         }
         
         return code;

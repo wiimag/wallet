@@ -22,6 +22,7 @@
 #include <framework/string.h>
 #include <framework/array.h>
 #include <framework/bgfx.h>
+#include <framework/system.h>
 
 #include <foundation/fs.h>
 #include <foundation/path.h>
@@ -570,6 +571,83 @@ FOUNDATION_STATIC ImU32 logo_get_fill_color(const logo_image_t* image)
     return logo_transparent_background_color(image, pixels);
 }
 
+FOUNDATION_STATIC bool logo_icon_selected_callback(string_const_t symbol, string_const_t icon_path)
+{
+    // Get thumbnail directory
+    string_const_t thumbnail_dir = session_get_user_file_path(STRING_CONST("thumbnails"));
+
+    // Parse symbol to only keep the code (removing *.EXCHANGE)
+    string_const_t symbol_code = symbol;
+    size_t dot_pos = string_find(STRING_ARGS(symbol), '.', 0);
+    if (dot_pos != STRING_NPOS)
+        symbol_code.length = dot_pos;
+
+    // Format destination path
+    char dest_path_buffer[BUILD_MAX_PATHLEN];
+    string_t dest_path = string_format(STRING_BUFFER(dest_path_buffer), 
+        STRING_CONST("%.*s/%.*s.icon.png"), STRING_FORMAT(thumbnail_dir), STRING_FORMAT(symbol_code));
+
+    // Copy the icon in the thumbnail cache
+    if (fs_copy_file(STRING_ARGS(icon_path), STRING_ARGS(dest_path)))
+    {
+        // Update the thumbnail cache
+        const hash_t logo_hash = string_hash(STRING_ARGS(symbol));
+        logo_t* logo = logo_find(logo_hash);
+        if (logo)
+        {
+            logo_image_deallocate(logo->icon);
+
+            string_table_symbol_t scode = string_table_encode(STRING_ARGS(symbol));
+            logo->icon = logo_image_allocate(scode, STRING_CONST("icon.png"));
+            return true;
+        }
+        
+        return logo_request_image(STRING_ARGS(symbol));
+    }
+
+    return false;
+}
+
+FOUNDATION_STATIC bool logo_banner_selected_callback(string_const_t symbol, string_const_t icon_path)
+{
+    // Get thumbnail directory
+    string_const_t thumbnail_dir = session_get_user_file_path(STRING_CONST("thumbnails"));
+
+    // Parse symbol to only keep the code (removing *.EXCHANGE)
+    string_const_t symbol_code = symbol;
+    size_t dot_pos = string_find(STRING_ARGS(symbol), '.', 0);
+    if (dot_pos != STRING_NPOS)
+        symbol_code.length = dot_pos;
+
+    // Format destination path
+    char dest_path_buffer[BUILD_MAX_PATHLEN];
+    string_t dest_path = string_format(STRING_BUFFER(dest_path_buffer), 
+        STRING_CONST("%.*s/%.*s.png"), STRING_FORMAT(thumbnail_dir), STRING_FORMAT(symbol_code));
+
+    // Copy the icon in the thumbnail cache
+    SHARED_WRITE_LOCK(_logos_mutex);
+    if (fs_copy_file(STRING_ARGS(icon_path), STRING_ARGS(dest_path)))
+    {
+        // Update the thumbnail cache
+        const hash_t logo_hash = string_hash(STRING_ARGS(symbol));
+        logo_t* logo = logo_find(logo_hash);
+        if (logo)
+        {
+            logo_image_deallocate(logo->banner);
+
+            string_table_symbol_t scode = string_table_encode(STRING_ARGS(symbol));
+            logo->banner = logo_image_allocate(scode, STRING_CONST("png"));
+            logo->banner->image_processor = logo_process_banner_image;
+
+            return true;
+        }
+        
+        return logo_request_image(STRING_ARGS(symbol));
+    }
+
+    return false;
+}
+
 //
 // # PUBLIC API
 //
@@ -760,6 +838,22 @@ bool logo_render_banner(const char* symbol, size_t symbol_length, ImVec2& render
     }
 
     return true;
+}
+
+bool logo_select_icon(const char* symbol, size_t length)
+{
+    string_const_t symbolstr = string_const(symbol, length);
+    const char* title = tr_format("Select icon image (i.e. 32x32) for {0}...", symbolstr);
+    return system_open_file_dialog(title, "PNG (*.png)|*.png", 
+        nullptr, L1(logo_icon_selected_callback(symbolstr, _1)));
+}
+
+bool logo_select_banner(const char* symbol, size_t length)
+{
+    string_const_t symbolstr = string_const(symbol, length);
+    const char* title = tr_format("Select image banner (i.e. 200x32) for {0}...", symbolstr);
+    return system_open_file_dialog(title, "PNG (*.png)|*.png", 
+        nullptr, L1(logo_banner_selected_callback(symbolstr, _1)));
 }
 
 bool logo_has_banner(const char* symbol, size_t symbol_length, int& banner_width, int& banner_height, int& banner_channels, 

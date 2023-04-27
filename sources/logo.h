@@ -67,5 +67,23 @@ bool logo_has_banner(
     const char* symbol, size_t symbol_length, 
     int& banner_width, int& banner_height, int& banner_channels, 
     ImU32& image_bg_color, ImU32& fill_color);
+
+/*! Prompt the user to select a new icon for the symbol.
+ * 
+ *  @param symbol           The symbol to render.
+ *  @param length           The length of the symbol.
+ * 
+ *  @returns Returns true if the user selected a new icon.
+ */
+bool logo_select_icon(const char* symbol, size_t length);
+
+/*! Prompt the user to select a new banner for the symbol.
+ * 
+ *  @param symbol           The symbol to render.
+ *  @param length           The length of the symbol.
+ * 
+ *  @returns Returns true if the user selected a new banner.
+ */
+bool logo_select_banner(const char* symbol, size_t length);
  
 #endif // BUILD_APPLICATION

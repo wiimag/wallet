@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.19.5] - 2023-04-27
+## [0.19.6] - 2023-04-27
 - Add basic fundamental pattern analysis.
 - Add support to check for new releases.
+- Add support to update symbol icon and banner logo images.
 - Fix opening URL links on MacOS.
 - Fix table currency value rounding.
 - Fix timestamp parsing on MacOS.
@@ -28,7 +29,7 @@
 
 # TODO
 
-- [ ] 2023-04-21: Add interface to update stock banner and logo icons.
+- [ ] 2023-04-27: Check alerts in a job
 - [ ] 2023-04-20: Use the new search window to add a new title
 - [ ] 2023-04-20: Check if we can download a first search index database from the backend
 - [ ] 2023-04-19: Add user guide

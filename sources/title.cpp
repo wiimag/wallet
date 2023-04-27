@@ -638,33 +638,8 @@ double title_average_days_held(const title_t* title)
     if (title->average_days_held.try_get(average_days_held))
         return average_days_held;
 
-    const time_t start_date = title_get_first_transaction_date(title);
-    if (start_date == 0 || start_date == INT64_MAX)
-    {
-        title->average_days_held = DNAN;
-        return DNAN;
-    }
-
     auto orders = title->data["orders"];
     double buy_total_price = title->buy_total_price;
-
-    #if 0
-    // Exclude from the buy total the first day
-    for (auto e : orders)
-    {
-        if (!e["buy"].as_boolean())
-            continue;
-
-        const time_t order_date = e["date"].as_time();
-        if (order_date == start_date)
-        {
-            const double qty = e["qty"].as_number();
-            const double price = e["price"].as_number();
-            const double total_price = qty * price;
-            buy_total_price -= total_price;
-        }
-    }
-    #endif
 
     // Compute in average how many days the title is help.
     // We weight each transaction total price by the title total transaction price.
@@ -674,9 +649,6 @@ double title_average_days_held(const title_t* title)
             continue;
 
         const time_t order_date = e["date"].as_time();
-        //if (order_date == 0 || order_date == start_date)
-          //  continue;
-
         const double qty = e["qty"].as_number();
         const double price = e["price"].as_number();
         const double total_price = qty * price;

@@ -13,6 +13,7 @@
 #include "alerts.h"
 #include "openai.h"
 #include "financials.h"
+#include "logo.h"
 
 #include <framework/app.h>
 #include <framework/jobs.h>
@@ -3288,6 +3289,17 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
     }
 
     ImGui::Separator();
+
+    if (ImGui::TrBeginMenu("Update Logo"))
+    {
+        if (ImGui::TrMenuItem(" Icon (32x32)"))
+            logo_select_icon(symbol, symbol_length);
+
+        if (ImGui::TrMenuItem(" Banner (200x32)"))
+            logo_select_banner(symbol, symbol_length);
+        ImGui::EndMenu();
+    }
+
     if (ImGui::TrBeginMenu("Add to report"))
     {
         pattern_add_to_report_menu(symbol, symbol_length);

@@ -2630,5 +2630,40 @@
 			en = "Can you explain what the value {0} for {1} means given that this is associated to the public company {2}. Also please explain briefly what {1} means for an investor and if it is good or not regarding {2}. Please reword any \"CamelCase\" words to something understandable and convert numerical values into the appropriate unit, i.e. $, %, etc.---\n"
 			fr = "Pouvez-vous expliquer ce que signifie la valeur {0} pour {1} \xc3\xa9tant donn\xc3\xa9 que celle-ci est associ\xc3\xa9e \xc3\xa0 la soci\xc3\xa9t\xc3\xa9 publique {2}. Veuillez \xc3\xa9galement expliquer bri\xc3\xa8vement ce que {1} signifie pour un investisseur et si c'est bon ou non par rapport \xc3\xa0 {2}. Veuillez reformuler tous les mots \"CamelCase\" en quelque chose de compr\xc3\xa9hensible et convertir les valeurs num\xc3\xa9riques en l'unit\xc3\xa9 appropri\xc3\xa9e, c'est-\xc3\xa0-dire $, %, etc.---\n"
 		}
+		{
+			hash = "1c34f00a9d6ac1aa"
+			en = "Update Logo"
+			fr = "Mettre \xc3\xa0 jour le logo"
+		}
+		{
+			hash = "1396f3b92b6cd554"
+			en = "Icon (32x32)"
+			fr = "Ic\xc3\xb4ne (32x32)"
+		}
+		{
+			hash = "1a5d4e48138ace06"
+			en = "Banner (200x32)"
+			fr = "Banni\xc3\xa8re (200x32)"
+		}
+		{
+			hash = "170f22cb3d063ce4"
+			en = " Icon (32x32)"
+			fr = " Ic\xc3\xb4ne (32x32)"
+		}
+		{
+			hash = "a356dd337a2026d7"
+			en = " Banner (200x32)"
+			fr = " Banni\xc3\xa8re (200x32)"
+		}
+		{
+			hash = "971a5b309ced4376"
+			en = "Select icon image (i.e. 32x32) for {0}..."
+			fr = "Selectionnez l'image d'icone (32x32) pour {0}..."
+		}
+		{
+			hash = "177b67ea7094ed82"
+			en = "Select image banner (i.e. 200x32) for {0}..."
+			fr = "Selectionnez l'image de banniere (200x32) pour {0}..."
+		}
 	]
 }
