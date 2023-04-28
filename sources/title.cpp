@@ -634,6 +634,9 @@ double title_current_price(const title_t* title)
 
 double title_average_days_held(const title_t* title)
 {
+    if (title->average_quantity == 0)
+        return title->elapsed_days;
+
     if (title_sold(title) || title_is_index(title))
         return DNAN;
 

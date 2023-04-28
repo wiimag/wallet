@@ -851,6 +851,9 @@ FOUNDATION_STATIC void window_render(window_t* win)
     if (glfwGetWindowAttrib(win->glfw_window, GLFW_ICONIFIED))
         return;
 
+    if (glfwWindowShouldClose(win->glfw_window))
+        return;
+
     // Prepare next frame
     window_bgfx_new_frame(win);
     window_imgui_new_frame(win);
@@ -1179,7 +1182,14 @@ void window_close(window_handle_t window_handle)
     FOUNDATION_ASSERT(window);
     
     if (window->glfw_window)
-        glfw_request_close_window(window->glfw_window);
+    {
+        dispatch([window_handle]()
+        {
+            window_t* window = window_handle_lookup(window_handle);
+			if (window->glfw_window)
+	            glfw_request_close_window(window->glfw_window);
+        });
+    }
 }
 
 bool window_focus(window_handle_t window_handle)
