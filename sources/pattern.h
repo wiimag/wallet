@@ -125,6 +125,8 @@ struct pattern_t
     bool notes_opened{ false };
 
     config_handle_t fundamentals;
+    bool fundamentals_fetched{ false };
+    bool fundamentals_dialog_opened{ false };
 };
 
 pattern_handle_t pattern_find(const char* symbol, size_t symbol_length);

@@ -29,6 +29,7 @@
 #include <framework/dispatcher.h>
 #include <framework/array.h>
 #include <framework/system.h>
+#include <framework/shared_ptr.h>
 
 #include <algorithm>
 
@@ -65,7 +66,6 @@ enum PatternType : int {
     PATTERN_SIMULATION_BEGIN,
     PATTERN_LONG_COORDINATED_FLEX,
     PATTERN_ACTIVITY,
-    PATTERN_FUNDAMENTALS,
     PATTERN_SIMULATION_END,
 
     PATTERN_ALL_END = PATTERN_SIMULATION_END
@@ -80,8 +80,7 @@ constexpr const char* GRAPH_TYPES[PATTERN_ALL_END] = {
     nullptr,
     nullptr,
     "LCF",
-    "Activity",
-    "Fundamentals"
+    "Activity"
 };
 
 typedef enum class PatternRenderFlags : int {
@@ -976,6 +975,7 @@ FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
         "\n"))
     {
         pattern->notes_opened = true;
+        pattern->fundamentals_dialog_opened = true;
     }
 
     if (pattern_render_decision_mark(pattern, 3,
@@ -2089,7 +2089,6 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('5') || shortcut_executed('Y')) pattern->type = PATTERN_GRAPH_YOY;
     if (shortcut_executed('6')) pattern->type = PATTERN_LONG_COORDINATED_FLEX;
     if (shortcut_executed('7') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
-    if (shortcut_executed('8')) pattern->type = PATTERN_FUNDAMENTALS;
 
     ImGui::SetNextItemWidth(IM_SCALEF(120));
     string_const_t graph_type_label_preview = string_to_const(GRAPH_TYPES[pattern->type]);
@@ -2118,7 +2117,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
         pattern->autofit = false;
     }
 
-    if (pattern->type != PATTERN_FUNDAMENTALS)
+    //if (pattern->type != PATTERN_FUNDAMENTALS)
     {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
@@ -2235,6 +2234,66 @@ FOUNDATION_STATIC int pattern_activity_format_date(double value, char* buff, int
     return (int)string_copy(buff, size, STRING_ARGS(date_str)).length;
 }
 
+struct pattern_fundamentals_field_info_t
+{
+    string_t response;
+};
+
+FOUNDATION_STATIC bool pattern_render_fundamental_field_tooltip(pattern_t* pattern, string_const_t field_name, string_const_t value_string)
+{
+    if (!ImGui::IsItemHovered() || !openai_available())
+        return false;
+
+    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+
+    //if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+      //  ImGui::SetTooltip(tr("Click to get more info about this field"));
+
+    if (!ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+        return false;
+
+    char value_copy_buffer[128];
+    string_t value_copy = string_copy(STRING_BUFFER(value_copy_buffer), STRING_ARGS(value_string));
+
+    char buffer[2048];
+    string_const_t company_name = stock_get_name(pattern->stock);
+    string_t p1 = tr_format(STRING_BUFFER(buffer),
+        "Can you explain what the value {0} for {1} means given that this is associated to the public company {2}. "
+        "Also please explain briefly what {1} means for an investor and if it is good or not regarding {2}. "
+        "Please reword any \"CamelCase\" words to something understandable and convert numerical values into the appropriate unit, i.e. $, %, etc.---\n",
+        value_copy, field_name, company_name);
+
+    auto field_info = shared_ptr<pattern_fundamentals_field_info_t>::create(HASH_PATTERN);
+    field_info->response = {};
+
+    openai_completion_options_t options{};
+    options.max_tokens = 250;
+    options.temperature = 0.4f;
+    options.frequency_penalty = -0.4f;
+    if (openai_complete_prompt(STRING_ARGS(p1), options, [field_info](string_t response) {
+        log_info(HASH_PATTERN, STRING_ARGS(response));
+        field_info->response = response;
+    })) 
+    {
+        static int occ = 0;    
+        app_open_dialog(tr_format("Field Description - {0}##{1}", field_name, ++occ), [field_info](void* context)
+        {
+            if (field_info->response.length != 0)
+                ImGui::TextWrapped("%.*s", STRING_FORMAT(field_info->response));
+            else
+                ImGui::TextWrapped(tr("Fetching field information..."));
+            return true;
+        }, IM_SCALEF(400), IM_SCALEF(300), true, nullptr, [field_info](void* context)
+        {
+            string_deallocate(field_info->response.str);
+        });
+
+        return true;
+    }
+
+    return false;
+}
+
 FOUNDATION_STATIC void pattern_render_fundamentals_object(pattern_t* pattern, config_handle_t obj, int level = 0)
 {
     for (auto e : obj)
@@ -2283,11 +2342,6 @@ FOUNDATION_STATIC void pattern_render_fundamentals_object(pattern_t* pattern, co
         }
     }
 
-    char section_buffer[64];
-    string_const_t cvsection = config_name(obj);
-    string_t section = string_copy(STRING_BUFFER(section_buffer), STRING_ARGS(cvsection));
-    int lines = 0;
-    //ImGui::Columns(2, section.str, true);
     for (auto e : obj)
     {
         auto type = config_value_type(e);
@@ -2299,65 +2353,26 @@ FOUNDATION_STATIC void pattern_render_fundamentals_object(pattern_t* pattern, co
             continue;
 
         string_const_t cv_id = config_name(e);
+
         // Skip field id with "name"
         if (string_equal_nocase(STRING_ARGS(cv_id), STRING_CONST("name")))
             continue;
 
         string_const_t cv_value = e.as_string();
 
-        ImGui::BeginGroup();
         ImGui::TextUnformatted(STRING_RANGE(cv_id));
+        pattern_render_fundamental_field_tooltip(pattern, cv_id, cv_value);
         ImGui::NextColumn();        
         
         ImGui::TextWrapped("%.*s", STRING_FORMAT(cv_value));
+        pattern_render_fundamental_field_tooltip(pattern, cv_id, cv_value);
         ImGui::NextColumn();
-        ImGui::EndGroup();
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && openai_available())
-        {
-            char value_copy_buffer[128];
-            string_t value_copy = string_copy(STRING_BUFFER(value_copy_buffer), STRING_ARGS(cv_value));
-
-            char buffer[2048];
-            string_const_t company_name = stock_get_name(pattern->stock);
-            string_t p1 = tr_format(STRING_BUFFER(buffer), 
-                "Can you explain what the value {0} for {1} means given that this is associated to the public company {2}. "
-                "Also please explain briefly what {1} means for an investor and if it is good or not regarding {2}. "
-                "Please reword any \"CamelCase\" words to something understandable and convert numerical values into the appropriate unit, i.e. $, %, etc.---\n",
-                value_copy, cv_id, company_name);
-
-            openai_completion_options_t options{};
-            options.max_tokens = 250;
-            options.temperature = 0.4f;
-            options.frequency_penalty = -0.4f;
-            openai_complete_prompt(STRING_ARGS(p1), options, [](string_t response)
-            {
-                log_info(HASH_PATTERN, STRING_ARGS(response));
-
-                char title[256];
-                static int occ = 0;
-                string_const_t fmttr = RTEXT("Field Description##%d");
-                string_format(STRING_BUFFER(title), STRING_ARGS(fmttr), ++occ);
-
-                app_open_dialog(title, [](void* context)
-                {
-                    ImGui::TextWrapped("%s", (const char*)context);
-                    return true;
-                }, IM_SCALEF(400), IM_SCALEF(300), true, response.str, [](void* context)
-                {
-                    string_deallocate((char*)context);
-                });
-            });;
-        }
-
-        lines++;
     }
-
-   // ImGui::Columns(1, "##STOP", false);
 }
 
 FOUNDATION_STATIC void pattern_render_fundamentals(pattern_t* pattern)
 {
-    if (!pattern->fundamentals)
+    if (!pattern->fundamentals_fetched)
     {
         const char* symbol = string_table_decode(pattern->code);
         eod_fetch_async("fundamentals", symbol, FORMAT_JSON_CACHE, [pattern](const json_object_t& json)
@@ -2367,6 +2382,8 @@ FOUNDATION_STATIC void pattern_render_fundamentals(pattern_t* pattern)
             else
                 pattern->fundamentals = config_allocate();
         });
+
+        pattern->fundamentals_fetched = true;
     }
     else if (config_size(pattern->fundamentals) == 0)
     {
@@ -2574,10 +2591,6 @@ FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
             pattern_render_activity(pattern, graph_data);
             break;
 
-        case PATTERN_FUNDAMENTALS:
-            pattern_render_fundamentals(pattern);
-            break;
-
         default: // PATTERN_GRAPH_PRICE
             pattern_render_graph_analysis(pattern, graph_data); 
             break;
@@ -2750,6 +2763,34 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
     }
 }
 
+FOUNDATION_STATIC void pattern_render_dialogs(pattern_t* pattern)
+{
+    if (pattern->notes_opened)
+    {
+        string_const_t code = string_table_decode_const(pattern->code);
+        const char* title = string_format_static_const("%.*s Notes", STRING_FORMAT(code));
+        ImGui::SetNextWindowSize({IM_SCALEF(400), IM_SCALEF(500)}, ImGuiCond_Appearing);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(6), IM_SCALEF(2)));
+        if (ImGui::Begin(title, &pattern->notes_opened, 0))
+        {
+            static bool focus_notes = false;
+            pattern_render_notes_and_analysis(pattern, focus_notes);
+        } ImGui::End();
+        ImGui::PopStyleVar();
+    }
+
+    if (pattern->fundamentals_dialog_opened)
+    {
+        string_const_t name = string_table_decode_const(pattern->stock->name);
+        ImGui::SetNextWindowSize({ IM_SCALEF(500), IM_SCALEF(700) }, ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(tr_format("{0} Fundamentals", name), &pattern->fundamentals_dialog_opened))
+        {
+            pattern_render_fundamentals(pattern);
+        }
+        ImGui::End();
+    }
+}
+
 FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_flags_t render_flags = PatternRenderFlags::None)
 {
     const ImGuiTableFlags flags =
@@ -2811,19 +2852,7 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     ImGui::EndTable();	
 
     pattern_handle_shortcuts(pattern);
-
-    if (pattern->notes_opened)
-    {
-        const char* title = string_format_static_const("%.*s Notes", STRING_FORMAT(code));
-        ImGui::SetNextWindowSize({IM_SCALEF(400), IM_SCALEF(500)}, ImGuiCond_Appearing);
-        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(6), IM_SCALEF(2)));
-        if (ImGui::Begin(title, &pattern->notes_opened, 0))
-        {
-            static bool focus_notes = false;
-            pattern_render_notes_and_analysis(pattern, focus_notes);
-        } ImGui::End();
-        ImGui::PopStyleVar();
-    }
+    pattern_render_dialogs(pattern);
 }
 
 FOUNDATION_STATIC bool pattern_render_summarized_news_dialog(void* context)
@@ -2848,6 +2877,12 @@ FOUNDATION_STATIC void pattern_menu_items(pattern_handle_t handle)
 
     if (ImGui::TrMenuItem("Show Financials"))
         financials_open_window(STRING_ARGS(code));
+
+    if (ImGui::TrMenuItem("Show Fundamentals"))
+        pattern->fundamentals_dialog_opened = true;
+
+    if (ImGui::TrMenuItem("Show Notes"))
+        pattern->notes_opened = true;
 
     #if BUILD_DEVELOPMENT
 

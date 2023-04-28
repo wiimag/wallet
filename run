@@ -50,6 +50,7 @@ NO_COLOR=0
 NO=0
 YES=1
 COMMAND_COUNTER=0
+COMMAND_NAME_ARGS="START"
 
 # Check if project/.build is present, if not, then we need to generate the project
 # Also check if the project/.build/CMakeCache.txt is present, if not, then we need to generate the project
@@ -173,6 +174,9 @@ while [[ $# -gt 0 ]]; do
       elif [ $COMMAND_NAME_ARGS == "DIFF" ]; then
         DIFF+=("$1")
       elif [ $COMMAND_NAME_ARGS == "START" ]; then
+        if [ ${#START[@]} -eq 0 ]; then
+          START=($YES)
+        fi
         START+=("$1")
       elif [ ${#START[@]} -eq 0 ]; then
         START=($YES $1)
@@ -184,7 +188,7 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# If there is not arguments to ./run, then lets force start to be the default command
+# If there is no arguments to ./run, then lets force start to be the default command
 if [ $COMMAND_COUNTER -eq 0 ]; then
   if [ ${#START[@]} -eq 0 ]; then
     START=($YES)

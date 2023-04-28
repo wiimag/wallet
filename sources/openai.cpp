@@ -835,25 +835,36 @@ const openai_response_t* openai_generate_news_sentiment(
 
 bool openai_complete_prompt(const char* prompt, size_t length, const openai_completion_options_t& options, const function<void(string_t)>& completed)
 {
-    string_t promptstr = string_clone(prompt, length);
+    struct openai_complete_prompt_args_t
+    {
+        string_t prompt;
+        openai_completion_options_t options;
+        function<void(string_t)> completed;
+    };
+
+    openai_complete_prompt_args_t* args = memory_allocate<openai_complete_prompt_args_t>(HASH_OPENAI);
+    args->prompt = string_clone(prompt, length);
+    args->options = options;
+    args->completed = completed;
     
     // Start a job to fetch the data
-    return job_execute([promptstr, options, completed](void* context)
+    return job_execute([](void* context)
     {
+        openai_complete_prompt_args_t* args = (openai_complete_prompt_args_t*)context;
         const char* query_url = openai_build_url("completions");
 
         config_handle_t data = config_allocate();
         config_set(data, "model", STRING_CONST("text-davinci-003"));
-        config_set(data, "temperature", options.temperature);
-        config_set(data, "max_tokens", options.max_tokens);
-        config_set(data, "top_p", options.top_p);
-        config_set(data, "best_of", options.best_of);
-        config_set(data, "presence_penalty", options.presence_penalty);
-        config_set(data, "frequency_penalty", options.frequency_penalty);
+        config_set(data, "temperature", args->options.temperature);
+        config_set(data, "max_tokens", args->options.max_tokens);
+        config_set(data, "top_p", args->options.top_p);
+        config_set(data, "best_of", args->options.best_of);
+        config_set(data, "presence_penalty", args->options.presence_penalty);
+        config_set(data, "frequency_penalty", args->options.frequency_penalty);
         config_set(data, "stop", STRING_CONST("---\n"));
-        config_set(data, "prompt", STRING_ARGS(promptstr));
+        config_set(data, "prompt", STRING_ARGS(args->prompt));
 
-        if (!openai_execute_query(query_url, data, [completed](const auto& res)
+        if (!openai_execute_query(query_url, data, [args](const auto& res)
         {
             if (!res.resolved())
             {
@@ -882,16 +893,17 @@ bool openai_complete_prompt(const char* prompt, size_t length, const openai_comp
             // Replace all occurrences of \xe2\x80\x99 with '
             response = string_replace(STRING_ARGS_CAPACITY(response), STRING_CONST("\xe2\x80\x99"), STRING_CONST("'"), true);
 
-            completed(response);
+            args->completed(response);
         }))
         {
             log_errorf(HASH_OPENAI, ERROR_EXCEPTION, STRING_CONST("Failed to execute OpenAI query"));
         }
 
         config_deallocate(data);
-        string_deallocate(promptstr.str);
+        string_deallocate(args->prompt);
+        memory_deallocate(args);
         return 0;
-    }, nullptr, JOB_DEALLOCATE_AFTER_EXECUTION) != nullptr;
+    }, args, JOB_DEALLOCATE_AFTER_EXECUTION) != nullptr;
 }
 
 string_t* openai_generate_summary_sentiment(

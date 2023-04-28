@@ -1,7 +1,9 @@
 # Changelog
 
+## [0.20.0] - 2023-04-28
+- - Add basic fundamental pattern analysis.
+
 ## [0.19.8] - 2023-04-27
-- Add basic fundamental pattern analysis.
 - Add support to check for new releases.
 - Add support to update symbol icon and banner logo images.
 - Fix crash when closing a floating window.

@@ -284,9 +284,9 @@ FOUNDATION_STATIC void app_dialogs_render()
 
             if (!dlg.opened || !dlg.handler(dlg.user_data))
             {
-                dlg.handler.~function();
                 if (dlg.close_handler)
                     dlg.close_handler(dlg.user_data);
+                dlg.handler.~function();
                 dlg.close_handler.~function();
                 array_erase(_dialogs, i);
                 ImGui::End();

@@ -3125,5 +3125,50 @@
 			en = "Total Cash From Operating Activities"
 			fr = "Total des flux de tr\xc3\xa9sorerie des activit\xc3\xa9s d'exploitation"
 		}
+		{
+			hash = "e1a95208511e5b91"
+			en = "Deferred Long Term Liabilities"
+			fr = "Passifs \xc3\xa0 long terme diff\xc3\xa9r\xc3\xa9s"
+		}
+		{
+			hash = "b174e3eaf1054d63"
+			en = "Long Term Investments"
+			fr = "Investissements \xc3\xa0 long terme"
+		}
+		{
+			hash = "44b9550fbcf7ca21"
+			en = "Show Fundamentals"
+			fr = "Afficher les donn\xc3\xa9es fondamentales"
+		}
+		{
+			hash = "cfc6811973dc6ff"
+			en = "Show Notes"
+			fr = "Afficher les notes"
+		}
+		{
+			hash = "ff812bbcf8a9963d"
+			en = "{0} Fundamentals"
+			fr = "Donn\xc3\xa9es fondamentales de {0}"
+		}
+		{
+			hash = "edc8c270e5304c00"
+			en = "Click to get more info about this field"
+			fr = "Cliquez pour obtenir plus d'informations sur ce champ"
+		}
+		{
+			hash = "ac0df6dbb935ca97"
+			en = "Field Description - {0}##{1}"
+			fr = "Description du champ - {0}##{1}"
+		}
+		{
+			hash = "1cfe7a84847c2e24"
+			en = "Fetching field information..."
+			fr = "R\xc3\xa9cup\xc3\xa9ration des informations sur le champ..."
+		}
+		{
+			hash = "47c98b8f0c969f2a"
+			en = "No data available"
+			fr = "Aucune donn\xc3\xa9e disponible"
+		}
 	]
 }

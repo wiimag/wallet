@@ -88,7 +88,7 @@ struct MemoryScope
  *  @return A pointer to the allocated memory.
  */
 template<typename T>
-FOUNDATION_FORCEINLINE T* memory_allocate(hash_t context = 0, uint32_t alignment = alignof(T), uint32_t flags = MEMORY_PERSISTENT)
+FOUNDATION_FORCEINLINE T* memory_allocate(hash_t context = 0, uint32_t alignment = alignof(T), uint32_t flags = MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED)
 {
     return (T*)memory_allocate(context, sizeof(T), alignment, flags);
 }
