@@ -851,8 +851,24 @@ FOUNDATION_STATIC void window_render(window_t* win)
     if (glfwGetWindowAttrib(win->glfw_window, GLFW_ICONIFIED))
         return;
 
+    if (glfwGetWindowAttrib(win->glfw_window, GLFW_VISIBLE) == 0)
+    {
+        // Window is not visible, but not iconified either
+        // This happens when the window is minimized on Windows
+
+        log_warnf(0, WARNING_SUSPICIOUS, STRING_CONST("Window %.*s is not visible, but not iconified either"), STRING_FORMAT(win->id));
+        return;
+    }
+
     if (glfwWindowShouldClose(win->glfw_window))
         return;
+
+    if (win->frame_width <= 0 || win->frame_height <= 0)
+    {
+        log_warnf(0, WARNING_SUSPICIOUS, STRING_CONST("Window %.*s has invalid frame size (%dx%d)"),
+                         STRING_FORMAT(win->id), win->frame_width, win->frame_height);
+        return;
+    }
 
     // Prepare next frame
     window_bgfx_new_frame(win);
