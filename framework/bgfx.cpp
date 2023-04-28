@@ -403,6 +403,7 @@ void bgfx_initialize(GLFWwindow* window)
     bgfxInit.resolution.height = (uint32_t)height;
     bgfxInit.resolution.reset = main_is_running_tests() ? BGFX_RESET_NONE : (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI);
     bgfxInit.debug = false;
+    bgfxInit.profile = false;
     
     log_infof(HASH_BGFX, STRING_CONST("Initializing BGFX (%d)..."), (int)bgfxInit.type);
     if (!bgfx::init(bgfxInit))

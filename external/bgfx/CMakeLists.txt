@@ -49,11 +49,14 @@ add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGLES=0)
 add_compile_definitions(BGFX_CONFIG_RENDERER_AGC=0)
 add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGL=0)
 
-add_compile_definitions(BGFX_CONFIG_MAX_DRAW_CALLS=1024)
+add_compile_definitions(BGFX_CONFIG_MAX_DRAW_CALLS=2048)
 add_compile_definitions(BGFX_CONFIG_MAX_OCCLUSION_QUERIES=32)
 add_compile_definitions(BGFX_CONFIG_MAX_VIEW_NAME=64)
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_DECLS=32)
 add_compile_definitions(BGFX_CONFIG_MAX_INDEX_BUFFERS=512)
+add_compile_definitions(BGFX_CONFIG_DEBUG_ANNOTATION=0)
+add_compile_definitions(BGFX_CONFIG_DEBUG_UNIFORM=0)
+add_compile_definitions(BGFX_CONFIG_DEBUG_OCCLUSION=0)
 
 if (WIN32)
 
@@ -63,9 +66,9 @@ if (WIN32)
 
     # Enable directx backend renderers
     add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D11=1)
-    add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D12=1)
+    add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D12=0)
 
-    add_compile_definitions(BGFX_CONFIG_MAX_INSTANCE_DATA_COUNT=4)
+    #add_compile_definitions(BGFX_CONFIG_MAX_INSTANCE_DATA_COUNT=4)
 
 elseif (APPLE)
 
