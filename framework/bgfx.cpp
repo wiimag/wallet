@@ -81,7 +81,6 @@ struct BgfxCallbackHandler : bgfx::CallbackI
     {
         if (environment_argument("verbose"))
         {
-            ignore_logs = false;
             ignore_logs = environment_argument("bgfx-ignore-logs");
         }
     }
@@ -89,18 +88,16 @@ struct BgfxCallbackHandler : bgfx::CallbackI
 
     virtual void fatal(const char* _filePath, uint16_t _line, bgfx::Fatal::Enum _code, const char* _str) override
     {
-        log_errorf(HASH_BGFX, ERROR_INTERNAL_FAILURE, STRING_CONST("BGFX Failure (%d): %s\n\t%s(%hu)"), _code, _str, _filePath, _line);
-        FOUNDATION_ASSERT_FAIL(_str);
-        //process_exit(_code);
+        log_panicf(HASH_BGFX, ERROR_INTERNAL_FAILURE, STRING_CONST("BGFX Failure (%d): %s\n\t%s(%hu)"), _code, _str, _filePath, _line);
     }
 
     virtual void traceVargs(const char* _filePath, uint16_t _line, const char* _format, va_list _argList) override
     {
         if (ignore_logs)
             return;
-        string_t trace_msg = string_allocate_vformat(_format, string_length(_format), _argList);
-        log_infof(HASH_BGFX, STRING_CONST("%.*s"), (int)trace_msg.length - 1, trace_msg.str);
-        string_deallocate(trace_msg.str);
+        static thread_local char trace_buffer[4096];
+        string_t trace_msg = string_vformat(STRING_BUFFER(trace_buffer), _format, string_length(_format), _argList);
+        log_info(HASH_BGFX, STRING_ARGS(trace_msg));
     }
 
     virtual void profilerBegin(const char* _name, uint32_t _abgr, const char* _filePath, uint16_t _line) override
