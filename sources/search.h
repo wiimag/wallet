@@ -21,6 +21,3 @@ bool search_render_settings();
  *  @returns An array string contains stock markets symbols.
  */
 const string_t* search_stock_exchanges();
-
-/*! Renders a search view that is shared globally. */
-void search_render_global_view();

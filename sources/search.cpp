@@ -165,7 +165,7 @@ static struct SEARCH_MODULE {
     string_t*                   exchanges{ nullptr };
     shared_mutex                exchanges_lock{};
 
-    search_window_t*            global_view{ nullptr };
+    search_database_t*          transient_db{ nullptr };
 
 } *_search;
 
@@ -720,6 +720,101 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
     }
 }
 
+FOUNDATION_STATIC void search_index_transient_db(const char* market, size_t length)
+{
+    char market_str[16];
+    string_copy(STRING_BUFFER(market_str), market, length);
+    eod_fetch("eod-bulk-last-day", market_str, FORMAT_JSON_CACHE, "filter", "extended", [](const json_object_t& json)
+    {
+        search_database_t* db = _search->db;
+
+        for (auto e : json)
+        {
+            // Check if the indexing thread was signaled to quit.
+            if (thread_try_wait(0))
+                return;
+
+            string_const_t code = e["code"].as_string();
+            string_const_t exchange = e["exchange_short_name"].as_string();            
+
+            char id_buffer[16];
+            string_t id = string_format(STRING_BUFFER(id_buffer), 
+                STRING_CONST("%.*s.%.*s.BULK"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+
+            search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(id));
+            if (doc != SEARCH_DOCUMENT_INVALID_ID)
+            {
+                const time_t doc_timestamp = search_database_document_timestamp(db, doc);
+                const double days_old = time_elapsed_days(doc_timestamp, time_now());
+                if (days_old < 1.5)
+                    continue;
+
+                search_database_remove_document(db, doc);
+            }
+
+            doc = search_database_add_document(db, STRING_ARGS(id));
+            if (doc == SEARCH_DOCUMENT_INVALID_ID)
+                continue;
+
+            const time_t date = e["date"].as_time();
+            string_const_t type = e["type"].as_string();
+            string_const_t name = e["name"].as_string();
+            const double MarketCapitalization = e["MarketCapitalization"].as_number();
+            const double Beta = e["Beta"].as_number();
+            const double open = e["open"].as_number();
+            const double high = e["high"].as_number();
+            const double low = e["low"].as_number();
+            const double close = e["close"].as_number();
+            const double adjusted_close = e["adjusted_close"].as_number();
+            const double volume = e["volume"].as_number();
+            const double ema_50d = e["ema_50d"].as_number();
+            const double ema_200d = e["ema_200d"].as_number();
+            const double hi_250d = e["hi_250d"].as_number();
+            const double lo_250d = e["lo_250d"].as_number();
+            const double avgvol_14d = e["avgvol_14d"].as_number();
+            const double avgvol_50d = e["avgvol_50d"].as_number();
+            const double avgvol_200d = e["avgvol_200d"].as_number();
+
+            search_database_index_text(db, doc, STRING_ARGS(name), false);
+            search_database_index_word(db, doc, STRING_ARGS(code), false);
+            search_database_index_word(db, doc, id.str, id.length - 5, false);
+
+            search_database_index_property(db, doc, STRING_CONST("type"), STRING_ARGS(type), false);
+            search_database_index_property(db, doc, STRING_CONST("exchange"), STRING_ARGS(exchange), false);
+
+            search_database_index_property(db, doc, STRING_CONST("bulk"), (double)date);
+            if (Beta > 0)
+                search_database_index_property(db, doc, STRING_CONST("beta"), Beta);
+            search_database_index_property(db, doc, STRING_CONST("open"), open);
+            search_database_index_property(db, doc, STRING_CONST("close"), close);
+            search_database_index_property(db, doc, STRING_CONST("price"), adjusted_close);
+            if (math_abs(close - adjusted_close) > REAL_EPSILON * 2.0)
+                search_database_index_property(db, doc, STRING_CONST("adjusted"), STRING_CONST("true"), false);
+            search_database_index_property(db, doc, STRING_CONST("volume"), volume);
+            search_database_index_property(db, doc, STRING_CONST("ema50"), ema_50d);
+            search_database_index_property(db, doc, STRING_CONST("ema200"), ema_200d);
+            search_database_index_property(db, doc, STRING_CONST("hi250"), hi_250d);
+            search_database_index_property(db, doc, STRING_CONST("lo250"), lo_250d);
+            search_database_index_property(db, doc, STRING_CONST("avgvol"), avgvol_50d);
+            search_database_index_property(db, doc, STRING_CONST("avgvol14"), avgvol_14d);
+            search_database_index_property(db, doc, STRING_CONST("avgvol200"), avgvol_200d);
+
+            const double emaavg = (ema_50d + ema_200d) / 2.0;
+            const double change = close - open;
+            search_database_index_property(db, doc, STRING_CONST("ema"), (emaavg - adjusted_close) / adjusted_close * 100.0);
+            search_database_index_property(db, doc, STRING_CONST("change"), (close - open) / open * 100.0);
+            search_database_index_property(db, doc, STRING_CONST("change_high"), (high - low) / open * 100.0);
+            search_database_index_property(db, doc, STRING_CONST("gain"), change * volume);
+            if (MarketCapitalization > 0)
+            {
+                search_database_index_property(db, doc, STRING_CONST("cap"), (double)MarketCapitalization);
+                search_database_index_property(db, doc, STRING_CONST("gain_p"),
+                    change * volume / MarketCapitalization * 100);
+            }
+        }
+    }, 24 * 60 * 60ULL);
+}
+
 FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
 {
     MEMORY_TRACKER(HASH_SEARCH);
@@ -760,6 +855,16 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
     
     // Fetch all titles from stock exchange market
     SHARED_READ_LOCK(_search->exchanges_lock);
+
+    // First do a quick indexing of the markets bulk data.
+    foreach (tmarket, _search->exchanges)
+    {            
+        if (thread_try_wait(1000))
+            break;
+
+        search_index_transient_db(STRING_ARGS(*tmarket));
+    }   
+
     bool stop_indexing = false;
     foreach (market, _search->exchanges)
     {
@@ -830,7 +935,12 @@ FOUNDATION_STATIC void search_save_query(const char* search_text, size_t search_
 FOUNDATION_STATIC string_const_t search_entry_resolve_symbol(const search_result_entry_t* entry)
 {
     if (entry->db && entry->doc)
-        return search_database_document_name(entry->db, entry->doc);
+    {
+        string_const_t symbol = search_database_document_name(entry->db, entry->doc);
+        if (string_ends_with(STRING_ARGS(symbol), STRING_CONST(".BULK")))
+            symbol.length -= 5;
+        return symbol;
+    }
 
     return string_to_const(entry->symbol);   
 }
@@ -841,6 +951,11 @@ FOUNDATION_STATIC bool search_insert_symbol_result(window_handle_t window_handle
     entry.db = nullptr;
     entry.doc = 0;
     entry.source_type = SearchResultSourceType::EODApi;
+
+    // Check if the symbol ends with .BULK
+    if (string_ends_with(STRING_ARGS(symbol), STRING_CONST(".BULK")))
+        symbol.length -= 5;
+
     string_copy(STRING_BUFFER(entry.symbol), STRING_ARGS(symbol));
 
     search_window_t* sw = (search_window_t*)window_get_user_data(window_handle);
@@ -1153,7 +1268,8 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
     }
 
     string_const_t symbol = search_entry_resolve_symbol(entry);
-    FOUNDATION_ASSERT(!string_is_null(symbol));
+    if (string_is_null(symbol))
+        return nullptr;
 
     if (column->flags & COLUMN_RENDER_ELEMENT)
         ImGui::Text("%.*s", STRING_FORMAT(symbol));
@@ -1800,14 +1916,6 @@ const string_t* search_stock_exchanges()
     return _search->exchanges;
 }
 
-void search_render_global_view()
-{
-    if (_search->global_view == nullptr)
-        _search->global_view = search_window_allocate();
-
-    search_window_render(_search->global_view);
-}
-
 bool search_render_settings()
 {
     bool updated = false;
@@ -1862,8 +1970,6 @@ FOUNDATION_STATIC void search_initialize()
 
 FOUNDATION_STATIC void search_shutdown()
 {   
-    MEM_DELETE(_search->global_view);
-
     session_set_string("search_query", _search->query, string_length(_search->query));
 
     // Save queries to queries.json
