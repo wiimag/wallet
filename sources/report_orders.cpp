@@ -669,6 +669,8 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
         ImGui::InputDouble("##Quantity", &quantity, 10.0f, 100.0f, "%.0lf", ImGuiInputTextFlags_None);
         if (quantity < 0)
             quantity = 0;
+        if (quantity > title->average_quantity)
+            quantity = title->average_quantity;
 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(control_width);
