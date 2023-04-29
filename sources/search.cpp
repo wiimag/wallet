@@ -841,6 +841,14 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
     
     dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);
 
+    // If using demo key, skip indexing
+    string_const_t eod_key = string_to_const(eod_get_key().str);
+    if (string_equal_nocase(STRING_ARGS(eod_key), STRING_CONST("demo")))
+    {
+        log_warnf(HASH_SEARCH, WARNING_SUSPICIOUS, STRING_CONST("Demo key, skipping search indexing"));
+        return 0;
+    }
+
     if (environment_argument("disable-indexing"))
     {
         log_warnf(HASH_SEARCH, WARNING_SUSPICIOUS, STRING_CONST("Search indexing is disabled, skipping search indexing"));

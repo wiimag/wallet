@@ -252,6 +252,36 @@ FOUNDATION_STATIC bool environment_command_line_read_value(
     return false;
 }
 
+string_const_t environment_username()
+{
+    static char username_buffer[32] = { 0 };
+
+    if (username_buffer[0] != 0)
+        return string_to_const(username_buffer);
+
+    string_const_t username = environment_variable(STRING_CONST("USERNAME"));
+    if (username.length)
+    {
+        string_copy(STRING_BUFFER(username_buffer), STRING_ARGS(username));
+        return string_to_const(username_buffer);
+    }
+    
+    string_const_t app_dir = environment_application_directory();
+    #if FOUNDATION_PLATFORM_WINDOWS
+    string_const_t user_dir = path_directory_name(STRING_ARGS(app_dir));
+    user_dir = path_directory_name(STRING_ARGS(user_dir));
+    user_dir = path_directory_name(STRING_ARGS(user_dir));
+    user_dir = path_directory_name(STRING_ARGS(user_dir));
+    username = path_base_file_name(STRING_ARGS(user_dir));
+
+    string_copy(STRING_BUFFER(username_buffer), STRING_ARGS(username));
+    #else
+    string_copy(STRING_BUFFER(username_buffer), STRING_CONST("OSX"));
+    #endif
+
+    return string_to_const(username_buffer);
+}
+
 bool environment_argument(string_const_t name, string_const_t* value, bool check_environment_variable)
 {
     name = environment_command_line_trim_param(name);

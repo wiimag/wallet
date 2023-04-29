@@ -467,6 +467,8 @@ FOUNDATION_FORCEINLINE bool environment_argument(const char(&name)[N])
     return environment_argument(name_str, nullptr, false);
 }
 
+string_const_t environment_username();
+
 ////////////////////////////////////////////////////////////////////////////
 // ## Main functions
 

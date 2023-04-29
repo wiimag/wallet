@@ -146,7 +146,11 @@ string_t eod_get_key()
 bool eod_save_key(string_t eod_key)
 {
     eod_key.length = string_length(eod_key.str);
-    if (eod_key.str != EOD->KEY)
+
+    // Force demo key if the key is empty
+    if (eod_key.length == 0)
+        eod_key = string_copy(STRING_BUFFER(EOD->KEY), STRING_CONST("demo"));
+    else if (eod_key.str != EOD->KEY)
         string_copy(STRING_BUFFER(EOD->KEY), STRING_ARGS(eod_key));
         
     if (eod_key.length)
@@ -194,7 +198,7 @@ string_const_t eod_build_url(const char* api, const char* ticker, query_format_t
     if (format != FORMAT_UNDEFINED)
     {
         eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("&fmt="));
-        if (format == FORMAT_JSON || format == FORMAT_JSON_CACHE)
+        if (format == FORMAT_JSON || format == FORMAT_JSON_CACHE || format == FORMAT_JSON_WITH_ERROR)
             eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("json"));
         else
             eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("csv"));

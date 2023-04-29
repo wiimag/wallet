@@ -1,11 +1,12 @@
 # Changelog
 
-## [0.20.4] - 2023-04-29
+## [0.20.5] - 2023-04-29
 - Add basic fundamental pattern analysis.
 - Add last day bulk data to the search index.
 - Fix fetching non existing symbol data.
 - Fix selling quantity than owned.
 - Open market symbol in a new window.
+- Skip indexing when using demo key.
 
 ## [0.19.8] - 2023-04-27
 - Add support to check for new releases.
