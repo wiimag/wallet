@@ -96,7 +96,10 @@ struct BgfxCallbackHandler : bgfx::CallbackI
         if (ignore_logs)
             return;
         static thread_local char trace_buffer[4096];
-        string_t trace_msg = string_vformat(STRING_BUFFER(trace_buffer), _format, string_length(_format), _argList);
+        const size_t fmt_length = string_length(_format);
+        string_t trace_msg = string_vformat(STRING_BUFFER(trace_buffer), _format, fmt_length, _argList);
+        if (trace_msg.length > 0 && trace_msg.str[trace_msg.length - 1] == '\n')
+            --trace_msg.length;
         log_info(HASH_BGFX, STRING_ARGS(trace_msg));
     }
 
@@ -239,7 +242,7 @@ void bgfx_init_view(int imgui_view)
 
     // Set view 0 to the same dimensions as the window and to clear the color buffer.
     const bgfx::ViewId kClearView = 0;
-    bgfx::setViewClear(kClearView, BGFX_CLEAR_COLOR);
+    bgfx::setViewClear(kClearView, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH);
     bgfx::setViewRect(kClearView, 0, 0, bgfx::BackbufferRatio::Equal);
 }
 
@@ -261,18 +264,10 @@ void bgfx_new_frame(GLFWwindow* window, int width, int height)
     if (width != bWidth || height != bHeight)
     {
         bWidth = width; bHeight = height;
-        bgfx::reset(bWidth, bHeight, 
-        #if BUILD_TESTS
-            main_is_running_tests() ? BGFX_RESET_NONE :
-        #endif
-            (BGFX_RESET_VSYNC | BGFX_RESET_HIDPI));
+        bgfx::reset(bWidth, bHeight, BGFX_RESET_NONE);
     }
 
-    bgfx::setViewClear(kClearView, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH);
-    bgfx::setViewClear(_bgfx_imgui_view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH);
-
     bgfx::touch(kClearView);
-    bgfx::touch(_bgfx_imgui_view);
 }
 
 // This is the main rendering function that you have to implement and call after
@@ -296,6 +291,7 @@ void bgfx_render_draw_lists(ImDrawData* draw_data, int fb_width, int fb_height)
 
     bgfx::setViewName(_bgfx_imgui_view, "UI");
     bgfx::setViewMode(_bgfx_imgui_view, bgfx::ViewMode::Sequential);
+    bgfx::setViewClear(_bgfx_imgui_view, BGFX_CLEAR_COLOR | BGFX_CLEAR_DEPTH);
 
     // Setup viewport, orthographic projection matrix
     float ortho[16];
@@ -374,7 +370,7 @@ bgfx::CallbackI* bgfx_system_callback_handler()
 
 void bgfx_initialize(GLFWwindow* window)
 {
-    if (!environment_argument("render-thread"))
+    if (!FOUNDATION_PLATFORM_WINDOWS || !environment_argument("render-thread"))
     {
         // Call bgfx::renderFrame before bgfx::init to signal to bgfx not to create a render thread.
         // Most graphics APIs must be used on the same thread that created the window.
@@ -391,6 +387,8 @@ void bgfx_initialize(GLFWwindow* window)
         bgfxInit.platformData.ndt = glfwGetX11Display();
     #elif FOUNDATION_PLATFORM_MACOS
         bgfxInit.type = bgfx::RendererType::Metal;
+    #elif FOUNDATION_PLATFORM_WINDOWS
+        bgfxInit.type = bgfx::RendererType::Direct3D11;
     #endif
     bgfxInit.platformData.nwh = glfw_platform_window_handle(window);
 

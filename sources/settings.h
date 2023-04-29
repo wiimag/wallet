@@ -13,11 +13,6 @@ struct settings_t
     int current_tab{ 0 };
 
     // Preferences
-    bool show_symbols_TO{ false };
-    bool show_symbols_US{ false };
-    bool show_symbols_CVE{ false };
-    bool show_symbols_NEO{ false };
-    bool show_symbols_INDX{ false };
     bool show_logo_banners{ true };
 
     char preferred_currency[32] { '\0' };

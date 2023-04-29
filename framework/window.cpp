@@ -1007,6 +1007,14 @@ void* window_get_user_data(window_handle_t window_handle)
     return window->user_data;
 }
 
+void window_set_user_data(window_handle_t window_handle, void* user_data)
+{
+    window_t* window = window_handle_lookup(window_handle);
+    if (window == nullptr)
+        return;
+    window->user_data = user_data;
+}
+
 const char* window_title(window_handle_t window_handle)
 {
     window_t* window = window_handle_lookup(window_handle);

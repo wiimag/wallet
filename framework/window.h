@@ -104,6 +104,15 @@ const char* window_title(window_handle_t window);
  */
 void* window_get_user_data(window_handle_t window);
 
+/*! Sets any user data associated with the window.
+ *
+ *  @important    The user data is NOT managed by the window system.
+ *
+ *  @param window The handle of the window.
+ *  @param user_data The user data associated with the window.
+ */
+void window_set_user_data(window_handle_t window, void* user_data);
+
 /*! Sets the window title. The title string gets copied into managed memory.
  *
  *  @param window_handle The handle of the window.

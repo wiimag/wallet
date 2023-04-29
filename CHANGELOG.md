@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.20.0] - 2023-04-28
-- - Add basic fundamental pattern analysis.
+## [0.20.1] - 2023-04-29
+- Add basic fundamental pattern analysis.
+- Open market symbol in a new window.
 
 ## [0.19.8] - 2023-04-27
 - Add support to check for new releases.

@@ -3356,6 +3356,8 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
 
 FOUNDATION_STATIC void pattern_initialize()
 {
+    TIME_TRACKER("pattern_initialize");
+
     if (_patterns == nullptr)
         array_reserve(_patterns, 8);
 

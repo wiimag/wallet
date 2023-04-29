@@ -221,11 +221,6 @@ void settings_draw()
 
 void settings_initialize()
 {
-    SETTINGS.show_symbols_TO = session_get_bool("show_symbols_TO", SETTINGS.show_symbols_TO);
-    SETTINGS.show_symbols_US = session_get_bool("show_symbols_US", SETTINGS.show_symbols_US);
-    SETTINGS.show_symbols_CVE = session_get_bool("show_symbols_CVE", SETTINGS.show_symbols_CVE);
-    SETTINGS.show_symbols_NEO = session_get_bool("show_symbols_NEO", SETTINGS.show_symbols_NEO);
-    SETTINGS.show_symbols_INDX = session_get_bool("show_symbols_INDX", SETTINGS.show_symbols_INDX);
     SETTINGS.show_logo_banners = session_get_bool("show_logo_banners", SETTINGS.show_logo_banners);
 
     SETTINGS.current_tab = session_get_integer(SESSION_KEY_CURRENT_TAB, SETTINGS.current_tab);
@@ -239,11 +234,6 @@ void settings_initialize()
 
 void settings_shutdown()
 {
-    session_set_bool("show_symbols_TO", SETTINGS.show_symbols_TO);
-    session_set_bool("show_symbols_US", SETTINGS.show_symbols_US);
-    session_set_bool("show_symbols_CVE", SETTINGS.show_symbols_CVE);
-    session_set_bool("show_symbols_NEO", SETTINGS.show_symbols_NEO);
-    session_set_bool("show_symbols_INDX", SETTINGS.show_symbols_INDX);
     session_set_bool("show_logo_banners", SETTINGS.show_logo_banners);
     session_set_integer(SESSION_KEY_CURRENT_TAB, SETTINGS.current_tab);
     session_set_string(SESSION_KEY_SEARCH_TERMS, SETTINGS.search_terms);

@@ -30,6 +30,7 @@
 #include <framework/dispatcher.h>
 #include <framework/array.h>
 #include <framework/profiler.h>
+#include <framework/window.h>
 
 #include <foundation/random.h>
 
@@ -654,6 +655,32 @@ FOUNDATION_STATIC void symbols_open_random_stock_pattern()
     string_array_deallocate(symbols);
 }
 
+FOUNDATION_STATIC void symbols_open_market_window(const char* title, const char* exchange, size_t length, bool filter_null_isin = true)
+{
+    if (string_equal(exchange, length, STRING_CONST("FOREX")))
+        filter_null_isin = false;
+
+    auto win = window_open(title, [filter_null_isin](window_handle_t win)
+    {
+        char* market = (char*)window_get_user_data(win);
+        if (market == nullptr)
+            return;
+        symbols_render(market, filter_null_isin);
+    });
+
+    if (win == OBJECT_INVALID)
+        return;
+
+    string_t market = string_clone(exchange, length);
+    window_set_user_data(win, market.str);
+    window_set_close_callback(win, [](window_handle_t win)
+    {
+        char* market = (char*)window_get_user_data(win);
+        if (market)
+            string_deallocate(market);
+    });
+}
+
 FOUNDATION_STATIC void symbols_render_menus()
 {
     if (!ImGui::BeginMenuBar())
@@ -661,20 +688,27 @@ FOUNDATION_STATIC void symbols_render_menus()
     
     if (ImGui::BeginMenu(tr("Symbols")))
     {
-        ImGui::MenuItem(tr("Indexes"), nullptr, &SETTINGS.show_symbols_INDX);
-        if (ImGui::MenuItem("La Presse", nullptr, nullptr, true))
-            system_execute_command("https://www.google.com/search?q=bourse+site:lapresse.ca&tbas=0&source=lnt&tbs=qdr:w&sa=X&biw=1920&bih=902&dpr=2");
+        if (ImGui::TrMenuItem("Indexes"))
+            symbols_open_market_window(tr("Indexes"), STRING_CONST("INDX"), false);
 
         ImGui::Separator();
         #if BUILD_DEVELOPMENT
         if (ImGui::MenuItem(tr("IPOs"), nullptr, nullptr, true))
             system_execute_command(eod_build_url("calendar", "ipos", FORMAT_JSON).str);
-        #endif
-        ImGui::MenuItem(tr("TO Symbols"), nullptr, &SETTINGS.show_symbols_TO);
-        ImGui::MenuItem(tr("CVE Symbols"), nullptr, &SETTINGS.show_symbols_CVE);
-        ImGui::MenuItem(tr("NEO Symbols"), nullptr, &SETTINGS.show_symbols_NEO);
-        ImGui::MenuItem(tr("US Symbols"), nullptr, &SETTINGS.show_symbols_US);      
 
+        if (ImGui::MenuItem("La Presse", nullptr, nullptr, true))
+            system_execute_command("https://www.google.com/search?q=bourse+site:lapresse.ca&tbas=0&source=lnt&tbs=qdr:w&sa=X&biw=1920&bih=902&dpr=2");
+        #endif
+
+        const string_t* exchanges = search_stock_exchanges();
+        for (unsigned i = 0, end = array_size(exchanges); i < end; ++i)
+        {
+            const string_t& exchange = exchanges[i];
+            const char* label = tr_format("{0} Symbols", exchange);
+            if (ImGui::MenuItem(label))
+                symbols_open_market_window(label, STRING_ARGS(exchange));
+        }
+        
         ImGui::Separator();
         if (ImGui::TrMenuItem("Random"))
             dispatch_fire(symbols_open_random_stock_pattern);
@@ -683,20 +717,6 @@ FOUNDATION_STATIC void symbols_render_menus()
     }
 
     ImGui::EndMenuBar();
-}
-
-FOUNDATION_STATIC void symbols_render_tabs()
-{
-    static const ImVec4 TAB_COLOR_SYMBOLS(0.6f, 0.2f, 0.5f, 1.0f);
-    
-    tab_set_color(TAB_COLOR_SYMBOLS);
-    if (SETTINGS.show_symbols_TO) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (TO)", &SETTINGS.show_symbols_TO, L0(symbols_render("TO")));
-    if (SETTINGS.show_symbols_CVE) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (CVE)", &SETTINGS.show_symbols_CVE, L0(symbols_render("V")));
-    if (SETTINGS.show_symbols_NEO) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (NEO)", &SETTINGS.show_symbols_NEO, L0(symbols_render("NEO")));
-    if (SETTINGS.show_symbols_US) tab_draw(ICON_MD_CURRENCY_EXCHANGE " Symbols (US)", &SETTINGS.show_symbols_US, L0(symbols_render("US")));
-    if (SETTINGS.show_symbols_INDX) tab_draw(ICON_MD_TRENDING_UP " Indexes", &SETTINGS.show_symbols_INDX, L0(symbols_render("INDX", false)));
-
-    tab_draw(tr(ICON_MD_MANAGE_SEARCH " Search ##Search"), nullptr, ImGuiTabItemFlags_Trailing, search_render_global_view, nullptr);
 }
 
 //
@@ -708,7 +728,6 @@ FOUNDATION_STATIC void symbols_initialize()
     _symbols_lock = mutex_allocate(STRING_CONST("Symbols"));
     array_reserve(_markets, 1);
 
-    module_register_tabs(HASH_SYMBOLS, symbols_render_tabs);
     module_register_menu(HASH_SYMBOLS, symbols_render_menus);
 }
 

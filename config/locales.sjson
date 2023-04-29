@@ -3170,5 +3170,10 @@
 			en = "No data available"
 			fr = "Aucune donn\xc3\xa9e disponible"
 		}
+		{
+			hash = "a91d04f79614e143"
+			en = "{0} Symbols"
+			fr = "Symboles {0}"
+		}
 	]
 }
