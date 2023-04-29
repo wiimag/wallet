@@ -219,6 +219,14 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     SHARED_READ_LOCK(_db_lock);
     stock_t& entry = _db_stocks[index];
 
+    if (!json.resolved())
+    {
+        string_const_t code = SYMBOL_CONST(entry.code);
+        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, STRING_CONST("Stock '%.*s' has no fundamentals data"), STRING_FORMAT(code));
+        entry.fetch_errors++;
+        return entry.mark_resolved(FetchLevel::FUNDAMENTALS, true);
+    }
+
     const json_object_t& general = json["General"];
     entry.symbol = string_table_encode(general["Code"].as_string());
     entry.name = string_table_encode_unescape(general["Name"].as_string());
@@ -298,8 +306,16 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
 FOUNDATION_STATIC void stock_read_technical_results(const json_object_t& json, stock_index_t index, FetchLevel level, const technical_descriptor_t& desc)
 {
     SHARED_READ_LOCK(_db_lock);
-    
     stock_t* s = &_db_stocks[index];
+
+    if (!json.resolved())
+    {
+        string_const_t code = SYMBOL_CONST(s->code);
+        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, STRING_CONST("Stock '%.*s' has no technical data"), STRING_FORMAT(code));
+        s->fetch_errors++;
+        return s->mark_resolved(level, true);
+    }
+    
     day_result_t* history = s->history;
     int h = 0, h_end = array_size(history);
     bool applied_to_current = false;
@@ -345,7 +361,7 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
     {
         if (entry->has_resolve(FetchLevel::EOD))
         {
-            if (eod_fetch_async("technical", ticker, FORMAT_JSON_CACHE, "order", "d", "function", fn_name,
+            if (eod_fetch_async("technical", ticker, FORMAT_JSON_WITH_ERROR, "order", "d", "function", fn_name,
                 LC1(stock_read_technical_results(_1, index, access_level, desc)), 12ULL * 3600ULL))
             {
                 entry->mark_fetched(access_level);
@@ -400,6 +416,16 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
 FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_index_t index)
 {
     MEMORY_TRACKER(HASH_STOCK);
+
+    if (!json.resolved())
+    {
+        SHARED_READ_LOCK(_db_lock);
+        stock_t& entry = _db_stocks[index];
+        string_const_t code = SYMBOL_CONST(entry.code);
+        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, STRING_CONST("Stock '%.*s' has no EOD data"), STRING_FORMAT(code));
+        entry.fetch_errors++;
+        return entry.mark_resolved(FetchLevel::EOD, true);
+    }
 
     day_result_t* history = nullptr;
     array_reserve(history, json.root->value_length + 1);
@@ -625,7 +651,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         
     if ((fetch_levels & FetchLevel::FUNDAMENTALS) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::FUNDAMENTALS) == 0)
     {
-        if (eod_fetch_async("fundamentals", ticker, FORMAT_JSON_CACHE, LC1(stock_read_fundamentals_results(_1, index)), 14 * 24ULL * 3600ULL))
+        if (eod_fetch_async("fundamentals", ticker, FORMAT_JSON_WITH_ERROR, LC1(stock_read_fundamentals_results(_1, index)), 14 * 24ULL * 3600ULL))
         {
             entry->mark_fetched(FetchLevel::FUNDAMENTALS);
             status = STATUS_RESOLVING;
@@ -639,7 +665,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 
     if ((fetch_levels & FetchLevel::EOD) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::EOD) == 0)
     {
-        if (eod_fetch_async("eod", ticker, FORMAT_JSON_CACHE, "order", "d", LC1(stock_read_eod_results(_1, index)), 12ULL * 3600ULL))
+        if (eod_fetch_async("eod", ticker, FORMAT_JSON_WITH_ERROR, "order", "d", LC1(stock_read_eod_results(_1, index)), 12ULL * 3600ULL))
         {
             entry->mark_fetched(FetchLevel::EOD);
             status = STATUS_RESOLVING;
