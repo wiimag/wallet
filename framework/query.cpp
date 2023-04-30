@@ -874,8 +874,7 @@ stream_t* query_execute_download_file(const char* query)
 
     if (response_code >= 400)
     {
-        log_warnf(HASH_QUERY, WARNING_NETWORK,
-            STRING_CONST("Failed to download file %s (%d)"), query, (int)response_code);
+        log_debugf(HASH_QUERY, STRING_CONST("Failed to download file %s (%d)"), query, (int)response_code);
 
         stream_deallocate(download_stream);
         return nullptr;

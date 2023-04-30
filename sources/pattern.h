@@ -101,6 +101,7 @@ struct pattern_t
     bool extra_charts{ false };
     bool show_limits{ true };
     bool x_axis_inverted{ false };
+    bool show_trend_equation{ false };
     int range { 90 };
     float percent{ 90 };
     int type{ 0 };

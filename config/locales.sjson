@@ -3175,5 +3175,15 @@
 			en = "{0} Symbols"
 			fr = "Symboles {0}"
 		}
+		{
+			hash = "47573977c63c4f6d"
+			en = "Show Trend Equations"
+			fr = "Afficher les \xc3\xa9quations de tendance"
+		}
+		{
+			hash = "a897cb2b873fe64"
+			en = "Plot options"
+			fr = "Options des graphiques"
+		}
 	]
 }

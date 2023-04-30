@@ -1,11 +1,12 @@
 # Changelog
 
-## [0.20.6] - 2023-04-29
+## [0.20.7] - 2023-04-29
 - Add basic fundamental pattern analysis.
 - Add last day bulk data to the search index.
 - Fix contextual menu on invalid titles in a report.
 - Fix fetching non existing symbol data.
 - Fix selling quantity than owned.
+- Hide pattern plot equation by default.
 - Open market symbol in a new window.
 - Skip indexing when using demo key.
 
