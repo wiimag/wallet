@@ -512,7 +512,7 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
 FOUNDATION_STATIC void report_column_price_alert_menu(const title_t* title)
 {
     const double current_price = title_current_price(title);
-    if (math_real_is_finite(current_price) && !ImGui::TrBeginMenu("Price Alerts"))
+    if (!math_real_is_finite(current_price) || !ImGui::TrBeginMenu("Price Alerts"))
         return;
 
     ImGui::MoveCursor(8.0f, 4.0f);

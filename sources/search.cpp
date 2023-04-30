@@ -1053,16 +1053,27 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
     {
         // Start with a query to EOD /api/search
         window_handle_t sw_handle = sw->handle;
-        hash_t search_query_hash = string_hash(search_text, search_text_length);
-        eod_fetch_async("search", search_text, FORMAT_JSON, "limit", "5", 
-            LC1(search_fetch_search_api_results_callback(search_query_hash, sw_handle, _1)));
 
-        // If the search text looks like a symbol, i.e. GFL.TO, then lets query the real-time value to see if it resolves.
-        if (search_text_length > 3 && search_text_length < 16 && 
-            search_text[search_text_length] != '.' &&
-            string_find(search_text, search_text_length, '.', 1) != STRING_NPOS)
+        // Run simple EOD API query if the search text does not contain any special characters
+        if (search_text_length > 1 &&
+            string_find(search_text, search_text_length, ':', 1) == STRING_NPOS &&
+            string_find(search_text, search_text_length, '=', 1) == STRING_NPOS &&
+            string_find(search_text, search_text_length, '!', 1) == STRING_NPOS &&
+            string_find(search_text, search_text_length, '<', 1) == STRING_NPOS &&
+            string_find(search_text, search_text_length, '>', 1) == STRING_NPOS)
         {
-            eod_fetch_async("real-time", search_text, FORMAT_JSON, LC1(search_fetch_single_symbol_callback(search_query_hash, sw_handle, _1)));
+            hash_t search_query_hash = string_hash(search_text, search_text_length);
+            eod_fetch_async("search", search_text, FORMAT_JSON, "limit", "5",
+                LC1(search_fetch_search_api_results_callback(search_query_hash, sw_handle, _1)));
+
+            // If the search text looks like a symbol, i.e. GFL.TO, then lets query the real-time value to see if it resolves.
+            if (search_text_length > 3 && search_text_length < 16 && 
+                search_text[search_text_length] != '.' &&
+                string_find(search_text, search_text_length, '.', 1) != STRING_NPOS &&
+                string_find(search_text, search_text_length, ' ', 1) == STRING_NPOS)
+            {
+                eod_fetch_async("real-time", search_text, FORMAT_JSON, LC1(search_fetch_single_symbol_callback(search_query_hash, sw_handle, _1)));
+            }
         }
 
         // Meanwhile query the indexed database
