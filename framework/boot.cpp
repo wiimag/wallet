@@ -171,6 +171,8 @@ extern int main_initialize()
             return ERROR_SYSTEM_CALL_FAIL;
         }
 
+        system_set_main_window_handle(glfw_platform_window_handle(window));
+
         bgfx_initialize(window);
         imgui_initiaize(window);
     }

@@ -450,8 +450,8 @@ thread_try_wait(unsigned int milliseconds) {
 }
 
 string_const_t
-thread_name(void) {
-	thread_t* thread = get_thread_self();
+thread_name(thread_t* thread) {
+	thread = thread == nullptr ? get_thread_self() : thread;
 	return thread ? thread->name : string_null();
 }
 

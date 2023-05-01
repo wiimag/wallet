@@ -53,7 +53,7 @@ FOUNDATION_STATIC const char* backend_platform_name_for_package()
     #endif
 }
 
-FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
+FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res, bool use_notif)
 {
     if (!res.resolved())
     {
@@ -79,6 +79,8 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
 
     char current_version_string_buffer[32];
     string_t myversionstr = string_from_version(STRING_BUFFER(current_version_string_buffer), app->version);
+
+    bool skip_no_update_check = false;
     
     // Scan versions for the most recent one
     auto versions = res["versions"];
@@ -103,6 +105,8 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
         if (url.length == 0)
             continue;
 
+        string_const_t description = e["description"].as_string();
+
         char download_url_buffer[1024];
         string_t download_url = string_format(STRING_BUFFER(download_url_buffer), STRING_CONST("%.*s://%.*s/%.*s"), 
             STRING_FORMAT(proto), STRING_FORMAT(host), STRING_FORMAT(url));
@@ -111,9 +115,31 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
 
         char msg_buffer[1024];
         string_t msgtr = tr_format(STRING_BUFFER(msg_buffer), 
-            "Currently you are using version {1}\n\nDo you want to download version {0} and install it?\n\nThis will close the application to launch the installer.\n\nSource: {2}", 
-            versionstr, myversionstr, download_url);
-        if (system_message_box(STRING_ARGS(titletr), STRING_ARGS(msgtr), true))
+            "Currently you are using version {1}\n\n"
+            "{3}\n"
+            "Do you want to download version {0} and install it?\n\n"
+            "This will close the application to launch the installer.\n\nSource: {2}", 
+            versionstr, myversionstr, download_url, description);
+
+        bool download_new_version = false;
+        if (use_notif)
+        {
+            if (skip_no_update_check)
+                break;
+
+            download_new_version = false;
+
+            titletr = tr_format_static("New version {0} available", versionstr);
+            system_notification_push(STRING_ARGS(titletr), STRING_ARGS(description));
+        }
+        else
+        {
+            download_new_version = system_message_box(STRING_ARGS(titletr), STRING_ARGS(msgtr), true);
+        }
+
+        skip_no_update_check = true;
+
+        if (download_new_version)
         {
             stream_t* new_version_download = query_execute_download_file(download_url.str);
             if (new_version_download)
@@ -146,12 +172,19 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res)
         }
     }
 
-    log_infof(HASH_BACKEND, STRING_CONST("Current version is %.*s is up-to-date."), STRING_FORMAT(myversionstr));
+    if (!use_notif && !skip_no_update_check)
+    {
+        char msg_buffer[1024];
+        string_const_t titletr = tr(STRING_CONST("No update available"), true);
+        string_t msgtr = tr_format(STRING_BUFFER(msg_buffer), "You are using the latest version {0}", myversionstr);
+        system_message_box(STRING_ARGS(titletr), STRING_ARGS(msgtr), false);
+        log_infof(HASH_BACKEND, STRING_CONST("Current version is %.*s is up-to-date."), STRING_FORMAT(myversionstr));
+    }
 }
 
 FOUNDATION_STATIC bool backend_check_new_version_event(const dispatcher_event_args_t& args)
 {
-    backend_check_new_version(args.user_data);
+    backend_check_new_version(args.size > 0 ? true : false);
     return true;
 }
 
@@ -178,6 +211,9 @@ FOUNDATION_STATIC void backend_establish_connection()
         dispatcher_post_event(EVENT_BACKEND_CONNECTED);
         dispatcher_register_event_listener(EVENT_CHECK_NEW_VERSIONS, backend_check_new_version_event);
 
+        bool use_notif = true;
+        dispatcher_post_event(EVENT_CHECK_NEW_VERSIONS, &use_notif, sizeof(use_notif));
+
         log_infof(HASH_BACKEND, STRING_CONST("Connected to backend"));
     });
 }
@@ -186,10 +222,40 @@ FOUNDATION_STATIC void backend_establish_connection()
 // ## PUBLIC
 //
 
-void backend_check_new_version(void* context)
+string_t backend_translate_text(const char* id, size_t id_length, const char* text, size_t text_length, const char* lang, size_t lang_length)
+{
+    if (!backend_is_connected())
+        return {};
+
+    const char* translate_url = string_format_static_const("%.*s/v2/translate?id=%.*s", STRING_FORMAT(_backend_module->url), (int)id_length, id);
+
+    string_t translation{};
+    char translate_body_buffer[8096];
+    string_t body = string_format(STRING_BUFFER(translate_body_buffer), 
+           STRING_CONST("{\"text\":[\"%.*s\"],\"target_lang\":\"%.*s\"}"), 
+           min((int)text_length, 8000), text, (int)lang_length, lang);
+    const bool query_success = query_execute_json(translate_url, FORMAT_JSON_CACHE, body, [&translation](const json_object_t& res)
+    {
+        if (!res.resolved())
+            return;
+
+        translation = res["translations"].get(0ULL)["text"].as_string_clone();
+    }, 60 * 60 * 24 * 14);
+
+    if (!query_success)
+    {
+        log_warnf(HASH_BACKEND, WARNING_NETWORK, STRING_CONST("Failed to translate text"));
+    }
+
+    if (translation.length == 0)
+        translation = string_clone(text, text_length);
+    return translation;
+}
+
+void backend_check_new_version(bool use_notif)
 {
     // Use PRODUCT_VERSIONS_URL to check if a new version is available.
-    query_execute_async_json(PRODUCT_VERSIONS_URL, FORMAT_JSON_WITH_ERROR, backend_fetch_versions_callback);
+    query_execute_async_json(PRODUCT_VERSIONS_URL, FORMAT_JSON_WITH_ERROR, LC1(backend_fetch_versions_callback(_1, use_notif)));
 }
 
 bool backend_is_connected()

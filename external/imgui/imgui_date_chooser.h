@@ -20,28 +20,40 @@
 #include <imgui.h>
 #endif //IMGUI_API
 
-// USAGE
-/*
-#include "imguidatechooser.h"
-//#include <time.h>   // mandatory when implementing ImGui::TestDateChooser() yourself in your code
-
-// inside a ImGui::Window:
-ImGui::TestDateChooser();
-*/
-
 struct tm;  // defined in <time.h>
 
 namespace ImGui {
 
-// Some example of date formats: "%d/%m/%Y" "%A %d %b %Y"
-IMGUI_API bool DateChooser(const char* label,tm& dateOut,const char* dateFormat="%d/%m/%Y",bool closeWhenMouseLeavesIt=true,bool* pSetStartDateToDateOutThisFrame=NULL,const char* leftArrow=nullptr,const char* rightArrow=nullptr,const char* upArrowString="   ^   ",const char* downArrowString="   v   ");
-// Some helper methods (note that I cannot use tm directly in this hader file, so we can't initialize a static date directly with these methods)
+/*! Date picker widget.
+ *
+ *  @param label Label to display before the widget.
+ *  @param dateOut Date to display and modify.
+ *  @param dateFormat Format string to use when displaying the date.
+ *  @param closeWhenMouseLeavesIt If true, the widget will close when the mouse leaves it.
+ *  @param pSetStartDateToDateOutThisFrame If not NULL, the widget will set the start date to the dateOut value this frame.
+ *  @param leftArrow If not NULL, the widget will display this string as the left arrow.
+ *  @param rightArrow If not NULL, the widget will display this string as the right arrow.
+ *  @param upArrowString If not NULL, the widget will display this string as the up arrow.
+ *  @param downArrowString If not NULL, the widget will display this string as the down arrow.
+ *
+ *  @return True if the user has selected a date, false otherwise.
+ */
+IMGUI_API bool DateChooser(const char* label,tm& dateOut,const char* dateFormat="%d/%m/%Y",
+    bool closeWhenMouseLeavesIt=true,bool* pSetStartDateToDateOutThisFrame=NULL,
+    const char* leftArrow=nullptr,const char* rightArrow=nullptr,
+    const char* upArrowString="   ^   ",const char* downArrowString="   v   ");
+
+/*! Reset the date to zero.
+ *
+ *  @param date Date to reset.
+ */
 IMGUI_API void SetDateZero(tm* date);
+
+/*! Set the date to today.
+ *
+ *  @param date Date to set.
+ */
 IMGUI_API void SetDateToday(tm* date);
-
-
-IMGUI_API void TestDateChooser(const char* dateFormat="%d/%m/%Y",bool closeWhenMouseLeavesIt=true,const char* leftArrow="<",const char* rightArrow=">",const char* upArrowString="   ^   ",const char* downArrowString="   v   ");
-
 
 } // namespace ImGui
 

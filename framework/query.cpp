@@ -947,10 +947,20 @@ void query_shutdown()
     const size_t thread_count = sizeof(_fetcher_threads) / sizeof(_fetcher_threads[0]);
     for (size_t i = 0; i < thread_count; ++i)
     {
+        tick_t timeout = time_current();
         while (thread_is_running(_fetcher_threads[i]))
         {
             _fetcher_requests.signal();
             thread_signal(_fetcher_threads[i]);
+
+            const double KILL_THREAD_AFTER_SECONDS = 10.0;
+            if (time_elapsed(timeout) > KILL_THREAD_AFTER_SECONDS)
+            {
+                string_const_t tname = thread_name(_fetcher_threads[i]);
+                log_warnf(HASH_QUERY, WARNING_SUSPICIOUS,
+                    STRING_CONST("Query thread %.*s (%d) did not exit within 5 seconds, killing it..."), STRING_FORMAT(tname), (int)i);
+                thread_kill(_fetcher_threads[i]);
+            }
         }
         thread_join(_fetcher_threads[i]);
     }

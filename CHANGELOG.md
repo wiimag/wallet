@@ -1,10 +1,14 @@
 # Changelog
 
-## [0.20.7] - 2023-04-29
+## [0.20.10] - 2023-05-01
 - Add basic fundamental pattern analysis.
 - Add last day bulk data to the search index.
+- Add missing french translations.
+- Add new version check on startup.
+- Add support to translate the stock description in the search window using DeepL.
 - Fix contextual menu on invalid titles in a report.
 - Fix fetching non existing symbol data.
+- Fix report symbol banner image scaling.
 - Fix selling quantity than owned.
 - Hide pattern plot equation by default.
 - Open market symbol in a new window.

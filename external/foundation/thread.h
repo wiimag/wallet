@@ -158,9 +158,10 @@ FOUNDATION_API void
 thread_set_hardware(uint group, uint64_t mask);
 
 /*! Get name for calling thread.
+\param thread Thread, if null the calling thread is used
 \return Thread name */
 FOUNDATION_API string_const_t
-thread_name(void);
+thread_name(thread_t* thread);
 
 /*! Get calling thread system id.
 \return Thread id */

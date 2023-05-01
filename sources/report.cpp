@@ -664,7 +664,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
         if (logo_has_banner(title->code, title->code_length, 
                 logo_banner_width, logo_banner_height, logo_banner_channels, logo_banner_color, fill_color) &&
                 can_show_banner && 
-                space.x > 225.0f)
+                space.x > IM_SCALEF(100))
         {
             const float ratio = logo_banner_height / text_size.y;
             logo_banner_height = text_size.y;
@@ -718,7 +718,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             }
             
             const float space_left = ImGui::GetContentRegionAvail().x - (logo_banner_width * max_scale) - (style.FramePadding.x * 2.0f);
-            if (button_width < space_left + 15.0f)
+            if (button_width < space_left + IM_SCALEF(10))
             {
                 ImGui::MoveCursor(space_left - button_width - style.FramePadding.x / 2.0f, 1.0f, true);
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
@@ -751,7 +751,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
 
             float logo_size = button_width;
             float space_left = ImGui::GetContentRegionAvail().x - code_width;
-            ImGui::MoveCursor(space_left - button_width - logo_size + 10.0f, 0, true);
+            ImGui::MoveCursor(space_left - button_width - logo_size + IM_SCALEF(7), IM_SCALEF(0.25), true);
             ImVec2 logo_size_v = ImVec2(logo_size, logo_size);
             if (ImGui::GetCursorPos().x < code_width || !logo_render_icon(title->code, title->code_length, logo_size_v, true, true))
                 ImGui::Dummy(ImVec2(logo_size, logo_size));
@@ -759,9 +759,9 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
                 ImGui::Dummy(ImVec2(logo_size, logo_size));
 
             space_left = ImGui::GetContentRegionAvail().x - code_width;
-            if (button_width < space_left + 35.0f)
+            if (button_width < space_left + IM_SCALEF(25))
             {
-                ImGui::MoveCursor(-14.0f, 1.0f, true);
+                ImGui::MoveCursor(-IM_SCALEF(7), 1.0f, true);
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
                 if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
                 {
@@ -1945,6 +1945,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
         #endif
     }
 
+    report_filter_out_titles(report);
     report_summary_update(report);
     log_infof(HASH_REPORT, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
     if (report->table)

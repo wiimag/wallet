@@ -948,8 +948,8 @@ FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
 
     string_const_t code = SYMBOL_CONST(pattern->code);
 
-    ImGui::TableSetupColumn("Check", ImGuiTableColumnFlags_WidthFixed, 50.0f);
-    ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+    ImGui::TableSetupColumn("Check", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(25));
+    ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(20));
     ImGui::TableSetupColumn("Text", ImGuiTableColumnFlags_WidthStretch);
     //ImGui::TableHeadersRow();
 

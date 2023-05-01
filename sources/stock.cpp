@@ -8,6 +8,7 @@
 #include "eod.h"
 #include "events.h"
 #include "settings.h"
+#include "backend.h"
 
 #include <framework/query.h>
 #include <framework/shared_mutex.h>
@@ -17,6 +18,7 @@
 #include <framework/math.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/localization.h>
 
 #include <foundation/path.h>
 #include <foundation/hashtable.h>
@@ -228,7 +230,9 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     }
 
     const json_object_t& general = json["General"];
-    entry.symbol = string_table_encode(general["Code"].as_string());
+    string_const_t code = general["Code"].as_string();
+
+    entry.symbol = string_table_encode(code.str, code.length);
     entry.name = string_table_encode_unescape(general["Name"].as_string());
     entry.type = string_table_encode(general["Type"].as_string());
     entry.country = string_table_encode(general["CountryName"].as_string());
@@ -237,7 +241,9 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     entry.logo = string_table_encode_unescape(general["LogoURL"].as_string());
     entry.exchange = string_table_encode(general["Exchange"].as_string());
     entry.isin = string_table_encode(general["ISIN"].as_string());
-    entry.description = string_table_encode_unescape(general["Description"].as_string());
+
+    string_const_t description = general["Description"].as_string();
+    entry.description = string_table_encode_unescape(description);
 
     string_const_t sector = general["GicSector"].as_string();
     if (string_is_null(sector))

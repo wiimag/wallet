@@ -14,6 +14,7 @@
 #include "news.h"
 #include "imwallet.h"
 #include "report.h"
+#include "backend.h"
 
 #include <framework/imgui.h>
 #include <framework/session.h>
@@ -131,6 +132,7 @@ struct search_result_entry_t
     stock_handle_t              stock{};
     tick_t                      uptime{ 0 };
     bool                        viewed{ false };
+    string_t                    description{};
                                 
     search_window_t*            window{ nullptr };
 };
@@ -1030,6 +1032,23 @@ FOUNDATION_STATIC void search_fetch_search_api_results_callback(hash_t query_has
     }        
 }
 
+FOUNDATION_STATIC void search_window_clear_results(search_window_t* sw)
+{
+    // Clear any previous errors
+    sw->error[0] = 0;
+
+    {
+        SHARED_WRITE_LOCK(sw->lock);
+        for (unsigned i = 0, end = array_size(sw->results); i < end; ++i)
+        {
+            search_result_entry_t* re = sw->results + i;
+            string_deallocate(re->description.str);
+        }
+        array_clear(sw->results);
+    }
+}
+
+
 FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const char* search_text, size_t search_text_length)
 {
     FOUNDATION_ASSERT(sw);
@@ -1037,14 +1056,7 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
     search_database_t* db = sw->db;
     FOUNDATION_ASSERT(db);
 
-    // Clear any previous errors
-    sw->error[0] = 0;
-
-    {
-        SHARED_WRITE_LOCK(sw->lock);
-        array_clear(sw->results);
-    }
-
+    search_window_clear_results(sw);
     if (search_text == nullptr || search_text_length == 0)
         return;
 
@@ -1529,9 +1541,31 @@ FOUNDATION_STATIC void search_table_column_description_tooltip(table_element_ptr
     if (tooltip_symbol == 0)
         return;
 
-    string_const_t tooltip = string_table_decode_const(tooltip_symbol);
     ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 800.0f);
-    ImGui::Text("%.*s", STRING_FORMAT(tooltip));
+    if (entry->description.length)
+    {
+        ImGui::Text("%.*s", STRING_FORMAT(entry->description));
+    }
+    else
+    {
+        string_const_t tooltip = string_table_decode_const(tooltip_symbol);
+        if (backend_is_connected())
+        {
+            string_const_t lang = localization_current_language();
+            const bool is_english = string_equal(lang.str, lang.length, STRING_CONST("en"));
+            if (!is_english)
+            {
+                string_const_t code = search_entry_resolve_symbol(entry);
+                entry->description = backend_translate_text(code.str, code.length, STRING_ARGS(tooltip), STRING_ARGS(lang));
+            }
+
+            ImGui::Text("%.*s", STRING_FORMAT(entry->description));
+        }
+        else
+        {
+            ImGui::Text("%.*s", STRING_FORMAT(tooltip));
+        }
+    }
     ImGui::PopTextWrapPos();
 }
 
@@ -1703,6 +1737,8 @@ FOUNDATION_STATIC void search_window_deallocate(void* window)
 
     dispatcher_unregister_event_listener(search_window->event_db_loaded);
     dispatcher_unregister_event_listener(search_window->event_query_updated);
+
+    search_window_clear_results(search_window);
     
     {
         SHARED_WRITE_LOCK(search_window->lock);

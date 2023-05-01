@@ -161,3 +161,10 @@ system_thread_finalize(void);
 /*! Checks if the system is a running a dark theme */
 FOUNDATION_API bool
 system_is_dark_theme();
+
+/*! Set the main window handle for the application. This is used to determine
+    if the application is active or not. 
+    \param window_handle The handle to the main window
+    \return The previous window handle */
+FOUNDATION_API void*
+system_set_main_window_handle(void* window_handle);

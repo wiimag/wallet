@@ -43,6 +43,7 @@ system_show_alert(const char*, size_t, const char*, size_t, int);
 #define SYSTEM_BUFFER_SIZE 511
 FOUNDATION_DECLARE_THREAD_LOCAL(char*, system_buffer, 0)
 
+static void* system_main_window_handle = nullptr;
 static device_orientation_t system_device_orientation_current = DEVICEORIENTATION_UNKNOWN;
 static event_stream_t* system_event_stream_current;
 
@@ -751,7 +752,15 @@ system_message_box(const char* title, size_t title_length, const char* message, 
 #if FOUNDATION_PLATFORM_WINDOWS
 	FOUNDATION_UNUSED(message_length);
 	FOUNDATION_UNUSED(title_length);
-	return (MessageBoxA(0, message, title, cancel_button ? MB_OKCANCEL : MB_OK) == IDOK);
+
+	wchar_t wtitle[256];
+	wstring_from_string(wtitle, sizeof(wtitle), title, title_length);
+
+	wchar_t wmessage[1024];
+	wstring_from_string(wmessage, sizeof(wmessage), message, message_length);
+
+	return (MessageBoxW((HWND)system_main_window_handle, wmessage, wtitle, 
+		(cancel_button ? (MB_OKCANCEL | MB_ICONQUESTION) : MB_OK) | MB_APPLMODAL) == IDOK);
 #elif FOUNDATION_PLATFORM_APPLE
 	return system_show_alert(title, title_length, message, message_length, cancel_button ? 1 : 0) > 0;
 #elif 0  // FOUNDATION_PLATFORM_LINUX
@@ -799,4 +808,12 @@ system_thread_finalize(void) {
 
 	memory_deallocate(buffer);
 	set_thread_system_buffer(0);
+}
+
+void*
+system_set_main_window_handle(void* window_handle)
+{
+	void* old_handle = system_main_window_handle;
+	system_main_window_handle = window_handle;
+	return old_handle;
 }

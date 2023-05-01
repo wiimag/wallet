@@ -460,15 +460,14 @@ FOUNDATION_STATIC string_const_t report_title_order_window_id(const title_t* tit
 {
     const stock_t* s = title->stock;
     if (s == nullptr || math_real_is_nan(s->current.close))
-        return string_format_static(STRING_CONST(ICON_MD_FORMAT_LIST_BULLETED " Orders %.*s###Orders_%.*s_4"),
-            (int)title->code_length, title->code, (int)title->code_length, title->code);
+        return tr_format_static(ICON_MD_FORMAT_LIST_BULLETED " Orders {0}###Orders_{0}_4", string_const(title->code, title->code_length));
 
     if (title_sold(title))
         return string_format_static(STRING_CONST(ICON_MD_FORMAT_LIST_BULLETED " Orders %.*s [SOLD] (%.2lf $)###Orders_%.*s_4"),
             (int)title->code_length, title->code, title->stock->current.close, (int)title->code_length, title->code);
     
-    return string_format_static(STRING_CONST(ICON_MD_FORMAT_LIST_BULLETED " Orders %.*s (%.2lf $)###Orders_%.*s_4"),
-        (int)title->code_length, title->code, title->stock->current.close, (int)title->code_length, title->code);
+    return tr_format_static(ICON_MD_FORMAT_LIST_BULLETED " Orders {0} ({1,currency})###Orders_%.*s_4", 
+        string_const(title->code, title->code_length), title->stock->current.close);
 }
 
 void report_render_title_details(report_t* report, title_t* title)

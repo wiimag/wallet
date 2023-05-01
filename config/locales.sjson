@@ -2518,7 +2518,7 @@
 		{
 			hash = "4dd758bd40dd596c"
 			en = " Bought Price Gain: %.3g %% \n Current Price Gain: %.3g %% (\xee\x8f\x8a %.2lf $) \n Ask Safe Price Gain: %.2lf $ (\xee\x8f\x8a %.3g %%) \n"
-			fr = " Prix d'achat Gain: %.3g %% \n Prix actuel Gain: %.3g %% (\xee\x8f\x8a %.2lf $) \n Prix Prix S\xc3\xa9cure Gain: %.2lf $ (\xee\x8f\x8a %.3g %%) \n"
+			fr = " Prix d'achat Gain: %.3g %% \n Prix actuel Gain: %.3g %% (\xee\x8f\x8a %.2lf $) \n Prix S\xc3\xa9cure Gain: %.2lf $ (\xee\x8f\x8a %.3g %%) \n"
 		}
 		{
 			hash = "a615bb82ef228020"
@@ -2723,7 +2723,7 @@
 		{
 			hash = "d1c3541a0f3e0173"
 			en = "Cash And Short Term Investments"
-			fr = "@TODO"
+			fr = "Encaisse et investissements \xc3\xa0 court terme"
 		}
 		{
 			hash = "3447649bfe7a36be"
@@ -3063,7 +3063,7 @@
 		{
 			hash = "c9f10dba1e34ebba"
 			en = "Change To Netincome"
-			fr = "@TODO"
+			fr = "Changement du b\xc3\xa9n\xc3\xa9fice net"
 		}
 		{
 			hash = "cfdd1e43793fe262"
@@ -3184,6 +3184,131 @@
 			hash = "a897cb2b873fe64"
 			en = "Plot options"
 			fr = "Options des graphiques"
+		}
+		{
+			hash = "6d2dbb3e802e6148"
+			en = "January"
+			fr = "Janvier"
+		}
+		{
+			hash = "678032b1e93f8ac8"
+			en = "February"
+			fr = "F\xc3\xa9vrier"
+		}
+		{
+			hash = "b77c5f328290638"
+			en = "March"
+			fr = "Mars"
+		}
+		{
+			hash = "9d4b5aaec80971f9"
+			en = "April"
+			fr = "Avril"
+		}
+		{
+			hash = "9ea7ae3bfca84294"
+			en = "May"
+			fr = "Mai"
+		}
+		{
+			hash = "343973768a246370"
+			en = "June"
+			fr = "Juin"
+		}
+		{
+			hash = "c64b95908a518f75"
+			en = "July"
+			fr = "Juillet"
+		}
+		{
+			hash = "9f7bef3308c96c03"
+			en = "August"
+			fr = "Ao\xc3\xbbt"
+		}
+		{
+			hash = "c780f8ee981eb1e1"
+			en = "September"
+			fr = "Septembre"
+		}
+		{
+			hash = "5d64d52a1fadb25d"
+			en = "October"
+			fr = "Octobre"
+		}
+		{
+			hash = "9e5062ea4ccb82ba"
+			en = "November"
+			fr = "Novembre"
+		}
+		{
+			hash = "f399c9d0ea798cc1"
+			en = "December"
+			fr = "D\xc3\xa9cembre"
+		}
+		{
+			hash = "4bed7d918bdc66e8"
+			en = "Sunday"
+			fr = "Dimanche"
+		}
+		{
+			hash = "28cc7ba650d3538c"
+			en = "Monday"
+			fr = "Lundi"
+		}
+		{
+			hash = "c9611b580a7c664e"
+			en = "Tuesday"
+			fr = "Mardi"
+		}
+		{
+			hash = "6e466249a70657b6"
+			en = "Wednesday"
+			fr = "Mercredi"
+		}
+		{
+			hash = "61eee82ea18bf5bd"
+			en = "Thursday"
+			fr = "Jeudi"
+		}
+		{
+			hash = "10d613eadee69f11"
+			en = "Friday"
+			fr = "Vendredi"
+		}
+		{
+			hash = "595de15bb69dd6bf"
+			en = "Saturday"
+			fr = "Samedi"
+		}
+		{
+			hash = "9a410ced9d2edd16"
+			en = "\xee\x89\x81 Orders {0} ({1,currency})###Orders_%.*s_4"
+			fr = "\xee\x89\x81 D\xc3\xa9tails des transactions {0} ({1,currency})###Ordres_%.*s_4"
+		}
+		{
+			hash = "987ff9869c977ded"
+			en = "You are using the latest version {0}"
+			fr = "Vous utilisez la derniere version {0}"
+		}
+		{
+			hash = "63167dc2c45d3b6c"
+			en = "No update available"
+			fr = "Aucune mise a jour disponible"
+		}
+		{
+			hash = "7365d92bfc007682"
+			en = "Currently you are using version {1}\n\n{3}\nDo you want to download version {0} and install it?\n\nThis will close the application to launch the installer.\n\nSource: {2}"
+			fr = "Vous utilisez actuellement la version {1}\n\n{3}\nVoulez-vous t\xc3\xa9l\xc3\xa9charger la version {0} et l'installer?\n\nCela fermera l'application pour lancer l'installateur.\n\nSource: {2}"
+		}
+		{
+			hash = "35e2d342bf4be03f"
+			en = "New version {0} is now available\n{1}"
+			fr = "\nLa nouvelle version {0} est maintenant disponible\n{1}"
+		}
+		{
+			hash = "4cc155ea4e568539"
+			en = "New version {0} available"
+			fr = "Nouvelle version {0} disponible"
 		}
 	]
 }
