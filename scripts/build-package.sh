@@ -200,6 +200,13 @@ if [ -f "$WINDOWS_DEFENDER_PATH" ]; then
     "$ZIP_OUTPUT_PATH"
   fi
 
+  # Copy to ballet repo
+  if [[ "$*" == *backend* ]]; then
+    BALLET_RELEASE_PATH="../ballet/public/releases/win32/wallet_release_latest_backend.exe"
+    cp "$ZIP_OUTPUT_PATH" "$BALLET_RELEASE_PATH"
+    echo "Copied to ballet repo: $BALLET_RELEASE_PATH"
+  fi
+
 else
   echo "Cannot scan the zip file with Windows Defender, the MpCmdRun.exe file does not exist in the Program Files folder"
 fi
