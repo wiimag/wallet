@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.20.11] - 2023-05-01
+## [0.20.12] - 2023-05-01
 - Add basic fundamental pattern analysis.
+- Add default pattern view track point to follow price changes.
 - Add last day bulk data to the search index.
 - Add missing french translations.
 - Add new version check on startup.

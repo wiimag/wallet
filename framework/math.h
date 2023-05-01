@@ -26,6 +26,7 @@ typedef struct vec2_t
     FOUNDATION_FORCEINLINE vec2_t(float s) : x(s), y(s) {}
     FOUNDATION_FORCEINLINE vec2_t(int x, int y) : x((float)x), y((float)y) {}
     FOUNDATION_FORCEINLINE vec2_t(float x, float y) : x(x), y(y) {}
+    FOUNDATION_FORCEINLINE vec2_t(double x, double y) : x((double)x), y((double)y) {}
     FOUNDATION_FORCEINLINE vec2_t(const ImVec2& iv2) : xy(iv2) {}
     FOUNDATION_FORCEINLINE vec2_t(const bx::Vec3& bxv3) : x(bxv3.x), y(bxv3.y) {}
     FOUNDATION_FORCEINLINE vec2_t(const float* p, unsigned length = UINT_MAX) : x(p[0]), y(length > 1 ? p[1] : 0) {}
@@ -66,6 +67,7 @@ typedef struct vec3_t
     FOUNDATION_FORCEINLINE vec3_t(float x, float y, float z) : x(x), y(y), z(z) {}
     FOUNDATION_FORCEINLINE vec3_t(const vec2_t& v2) : x(v2.x), y(v2.y), z(0) {}
     FOUNDATION_FORCEINLINE vec3_t(const ImVec2& iv2) : x(iv2.x), y(iv2.y), z(0) {}
+    FOUNDATION_FORCEINLINE vec3_t(const ImPlotPoint& iv2) : x(iv2.x), y(iv2.y), z(0) {}
     FOUNDATION_FORCEINLINE vec3_t(const bx::Vec3& bxv3) : x(bxv3.x), y(bxv3.y), z(bxv3.z) {}
     FOUNDATION_FORCEINLINE vec3_t(const float* p, unsigned length = UINT_MAX) : x(p[0]), y(length > 1 ? p[1] : 0), z(length > 2 ? p[2] : 0) {}
 

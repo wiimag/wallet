@@ -116,6 +116,10 @@ struct plot_context_t
     double a{ 0 }, b{ 0 }, c{ 0 }, d{ 0 }, e{ 0 }, f{ 0 };
 
     bool show_trend_equation{ false };
+
+    ImPlotPoint mouse_pos{};
+    ImPlotPoint cursor_xy1{};
+    ImPlotPoint cursor_xy2{};
 };
 
 struct pattern_graph_data_t
@@ -1189,6 +1193,7 @@ FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern
     plot_context_t c{ pattern->date, min((size_t)4096, s->history_count), offset, s->history };
     c.show_trend_equation = pattern->show_trend_equation;
     c.acc = pattern->range;
+    c.mouse_pos = ImPlot::GetPlotMousePos();
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG(label, [](int idx, void* user_data)->ImPlotPoint
     {
@@ -1222,6 +1227,9 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
     plot_context_t c{ pattern->date, min(size_t(4096), s->history_count), 1, s->history };
     c.show_trend_equation = pattern->show_trend_equation;
     c.acc = pattern->range;
+    c.cursor_xy1 = { DBL_MAX, DNAN };
+    c.cursor_xy2 = { DNAN, DNAN };
+    c.mouse_pos = ImPlot::GetPlotMousePos();
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG(tr("Price"), [](int idx, void* user_data)->ImPlotPoint
     {
@@ -1237,6 +1245,20 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
         if (days_diff <= c->acc)
             pattern_build_trend(*c, x, y);
 
+        if (math_real_is_finite(c->mouse_pos.x))
+        {
+            const double diffx = math_abs(c->mouse_pos.x - x);
+            if (x < c->mouse_pos.x)
+            {
+                c->cursor_xy1 = ImPlotPoint(x, y);
+            }
+            else if (x > c->mouse_pos.x && math_real_is_nan(c->cursor_xy2.x))
+            {
+                c->cursor_xy2 = ImPlotPoint(x, y);
+            }
+            
+        }
+
         return ImPlotPoint(x, y);
     }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
 
@@ -1244,6 +1266,26 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
     {
         pattern_compute_trend(c);
         pattern_render_trend(tr("Price"), c, x_axis_inverted);
+    }
+
+    if (math_real_is_finite(c.cursor_xy1.x) && math_real_is_finite(c.cursor_xy2.x))
+    {
+        // Interpolate the mouse position for xy1 and xy2 points
+        const double x1 = c.cursor_xy1.x;
+        const double y1 = c.cursor_xy1.y;
+        const double x2 = c.cursor_xy2.x;
+        const double y2 = c.cursor_xy2.y;
+        const double x = c.mouse_pos.x;
+        double y = 0;
+        if (x_axis_inverted)
+            y = (y2 - y1) / (x2 - x1) * (x - x1) + y1;
+        else
+            y = (y1 - y2) / (x1 - x2) * (x - x2) + y2;
+        ImPlot::Annotation(x, c.mouse_pos.y, (ImColor)IM_COL32(55, 55, 55, 155), {0, -20}, false, "%.2lf $", y);
+        ImPlot::Annotation(x, y, (ImColor)IM_COL32(55, 55, 55, 155), {0, 0}, false, ICON_MD_CIRCLE);
+
+        //ImPlot::Annotation(c.cursor_xy1.x, c.cursor_xy1.y, (ImColor)IM_COL32(155, 55, 55, 155), {0, 0}, false, ICON_MD_CIRCLE);
+        //ImPlot::Annotation(c.cursor_xy2.x, c.cursor_xy2.y, (ImColor)IM_COL32(55, 155, 55, 155), {0, 0}, false, ICON_MD_CIRCLE);
     }
 }
 
