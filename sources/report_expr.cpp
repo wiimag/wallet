@@ -66,7 +66,7 @@ struct dynamic_report_t
 #define IS_NOT_A_NUMBER SC1(math_real_is_nan(_1.as_number()))
 #define EVAL_STOCK_FIELD(field_name) FOUNDATION_PREPROCESSOR_TOSTRING(field_name), SC2(_2->field_name), IS_NOT_A_NUMBER, FetchLevel::FUNDAMENTALS
 
-constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 35;
+constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 36;
 
 static struct {
     const char* property_name;
@@ -77,7 +77,7 @@ static struct {
     
     // Title & Stocks
     
-    {"sold",    SC2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0)},                       /*0*/
+    { "sold",    SC2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0)},                       /*0*/
     { "active", SC2(_1->average_quantity ? true : false), SL1(_1.as_number() == 0) },
     { "qty",    SC2(_1->average_quantity), SL1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
     { "buy",    SC2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
@@ -122,9 +122,11 @@ static struct {
     { "ask",                    SC2(_1->ask_price.fetch()), nullptr },
     { "today_exchange_rate",    SC2(_1->today_exchange_rate.fetch()), nullptr },
 
-    //Stock only (Start at index 35 <== !!!UPDATE INDEX #STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
+    { "gain",    SC2(title_get_total_gain(_1)), nullptr},
 
-    { "price",      SC2(_2->current.price), IS_NOT_A_NUMBER, FetchLevel::REALTIME },                       /*35*/
+    //Stock only (Start at index 36 <== !!!UPDATE INDEX #STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
+
+    { "price",      SC2(_2->current.price), IS_NOT_A_NUMBER, FetchLevel::REALTIME },                       /*36*/
     { "date",       SC2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
     { "gmt",        SC2((double)_2->current.gmtoffset), nullptr, FetchLevel::REALTIME },
     { "open",       SC2(_2->current.open), IS_NOT_A_NUMBER, FetchLevel::REALTIME },

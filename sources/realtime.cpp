@@ -511,7 +511,7 @@ FOUNDATION_STATIC cell_t realtime_table_column_time(table_element_ptr_t element,
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         char time_buffer[64];
-        string_t time_string = localization_string_from_time(STRING_BUFFER(time_buffer), (tick_t)s->timestamp * (tick_t)1000, false);
+        string_t time_string = localization_string_from_time(STRING_BUFFER(time_buffer), (tick_t)s->timestamp * (tick_t)1000, true);
         ImGui::TextWrapped("%.*s", STRING_FORMAT(time_string));
     }
 
@@ -598,8 +598,10 @@ FOUNDATION_STATIC bool realtime_render_graph(const stock_realtime_t* s, time_t s
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, min - (max - min) * 0.05, max);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y2, 0, INFINITY);
 
+    ImPlot::SetupLegend(ImPlotLocation_North, ImPlotLegendFlags_Horizontal);
+
     ImPlot::SetAxis(ImAxis_Y1);
-    ImPlot::PlotLineG("##Price", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotLineG(tr("Price"), [](int idx, void* user_data)->ImPlotPoint
     {
         const stock_realtime_record_t* first = (const stock_realtime_record_t*)user_data;
         const stock_realtime_record_t* r = first + idx;
@@ -610,7 +612,7 @@ FOUNDATION_STATIC bool realtime_render_graph(const stock_realtime_t* s, time_t s
     }, (void*)first, visible_record_count, ImPlotLineFlags_SkipNaN);
 
     ImPlot::SetAxis(ImAxis_Y2);
-    ImPlot::PlotLineG("##Volume", [](int idx, void* user_data)->ImPlotPoint
+    ImPlot::PlotLineG(tr("Volume"), [](int idx, void* user_data)->ImPlotPoint
     {
         const stock_realtime_record_t* first = (const stock_realtime_record_t*)user_data;
         const stock_realtime_record_t* r = first + idx;
