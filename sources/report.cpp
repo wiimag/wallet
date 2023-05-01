@@ -988,7 +988,8 @@ FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t
             time_elapsed_unit = "hour";
             elapsed_time_updated /= 60;
         }
-        string_const_t last_update = string_from_time_static(tick_updated, true);
+        char time_buffer[64];
+        string_t last_update = localization_string_from_time(STRING_BUFFER(time_buffer), tick_updated);
         ImGui::AlignTextToFramePadding();
         ImGui::Text(" Updated %.0lf %s(s) ago (%.*s) \n %.*s [%.*s] -> %.2lf $ (%.3lg %%) ",
             elapsed_time_updated, time_elapsed_unit, STRING_FORMAT(last_update),
@@ -1008,7 +1009,8 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
     eod_fetch("real-time", title->code, FORMAT_JSON_CACHE, "s", title->code, [title](const json_object_t& json)
     {
         const stock_t* s = title->stock;
-        string_const_t time_str = string_from_time_static((tick_t)(json["timestamp"].as_number() * 1000.0), true);
+        char time_buffer[64];
+        string_t time_str = localization_string_from_time(STRING_BUFFER(time_buffer), (tick_t)(json["timestamp"].as_number() * 1000.0));
         
         if (s == nullptr || time_str.length == 0)
         {

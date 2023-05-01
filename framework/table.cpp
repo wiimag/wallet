@@ -396,6 +396,8 @@ FOUNDATION_STATIC void table_render_column_header(const char* label, void* paylo
         table_cell_right_aligned_column_label(label, nullptr);
     else if (column->flags & COLUMN_CENTER_ALIGN)
         table_cell_middle_aligned_column_label(label, nullptr);
+    else if (column->flags & COLUMN_LEFT_ALIGN)
+        table_cell_left_aligned_column_label(label, nullptr);
     else if (format_is_numeric(column->format))
         table_cell_right_aligned_column_label(label, nullptr);
     else

@@ -3310,5 +3310,70 @@
 			en = "New version {0} available"
 			fr = "Nouvelle version {0} disponible"
 		}
+		{
+			hash = "2b264e51fb44ce93"
+			en = "As of %.*s your stock value is worth about %.0lf $."
+			fr = "En date du %.*s votre portefeuille vaut environ %.0lf $."
+		}
+		{
+			hash = "d7feccfb085a00ec"
+			en = "As of %.*s you can say that you've gain or lost about %.0lf $."
+			fr = "En date du %.*s vous pouvez dire que vous avez gagn\xc3\xa9 ou perdu environ %.0lf $."
+		}
+		{
+			hash = "2f5bebdf765629f0"
+			en = "Filter stock titles..."
+			fr = "Filtrer les titres..."
+		}
+		{
+			hash = "11013f99ce64cbd0"
+			en = "%d hour(s)"
+			fr = "%d heure(s)"
+		}
+		{
+			hash = "222b9714b763f43"
+			en = "Not enough data"
+			fr = "Pas assez de donn\xc3\xa9es"
+		}
+		{
+			hash = "d5c3f3f293fd0666"
+			en = "minutes"
+			fr = "minutes"
+		}
+		{
+			hash = "427b643558761171"
+			en = "hours"
+			fr = "heures"
+		}
+		{
+			hash = "d07b30c77236676a"
+			en = "Time"
+			fr = "Temps"
+		}
+		{
+			hash = "bc84952cc78d6b0b"
+			en = "%||Change %"
+			fr = "%||Changement %"
+		}
+		{
+			hash = "6f47fd3aeb4dd16d"
+			en = "Monitor"
+			fr = "Moniteur"
+		}
+		{
+			hash = "1e7b546003e80058"
+			en = "#||Samples"
+			fr = "#||Echantillons"
+		}
+		{
+			hash = "b4617b29069755e4"
+			en = "{0}-{1,2}-{2,2} {3:H}:{4,2:M}"
+			fr = "{0}-{1,2}-{2,2} {3:H}h{4,2:M}"
+		}
+		{
+			hash = "16b7bec1b6eecf5a"
+			en = "{0,translate:D} {1,translate:M} {2:D} {3:H}:{4,2:M}:{5,2:S} {6:Y}"
+			fr = "{0,translate:D} {2:D} {1,translate:M} {6:Y} {3:H}h{4,2:M}"
+		}
 	]
 }

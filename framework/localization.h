@@ -187,4 +187,15 @@ string_const_t localization_language_name(unsigned int index);
  */
 bool localization_set_current_language(const char* lang, size_t lang_length);
 
+/*! Converts a timestamp to the application locales.
+ * 
+ *  @param buffer Buffer to store the result.
+ *  @param capacity Capacity of the buffer.
+ *  @param time Timestamp to convert.
+ *  @param since If true, the string will indicate how much time since the given timestamp.
+ * 
+ *  @return Localized string.
+ */
+string_t localization_string_from_time(char* buffer, size_t capacity, tick_t time, bool since = false);
+
 #endif

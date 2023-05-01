@@ -229,26 +229,34 @@ string_t backend_translate_text(const char* id, size_t id_length, const char* te
 
     const char* translate_url = string_format_static_const("%.*s/v2/translate?id=%.*s", STRING_FORMAT(_backend_module->url), (int)id_length, id);
 
-    string_t translation{};
-    char translate_body_buffer[8096];
-    string_t body = string_format(STRING_BUFFER(translate_body_buffer), 
+    char text_buffer[8096];
+    string_t formatted_text = string_copy(STRING_BUFFER(text_buffer), text, text_length);
+    formatted_text = string_replace(STRING_ARGS(formatted_text), sizeof(text_buffer), STRING_CONST("\""), STRING_CONST("\\\""), true);
+
+    char post_buffer[8096];
+    string_t post_body = string_format(STRING_BUFFER(post_buffer), 
            STRING_CONST("{\"text\":[\"%.*s\"],\"target_lang\":\"%.*s\"}"), 
-           min((int)text_length, 8000), text, (int)lang_length, lang);
-    const bool query_success = query_execute_json(translate_url, FORMAT_JSON_CACHE, body, [&translation](const json_object_t& res)
+           min((int)formatted_text.length, 8000), formatted_text.str, (int)lang_length, lang);
+
+    string_t translation{};
+    query_execute_json(translate_url, FORMAT_JSON_WITH_ERROR, post_body, [id, id_length, &translation](const json_object_t& res)
     {
         if (!res.resolved())
+        {
+            log_warnf(HASH_BACKEND, WARNING_NETWORK, STRING_CONST("Failed to translate text for %.*s"), (int)id_length, id);
             return;
+        }
 
         translation = res["translations"].get(0ULL)["text"].as_string_clone();
-    }, 60 * 60 * 24 * 14);
-
-    if (!query_success)
-    {
-        log_warnf(HASH_BACKEND, WARNING_NETWORK, STRING_CONST("Failed to translate text"));
-    }
+        translation = string_replace(STRING_ARGS_CAPACITY(translation), STRING_CONST("\\\""), STRING_CONST("\""), true);
+    });
 
     if (translation.length == 0)
         translation = string_clone(text, text_length);
+    else
+    {
+        log_infof(HASH_BACKEND, STRING_CONST("Translated text for %.*s"), (int)id_length, id);
+    }
     return translation;
 }
 

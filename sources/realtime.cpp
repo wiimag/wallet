@@ -80,6 +80,12 @@ FOUNDATION_STATIC bool realtime_register_new_stock(const dispatcher_event_args_t
 {
     FOUNDATION_ASSERT(args.size == sizeof(stock_realtime_t));
     stock_realtime_t* stock_realtime = (stock_realtime_t*)args.data;
+
+    if (stock_realtime->timestamp <= 0 || stock_realtime->price <= 0 || stock_realtime->volume <= 0)
+    {
+        log_debugf(HASH_REALTIME, STRING_CONST("Ignoring invalid realtime stock %s"), stock_realtime->code);
+        return false;
+    }
     
     string_const_t code{ stock_realtime->code, string_length(stock_realtime->code) };
     stock_realtime->key = hash(code.str, code.length);
@@ -170,7 +176,8 @@ FOUNDATION_STATIC void realtime_fetch_query_data(const json_object_t& res)
 
 FOUNDATION_STATIC stream_t* realtime_open_stream()
 {
-    string_const_t realtime_stream_path = session_get_user_file_path(STRING_CONST("realtime"), nullptr, 0, STRING_CONST("stream"));
+    string_const_t realtime_stream_path = session_get_user_file_path(
+        STRING_CONST("realtime"), nullptr, 0, STRING_CONST("stream"));
     stream_t* stream = fs_open_file(STRING_ARGS(realtime_stream_path), STREAM_CREATE | STREAM_IN | STREAM_OUT | STREAM_BINARY);
     if (stream == nullptr)
     {
@@ -341,6 +348,9 @@ FOUNDATION_STATIC void* realtime_background_thread_fn(void*)
     shared_mutex& mutex = _realtime_module->stocks_mutex;
     
     realtime_stream_stock_entries();
+
+    if (environment_argument("disable-realtime"))
+        return to_ptr(1);
     
     bool quit_thread = false;
     static string_t* codes = nullptr;
@@ -500,8 +510,9 @@ FOUNDATION_STATIC cell_t realtime_table_column_time(table_element_ptr_t element,
 
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
-        string_const_t date_string = string_from_time_static((tick_t)s->timestamp * (tick_t)1000, true);
-        ImGui::TextWrapped("%.*s", STRING_FORMAT(date_string));
+        char time_buffer[64];
+        string_t time_string = localization_string_from_time(STRING_BUFFER(time_buffer), (tick_t)s->timestamp * (tick_t)1000, false);
+        ImGui::TextWrapped("%.*s", STRING_FORMAT(time_string));
     }
 
     return s->timestamp;
@@ -625,7 +636,7 @@ FOUNDATION_STATIC cell_t realtime_table_draw_monitor(table_element_ptr_t element
         ImGui::PushID(_realtime_module->time_lapse);
         if (record_count < 2 || !realtime_render_graph(s, since, -1.0f, _realtime_module->table->row_fixed_height))
         {
-            ImGui::TextUnformatted("Not enough data");
+            ImGui::TrTextUnformatted("Not enough data");
         }
         ImGui::PopID();
     }
@@ -645,10 +656,10 @@ FOUNDATION_STATIC void realtime_render_window_tootlbar()
 
     // Render search box to filter realtime stocks
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("Search");
+    ImGui::TrTextUnformatted("Search");
     ImGui::SameLine();
-    ImGui::PushItemWidth(ImGui::GetFontSize() * 14.0f);
-    if (ImGui::InputTextWithHint("##Search", "Filter stock titles...", _realtime_module->search, sizeof(_realtime_module->search)))
+    ImGui::SetNextItemWidth(IM_SCALEF(170));
+    if (ImGui::InputTextWithHint("##Search", tr("Filter stock titles..."), _realtime_module->search, sizeof(_realtime_module->search)))
     {
         // Update table search filter
         table_set_search_filter(_realtime_module->table, _realtime_module->search, string_length(_realtime_module->search));
@@ -665,8 +676,8 @@ FOUNDATION_STATIC void realtime_render_window_tootlbar()
     {
         // Render time lapse slider in days
         ImGui::SameLine();
-        ImGui::PushItemWidth(ImGui::GetFontSize() * 20.0f);
-        if (ImGui::SliderInt("##TimeLapse", &_realtime_module->time_lapse, 1, 3 * 24, "%d hour(s)"))
+        ImGui::ExpandNextItem();
+        if (ImGui::SliderInt("##TimeLapse", &_realtime_module->time_lapse, 1, 3 * 24, tr("%d hour(s)")))
             session_set_integer("realtime_time_lapse_days", _realtime_module->time_lapse);
     }
 
@@ -678,16 +689,13 @@ FOUNDATION_STATIC void realtime_render_window()
     if (_realtime_module->show_window == false)
         return;
 
-    static bool has_ever_shown_window = session_key_exists("show_realtime_window");
-    if (!has_ever_shown_window)
-        ImGui::SetNextWindowSize(ImVec2(1280, 720), ImGuiCond_Once);
-
-    if (ImGui::Begin("Realtime Stocks##1", &_realtime_module->show_window, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoCollapse))
+    ImGui::SetNextWindowSize(IM_SCALEV(900, 520), ImGuiCond_FirstUseEver);
+    if (ImGui::Begin("Realtime Stocks##3", &_realtime_module->show_window, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoCollapse))
     {
         if (_realtime_module->table == nullptr)
         {
-            _realtime_module->table = table_allocate("realtime");
-            _realtime_module->table->row_fixed_height = imgui_get_font_ui_scale(250.0f);
+            _realtime_module->table = table_allocate("realtime", TABLE_LOCALIZATION_CONTENT);
+            _realtime_module->table->row_fixed_height = IM_SCALEF(200.0f);
             table_add_column(_realtime_module->table, "Title", realtime_table_draw_title, COLUMN_FORMAT_TEXT, 
                 COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING | COLUMN_NOCLIP_CONTENT | COLUMN_SEARCHABLE)
                 .set_selected_callback(realtime_code_selected);
@@ -753,7 +761,7 @@ FOUNDATION_STATIC void realtime_initialize()
     _realtime_module->stream = realtime_open_stream();
 
     // Create thread to query realtime stock
-    if (main_is_interactive_mode() && !environment_argument("disable-realtime"))
+    if (main_is_interactive_mode())
     {
         _realtime_module->background_thread = thread_allocate(realtime_background_thread_fn, nullptr, STRING_CONST("realtime"), THREAD_PRIORITY_NORMAL, 0);
         if (_realtime_module->background_thread == nullptr || !thread_start(_realtime_module->background_thread))

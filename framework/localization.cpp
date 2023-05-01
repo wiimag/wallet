@@ -430,6 +430,78 @@ bool localization_set_current_language(const char* lang, size_t lang_length)
     return false;
 }
 
+string_t localization_string_from_time(char* buffer, size_t capacity, tick_t time, bool since /*= false*/)
+{
+    time_t ts = (time_t)(time / 1000LL);
+
+    if (since)
+        return string_template(buffer, capacity, "{0,since}", ts);
+
+    FOUNDATION_ASSERT(buffer);
+
+    if (capacity < 25) {
+		if (capacity)
+			buffer[0] = 0;
+		return string_from_date(buffer, capacity, ts);
+	}
+
+    #if FOUNDATION_PLATFORM_WINDOWS && (FOUNDATION_COMPILER_MSVC || FOUNDATION_COMPILER_INTEL)
+	    struct tm tm;
+	    errno_t err = localtime_s(&tm, &ts);
+    #elif FOUNDATION_PLATFORM_WINDOWS
+	    struct tm* gtm = local ? localtime(&ts) : gmtime(&ts);
+    #else
+	    struct tm tm;
+	    struct tm* gtm = local ? localtime_r(&ts, &tm) : gmtime_r(&ts, &tm);
+    #endif
+
+    const char* day_name = "Monday";
+    if (tm.tm_wday == 1)
+        day_name = "Tuesday";
+    else if (tm.tm_wday == 2)
+        day_name = "Wednesday";
+    else if (tm.tm_wday == 3)
+        day_name = "Thursday";
+    else if (tm.tm_wday == 4)
+        day_name = "Friday";
+    else if (tm.tm_wday == 5)
+        day_name = "Saturday";
+    else if (tm.tm_wday == 6)
+        day_name = "Sunday";
+
+    const char* month_name = "January";
+    if (tm.tm_mon == 1)
+        month_name = "February";
+    else if (tm.tm_mon == 2)
+        month_name = "March";
+    else if (tm.tm_mon == 3)
+        month_name = "April";
+    else if (tm.tm_mon == 4)
+        month_name = "May";
+    else if (tm.tm_mon == 5)
+        month_name = "June";
+    else if (tm.tm_mon == 6)
+        month_name = "July";
+    else if (tm.tm_mon == 7)
+        month_name = "August";
+    else if (tm.tm_mon == 8)
+        month_name = "September";
+    else if (tm.tm_mon == 9)
+        month_name = "October";
+    else if (tm.tm_mon == 10)
+        month_name = "November";
+    else if (tm.tm_mon == 11)
+        month_name = "December";        
+
+    if (capacity < 60) {
+		return tr_format(buffer, capacity, "{0}-{1,2}-{2,2} {3:H}:{4,2:M}",
+            tm.tm_year + 1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+	}
+
+    return tr_format(buffer, capacity, "{0,translate:D} {1,translate:M} {2:D} {3:H}:{4,2:M}:{5,2:S} {6:Y}",
+        day_name, month_name, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, tm.tm_year + 1900, tm.tm_mon+1);
+}
+
 // 
 // MODULE
 //

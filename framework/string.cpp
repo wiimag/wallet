@@ -2627,7 +2627,7 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
                 else if (value > 1e3)
                     bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%lldK"), value / 1000LL).length;
                 else
-                    bufpos += string_from_int(buffer + bufpos, capacity - bufpos, value, t.precision, 0).length;
+                    bufpos += string_from_int(buffer + bufpos, capacity - bufpos, value, t.precision, ' ').length;
             }
         }
         else if (test(t.options, StringTokenOption::StringTableSymbol) && type == StringArgumentType::INT32)
@@ -2660,15 +2660,15 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
 
             //unit_label = tr(STRING_ARGS(unit_label), true);
             string_const_t fmttr = tr(STRING_CONST("{0,round} {1,translate:unit} {2,translate:ago}"), true);
-            bufpos += string_template(buffer + bufpos, capacity - bufpos,  fmttr, unit_since, unit_label, "ago").length;
+            bufpos += string_template(buffer + bufpos, capacity - bufpos, fmttr, unit_since, unit_label, "ago").length;
         }
         else if (type == StringArgumentType::INT32 || type == StringArgumentType::INT64)
         {
-            bufpos += string_from_int(buffer + bufpos, capacity - bufpos, values[t.index].i, t.precision, 0).length;
+            bufpos += string_from_int(buffer + bufpos, capacity - bufpos, values[t.index].i, t.precision, '0').length;
         }
         else if (type == StringArgumentType::UINT32 || type == StringArgumentType::UINT64)
         {
-            char padding = 0;
+            char padding = ' ';
             int width = t.precision;
             
             if (test(t.options, StringTokenOption::HexPrefix))
@@ -2696,7 +2696,7 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
         {   
             double value = values[t.index].f;
             if (test(t.options, StringTokenOption::Round))
-                bufpos += string_from_int(buffer + bufpos, capacity - bufpos, math_round(value), t.precision, 0).length;
+                bufpos += string_from_int(buffer + bufpos, capacity - bufpos, math_round(value), t.precision, ' ').length;
             else
                 bufpos += string_from_float64(buffer + bufpos, capacity - bufpos, value, t.precision, 0, 0).length;
         }
@@ -2746,7 +2746,7 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
             {
                 if (j > 0)
                     bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_CONST(", ")).length;
-                bufpos += string_from_int(buffer + bufpos, capacity - bufpos, array[j], t.precision, 0).length;
+                bufpos += string_from_int(buffer + bufpos, capacity - bufpos, array[j], t.precision, ' ').length;
             }
         }
         else

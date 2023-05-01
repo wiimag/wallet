@@ -321,7 +321,8 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
             // Creation date
             if (ImGui::TableNextColumn())
             {
-                string_const_t datestr = string_from_time_static(time_to_tick(ev.creation_date), true);
+                char time_buffer[64];
+                string_t datestr = localization_string_from_time(STRING_BUFFER(time_buffer), time_to_tick(ev.creation_date));
                 ImGui::TextUnformatted(STRING_RANGE(datestr));
             }
 
@@ -360,7 +361,8 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
                         ImGui::EndTooltip();
                     }
 
-                    string_const_t triggered_time_string = string_from_time_static(ev.triggered_time * 1000, true);
+                    char time_buffer[64];
+                    string_t triggered_time_string = localization_string_from_time(STRING_BUFFER(time_buffer), ev.triggered_time * 1000);
                     ImGui::SameLine();
                     ImGui::AlignTextToFramePadding();
                     ImGui::TextColored(ImVec4(0.0f, 0.9f, 0.0f, 1.0f), ICON_MD_NOTIFICATIONS_ACTIVE " %.*s", STRING_FORMAT(triggered_time_string));
@@ -373,7 +375,9 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
                 else if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
                 {
                     ImGui::AlignTextToFramePadding();
-                    string_const_t last_run_time_string = string_from_time_static(ev.last_run_time * 1000, true);
+
+                    char time_buffer[64];
+                    string_t last_run_time_string = localization_string_from_time(STRING_BUFFER(time_buffer), ev.last_run_time * 1000);
                     ImGui::TextWrapped("%.*s", STRING_FORMAT(last_run_time_string));
                     if (ImGui::IsItemHovered() && ImGui::BeginTooltip())
                     {

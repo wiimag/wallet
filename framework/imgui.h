@@ -217,6 +217,16 @@ float imgui_get_font_ui_scale(float value = 1.0f);
  */
 #define IM_SCALEF(value) imgui_get_font_ui_scale((float)(value))
 
+/*! @def IM_SCALEV
+ * 
+ *  Returns a vector scaled with the global UI scaling factor.
+ * 
+ *  @param x The x value to scale.
+ *  @param y The y value to scale.
+ *  @return The scaled vector.
+ */
+#define IM_SCALEV(x, y) { IM_SCALEF(x), IM_SCALEF(y) }
+
 /*! Sets the global UI scaling factor.
  *
  *  @param scale The scaling factor.

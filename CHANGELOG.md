@@ -1,10 +1,11 @@
 # Changelog
 
-## [0.20.10] - 2023-05-01
+## [0.20.11] - 2023-05-01
 - Add basic fundamental pattern analysis.
 - Add last day bulk data to the search index.
 - Add missing french translations.
 - Add new version check on startup.
+- Add support to localize long date format.
 - Add support to translate the stock description in the search window using DeepL.
 - Fix contextual menu on invalid titles in a report.
 - Fix fetching non existing symbol data.
