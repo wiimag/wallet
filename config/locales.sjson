@@ -3390,5 +3390,25 @@
 			en = "%s %10.*s \n Price: %5.2lf $ (%.1g %%)\n   SMA: %5.2lf $"
 			fr = "%s %10.*s \n  Prix: %5.2lf $ (%.1g %%)\n   SMA: %5.2lf $"
 		}
+		{
+			hash = "8c141a87ca734ea2"
+			en = "Search table..."
+			fr = "@TODO"
+		}
+		{
+			hash = "6f9c461b315948a7"
+			en = "Export table"
+			fr = "@TODO"
+		}
+		{
+			hash = "964f34848f09bcc7"
+			en = "Comma-Separated-Value (*.csv)|*.csv"
+			fr = "@TODO"
+		}
+		{
+			hash = "3fbc8167af90fff8"
+			en = "Export table to CSV..."
+			fr = "@TODO"
+		}
 	]
 }

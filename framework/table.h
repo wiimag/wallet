@@ -610,3 +610,11 @@ float table_default_row_height();
  *  @param filter_length    The filter string length
  */
 void table_set_search_filter(table_t* table, const char* filter, size_t filter_length);
+
+/*! Export the table content into a csv file. 
+ *  @param table            The table
+ *  @param path             The path to the csv file
+ *  @param length           The path length
+ *  @return true if the file was successfully exported
+ */
+bool table_export_csv(table_t* table, const char* path, size_t length);

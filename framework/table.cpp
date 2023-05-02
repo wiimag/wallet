@@ -11,10 +11,12 @@
 #include <framework/imgui.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/string_builder.h>
 
 #include <foundation/assert.h>
 #include <foundation/math.h>
 #include <foundation/time.h>
+#include <foundation/stream.h>
 
 #include <mnyfmt.h>
 #include <sys/timeb.h>
@@ -1083,4 +1085,102 @@ float table_default_row_height()
 void table_set_search_filter(table_t* table, const char* filter, size_t filter_length)
 {
     table->search_filter = { filter, filter_length };
+}
+
+FOUNDATION_STATIC void table_export_string_value(string_builder_t* sb, const char* str, size_t length)
+{
+    char csv_column_name_buffer[1024];
+    string_t csv_column_name = string_copy(STRING_BUFFER(csv_column_name_buffer), str, length);
+
+    // Escape " into ""
+    csv_column_name = string_replace(STRING_ARGS(csv_column_name), sizeof(csv_column_name_buffer), STRING_CONST("\""), STRING_CONST("\"\""), true);
+
+    // Escape column name if it contains comma
+    if (string_find(csv_column_name.str, csv_column_name.length, ';', 0) != STRING_NPOS || string_find(csv_column_name.str, csv_column_name.length, '\"', 0) != STRING_NPOS)
+    {
+        string_builder_append(sb, '"');
+        string_builder_append(sb, csv_column_name.str, csv_column_name.length);
+        string_builder_append(sb, '"');
+    }
+    else
+        string_builder_append(sb, csv_column_name.str, csv_column_name.length);
+}
+
+bool table_export_csv(table_t* table, const char* path, size_t length)
+{
+    string_builder_t* sb = string_builder_allocate();
+    
+    // Write header
+    for (int i = 0; i < ARRAY_COUNT(table->columns); ++i)
+    {
+        if (!table->columns[i].used)
+            continue;
+
+        if (i > 0)
+            string_builder_append(sb, ';');
+
+        string_const_t name = SYMBOL_CONST(table->columns[i].name);
+        table_export_string_value(sb, STRING_ARGS(name));
+    }
+
+    string_builder_append_new_line(sb);
+
+    // Write rows
+    for (int i = 0, end = table->rows_visible_count; i < end; ++i)
+    {
+        const row_t* row = table->rows + i;
+
+        for (int j = 0; j < ARRAY_COUNT(table->columns); ++j)
+        {
+            if (!table->columns[j].used)
+                continue;
+
+            column_t* column = table->columns + j;
+            cell_t cell_value = column->fetch_value.invoke(row->element, column);
+
+            if (j > 0)
+                string_builder_append(sb, ';');
+
+            if (cell_format_is_numeric(cell_value))
+            {
+                double value = cell_value.number;
+                if (column->format == COLUMN_FORMAT_PERCENTAGE)
+                    value /= 100.0;
+                char number_buffer[64];
+                string_t nstr = string_from_real(STRING_BUFFER(number_buffer), value, 0, 0, 0);
+                nstr = string_replace(STRING_ARGS(nstr), sizeof(number_buffer), STRING_CONST("."), STRING_CONST(","), true);
+                string_builder_append(sb, STRING_ARGS(nstr));
+            }
+            else if (cell_value.format == COLUMN_FORMAT_SYMBOL)
+            {
+                string_const_t str = SYMBOL_CONST(cell_value.symbol);
+                table_export_string_value(sb, STRING_ARGS(str));
+            }
+            else if (cell_value.format == COLUMN_FORMAT_TEXT)
+            {
+                table_export_string_value(sb, STRING_LENGTH(cell_value.text));
+            }
+            else if (cell_value.format == COLUMN_FORMAT_DATE)
+            {
+                char date_buffer[64];
+                string_t dstr = string_from_date(STRING_BUFFER(date_buffer), cell_value.time);
+                table_export_string_value(sb, STRING_ARGS(dstr));
+            }
+        }
+
+        string_builder_append_new_line(sb);
+    }
+
+    // Write to file
+    stream_t* stream = stream_open(path, length, STREAM_OUT | STREAM_CREATE | STREAM_TRUNCATE);
+    if (stream)
+    {
+        string_const_t text = string_builder_text(sb);
+        stream_write_string(stream, STRING_ARGS(text));
+        stream_deallocate(stream);
+    }
+
+    string_builder_deallocate(sb);
+
+    return true;
 }

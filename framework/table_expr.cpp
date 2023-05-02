@@ -27,6 +27,7 @@
 #include <framework/expr.h>
 #include <framework/table.h>
 #include <framework/array.h>
+#include <framework/system.h>
 
 #define HASH_TABLE_EXPRESSION static_hash_string("table_expr", 10, 0x20a95260d96304aULL)
 
@@ -68,6 +69,7 @@ struct table_expr_t
     table_expr_column_t* columns;
     table_expr_record_t* records;
     table_t*             table;
+    char                 search_filter[64];
 };
 
 FOUNDATION_STATIC void table_expr_add_record_values(table_expr_record_t& record, const expr_result_t& e)
@@ -116,7 +118,7 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
 {
     if (report->table == nullptr)
     {
-        report->table = table_allocate(report->name.str);
+        report->table = table_allocate(report->name.str, TABLE_SUMMARY | TABLE_HIGHLIGHT_HOVERED_ROW);
         foreach(c, report->columns)
         {
             table_add_column(report->table, STRING_ARGS(c->name), [c](table_element_ptr_t element, const column_t* column) 
@@ -140,8 +142,34 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
                     return cell_t(v->number);
 
                 return cell_t();
-            }, c->format, COLUMN_SORTABLE);
+            }, c->format, COLUMN_SORTABLE | (c->format == COLUMN_FORMAT_TEXT ? COLUMN_SEARCHABLE : COLUMN_OPTIONS_NONE));
         }
+    }
+
+    const float export_button_width = IM_SCALEF(20);
+
+    ImGui::ExpandNextItem(export_button_width);
+    if (ImGui::InputTextWithHint("##Search", tr("Search table..."), 
+        STRING_BUFFER(report->search_filter), ImGuiInputTextFlags_None))
+    {
+        table_set_search_filter(report->table, STRING_LENGTH(report->search_filter));
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button(ICON_MD_BACKUP_TABLE, {export_button_width, 0}))
+    {
+        system_save_file_dialog(
+            tr("Export table to CSV..."), 
+            tr("Comma-Separated-Value (*.csv)|*.csv"), 
+            nullptr, [table=report->table](string_const_t save_path)
+        {
+            FOUNDATION_ASSERT(table);
+            return table_export_csv(table, STRING_ARGS(save_path));
+        });
+    }
+    else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+    {
+        ImGui::SetTooltip("%s", tr("Export table"));
     }
 
     table_render(report->table, report->records, array_size(report->records), sizeof(table_expr_record_t), 0.0f, 0.0f);
@@ -269,6 +297,7 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
     report->columns = columns;
     report->records = records;
     report->table = nullptr;
+    report->search_filter[0] = 0;
 
     app_open_dialog(table_name.str, 
         L1(table_expr_render_dialog((table_expr_t*)_1)), 800, 600, true,

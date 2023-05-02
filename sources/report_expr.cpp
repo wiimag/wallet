@@ -450,14 +450,14 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     //           R('300K', [name, description])
     //           $SINCE=90,$REPORT=FLEX,R($REPORT, [name, close, S($TITLE, close, NOW() - (60 * 60 * 24 * $SINCE))])
 
-    const auto& report_name = expr_eval_get_string_arg(args, 0, "Invalid report name");
+    string_const_t report_name = expr_eval_get_string_arg(args, 0, "Invalid report name");
     if (report_name.length < 2)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid report name %.*s", STRING_FORMAT(report_name));
 
-    const bool underscore_name = report_name.str[0] == '_';
-    report_handle_t report_handle = report_find_no_case(
-        underscore_name ? report_name.str+1 : report_name.str, 
-        underscore_name ? report_name.length - 1 : report_name.length);
+    char report_name_buffer[128];
+    report_name = string_to_const(string_copy(STRING_BUFFER(report_name_buffer), STRING_ARGS(report_name)));
+    
+    report_handle_t report_handle = report_find_no_case(STRING_ARGS(report_name));
     if (!report_handle_is_valid(report_handle))
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Cannot find report %.*s", STRING_FORMAT(report_name));
 
