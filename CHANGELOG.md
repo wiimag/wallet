@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.21.0] - 2023-05-02
+## [0.21.1] - 2023-05-02
 - Add intraday pattern view.
+- Improve R(...) to support multiple field evaluation (i.e. `R(FLEX, [name, price, S($TITLE, close, NOW() - (90 * 24 * 3600))])`)
 
 ## [0.20.12] - 2023-05-01
 - Add basic fundamental pattern analysis.

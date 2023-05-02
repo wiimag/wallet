@@ -740,6 +740,21 @@ struct expr_result_t
         if (type == EXPR_RESULT_NUMBER)
             return expr_result_t(value + rhs.as_number(0.0));
 
+        if (type == EXPR_RESULT_SYMBOL || rhs.type == EXPR_RESULT_SYMBOL)
+        {
+            // Concat values into a new string.
+            string_const_t s1 = this->as_string();
+            string_const_t s2 = rhs.as_string();
+
+            const size_t capacity = s1.length + s2.length + 1;
+            string_t sc = string_allocate(0, capacity);
+            sc = string_concat(sc.str, capacity, STRING_ARGS(s1), STRING_ARGS(s2));
+
+            expr_result_t r(string_to_const(sc));
+            string_deallocate(sc.str);
+            return r;
+        }
+
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
     }

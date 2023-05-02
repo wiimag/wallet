@@ -6,60 +6,12 @@
 #include "report.h"
 
 #include "eod.h"
-#include "stock.h"
 #include "title.h"
 
-#include <framework/app.h>
 #include <framework/expr.h>
 #include <framework/module.h>
-#include <framework/table.h>
 #include <framework/dispatcher.h>
-#include <framework/string.h>
 #include <framework/array.h>
-#include <framework/profiler.h>
-
-#include <foundation/thread.h>
-
-struct dynamic_table_column_t
-{
-    string_t name;
-    string_t expression;
-    expr_t* ee;
-    int value_index;
-    column_format_t format{ COLUMN_FORMAT_TEXT };
-};
-
-typedef enum DynamicTableValueType {
-    DYNAMIC_TABLE_VALUE_NULL = 0,
-    DYNAMIC_TABLE_VALUE_TRUE = 1,
-    DYNAMIC_TABLE_VALUE_FALSE = 2,
-    DYNAMIC_TABLE_VALUE_NUMBER = 3,
-    DYNAMIC_TABLE_VALUE_TEXT = 4
-} dynamic_table_record_value_type_t;
-
-
-struct dynamic_table_record_value_t
-{
-    dynamic_table_record_value_type_t type;
-    union {
-        string_t text;
-        double number;
-    };
-};
-
-struct dynamic_table_record_t
-{
-    expr_result_t* values{ nullptr };
-    dynamic_table_record_value_t* resolved{ nullptr };
-};
-
-struct dynamic_report_t
-{
-    string_t name;
-    dynamic_table_column_t* columns;
-    dynamic_table_record_t* records;
-    table_t* table;
-};
 
 #define HASH_REPORT_EXPRESSION static_hash_string("report_expr", 11, 0x44456b54e62624e0ULL)
 
@@ -495,6 +447,8 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     //           R('_300K', BB.TO, 'ps')
     //           R('_300K', 'buy')
     //           R('300K', PFE.NEO, transactions)
+    //           R('300K', [name, description])
+    //           $SINCE=90,$REPORT=FLEX,R($REPORT, [name, close, S($TITLE, close, NOW() - (60 * 60 * 24 * $SINCE))])
 
     const auto& report_name = expr_eval_get_string_arg(args, 0, "Invalid report name");
     if (report_name.length < 2)
@@ -516,10 +470,8 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     }
 
     report_t* report = report_get(report_handle);
-    
-    char field_name_buffer[64];
-    string_const_t field_name_temp = expr_eval(args->get(field_name_index)).as_string();
-    string_const_t field_name = string_to_const(string_copy(STRING_BUFFER(field_name_buffer), STRING_ARGS(field_name_temp)));
+    if (!report)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Cannot find report %.*s", STRING_FORMAT(report_name));
 
     tick_t s = time_current();
     while (title_filter.length == 0 && !report_sync_titles(report))
@@ -530,50 +482,118 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     }
 
     expr_result_t* results = nullptr;
+    expr_t* field_expr = args->get(field_name_index);
 
-    if (string_equal_nocase(STRING_ARGS(field_name), STRING_CONST("transactions")))
+    if (field_expr->type == OP_SET)
     {
-        // Return a set of all transactions for the given title
-        if (title_filter.length == 0)
-            throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Title filter required for transactions");
-
-        for (unsigned i = 0, end = array_size(report->titles); i < end; ++i)
+        foreach (pt, report->titles)
         {
-            title_t* t = report->titles[i];
-            if (!string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
+            title_t* t = *pt;
+
+            if (title_is_index(t))
                 continue;
 
-            for (auto cv : t->data["orders"])
+            if (title_filter.length && !string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
+                continue;
+
+            expr_result_t* title_results = nullptr;    
+            expr_result_t title_code_expr(string_const(t->code, t->code_length));
+            array_push(title_results, title_code_expr);
+            for (int i = 0; i < field_expr->args.len; ++i)
             {
-                string_const_t datestr = cv["date"].as_string();
-                string_const_t buy_or_sell = cv["buy"].as_boolean() ? CTEXT("buy") : CTEXT("sell");
-                const time_t date = string_to_date(STRING_ARGS(datestr));
-                const double qty = cv["qty"].as_number();
-                const double price = cv["price"].as_number();
+                expr_t* fe = field_expr->args.get(i);
 
-                expr_result_t* title_field_values = nullptr;
-                array_push(title_field_values, expr_result_t(datestr));
-                array_push(title_field_values, expr_result_t((double)date));
-                array_push(title_field_values, expr_result_t(buy_or_sell));
-                array_push(title_field_values, expr_result_t(qty));
-                array_push(title_field_values, expr_result_t(price));
+                expr_set_or_create_global_var(STRING_CONST("$TITLE"), title_code_expr);
+                expr_set_or_create_global_var(STRING_CONST("$REPORT"), expr_result_t(report_name));
 
-                array_push(results, expr_eval_list(title_field_values));
+                bool was_evaluated = false;
+                expr_result_t fe_result = expr_eval(fe);
+                if (fe_result.type == EXPR_RESULT_SYMBOL)
+                {
+                    string_const_t field_name = fe_result.as_string();
+                    for (int i = 0; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
+                    {
+                        const auto& pe = report_field_property_evalutors[i];
+
+                        if (!string_equal_nocase(STRING_ARGS(field_name), STRING_LENGTH(pe.property_name)))
+                            continue;
+
+                        if (pe.required_level != FetchLevel::NONE)
+                            report_eval_report_field_resolve_level(t, pe.required_level);
+
+                        const stock_t* s = t->stock;
+                        if (s)
+                        {
+                            expr_result_t value = pe.handler(t, t->stock);
+                            array_push(title_results, value);
+                        }
+                        else
+                        {
+                            array_push(title_results, NIL);
+                        }
+
+                        was_evaluated = true;
+                    }
+                }
+
+                if (!was_evaluated)
+                    array_push(title_results, fe_result);
             }
+
+            expr_result_t title_result_list = expr_eval_list(title_results);
+            array_push(results, title_result_list);
         }
     }
     else
     {
-        // Evaluate the field for the given title
-        for (int i = 0; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
-        {
-            const auto& pe = report_field_property_evalutors[i];
-            if (report_eval_report_field_test(pe.property_name, report, title_filter, field_name, pe.handler, pe.filter_out, &results, pe.required_level))
-                break;
-        }
+        char field_name_buffer[64];
+        string_const_t field_name_temp = expr_eval(field_expr).as_string();
+        string_const_t field_name = string_to_const(string_copy(STRING_BUFFER(field_name_buffer), STRING_ARGS(field_name_temp)));
 
-        if (results == nullptr)
-            throw ExprError(EXPR_ERROR_EVALUATION_NOT_IMPLEMENTED, "Field %.*s not supported", STRING_FORMAT(field_name));
+        if (string_equal_nocase(STRING_ARGS(field_name), STRING_CONST("transactions")))
+        {
+            // Return a set of all transactions for the given title
+            if (title_filter.length == 0)
+                throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Title filter required for transactions");
+
+            for (unsigned i = 0, end = array_size(report->titles); i < end; ++i)
+            {
+                title_t* t = report->titles[i];
+                if (!string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
+                    continue;
+
+                for (auto cv : t->data["orders"])
+                {
+                    string_const_t datestr = cv["date"].as_string();
+                    string_const_t buy_or_sell = cv["buy"].as_boolean() ? CTEXT("buy") : CTEXT("sell");
+                    const time_t date = string_to_date(STRING_ARGS(datestr));
+                    const double qty = cv["qty"].as_number();
+                    const double price = cv["price"].as_number();
+
+                    expr_result_t* title_field_values = nullptr;
+                    array_push(title_field_values, expr_result_t(datestr));
+                    array_push(title_field_values, expr_result_t((double)date));
+                    array_push(title_field_values, expr_result_t(buy_or_sell));
+                    array_push(title_field_values, expr_result_t(qty));
+                    array_push(title_field_values, expr_result_t(price));
+
+                    array_push(results, expr_eval_list(title_field_values));
+                }
+            }
+        }
+        else
+        {
+            // Evaluate the field for the given title
+            for (int i = 0; i < ARRAY_COUNT(report_field_property_evalutors); ++i)
+            {
+                const auto& pe = report_field_property_evalutors[i];
+                if (report_eval_report_field_test(pe.property_name, report, title_filter, field_name, pe.handler, pe.filter_out, &results, pe.required_level))
+                    break;
+            }
+
+            if (results == nullptr)
+                throw ExprError(EXPR_ERROR_EVALUATION_NOT_IMPLEMENTED, "Field %.*s not supported", STRING_FORMAT(field_name));
+        }
     }
 
     if (array_size(results) == 1)
@@ -641,225 +661,6 @@ FOUNDATION_STATIC expr_result_t report_eval_list_fields(const expr_func_t* f, ve
     return expr_eval_list(field_names);
 }
 
-FOUNDATION_STATIC void report_eval_cleanup_columns(dynamic_table_column_t* columns)
-{
-    foreach(c, columns)
-    {
-        string_deallocate(c->name.str);
-        string_deallocate(c->expression.str);
-    }
-    array_deallocate(columns);
-}
-
-FOUNDATION_STATIC void report_eval_dynamic_table_deallocate(dynamic_report_t* report)
-{
-    table_deallocate(report->table);
-    report_eval_cleanup_columns(report->columns);
-    foreach(r, report->records)
-    {
-        foreach(vr, r->resolved)
-        {
-            if (vr->type == DYNAMIC_TABLE_VALUE_TEXT)
-                string_deallocate(vr->text.str);
-        }
-        array_deallocate(r->resolved);
-        array_deallocate(r->values);
-    }
-    array_deallocate(report->records);
-    string_deallocate(report->name.str);
-    memory_deallocate(report);
-}
-
-FOUNDATION_STATIC bool report_eval_table_dialog(dynamic_report_t* report)
-{
-    if (report->table == nullptr)
-    {
-        report->table = table_allocate(report->name.str);
-        foreach(c, report->columns)
-        {
-            table_add_column(report->table, STRING_ARGS(c->name), [c](table_element_ptr_t element, const column_t* column) 
-            {
-                dynamic_table_record_t* record = (dynamic_table_record_t*)element;
-                
-                const dynamic_table_record_value_t* v = &record->resolved[c->value_index];
-                if (v->type == DYNAMIC_TABLE_VALUE_NULL)
-                    return cell_t(nullptr);
-                
-                if (v->type == DYNAMIC_TABLE_VALUE_TRUE)
-                    return cell_t(STRING_CONST("true"));
-
-                if (v->type == DYNAMIC_TABLE_VALUE_FALSE)
-                    return cell_t(STRING_CONST("false"));
-
-                if (v->type == DYNAMIC_TABLE_VALUE_TEXT)
-                    return cell_t(string_to_const(v->text));
-
-                if (v->type == DYNAMIC_TABLE_VALUE_NUMBER)
-                    return cell_t(v->number);
-
-                return cell_t();
-            }, c->format, COLUMN_SORTABLE);
-        }
-    }
-
-    table_render(report->table, report->records, array_size(report->records), sizeof(dynamic_table_record_t), 0.0f, 0.0f);
-    return true;
-}
-
-FOUNDATION_STATIC void report_eval_add_record_values(dynamic_table_record_t& record, const expr_result_t& e)
-{
-    if (e.is_set())
-    {
-        for (auto ee : e)
-            report_eval_add_record_values(record, ee);
-    }
-    else
-    {
-        array_push(record.values, e);
-    }
-}
-
-FOUNDATION_STATIC expr_result_t report_eval_table(const expr_func_t* f, vec_expr_t* args, void* c)
-{
-    // Examples: TABLE(test, R(_300K, name), ['name', $2], ['col 1', S($1, open)], ['col 2', S($1, close)])
-    //           TABLE(test, R(favorites, name), ['title', $1], ['name', $2], ['open', S($1, open)], ['close', S($1, close)])
-    //           TABLE('Test', [U.US, GFL.TO], ['Title', $1], ['Price', S($1, close), currency])
-    //           TABLE('Unity Best Days', FILTER(S(U.US, close, ALL), $2 > 60), ['Date', DATESTR($1)], ['Price', $2, currency])
-    //           T=U.US, TABLE('Unity Best Days', FILTER(S(T, close, ALL), $2 > 60), 
-    //              ['Date', DATESTR($1)],
-    //              ['Price', $2, currency],
-    //              ['%', S(T, change_p, $1), percentage])
-
-    if (args->len < 3)
-        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Requires at least two arguments");
-
-    TIME_TRACKER("report_eval_table");
-
-    // Get the data set
-    expr_result_t elements = expr_eval(args->get(1));
-    if (!elements.is_set())
-        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Second argument must be a dataset");
-
-    // Then for each remaining arguments, evaluate them as columns.
-    dynamic_table_column_t* columns = nullptr;
-    for (int i = 2, col_index = 0; i < args->len; ++i, ++col_index)
-    {
-        dynamic_table_column_t col;
-        col.ee = args->get(i);
-        col.format = COLUMN_FORMAT_TEXT;
-        if (col.ee->type == OP_SET && col.ee->args.len >= 2)
-        {
-            // Get the column name
-            string_const_t col_name = expr_eval((expr_t*)col.ee->args.get(0)).as_string(string_format_static_const("col %d", i - 2));
-
-            if (col.ee->args.len >= 3)
-            {
-                string_const_t format_string = expr_eval((expr_t*)col.ee->args.get(2)).as_string();
-                if (!string_is_null(format_string))
-                {
-                    if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("currency")))
-                        col.format = COLUMN_FORMAT_CURRENCY;
-                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("percentage")))
-                        col.format = COLUMN_FORMAT_PERCENTAGE;
-                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("date")))
-                        col.format = COLUMN_FORMAT_DATE;
-                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("number")))
-                        col.format = COLUMN_FORMAT_NUMBER;
-                }
-            }
-            
-            col.ee = col.ee->args.get(1);
-            string_const_t col_expression = col.ee->token;
-
-            col.name = string_clone(STRING_ARGS(col_name));
-            col.expression = string_clone(STRING_ARGS(col_expression));
-            
-            col.value_index = col_index;
-
-            array_push_memcpy(columns, &col);
-        }
-        else
-        {
-            report_eval_cleanup_columns(columns);
-            throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Column argument must be a set of at least two elements, i.e. [name, evaluator[, ...options]");
-        }
-    }
-
-    dynamic_table_record_t* records = nullptr;
-    for (auto e : elements)
-    {
-        if (e.type == EXPR_RESULT_NULL)
-            continue;
-
-        dynamic_table_record_t record{};
-        report_eval_add_record_values(record, e);
-
-        for(unsigned ic = 0, endc = array_size(columns); ic < endc; ++ic)
-        {
-            dynamic_table_column_t* c = &columns[ic];
-            
-            foreach(v, record.values)
-            {
-                string_const_t arg_macro = string_format_static(STRING_CONST("$%u"), i + 1);
-                expr_set_or_create_global_var(STRING_ARGS(arg_macro), *v);
-            }
-
-            TIME_TRACKER("report_eval_table_ELEMENT(%.*s)", STRING_FORMAT(c->name));
-
-            expr_result_t cv = expr_eval(c->ee);
-            if (cv.type == EXPR_RESULT_TRUE)
-            {
-                array_push(record.resolved, dynamic_table_record_value_t{ DYNAMIC_TABLE_VALUE_TRUE });
-            }
-            else if (cv.type == EXPR_RESULT_FALSE)
-            {
-                array_push(record.resolved, dynamic_table_record_value_t{ DYNAMIC_TABLE_VALUE_FALSE });
-            }
-            else if (cv.type == EXPR_RESULT_NUMBER)
-            {
-                dynamic_table_record_value_t v{ DYNAMIC_TABLE_VALUE_NUMBER };
-                v.number = cv.as_number();
-                array_push(record.resolved, v);
-            }
-            else if (cv.type == EXPR_RESULT_SYMBOL)
-            {
-                dynamic_table_record_value_t v{ DYNAMIC_TABLE_VALUE_TEXT };
-                string_const_t e_text = cv.as_string();
-                v.text = string_clone(STRING_ARGS(e_text));
-                array_push(record.resolved, v);
-            }
-            else if (cv.is_set())
-            {
-                dynamic_table_record_value_t v{ DYNAMIC_TABLE_VALUE_NUMBER };
-                v.number = cv.as_number(DNAN, 0);
-                array_push(record.resolved, v);
-            }
-            else
-            {
-                array_push(record.resolved, dynamic_table_record_value_t{ DYNAMIC_TABLE_VALUE_NULL });
-            }
-        }
-
-        FOUNDATION_ASSERT(array_size(columns) == array_size(record.resolved));
-        array_push_memcpy(records, &record);
-    }
-
-    // Get the table name from the first argument.
-    string_const_t table_name = expr_eval(args->get(0)).as_string("none");
-
-    // Create the dynamic report
-    dynamic_report_t* report = (dynamic_report_t*)memory_allocate(HASH_REPORT_EXPRESSION, sizeof(dynamic_report_t), 0, MEMORY_PERSISTENT);
-    report->name = string_clone(STRING_ARGS(table_name));
-    report->columns = columns;
-    report->records = records;
-    report->table = nullptr;
-
-    app_open_dialog(table_name.str, 
-        L1(report_eval_table_dialog((dynamic_report_t*)_1)), 800, 600, true,
-        report, L1(report_eval_dynamic_table_deallocate((dynamic_report_t*)_1)));
-    return elements;
-}
-
 //
 // # SYSTEM
 //
@@ -870,7 +671,6 @@ FOUNDATION_STATIC void report_expr_initialize()
     expr_register_function("F", report_expr_eval_stock_fundamental);
     expr_register_function("R", report_eval_report_field);
     expr_register_function("FIELDS", report_eval_list_fields);
-    expr_register_function("TABLE", report_eval_table);
 }
 
 FOUNDATION_STATIC void report_expr_shutdown()

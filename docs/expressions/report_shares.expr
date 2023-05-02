@@ -1,0 +1,16 @@
+# For each titles in a report, compare shorts and the % change since 180 days
+$SINCE=180
+$REPORT='300K'
+$(price_since, S($1, close, NOW() - (60 * 60 * 24 * $2)))
+TABLE('Shares ' + $REPORT, R($REPORT, name),
+   ['Name', $2],
+   ['Shorts', F($1, "Technicals.SharesShort")/F($1, "SharesStats.SharesFloat")*100, percentage],
+   ['Since %', (S($1, close) - price_since($1, $SINCE)) / price_since($1, $SINCE) * 100, percentage])
+
+# Same as above, but instead we cache values in the R(...) functions for the closing prices
+$SINCE=180
+$REPORT='300K'
+TABLE('Shares ' + $REPORT, R($REPORT, [name, price, S($TITLE, close, NOW() - (60 * 60 * 24 * $SINCE))]),
+   ['Name', $2],
+   ['Shorts', F($1, "Technicals.SharesShort")/F($1, "SharesStats.SharesFloat")*100, percentage],
+   ['Since %', ($3 - $4) / $4 * 100, percentage])

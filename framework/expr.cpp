@@ -11,6 +11,7 @@
 #include <framework/module.h>
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
+#include <framework/table_expr.h>
 
 #include <foundation/random.h>
 #include <foundation/system.h>
@@ -2199,6 +2200,8 @@ FOUNDATION_STATIC void expr_initialize()
     expr_set_global_var("NIL", expr_result_t(nullptr));
     expr_set_global_var("true", expr_result_t(true));
     expr_set_global_var("false", expr_result_t(false));
+
+    table_expr_initialize();
 
     string_const_t eval_expression;
     // TODO: Add a way for module to register startup command line arguments
