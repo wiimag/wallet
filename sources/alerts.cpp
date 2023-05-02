@@ -45,6 +45,7 @@ static struct ALERTS_MODULE {
     bool                new_notifications{ false };
 
     tick_t              last_evaluation{ 0 };
+    bool                evaluation_disabled{ false };
 
     unsigned            async_index{ 0 };
 } *_alerts_module;
@@ -164,7 +165,7 @@ FOUNDATION_STATIC void alerts_push_notification(expr_evaluator_t& e)
 FOUNDATION_STATIC void alerts_run_evaluators()
 {
     // Skip evaluation if last evaluation occurred less than 5 seconds ago
-    if (time_elapsed(_alerts_module->last_evaluation) < 5)
+    if (_alerts_module->evaluation_disabled || time_elapsed(_alerts_module->last_evaluation) < 5)
         return;
 
     expr_evaluator_t* evaluators = _alerts_module->evaluators;
@@ -672,6 +673,7 @@ FOUNDATION_STATIC void alerts_initialize()
     _alerts_module = MEM_NEW(HASH_ALERTS, ALERTS_MODULE);
     _alerts_module->show_window = session_get_bool(SHOW_ALERTS_KEY, false);
     _alerts_module->last_evaluation = time_current();
+    _alerts_module->evaluation_disabled = environment_argument("disable-alerts");
 
     string_const_t evaluators_file_path = alerts_config_file_path();
     config_handle_t evaluators_data = config_parse_file(STRING_ARGS(evaluators_file_path), json_flags);

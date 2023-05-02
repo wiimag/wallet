@@ -593,7 +593,7 @@ FOUNDATION_FORCEINLINE uint32_t rgb_to_abgr(const uint32_t v, const uint8_t alph
 
 FOUNDATION_FORCEINLINE hash_t hash_combine(hash_t h1, hash_t h2)
 {
-    return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+    return h1 ^ (h2 + 0x9e3779b97f4a7c15ULL + (h1 << 12) + (h1 >> 2));
 }
 
 FOUNDATION_FORCEINLINE hash_t hash_combine(hash_t h1, hash_t h2, hash_t h3)

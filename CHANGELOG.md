@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.21.0] - 2023-05-02
+- Add intraday pattern view.
+
 ## [0.20.12] - 2023-05-01
 - Add basic fundamental pattern analysis.
 - Add default pattern view track point to follow price changes.

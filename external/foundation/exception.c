@@ -54,7 +54,7 @@ typedef BOOL(STDCALL* MiniDumpWriteDumpFn)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
                                            CONST PMINIDUMP_CALLBACK_INFORMATION);
 
 static void
-create_mini_dump(EXCEPTION_POINTERS* pointers, const char* name, size_t namelen, char* dump_file, size_t* capacity) {
+create_mini_dump(EXCEPTION_POINTERS* pointers, const char* name, size_t namelen, char* dump_file, size_t* capacity, bool print_dump_written_log) {
 	MINIDUMP_EXCEPTION_INFORMATION info;
 	HANDLE file;
 	SYSTEMTIME local_time;
@@ -109,8 +109,9 @@ create_mini_dump(EXCEPTION_POINTERS* pointers, const char* name, size_t namelen,
 			           STRING_FORMAT(errmsg));
 		}
 		if (success) {
-			log_errorf(0, ERROR_EXCEPTION, STRING_CONST("Exception occurred! Minidump written to: %.*s"),
-			           STRING_FORMAT(filename));
+			if (print_dump_written_log) {
+				log_errorf(0, ERROR_EXCEPTION, STRING_CONST("Exception occurred! Minidump written to: %.*s"), STRING_FORMAT(filename));
+			}
 			FlushFileBuffers(file);
 		}
 		CloseHandle(file);
@@ -156,9 +157,9 @@ exception_filter(LPEXCEPTION_POINTERS pointers) {
 		char dump_file_buffer[MAX_PATH];
 		size_t dump_file_len = sizeof(dump_file_buffer);
 		exception_closure.triggered = true;
-		create_mini_dump(pointers, STRING_ARGS(exception_closure.name), dump_file_buffer, &dump_file_len);
+		create_mini_dump(pointers, STRING_ARGS(exception_closure.name), dump_file_buffer, &dump_file_len, true);
 		if (exception_closure.handler)
-			exception_closure.handler(dump_file_buffer, dump_file_len);
+			exception_closure.handler(nullptr, dump_file_buffer, dump_file_len);
 		if (_RtlRestoreContext)
 			_RtlRestoreContext(&exception_closure.context, 0);
 		else
@@ -229,10 +230,10 @@ FOUNDATION_ATTRIBUTE(noreturn) exception_sigaction(int sig, siginfo_t* info, voi
 	char file_name_buffer[BUILD_MAX_PATHLEN];
 	const char* name = get_thread_dump_name();
 	string_t dump_file = (string_t){file_name_buffer, sizeof(file_name_buffer)};
-	dump_file = create_mini_dump(arg, (string_const_t){name, string_length(name)}, dump_file);
+	dump_file = create_mini_dump(arg, (string_const_t){name, string_length(name)}, dump_file, true);
 	exception_handler_fn handler = get_thread_exception_handler();
 	if (handler)
-		handler(dump_file.str, dump_file.length);
+		handler(arg, dump_file.str, dump_file.length);
 
 	// Log dump file name
 	log_warnf(0, WARNING_SUSPICIOUS, STRING_CONST("Minidump written to: %.*s"), STRING_FORMAT(dump_file));
@@ -274,10 +275,10 @@ exception_try(exception_try_fn fn, void* data, exception_handler_fn handler, con
 	__try {
 		ret = fn(data);
 	} /*lint -e534*/
-	__except (create_mini_dump(GetExceptionInformation(), name, length, buffer, &capacity), EXCEPTION_EXECUTE_HANDLER) {
+	__except (create_mini_dump(GetExceptionInformation(), name, length, buffer, &capacity, false), EXCEPTION_EXECUTE_HANDLER) {
 		ret = FOUNDATION_EXCEPTION_CAUGHT;
 		if (handler)
-			handler(buffer, capacity);
+			handler(data, buffer, capacity);
 
 		error_context_clear();
 	}

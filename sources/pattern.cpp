@@ -61,6 +61,7 @@ enum PatternType : int {
     PATTERN_GRAPH_FLEX,
     PATTERN_GRAPH_TRENDS,
     PATTERN_GRAPH_YOY,
+    PATTERN_GRAPH_INTRADAY,
     PATTERN_GRAPH_END,
 
     PATTERN_SIMULATION_BEGIN,
@@ -77,6 +78,7 @@ constexpr const char* GRAPH_TYPES[PATTERN_ALL_END] = {
     "Flex",
     "Trends",
     "Y/Y",
+    "Intraday",
     nullptr,
     nullptr,
     "LCF",
@@ -116,6 +118,7 @@ struct plot_context_t
     double a{ 0 }, b{ 0 }, c{ 0 }, d{ 0 }, e{ 0 }, f{ 0 };
 
     bool show_trend_equation{ false };
+    bool relative_dates{ false };
 
     ImPlotPoint mouse_pos{};
     ImPlotPoint cursor_xy1{};
@@ -200,6 +203,13 @@ FOUNDATION_STATIC int pattern_format_date_label(double value, char* buff, int si
     time_t then = graph.pattern->date - (time_t)value * time_one_day();
     string_const_t date_str = string_from_date(then);
     return (int)string_format(buff, size, STRING_CONST("%.*s (%d)"), STRING_FORMAT(date_str), math_round(value)).length;
+}
+
+FOUNDATION_STATIC int pattern_format_date_time(double value, char* buff, int size, void* user_data)
+{
+    time_t ts = (time_t)value;
+    string_const_t date_str = string_from_date(ts);
+    return (int)string_copy(buff, size, STRING_ARGS(date_str)).length;
 }
 
 FOUNDATION_STATIC int pattern_format_year_label(double value, char* buff, int size, void* user_data)
@@ -1188,12 +1198,13 @@ FOUNDATION_STATIC void pattern_render_trend(const char* label, const plot_contex
     ImPlot::PopStyleVar(1);
 }
 
-FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool x_axis_inverted)
+FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool x_axis_inverted, bool relative_dates = true)
 {
     plot_context_t c{ pattern->date, min((size_t)4096, s->history_count), offset, s->history };
     c.show_trend_equation = pattern->show_trend_equation;
     c.acc = pattern->range;
     c.mouse_pos = ImPlot::GetPlotMousePos();
+    c.relative_dates = relative_dates;
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG(label, [](int idx, void* user_data)->ImPlotPoint
     {
@@ -1205,7 +1216,7 @@ FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern
         if ((ed->date / ONE_DAY) >= (c->ref / ONE_DAY))
             return ImPlotPoint(DNAN, DNAN);
 
-        double x = math_round((c->ref - ed->date) / (double)ONE_DAY);
+        double x = c->relative_dates ? math_round((c->ref - ed->date) / (double)ONE_DAY) : ed->date;
         double y = *(const double*)(((const uint8_t*)ed)+c->stride);
 
         if (time_elapsed_days(ed->date, c->ref) <= c->acc)
@@ -1214,7 +1225,7 @@ FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern
         return ImPlotPoint(x, y);
     }, &c, (int)c.range, ImPlotLineFlags_SkipNaN | ImPlotLineFlags_Segments);
 
-    if (c.n > 0 && pattern->show_limits)
+    if (c.n > 0 && pattern->show_limits && relative_dates)
     {
         pattern_compute_trend(c);
         ImPlot::HideNextItem(true, ImPlotCond_Once);
@@ -1224,7 +1235,7 @@ FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern
 
 FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stock_t* s, ImAxis y_axis, bool x_axis_inverted)
 {
-    plot_context_t c{ pattern->date, min(size_t(4096), s->history_count), 1, s->history };
+    plot_context_t c{ pattern->date, min(size_t(8096), s->history_count), 1, s->history };
     c.show_trend_equation = pattern->show_trend_equation;
     c.acc = pattern->range;
     c.cursor_xy1 = { DBL_MAX, DNAN };
@@ -1239,7 +1250,8 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
 
         const day_result_t& ed = history[idx];
         const double days_diff = time_elapsed_days(ed.date, c->ref);
-        const double x = math_round(days_diff);
+        //const double x = math_round(days_diff);
+        const double x = days_diff;
         const double y = ed.adjusted_close;
 
         if (days_diff <= c->acc)
@@ -1268,7 +1280,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
         pattern_render_trend(tr("Price"), c, x_axis_inverted);
     }
 
-    if (math_real_is_finite(c.cursor_xy1.x) && math_real_is_finite(c.cursor_xy2.x))
+    if (ImGui::IsWindowHovered() && math_real_is_finite(c.cursor_xy1.x) && math_real_is_finite(c.cursor_xy2.x))
     {
         // Interpolate the mouse position for xy1 and xy2 points
         const double x1 = c.cursor_xy1.x;
@@ -1281,8 +1293,22 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
             y = (y2 - y1) / (x2 - x1) * (x - x1) + y1;
         else
             y = (y1 - y2) / (x1 - x2) * (x - x2) + y2;
-        ImPlot::Annotation(x, c.mouse_pos.y, (ImColor)IM_COL32(55, 55, 55, 155), {0, -20}, false, "%.2lf $", y);
-        ImPlot::Annotation(x, y, (ImColor)IM_COL32(55, 55, 55, 155), {0, 0}, false, ICON_MD_CIRCLE);
+
+        char date_buffer[16];
+        const time_t then = pattern->date - (time_t)x * time_one_day();
+        string_t date_str = string_from_date(STRING_BUFFER(date_buffer), then);
+        const auto* ed = stock_get_EOD(pattern->stock, then, false);
+        if (ed)
+        {
+            float offset = -20.0f;
+            if (c.mouse_pos.y < y)
+                offset = 40.0f;
+            ImPlot::Annotation(x, c.mouse_pos.y, (ImColor)IM_COL32(55, 55, 55, 155), { 0, offset }, true,
+                "%s %10.*s  \nPrice: %6.2lf $\n  SMA: %6.2lf $", 
+                ed->slope > 0 ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN,
+                STRING_FORMAT(date_str), y, ed->sma);
+        }
+        ImPlot::Annotation(x, y, (ImColor)IM_COL32(55, 55, 55, 5), {0, 0}, false, ICON_MD_CIRCLE);
 
         //ImPlot::Annotation(c.cursor_xy1.x, c.cursor_xy1.y, (ImColor)IM_COL32(155, 55, 55, 155), {0, 0}, false, ICON_MD_CIRCLE);
         //ImPlot::Annotation(c.cursor_xy2.x, c.cursor_xy2.y, (ImColor)IM_COL32(55, 155, 55, 155), {0, 0}, false, ICON_MD_CIRCLE);
@@ -1807,6 +1833,173 @@ FOUNDATION_STATIC void pattern_render_lcf(pattern_t* pattern, pattern_graph_data
     }
 }
 
+FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern_graph_data_t& graph)
+{
+    if (pattern->intradays == nullptr)
+    {
+        array_reserve(pattern->intradays, 1);
+        const char* code = SYMBOL_CSTR(pattern->code);
+        pattern_handle_t pattern_handle = pattern - _patterns;
+        eod_fetch_async("intraday", code, FORMAT_JSON_CACHE, "interval", "1h", [pattern_handle](const auto& json)
+        {
+            double previous_close = DNAN;
+            day_result_t* intradays = nullptr;
+            for (auto e : json)
+            {
+                day_result_t intraday{};
+                intraday.volume = e["volume"].as_number();
+
+                if (math_real_is_nan(intraday.volume))
+                    continue;
+
+                intraday.ts = e["timestamp"].as_number();
+                intraday.open = e["open"].as_number();
+                intraday.adjusted_close = e["close"].as_number();
+                intraday.price = intraday.adjusted_close;
+                intraday.close = intraday.adjusted_close;
+                intraday.low = e["low"].as_number();
+                intraday.high = e["high"].as_number();
+                intraday.change = intraday.close - intraday.open;
+                intraday.previous_close = previous_close;
+                previous_close = intraday.close;
+                array_push_memcpy(intradays, &intraday);
+            }
+
+            if (intradays)
+            {
+                pattern_t* pattern = pattern_get(pattern_handle);
+                if (pattern)
+                {
+                    day_result_t* old = pattern->intradays;
+                    pattern->intradays = intradays;
+                    dispatch([pattern_handle]()
+                    {
+                        pattern_t* pattern = pattern_get(pattern_handle);
+                        if (pattern)
+                            pattern->autofit = false;
+                    });
+                    array_deallocate(old);
+                }
+                else
+                {
+                    array_deallocate(intradays);
+                }
+            }
+        }, 60 * 60 * 24ULL);
+    }
+
+    const size_t intraday_count = array_size(pattern->intradays);
+    if (intraday_count <= 1)
+        return ImGui::TextUnformatted("No data");
+
+    const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
+    if (!ImPlot::BeginPlot("Pattern Intraday##1", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
+        return;
+
+    ImPlot::SetupLegend(ImPlotLocation_NorthWest, ImPlotLegendFlags_Horizontal);
+
+    const double time_end = array_last(pattern->intradays)->ts;
+    const double time_start = array_first(pattern->intradays)->ts;
+
+    // The price graph is always shown inverted by default.
+    ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, time_start, time_end);
+    ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_date_time, nullptr);
+
+    ImPlot::SetupAxis(ImAxis_Y1, "##Currency", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0.0, INFINITY);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2lf $");
+
+    plot_context_t c{ pattern->date, intraday_count, 1, pattern->intradays };
+    c.show_trend_equation = pattern->show_trend_equation;
+    c.acc = pattern->range;
+    c.cursor_xy1 = { DBL_MAX, DNAN };
+    c.cursor_xy2 = { DNAN, DNAN };
+    c.mouse_pos = ImPlot::GetPlotMousePos();
+    ImPlot::PlotLineG(tr("Price"), [](int idx, void* user_data)->ImPlotPoint
+    {
+        plot_context_t* c = (plot_context_t*)user_data;
+        const day_result_t* history = c->history;
+        constexpr time_t ONE_DAY = time_one_day();
+
+        const day_result_t& ed = history[idx];
+        const double x = ed.ts;
+        const double y = ed.price;
+
+        pattern_build_trend(*c, x, y);
+
+        if (math_real_is_finite(c->mouse_pos.x))
+        {
+            const double diffx = math_abs(c->mouse_pos.x - x);
+            if (x < c->mouse_pos.x)
+                c->cursor_xy1 = ImPlotPoint(x, y);
+            else if (x > c->mouse_pos.x && math_real_is_nan(c->cursor_xy2.x))
+                c->cursor_xy2 = ImPlotPoint(x, y);
+        }
+
+        return ImPlotPoint(x, y);
+    }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+
+    if (ImPlot::GetPlotLimits().X.Size() < time_one_day() * 3.0)
+    {
+        day_result_t* it = pattern->intradays;
+        ImPlot::PlotErrorBars(tr("Price"), &it->ts, &it->price, &it->change,
+            to_int(intraday_count), ImPlotErrorBarsFlags_None, 0, sizeof(day_result_t));
+    }
+
+    if (ImGui::IsWindowHovered() && math_real_is_finite(c.cursor_xy1.x) && math_real_is_finite(c.cursor_xy2.x))
+    {
+        // Interpolate the mouse position for xy1 and xy2 points
+        const double x1 = c.cursor_xy1.x;
+        const double y1 = c.cursor_xy1.y;
+        const double x2 = c.cursor_xy2.x;
+        const double y2 = c.cursor_xy2.y;
+        const double x = c.mouse_pos.x;
+        const double y = (y1 - y2) / (x1 - x2) * (x - x2) + y2;
+
+        char date_buffer[32];
+        const time_t ts = (time_t)x;
+        string_t date_str = localization_string_from_time(STRING_BUFFER(date_buffer), ts * 1000ULL, false);
+        const auto* ed = stock_get_EOD(pattern->stock, ts, false);
+        if (ed)
+        {
+            float offset = -20.0f;
+            if (c.mouse_pos.y < y)
+                offset = 40.0f;
+
+            const double change_p = (ed->close - ed->previous_close) / ed->previous_close * 100.0;
+
+            ImPlot::Annotation(x, c.mouse_pos.y, (ImColor)IM_COL32(55, 55, 55, 155), { 0, offset }, true,
+                tr("%s %10.*s \n Price: %5.2lf $ (%.1g %%)\n   SMA: %5.2lf $"), 
+                ed->slope > 0 ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN,
+                STRING_FORMAT(date_str), y, change_p, ed->sma);
+            ImPlot::Annotation(x, y, (ImColor)IM_COL32(55, 55, 55, 5), {0, 0}, false, ICON_MD_CIRCLE);
+        }
+    }
+
+    const stock_t* s = pattern->stock;
+    if (s)
+    {
+        pattern_render_graph_day_value("SMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, sma), false, false);
+        pattern_render_graph_day_value("EMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, ema), false, false);
+        pattern_render_graph_day_value("WMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, wma), false, false);
+
+        ImPlot::TagY(s->low_52, ImColor::HSV(29 / 360.0f, 0.63f, 1.0f), "Low 52");
+        ImPlot::TagY(s->high_52, ImColor::HSV(149 / 360.0f, 0.63f, 1.0f), "High 52");
+        ImPlot::TagY(s->current.low, ImColor::HSV(39 / 360.0f, 0.63f, 1.0f), "Low");
+        ImPlot::TagY(s->current.high, ImColor::HSV(139 / 360.0f, 0.63f, 1.0f), "High");
+
+        ImPlot::TagY(s->dma_50, ImColor::HSV(339 / 360.0f, 0.63f, 1.0f), "DMA");
+        ImPlot::TagY(s->ws_target, ImColor::HSV(349 / 360.0f, 0.63f, 1.0f), "WS");
+    }
+
+    pattern_compute_trend(c);
+    pattern_render_trend(tr("Trend"), c, false);
+
+    ImPlot::EndPlot();
+    pattern_render_graph_end(pattern, s, graph);
+}
+
 FOUNDATION_STATIC void pattern_render_graph_yoy(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     const unsigned yy_count = array_size(pattern->yy);
@@ -2141,11 +2334,11 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('3') || shortcut_executed('F')) pattern->type = PATTERN_GRAPH_FLEX;
     if (shortcut_executed('4') || shortcut_executed('T')) pattern->type = PATTERN_GRAPH_TRENDS;
     if (shortcut_executed('5') || shortcut_executed('Y')) pattern->type = PATTERN_GRAPH_YOY;
-    if (shortcut_executed('6')) pattern->type = PATTERN_LONG_COORDINATED_FLEX;
+    if (shortcut_executed('6') || shortcut_executed('Y')) pattern->type = PATTERN_GRAPH_INTRADAY;
     if (shortcut_executed('7') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
 
     ImGui::SetNextItemWidth(IM_SCALEF(120));
-    string_const_t graph_type_label_preview = string_to_const(GRAPH_TYPES[pattern->type]);
+    string_const_t graph_type_label_preview = string_to_const(GRAPH_TYPES[min(pattern->type, (int)ARRAY_COUNT(GRAPH_TYPES)-1)]);
     if (ImGui::BeginCombo("##Type", tr(STRING_ARGS(graph_type_label_preview), true).str, ImGuiComboFlags_None))
     {
         for (int n = 0; n < ARRAY_COUNT(GRAPH_TYPES); n++)
@@ -2171,7 +2364,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
         pattern->autofit = false;
     }
 
-    //if (pattern->type != PATTERN_FUNDAMENTALS)
+    if (pattern->type != PATTERN_GRAPH_INTRADAY)
     {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
@@ -2196,7 +2389,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
             if (ImGui::Checkbox(tr("Limits"), &pattern->show_limits))
                 graph.refresh = true;
 
-            if (pattern->type != PATTERN_GRAPH_YOY)
+            if (pattern->type != PATTERN_GRAPH_YOY && pattern->type != PATTERN_GRAPH_INTRADAY)
             {
                 ImGui::SameLine();
                 if (ImGui::Checkbox(tr("Extra Charts"), &pattern->extra_charts))
@@ -2299,9 +2492,6 @@ FOUNDATION_STATIC bool pattern_render_fundamental_field_tooltip(pattern_t* patte
         return false;
 
     ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-
-    //if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
-      //  ImGui::SetTooltip(tr("Click to get more info about this field"));
 
     if (!ImGui::IsMouseClicked(ImGuiMouseButton_Left))
         return false;
@@ -2548,7 +2738,6 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
     pattern_compute_trend(c);
     pattern_render_trend(tr("Popularity"), c, !pattern->x_axis_inverted);
 
-    //ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::PlotScatterG(tr("Hits"), [](int idx, void* user_data)->ImPlotPoint
     {
         plot_context_t* c = (plot_context_t*)user_data;
@@ -2637,6 +2826,10 @@ FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
 
         case PATTERN_GRAPH_YOY:
             pattern_render_graph_yoy(pattern, graph_data);
+            break;
+
+        case PATTERN_GRAPH_INTRADAY:
+            pattern_render_graph_intraday(pattern, graph_data);
             break;
 
         case PATTERN_LONG_COORDINATED_FLEX:
@@ -3463,6 +3656,7 @@ FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
         pattern->analysis_summary = nullptr;
     }
 
+    array_deallocate(pattern->intradays);
     config_deallocate(pattern->fundamentals);
 }
 

@@ -68,7 +68,10 @@ FOUNDATION_ALIGNED_STRUCT(stock_realtime_t, 8)
 /*! Represents a stock day results. */
 FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
 {
-    time_t date{ 0 };
+    union {
+        time_t date{ 0 };
+        double ts;
+    };
     uint8_t gmtoffset{ 0 };
 
     double open{ NAN };

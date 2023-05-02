@@ -1103,8 +1103,31 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
                 entry.doc = (search_document_handle_t)r->id;
                 entry.window = sw;
                 entry.source_type = SearchResultSourceType::Database;
-                array_push_memcpy(sw->results, &entry);
+
+                string_const_t symbol = search_database_document_name(db, (search_document_handle_t)r->id);
+                if (string_ends_with(STRING_ARGS(symbol), STRING_CONST(".BULK")))
+                    symbol.length -= 5;
+
+                string_copy(STRING_BUFFER(entry.symbol), STRING_ARGS(symbol));
+
+                // Check that we do not already have this symbol in the list
+                bool unique = true;
+                for (unsigned i = 0, end = array_size(sw->results); i < end; ++i)
+                {
+                    const search_result_entry_t* re = sw->results + i;
+                    string_const_t re_symbol = search_entry_resolve_symbol(re);
+                    if (string_equal(STRING_ARGS(re_symbol), STRING_ARGS(symbol)))
+                    {
+                        unique = false;
+                        break;
+                    }
+                }
+
+                if (unique)
+                    array_push_memcpy(sw->results, &entry);
             }
+
+            // TODO: Remove duplicates
 
             if (!search_database_query_dispose(db, query))
             {

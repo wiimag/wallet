@@ -59,7 +59,7 @@ extern void app_render_3rdparty_libs();
  *  @param dump_file The path to the dump file.
  *  @param length    The length of the dump file.
  */
-extern void app_exception_handler(const char* dump_file, size_t length);
+extern void app_exception_handler(void* args, const char* dump_file, size_t length);
 
 /*! Configure the application features and framework core services. 
  * 

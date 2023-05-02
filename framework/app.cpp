@@ -5,7 +5,6 @@
  * This module contains application framework specific code. 
  * It is expected that the project sources also includes an app.cpp and defines the following functions:
  *  extern const char* app_title()
- *  extern void app_exception_handler(const char* dump_file, size_t length)
  *  extern void app_initialize()
  *  extern void app_shutdown()
  *  extern void app_update()
@@ -551,8 +550,6 @@ void app_menu_help(GLFWwindow* window)
 
 FOUNDATION_STATIC void app_framework_initialize()
 {
-    //system_add_menu_item("test");
-
     module_register_window(HASH_APP, app_dialogs_render);
 }
 

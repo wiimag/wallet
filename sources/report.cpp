@@ -1163,6 +1163,9 @@ FOUNDATION_STATIC void report_title_gain_total_tooltip(table_element_ptr_const_t
     ImGui::TrText(" Total Investment %12s ", string_from_currency(title_get_total_investment(t)).str);
     ImGui::TrText(" Total Value      %12s ", string_from_currency(total_value).str);
 
+    if (t->total_dividends > 0)
+        ImGui::TrText(" Total Dividends  %12s ", string_from_currency(t->total_dividends).str);
+
     if (t->average_exchange_rate != 1.0 && t->average_quantity > 0)
     {
         const double exchange_diff = t->today_exchange_rate.fetch() - t->average_exchange_rate;
@@ -2376,6 +2379,13 @@ bool report_refresh(report_t* report)
         if (!stock_resolve(t->stock, FetchLevel::REALTIME))
             dispatcher_wait_for_wakeup_main_thread(50);
         report->fully_resolved = 0;
+    }
+
+    // Reset custom columns data
+    for (unsigned i = 0, end = array_size(report->expression_columns); i < end; ++i)
+    {
+        report_expression_column_t* c = report->expression_columns + i;
+        c->store_counter = 0;
     }
 
     _report_expression_cache->clear();

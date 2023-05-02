@@ -109,7 +109,7 @@ thread local storage to ensure maximum portability across supported platforms */
 #undef FOUNDATION_PLATFORM_ANDROID
 #define FOUNDATION_PLATFORM_ANDROID 1
 
-// Compatibile platforms
+// Compatible platforms
 #undef FOUNDATION_PLATFORM_POSIX
 #define FOUNDATION_PLATFORM_POSIX 1
 
@@ -200,7 +200,7 @@ thread local storage to ensure maximum portability across supported platforms */
 #undef FOUNDATION_PLATFORM_TIZEN
 #define FOUNDATION_PLATFORM_TIZEN 1
 
-// Compatibile platforms
+// Compatible platforms
 #undef FOUNDATION_PLATFORM_POSIX
 #define FOUNDATION_PLATFORM_POSIX 1
 
@@ -1796,7 +1796,7 @@ Expand to three arguments, string pointer, length and capacity, as in
 <code>s.str, s.length, s.length+1</code>
 
 \def STRING_FORMAT
-Expand to two arguments, legnth and string pointer, as in <code>(int)s.length, s.str</code>.
+Expand to two arguments, length and string pointer, as in <code>(int)s.length, s.str</code>.
 Useful when passing a string_t to a string format argument, for example
 <code>string_t mystr = ...; log_infof(0, STRING_CONST("Mystring: %.*s"), STRING_FORMAT(mystr));</code>
 

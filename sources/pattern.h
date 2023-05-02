@@ -128,6 +128,8 @@ struct pattern_t
     config_handle_t fundamentals;
     bool fundamentals_fetched{ false };
     bool fundamentals_dialog_opened{ false };
+
+    day_result_t* intradays{ nullptr };
 };
 
 pattern_handle_t pattern_find(const char* symbol, size_t symbol_length);

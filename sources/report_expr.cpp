@@ -433,14 +433,14 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
     //           F("CSH-UN.TO", "Highlights.WallStreetTargetPrice")
     //           F("U.US", "Technicals")
 
-    const auto& code = expr_eval_get_string_arg(args, 0, "Invalid symbol code");
-    const auto& field = expr_eval_get_string_arg(args, 1, "Invalid field name");
+    string_const_t code = expr_eval_get_string_arg(args, 0, "Invalid symbol code");
+    string_const_t field = expr_eval_get_string_arg(args, 1, "Invalid field name");
 
     expr_result_t value;
     eod_fetch("fundamentals", code.str, FORMAT_JSON_CACHE, [field, &value](const json_object_t& json)
     {
         const bool allow_nulls = false;
-        const json_object_t& ref = json.find(STRING_ARGS(field), allow_nulls);
+        json_object_t ref = json.find(STRING_ARGS(field), allow_nulls);
         if (ref.is_null())
             return;
 

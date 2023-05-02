@@ -195,14 +195,10 @@ string_const_t eod_build_url(const char* api, const char* ticker, query_format_t
     eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("?api_token="));
     eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, api_key, string_length(api_key));
 
-    if (format != FORMAT_UNDEFINED)
-    {
-        eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("&fmt="));
-        if (format == FORMAT_JSON || format == FORMAT_JSON_CACHE || format == FORMAT_JSON_WITH_ERROR)
-            eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("json"));
-        else
-            eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("csv"));
-    }
+    if (format == FORMAT_JSON || format == FORMAT_JSON_CACHE || format == FORMAT_JSON_WITH_ERROR)
+        eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("&fmt=json"));
+    else if (format == FORMAT_CSV)
+        eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("&fmt=csv"));
 
     if (param1 != nullptr)
     {

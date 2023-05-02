@@ -979,7 +979,7 @@ void window_update()
             window_t* win = (window_t*)args;
             window_render(win);
             return 0;
-        }, win, [](const char* file, size_t length)
+        }, win, [](void* args, const char* file, size_t length)
         {
             log_errorf(HASH_WINDOW, ERROR_EXCEPTION, "Exception in window render: %.*s", (int)length, file);
         }, STRING_CONST("window_dump"));

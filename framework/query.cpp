@@ -404,6 +404,12 @@ bool query_execute_json(const char* query, query_format_t format, void(*json_cal
     }, invalid_cache_query_after_seconds);
 }
 
+struct query_execute_args_t
+{
+    json_object_t json{};  
+    query_callback_t callback{};
+};
+
 bool query_execute_json(const char* query, string_t* headers, config_handle_t data, const query_callback_t& callback)
 {
     FOUNDATION_ASSERT(query);
@@ -434,22 +440,25 @@ bool query_execute_json(const char* query, string_t* headers, config_handle_t da
         query_success = req.execute(query);
     } 
 
-    json_object_t json = json_parse(req.json);
-    json.query = string_to_const(query);
-    json.status_code = req.response_code;
-    json.error_code = req.status > 0 ? req.status : (json.status_code >= 400 ? CURL_LAST : CURLE_OK);
+    query_execute_args_t args{};
+    args.callback = callback;
+    args.json = json_parse(req.json);
+    args.json.query = string_to_const(query);
+    args.json.status_code = req.response_code;
+    args.json.error_code = req.status > 0 ? req.status : (args.json.status_code >= 400 ? CURL_LAST : CURLE_OK);
 
-    try
+    exception_try([](void* args)
     {
-        callback(json);
+        query_execute_args_t* qargs = (query_execute_args_t*)args;
+        qargs->callback(qargs->json);
         signal_thread();
-    }
-    catch (...)
+        return 0;
+    }, &args, [](void* args, const char* file, size_t length)
     {
-        log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("Failed to execute JSON callback for %s [%.*s...]"), query, 64, json.buffer);
-        curl_slist_free_all(header_chunk);
-        return false;
-    }
+        query_execute_args_t* qargs = (query_execute_args_t*)args;
+        log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("Failed to execute JSON callback for %.*s [%.*s...]"), 
+            STRING_FORMAT(qargs->json.query), 64, qargs->json.buffer);
+    }, STRING_CONST("query"));
     
     curl_slist_free_all(header_chunk);
     return req.status == CURLE_OK && req.response_code < 400;
@@ -460,10 +469,22 @@ bool query_execute_json(const char* query, string_t* headers, const query_callba
     return query_execute_json(query, headers, config_null(), callback);
 }
 
+FOUNDATION_STATIC bool query_is_format_json_cachable(query_format_t format, uint64_t invalid_cache_query_after_seconds)
+{
+    if (invalid_cache_query_after_seconds == 0)
+        return false;
+    if (format == FORMAT_JSON_CACHE)
+        return true;
+    if (format == FORMAT_JSON_WITH_ERROR)
+        return true;
+
+    return false;
+}
+
 FOUNDATION_STATIC bool query_is_cache_file_valid(const char* query, query_format_t format, uint64_t invalid_cache_query_after_seconds, string_const_t& cache_file_path)
 {
     cache_file_path = string_const_t{ nullptr, 0 };
-    if (format != FORMAT_JSON_CACHE)
+    if (!query_is_format_json_cachable(format , invalid_cache_query_after_seconds))
         return false;
 
     char query_hash_string_buffer[32] = { 0 };
@@ -585,7 +606,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
     bool warning_logged = false;
     const bool has_body_content = !string_is_null(body);
     string_const_t cache_file_path{ nullptr, 0 };
-    if (format == FORMAT_JSON_CACHE && !has_body_content)
+    if (invalid_cache_query_after_seconds > 0 && !has_body_content)
     {
         if (query_is_cache_file_valid(query, format, invalid_cache_query_after_seconds, cache_file_path))
         {
@@ -655,7 +676,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
         json.status_code = req.response_code;
         json.error_code = req.status > 0 ? req.status : (json.status_code >= 400 ? CURL_LAST : CURLE_OK);
 
-        if (cache_file_path.length > 0 && format == FORMAT_JSON_CACHE && req.status == CURLE_OK && json.token_count > 0)
+        if (cache_file_path.length > 0 && invalid_cache_query_after_seconds > 0 && req.status == CURLE_OK && json.token_count > 0)
         {
             stream_t* cache_file_stream = fs_open_file(STRING_ARGS(cache_file_path), STREAM_CREATE | STREAM_OUT | STREAM_TRUNCATE);
             if (cache_file_stream == nullptr)
@@ -734,7 +755,6 @@ bool query_execute_async_json(const char* query, query_format_t format, const qu
 
     FOUNDATION_ASSERT(string_equal(query, 4, STRING_CONST("http")));
     const size_t query_length = string_length(query);
-    //log_debugf(HASH_QUERY, STRING_CONST("Queueing GET query [%zu] %.*s"), _fetcher_requests.size(), (int)query_length, query);
     json_query_request_t request;    
     request.query = string_clone(query, query_length);
     request.format = format;

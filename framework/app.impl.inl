@@ -26,7 +26,7 @@ extern const char* app_title()
     return PRODUCT_NAME;
 }
 
-extern void app_exception_handler(const char* dump_file, size_t length)
+extern void app_exception_handler(void* args, const char* dump_file, size_t length)
 {
     FOUNDATION_UNUSED(dump_file);
     FOUNDATION_UNUSED(length);

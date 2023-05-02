@@ -261,19 +261,19 @@ config_handle_t title_get_fundamental_config_value(title_t* title, const char* f
 
     filter_value = config_set(filters, STRING_ARGS(filter_string), STRING_CONST("..."));
     if (eod_fetch_async("fundamentals", title->code, FORMAT_JSON_CACHE, [filter_value, filter_string](const json_object_t& json)
+    {
+        const bool allow_nulls = false;
+        json_object_t ref = json.find(STRING_ARGS(filter_string), allow_nulls);
+        if (!ref.is_null())
         {
-            const bool allow_nulls = false;
-            json_object_t ref = json.find(STRING_ARGS(filter_string), allow_nulls);
-            if (!ref.is_null())
-            {
-                config_set(filter_value, STRING_ARGS(ref.as_string()));
-            }
-            else
-            {
-                // No match
-                config_set(filter_value, STRING_CONST("-"));
-            }
-        }, 15 * 24ULL * 3600ULL))
+            config_set(filter_value, STRING_ARGS(ref.as_string()));
+        }
+        else
+        {
+            // No match
+            config_set(filter_value, STRING_CONST("-"));
+        }
+    }, 15 * 24ULL * 3600ULL))
     {
         return filter_value;
     }

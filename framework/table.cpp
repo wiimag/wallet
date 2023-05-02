@@ -105,8 +105,13 @@ FOUNDATION_STATIC string_const_t cell_number_value_to_string(const cell_t& cell,
         
         if (abs_value < 0.1)
             format_string = CTEXT("%.2g" THIN_SPACE "%%");
-        else if (abs_value < 1)
-            format_string = CTEXT("%.2lf" THIN_SPACE "%%");
+        else if (abs_value <= 1)
+        {
+            if (flags & COLUMN_ROUND_NUMBER)
+                format_string = CTEXT("%.1g" THIN_SPACE "%%");
+            else
+                format_string = CTEXT("%.2lf" THIN_SPACE "%%");
+        }
         else if (abs_value > 999)
             format_string = CTEXT("%.0lf" THIN_SPACE "%%");
         else if (flags & COLUMN_ROUND_NUMBER || abs_value <= 100)

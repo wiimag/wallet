@@ -29,8 +29,6 @@ add_compile_definitions(_LIB)
 
 # Use compiler flags from parent project
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
-
-# Use compiler flags from parent project
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 
 # Project library
@@ -45,9 +43,7 @@ target_include_directories(foundation PUBLIC ${ROOT_DIR}/external/)
 # Export a few defines to the project
 target_compile_definitions(foundation PUBLIC -DFOUNDATION_SIZE_REAL=8)
 
-if (APPLE)
+if (XCODE)
     # Set Xcode project properties
-    set_target_properties(foundation
-                          PROPERTIES
-                          XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES)
+    set_target_properties(foundation PROPERTIES XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES)
 endif()

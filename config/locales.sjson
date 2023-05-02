@@ -1111,6 +1111,11 @@
 			fr = "        Valeur Totale %12s "
 		}
 		{
+			hash = "19ecf4a0c9505720"
+			en = " Total Dividends  %12s "
+			fr = "     Dividendes Total %12s "
+		}
+		{
 			hash = "6c57b260e920bd0b"
 			en = " Exchange Gain    %12s "
 			fr = "       Gain de Change %12s "
@@ -3374,6 +3379,16 @@
 			hash = "16b7bec1b6eecf5a"
 			en = "{0,translate:D} {1,translate:M} {2:D} {3:H}:{4,2:M}:{5,2:S} {6:Y}"
 			fr = "{0,translate:D} {2:D} {1,translate:M} {6:Y} {3:H}h{4,2:M}"
+		}
+		{
+			hash = "446d238b322c3b23"
+			en = "Intraday"
+			fr = "Journalier"
+		}
+		{
+			hash = "c4bc3d884da0d1d5"
+			en = "%s %10.*s \n Price: %5.2lf $ (%.1g %%)\n   SMA: %5.2lf $"
+			fr = "%s %10.*s \n  Prix: %5.2lf $ (%.1g %%)\n   SMA: %5.2lf $"
 		}
 	]
 }

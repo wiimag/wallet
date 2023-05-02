@@ -603,7 +603,7 @@ an implementation specific code which is then returned from the call to error_re
 \return Implementation specific code which is passed back as return from error_report */
 typedef int (*error_handler_fn)(error_level_t level, error_t error);
 
-/*! Assert handler which is passed assert data and should do impementation specific
+/*! Assert handler which is passed assert data and should do implementation specific
 processing and return a code indicating if execution can continue or need to be aborted.
 \param context Error context
 \param condition String expressing the condition that failed
@@ -743,9 +743,10 @@ typedef int (*exception_try_fn)(void* arg);
 
 /*! Exception handler function prototype, used to notify that an exception occurred
 and the process state was saved to a dump file
+\param arg Implementation specific argument passed to exception_try
 \param file Dump file path
 \param length Length of file path */
-typedef void (*exception_handler_fn)(const char* file, size_t length);
+typedef void (*exception_handler_fn)(void* arg, const char* file, size_t length);
 
 /*! Object deallocation function prototype, used to deallocate an object of a specific type
 \param object Object pointer */
