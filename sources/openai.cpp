@@ -939,7 +939,7 @@ string_t* openai_generate_summary_sentiment(
         const char* query_url = openai_build_url("completions");
         string_const_t prompt = openai_generate_summary_prompt(symbol, symbol_length, user_prompt, user_prompt_length);
 
-        config_handle_t data = config_allocate();
+        config_handle_t data = config_allocate(CONFIG_VALUE_OBJECT, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
         config_set(data, "model", STRING_CONST("text-davinci-003"));
         config_set(data, "temperature", options.temperature);
         config_set(data, "max_tokens", (double)options.max_tokens);
@@ -958,6 +958,8 @@ string_t* openai_generate_summary_sentiment(
             if (!res.resolved())
             {
                 string_const_t error_message = res["error"]["message"].as_string();
+                if (error_message.length == 0)
+                    error_message = string_to_const(res.buffer);
                 log_errorf(HASH_OPENAI, ERROR_EXCEPTION, STRING_CONST("Failed to complete summary prompt: %.*s"), STRING_FORMAT(error_message));
 
                 *response = string_allocate_format(STRING_CONST("Failed to complete summary prompt: %.*s"), STRING_FORMAT(error_message));

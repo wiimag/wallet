@@ -20,6 +20,7 @@
 #include <foundation/log.h>
 #include <foundation/error.h>
 #include <foundation/hashstrings.h>
+#include <foundation/stream.h>
 
 #define HASH_CONSOLE static_hash_string("console", 7, 0xf4408b2738af51e7ULL)
 
@@ -56,6 +57,8 @@ static struct CONSOLE_MODULE
 
     generics::fixed_loop < string_t, 20, [](string_t& s) { string_deallocate(s.str); } > saved_expressions;
 
+    stream_t* log_stream = nullptr;
+
 } *_console_module;
 
 FOUNDATION_STATIC string_table_symbol_t console_string_encode(const char* s, size_t length /* = 0*/)
@@ -89,6 +92,12 @@ FOUNDATION_STATIC string_table_symbol_t console_string_encode(const char* s, siz
 
 FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char* msg, size_t length)
 {
+    if (_console_module->log_stream)
+    {
+        stream_write_string(_console_module->log_stream, msg, length);
+        stream_write_endl(_console_module->log_stream);
+    }
+
 	#if BUILD_DEBUG
     if (error() == ERROR_ASSERT)
         return;
@@ -457,6 +466,16 @@ FOUNDATION_STATIC void console_module_ensure_initialized()
     {
         _console_module = MEM_NEW(HASH_CONSOLE, CONSOLE_MODULE);
         _console_module->lock = mutex_allocate(STRING_CONST("console_lock"));
+        
+        string_const_t log_path = session_get_user_file_path(STRING_CONST("log.txt"));
+        if (fs_is_file(STRING_ARGS(log_path)))
+        {
+            // Move log file to prev_log.txt
+            string_const_t prev_log_path = session_get_user_file_path(STRING_CONST("prev_log.txt"));
+            fs_move_file(STRING_ARGS(log_path), STRING_ARGS(prev_log_path));
+        }
+        
+        _console_module->log_stream = stream_open(STRING_ARGS(log_path), STREAM_OUT | STREAM_CREATE | STREAM_TRUNCATE | STREAM_SYNC);
     }
 }
 
@@ -550,6 +569,12 @@ FOUNDATION_STATIC void console_shutdown()
 
     string_table_deallocate(_console_module->strings);
     string_array_deallocate(_console_module->secret_keys);
+
+    if (_console_module->log_stream)
+    {
+        stream_deallocate(_console_module->log_stream);
+        _console_module->log_stream = nullptr;
+    }
 
     MEM_DELETE(_console_module);
 }

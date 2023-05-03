@@ -759,7 +759,7 @@ double pattern_get_bid_price_high(pattern_handle_t pattern_handle)
     return today_price + (today_price * (flex_high_p - mcp));
 }
 
-FOUNDATION_STATIC double pattern_average_volume_3months(const pattern_t* pattern)
+FOUNDATION_STATIC double pattern_average_volume_3months(pattern_t* pattern)
 {
     if (pattern->average_volume_3months.initialized)
         return pattern->average_volume_3months.fetch();
@@ -786,7 +786,7 @@ FOUNDATION_STATIC double pattern_average_volume_3months(const pattern_t* pattern
     return pattern->average_volume_3months.fetch();
 }
 
-FOUNDATION_STATIC float pattern_render_stats(const pattern_t* pattern)
+FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
 {
     ImGuiTableFlags flags =
         ImGuiTableFlags_NoSavedSettings |
@@ -3059,7 +3059,7 @@ FOUNDATION_STATIC void pattern_load(const config_handle_t& pattern_data, pattern
     // Load AI analysis options
     auto cv_ai = pattern_data["analysis"];
     pattern.analysis_options.best_of = cv_ai["best_of"].as_integer(3);
-    pattern.analysis_options.max_tokens = cv_ai["max_tokens"].as_integer(2496);
+    pattern.analysis_options.max_tokens = cv_ai["max_tokens"].as_integer(1700);
     pattern.analysis_options.temperature = cv_ai["temperature"].as_number(0.7f);
     pattern.analysis_options.top_p = cv_ai["top_p"].as_number(0.9f);
     pattern.analysis_options.presence_penalty = cv_ai["presence_penalty"].as_number(1.50);
@@ -3296,8 +3296,8 @@ FOUNDATION_STATIC void pattern_initialize()
 
 FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
 {
-    array_deallocate(pattern->flex);
     array_deallocate(pattern->yy);
+    array_deallocate(pattern->flex);
 
     if (pattern->analysis_summary)
     {

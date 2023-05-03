@@ -67,7 +67,7 @@ struct pattern_t
     bool save{ false };
     bool autofit{ false };
 
-    // Computed values
+    // On-demand computed values
     pattern_mark_t marks[12]{};
     pattern_flex_t* flex{ nullptr };
     pattern_flex_medavg_t flex_buy{};
@@ -77,37 +77,36 @@ struct pattern_t
     double_option_t yy_ratio{ DNAN };
     double_option_t performance_ratio{ DNAN };
     double_option_t years{ DNAN };
-    mutable double_option_t average_volume_3months{ DNAN };
+    double_option_t average_volume_3months{ DNAN };
 
-    // Persisted data
+    // Persisted view data
+    int type{ 0 };
+    int range { 90 };
     bool opened{ true };
     pattern_check_t checks[8] {};
-    bool extra_charts{ false };
     bool show_limits{ true };
+    bool extra_charts{ false };
     bool x_axis_inverted{ false };
     bool show_trend_equation{ false };
-    int range { 90 };
-    float percent{ 90 };
-    int type{ 0 };
     pattern_limits_t price_limits;
-    char notes[2048]{ '\0' };
 
     // Y./Y. data
-    struct yy_t
-    {
-        time_t beg, end;
-        double change_p;
-    } *yy{ nullptr };
+    struct yy_t { time_t beg, end; double change_p; } *yy{ nullptr };
 
+    // Open AI data
     string_t*                   analysis_summary{};
     openai_completion_options_t analysis_options{};
 
+    // Notes data
+    char notes[2048]{ '\0' };
     bool notes_opened{ false };
 
+    // Fundamentals view data
     config_handle_t fundamentals;
     bool fundamentals_fetched{ false };
     bool fundamentals_dialog_opened{ false };
 
+    // Intraday view data
     day_result_t* intradays{ nullptr };
 };
 
