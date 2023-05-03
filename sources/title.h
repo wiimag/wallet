@@ -274,20 +274,18 @@ bool title_has_decreased(const title_t* t, double* out_delta = nullptr, double s
 /*! Get the title last transaction date.
  *
  *  @param t The title to get the last transaction date for.
- *  @param date The last transaction date.
  *
- *  @return The last transaction date.
+ *  @return The last transaction date. 0 is returned if the title has no transactions.
  */
-time_t title_get_last_transaction_date(const title_t* t, time_t* date = nullptr);
+time_t title_last_transaction_date(const title_t* t);
 
 /*! Get the title first transaction date.
  *
  *  @param t The title to get the first transaction date for.
- *  @param date The first transaction date.
  *
  *  @return The first transaction date.
  */
-time_t title_get_first_transaction_date(const title_t* t, time_t* date = nullptr);
+time_t title_first_transaction_date(const title_t* t);
 
 /*! Checks if the title is fully sold.
  * 

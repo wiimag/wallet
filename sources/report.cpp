@@ -1046,8 +1046,9 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
             title_refresh(title);
     }, 60ULL);
 
-    time_t since = time_add_days(time_now(), -9);
-    title_get_last_transaction_date(title, &since);
+    time_t since = title_last_transaction_date(title);
+    if (since == 0)
+        since = time_add_days(time_now(), -9);
     
     realtime_render_graph(title->code, title->code_length, since, max(ImGui::GetContentRegionAvail().x, 900.0f), 300.0f);
 }
@@ -1171,6 +1172,23 @@ FOUNDATION_STATIC void report_title_gain_total_tooltip(table_element_ptr_const_t
         const double exchange_diff = t->today_exchange_rate.fetch() - t->average_exchange_rate;
         ImGui::TrText(" Exchange Gain    %12s ", string_from_currency(exchange_diff * total_value).str);
     }
+}
+
+FOUNDATION_STATIC void report_title_days_held_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+{
+    const title_t* t = *(const title_t**)element;
+    if (t == nullptr)
+        return;
+
+    const time_t last_date = title_last_transaction_date(t);
+    const time_t first_date = title_first_transaction_date(t);
+
+    if (last_date == 0 || first_date == 0)
+        return;
+
+    ImGui::TextUnformatted(tr_format("  Last transaction: {0:date} ({0:since}) ", last_date));
+    ImGui::TextUnformatted(tr_format(" First transaction: {0:date} ({0:since}) ", first_date));
+    ImGui::TrTextUnformatted("\n The days held field reflects the average number of days held \n for each transaction weighted by the quantity of each transaction. ");
 }
 
 FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
@@ -1349,8 +1367,8 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .width = 200.0f;
 
     table_add_column(table, STRING_CONST(ICON_MD_DATE_RANGE "||" ICON_MD_DATE_RANGE " Elapsed Days"),
-        report_column_average_days_held, COLUMN_FORMAT_NUMBER,
-        COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER | COLUMN_MIDDLE_ALIGN);
+        report_column_average_days_held, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_SUMMARY_AVERAGE | COLUMN_ROUND_NUMBER | COLUMN_MIDDLE_ALIGN)
+        .set_tooltip_callback(report_title_days_held_tooltip);
 
     // Add custom expression columns
     report_t* report = report_get(report_handle);

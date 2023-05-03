@@ -861,7 +861,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
                 column.tooltip(element, &column, &cell);
                 ImGui::EndTooltip();
             }
-            else if (table_column_is_number_value_trimmed(column, cell))
+            else if (!column.tooltip && table_column_is_number_value_trimmed(column, cell))
             {
                 ImGui::SetTooltip("%lg", cell.number);
             }

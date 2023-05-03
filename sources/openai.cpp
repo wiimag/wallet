@@ -1013,7 +1013,7 @@ FOUNDATION_STATIC void openai_initialize()
 
     dispatcher_register_event_listener(EVENT_BACKEND_CONNECTED, openai_backend_connected_event);
 
-    #if BUILD_DEBUG
+    #if 0
     app_register_menu(HASH_OPENAI, STRING_CONST("Modules/" ICON_MD_PSYCHOLOGY " OpenAI"), 
         STRING_CONST("Alt+F1"), AppMenuFlags::Append, openai_run_tests, nullptr);
     #endif

@@ -44,18 +44,24 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 add_compile_definitions(BGFX_CONFIG_USE_TINYSTL=0)
 
 # Disable vulkan backend renderer for all platforms
+add_compile_definitions(BGFX_CONFIG_RENDERER_AGC=0)
 add_compile_definitions(BGFX_CONFIG_RENDERER_VULKAN=0)
 add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGLES=0)
-add_compile_definitions(BGFX_CONFIG_RENDERER_AGC=0)
 add_compile_definitions(BGFX_CONFIG_RENDERER_OPENGL=0)
 
-add_compile_definitions(BGFX_CONFIG_MAX_DRAW_CALLS=2048)
-add_compile_definitions(BGFX_CONFIG_MAX_OCCLUSION_QUERIES=32)
-add_compile_definitions(BGFX_CONFIG_MAX_VIEW_NAME=64)
+# BGFX tweaks for our needs
+add_compile_definitions(BGFX_CONFIG_MAX_SHADERS=16)
+add_compile_definitions(BGFX_CONFIG_MAX_VIEW_NAME=16)
+add_compile_definitions(BGFX_CONFIG_MAX_DRAW_CALLS=2047)
 add_compile_definitions(BGFX_CONFIG_MAX_VERTEX_DECLS=32)
-add_compile_definitions(BGFX_CONFIG_MAX_INDEX_BUFFERS=512)
-add_compile_definitions(BGFX_CONFIG_DEBUG_ANNOTATION=0)
+add_compile_definitions(BGFX_CONFIG_MAX_INDEX_BUFFERS=256)
+add_compile_definitions(BGFX_CONFIG_MAX_OCCLUSION_QUERIES=8)
+add_compile_definitions(BGFX_CONFIG_MAX_DYNAMIC_INDEX_BUFFERS=8192)
+add_compile_definitions(BGFX_CONFIG_MAX_DYNAMIC_VERTEX_BUFFERS=8192)
+
+# Disable debug features
 add_compile_definitions(BGFX_CONFIG_DEBUG_UNIFORM=0)
+add_compile_definitions(BGFX_CONFIG_DEBUG_ANNOTATION=0)
 add_compile_definitions(BGFX_CONFIG_DEBUG_OCCLUSION=0)
 
 if (WIN32)
@@ -68,15 +74,13 @@ if (WIN32)
     add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D11=1)
     add_compile_definitions(BGFX_CONFIG_RENDERER_DIRECT3D12=0)
 
-    #add_compile_definitions(BGFX_CONFIG_MAX_INSTANCE_DATA_COUNT=4)
-
 elseif (APPLE)
 
     # Disable CPP exceptions and RTTI
     add_compile_options(-fno-rtti)
     add_compile_options(-fno-exceptions)
 
-    # Force METAL renderer with BGFX_CONFIG_RENDERER_METAL=1
+    # Force METAL renderer
     add_compile_definitions(BGFX_CONFIG_RENDERER_METAL=1)
 
 endif()

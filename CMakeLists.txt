@@ -111,7 +111,12 @@ add_compile_options(-DMAX_QUERY_THREADS=${BUILD_MAX_QUERY_THREADS})
 add_compile_options("$<$<CONFIG:DEBUG>:-DBUILD_DEBUG=1>")
 add_compile_options("$<$<CONFIG:RELEASE>:-DBUILD_RELEASE=1>")
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEPLOY=1>")
+
+if (NOT BUILD_ENABLE_DEVELOPMENT)
+    add_compile_options("$<$<CONFIG:DEBUG,RELEASE>:-DBUILD_DEVELOPMENT=0>")
+endif()
 add_compile_options("$<$<CONFIG:DEPLOY>:-DBUILD_DEVELOPMENT=0>")
+
 add_compile_options("$<$<CONFIG:DEBUG,RELEASE,DEPLOY>:-DBUILD_ENABLE_LOG=1>")
 add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_ENABLE_DEBUG_LOG=0>")
 add_compile_options("$<$<CONFIG:RELEASE,DEPLOY>:-DBUILD_ENABLE_ASSERT=0>")

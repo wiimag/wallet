@@ -55,6 +55,12 @@ You can find the `locales.sjson` which contains the localized strings at `config
 
 When build with `BUILD_DEPLOY`, the `locales.sjson` file will be copied to the `build` directory.
 
+### `-DBUILD_ENALE_DEVELOPMENT=ON|OFF`
+
+**Default: `ON`**
+
+If enabled, the project will be built with development support. If turned off, the project will be built without development support.
+
 ### `-DBUILD_MAX_QUERY_THREADS=N`
 
 **Default: `4`**

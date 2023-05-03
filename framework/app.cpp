@@ -451,7 +451,7 @@ void app_menu_help(GLFWwindow* window)
     }
     #endif
 
-    #if BUILD_ENABLE_MEMORY_STATISTICS && BUILD_ENABLE_MEMORY_TRACKER
+    #if BUILD_DEVELOPMENT && BUILD_ENABLE_MEMORY_STATISTICS && BUILD_ENABLE_MEMORY_TRACKER
     if (ImGui::TrMenuItem("Show Memory Stats"))
     {
         MEMORY_TRACKER(HASH_MEMORY);

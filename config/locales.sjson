@@ -3393,22 +3393,37 @@
 		{
 			hash = "8c141a87ca734ea2"
 			en = "Search table..."
-			fr = "@TODO"
+			fr = "Rechercher dans la table..."
 		}
 		{
 			hash = "6f9c461b315948a7"
 			en = "Export table"
-			fr = "@TODO"
+			fr = "Exporter la table"
 		}
 		{
 			hash = "964f34848f09bcc7"
 			en = "Comma-Separated-Value (*.csv)|*.csv"
-			fr = "@TODO"
+			fr = "CSV (*.csv)|*.csv"
 		}
 		{
 			hash = "3fbc8167af90fff8"
 			en = "Export table to CSV..."
-			fr = "@TODO"
+			fr = "Exporter la table en CSV..."
+		}
+		{
+			hash = "746bbe1d1ce53a12"
+			en = "  Last transaction: {0:date} ({0:since}) "
+			fr = " Derni\xc3\xa8re transaction: {0:date} ({0:since}) "
+		}
+		{
+			hash = "ea22ed5a81db2ccc"
+			en = " First transaction: {0:date} ({0:since}) "
+			fr = " Premi\xc3\xa8re transaction: {0:date} ({0:since}) "			
+		}
+		{
+			hash = "67617f8bad9d1d89"
+			en = "\n The days held field reflects the average number of days held \n for each transaction weighted by the quantity of each transaction. "
+			fr = "\n Le champ jours d\xc3\xa9tenus refl\xc3\xa8te le nombre moyen de jours d\xc3\xa9tenus \n pour chaque transaction pond\xc3\xa9r\xc3\xa9 par la quantit\xc3\xa9 de chaque transaction. "
 		}
 	]
 }

@@ -1,9 +1,10 @@
 # Changelog
 
-## [0.21.3] - 2023-05-03
+## [0.21.4] - 2023-05-03
 - Add intraday pattern view.
 - Add TSX money hyperlink to the pattern view when available.
 - Fix EOD data with erronous closing prices from the data source.
+- Hide Realtime window in non-development builds.
 - Improve R(...) to support multiple field evaluation (i.e. `R(FLEX, [name, price, S($TITLE, close, NOW() - (90 * 24 * 3600))])`)
 
 ## [0.20.12] - 2023-05-01

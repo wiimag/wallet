@@ -775,8 +775,10 @@ FOUNDATION_STATIC void realtime_initialize()
 
     dispatcher_register_event_listener(EVENT_STOCK_REQUESTED, realtime_register_new_stock);
 
+    #if BUILD_DEVELOPMENT
     module_register_menu(HASH_REALTIME, realtime_menu);
     module_register_window(HASH_REALTIME, realtime_render_window);
+    #endif
 }
 
 FOUNDATION_STATIC void realtime_shutdown()

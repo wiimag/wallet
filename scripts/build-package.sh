@@ -66,6 +66,7 @@ if [[ "$*" == *-build* ]]; then
 
   if [[ "$*" == *backend* ]]; then
     BUILD_OPTIONS+=("-DBUILD_ENABLE_BACKEND=ON")
+    BUILD_OPTIONS+=("-DBUILD_ENABLE_DEVELOPMENT=OFF")
 
     # Add _backend suffix to the branch name
     BRANCH_NAME="${BRANCH_NAME}_backend"
@@ -144,9 +145,6 @@ FILES_TO_PACKAGE+=("$BUILD_FOLDER_PATH/*.pdb")
 
 # Add root CHANGELOG.md
 FILES_TO_PACKAGE+=("CHANGELOG.md")
-
-# Add locales.sjson
-FILES_TO_PACKAGE+=("config/locales.sjson")
 
 # Print the files to be packaged
 echo "Files to be packaged:"
