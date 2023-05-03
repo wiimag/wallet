@@ -50,22 +50,6 @@ struct pattern_flex_medavg_t
     double medavg;
 };
 
-struct pattern_lcf_t
-{
-    time_t date{ 0 };
-    bulk_t* symbols{ nullptr };
-
-    int type{ 0 };
-};
-
-struct pattern_lcf_symbol_t
-{
-    string_table_symbol_t code;
-    const bulk_t* bulk{ nullptr };
-    char* sequence{ nullptr };
-    int matches{ 0 };
-};
-
 /*! Pattern limits. */
 struct pattern_limits_t
 {
@@ -107,11 +91,6 @@ struct pattern_t
     int type{ 0 };
     pattern_limits_t price_limits;
     char notes[2048]{ '\0' };
-
-    // LCF
-    job_t* lcf_job{ nullptr };
-    pattern_lcf_t* lcf{ nullptr };
-    pattern_lcf_symbol_t* lcf_symbols{ nullptr };
 
     // Y./Y. data
     struct yy_t

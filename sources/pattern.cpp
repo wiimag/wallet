@@ -37,8 +37,6 @@
 
 #define PATTERN_FLEX_RANGE_COUNT (90U)
 
-constexpr int MAX_LCF_DAY_COUNT = 180;
-
 constexpr int FIXED_MARKS[] = { 1, 3, 7, 14, 30, 90, 180, 365, 365 * 2, 365 * 3, 365 * 6, -1 };
 constexpr const char* DAY_LABELS[] = { "1D", "3D", "1W", "2W", "1M",  "3M",  "6M",  "1Y", "2Y", "3Y",  "6Y", "MAX" };
 
@@ -65,7 +63,6 @@ enum PatternType : int {
     PATTERN_GRAPH_END,
 
     PATTERN_SIMULATION_BEGIN,
-    PATTERN_LONG_COORDINATED_FLEX,
     PATTERN_ACTIVITY,
     PATTERN_SIMULATION_END,
 
@@ -81,7 +78,6 @@ constexpr const char* GRAPH_TYPES[PATTERN_ALL_END] = {
     "Intraday",
     nullptr,
     nullptr,
-    "LCF",
     "Activity"
 };
 
@@ -1510,345 +1506,6 @@ FOUNDATION_STATIC void pattern_render_graph_flex(pattern_t* pattern, pattern_gra
     pattern_render_graph_end(pattern, nullptr, graph);
 }
 
-void pattern_fetch_lcf_data(const pattern_t* pattern, const json_object_t& json, pattern_lcf_t* lcf)
-{
-    bulk_t* symbols = nullptr;
-    if (json.root->value_length == 0)
-        return;
-
-    const day_result_t* ed = stock_get_EOD(pattern->stock, lcf->date, true);
-    if (ed == nullptr)
-        return;
-    if (math_real_eq(ed->open, ed->adjusted_close, 3))
-        return;
-
-    bulk_t ps{};
-    ps.name = pattern->stock->name;
-    ps.code = pattern->stock->symbol;
-    ps.type = pattern->stock->type;
-    ps.exchange = pattern->stock->exchange;
-    ps.close = ed->adjusted_close;
-    ps.open = ed->open;
-    ps.date = ed->date;
-    if (ps.close > ps.open)
-        lcf->type = 1;
-    else if(ps.close < ps.open)
-        lcf->type = -1;
-
-    symbols = array_push(symbols, ps);
-
-    for (int i = 0, end = json.root->value_length; i != end; ++i)
-    {
-        const json_object_t& e = json[i];
-
-        bulk_t s{};
-        s.code = string_table_encode(e["code"].as_string());
-        if (s.code == ps.code)
-            continue;
-
-        s.type = string_table_encode(e["type"].as_string());
-
-        if (s.type != pattern->stock->type)
-            continue;
-
-        s.date = string_to_date(STRING_ARGS(e["date"].as_string()));		
-        s.code = string_table_encode(e["code"].as_string());
-        s.name = string_table_encode_unescape(e["name"].as_string());
-        s.exchange = string_table_encode(e["exchange_short_name"].as_string());
-        s.market_capitalization = e["MarketCapitalization"].as_number();
-        s.beta = e["Beta"].as_number();
-        s.open = e["open"].as_number();
-        s.high = e["high"].as_number();
-        s.low = e["low"].as_number();
-        s.close = e["close"].as_number();
-        s.adjusted_close = e["adjusted_close"].as_number();
-        s.volume = e["volume"].as_number();
-        s.ema_50d = e["ema_50d"].as_number();
-        s.ema_200d = e["ema_200d"].as_number();
-        s.hi_250d = e["hi_250d"].as_number();
-        s.lo_250d = e["lo_250d"].as_number();
-        s.avgvol_14d = e["avgvol_14d"].as_number();
-        s.avgvol_50d = e["avgvol_50d"].as_number();
-        s.avgvol_200d = e["avgvol_200d"].as_number();
-
-        symbols[0].date = s.date;
-        symbols = array_push(symbols, s);
-    }
-
-    lcf->symbols = symbols;
-}
-
-FOUNDATION_STATIC int pattern_load_lcf_thread(payload_t* payload)
-{
-    MEMORY_TRACKER(HASH_PATTERN);
-    
-    pattern_lcf_t* lcfarr = nullptr;
-    pattern_t* pattern = (pattern_t*)payload;
-
-    time_t ref_date = pattern->date;
-    while ((int)array_size(lcfarr) < min(pattern->range, MAX_LCF_DAY_COUNT))
-    {
-        pattern_lcf_t lcf{ ref_date, nullptr };
-        string_const_t exchange = string_table_decode_const(pattern->stock->exchange);
-        string_const_t first_date_string = string_from_date(ref_date);
-        if (eod_fetch("eod-bulk-last-day", exchange.str, FORMAT_JSON_CACHE,
-            "filter", "extended",
-            ref_date != pattern->date ? "date" : "ignore", first_date_string.str,
-            [pattern, &lcf](const json_object_t& _1) { pattern_fetch_lcf_data(pattern, _1, &lcf); }, 30 * 24 * 60 * 60ULL))
-        {
-            if (lcf.symbols != nullptr)
-            {
-                ref_date = lcf.date = lcf.symbols[0].date;
-                array_push(lcfarr, lcf);
-            }
-        }
-
-        ref_date -= time_one_day();
-    }
-
-    pattern_lcf_symbol_t* lcf_symbols = nullptr;
-
-    // Find days with most symbols
-    int date_count = array_size(lcfarr);
-    const pattern_lcf_t& first_lcf = lcfarr[0];
-    const bulk_t* symbols = first_lcf.symbols;
-    unsigned symbol_count = array_size(first_lcf.symbols);
-    for (size_t i = 1; i < date_count; ++i)
-    {
-        unsigned cz = array_size(lcfarr[i].symbols);
-        if (cz > symbol_count)
-        {
-            symbols = lcfarr[i].symbols;
-            symbol_count = cz;
-        }
-    }
-
-    double total_match = 0;
-    static double average_match = 0;
-
-    int ref_matches = 0;
-    for (unsigned n = 0; n < symbol_count; ++n)
-    {
-        const string_table_symbol_t code = symbols[n].code;
-        if (code == 0)
-            continue;
-
-        pattern_lcf_symbol_t lcfs{};
-        lcfs.bulk = &symbols[n];
-        lcfs.code = code;
-        lcfs.matches = 0;
-        lcfs.sequence = nullptr;
-        array_reserve(lcfs.sequence, date_count);
-        
-        for (size_t i = 0; i < min(pattern->range, date_count); ++i)
-        {
-            const pattern_lcf_t& lcf = lcfarr[i];
-            if (lcf.type == 0)
-                continue;
-
-            bool ignored = true;
-
-            for (size_t s = 0; s < symbol_count; ++s)
-            {
-                if (s >= array_size(lcf.symbols) || lcf.symbols[s].code != code)
-                    continue;
-
-                const bulk_t& sl = lcf.symbols[s];
-                if (lcf.type == 1)
-                {
-                    if (sl.close > sl.open)
-                    {
-                        ignored = false;
-                        array_push(lcfs.sequence, 'U');
-                        lcfs.matches++;
-                    }
-                    else
-                    {
-                        ignored = false;
-                        array_push(lcfs.sequence, 'X');
-                    }
-                }
-                else if (lcf.type == -1)
-                {
-                    if (sl.close < sl.open)
-                    {
-                        ignored = false;
-                        array_push(lcfs.sequence, 'D');
-                        lcfs.matches++;
-                    }
-                    else
-                    {
-                        ignored = false;
-                        array_push(lcfs.sequence, 'X');
-                    }
-                }
-
-                break;
-            }
-
-            if (ignored)
-                array_push(lcfs.sequence, '_');
-        }
-
-        array_push(lcf_symbols, lcfs);
-    }
-
-    foreach(lcfs, pattern->lcf_symbols)
-        array_deallocate(lcfs->sequence);
-    array_deallocate(pattern->lcf_symbols);
-
-    foreach(e, pattern->lcf)
-        array_deallocate(e->symbols);
-    array_deallocate(pattern->lcf);
-    
-    pattern->lcf = lcfarr;
-    pattern->lcf_symbols = array_sort(lcf_symbols, LC2(_2.matches - _1.matches));
-    return 0;
-}
-
-FOUNDATION_STATIC void pattern_render_lcf_table(pattern_t* pattern)
-{
-    int date_count = array_size(pattern->lcf);
-
-    const ImVec2 graph_offset = ImVec2(0, -ImGui::GetStyle().CellPadding.y);
-    if (ImGui::BeginTable("##LCF", 3,
-        ImGuiTableFlags_Resizable |
-        ImGuiTableFlags_NoSavedSettings |
-        ImGuiTableFlags_RowBg |
-        ImGuiTableFlags_NoBordersInBody |
-        ImGuiTableFlags_SizingFixedSame |
-        ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY, graph_offset))
-    {
-        ImGui::TableSetupScrollFreeze(1, 2);
-
-        string_const_t pattern_code = string_table_decode_const(pattern->code);
-        ImGui::TableSetupColumn(tr("Title"), ImGuiTableColumnFlags_None);
-        ImGui::TableSetupColumn(string_format_static(STRING_CONST("DNA (%d)"), min(pattern->range, date_count)).str, ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn(tr("Hits"), ImGuiTableColumnFlags_None);
-        ImGui::TableHeadersRow();
-        
-        double total_match = 0;
-        static double average_match = 0;
-
-        const int ref_matches = date_count;
-        const int symbol_count = array_size(pattern->lcf_symbols);
-        const pattern_lcf_symbol_t* symbols = pattern->lcf_symbols;
-        
-        ImGuiListClipper clipper;
-        clipper.Begin(symbol_count);
-        while (clipper.Step())
-        {
-            for (size_t n = clipper.DisplayStart; n < clipper.DisplayEnd; ++n)
-            {
-                const string_table_symbol_t code = symbols[n].code;
-                if (code == 0)
-                    continue;
-
-                int matches = symbols[n].matches;
-                ImGui::TableNextRow();
-                {
-                    ImGui::TableNextColumn();
-
-                    string_const_t code_string = string_table_decode_const(symbols[n].code);
-                    ImGui::TextUnformatted(code_string.str);
-                    if (ImGui::IsItemHovered())
-                    {
-                        if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-                        {
-                            string_const_t code_id = string_format_static(STRING_CONST("%s.%s"), code_string.str, string_table_decode(symbols[n].bulk->exchange));
-                            pattern_open(STRING_ARGS(code_id));
-                        }
-                        else
-                        {
-                            ImGui::SetTooltip("%s\n%s", string_table_decode(symbols[n].bulk->name), string_table_decode(symbols[n].bulk->type));
-                        }
-                    }
-                }
-
-                {
-                    ImGui::TableNextColumn();
-                   
-                    bool first_write = true;
-                    int offset = 0;
-                    ImGui::BeginGroup();
-                    for (unsigned c = 0; c < array_size(symbols[n].sequence); ++c)
-                    {
-                        const char ch = symbols[n].sequence[c];
-                        if (ch == 'D')
-                        {
-                            if (!first_write) ImGui::SameLine(0, 1); else first_write = false;
-                            ImGui::TextColored(ImVec4(0.6f, 0.4f, 0.3f, 1.0f), "D");
-                        }
-                        else if (ch == 'U')
-                        {
-                            if (!first_write) ImGui::SameLine(0, 1); else first_write = false;
-                            ImGui::TextColored(ImVec4(0.2f, 0.9f, 0.3f, 1.0f), "U");
-                        }
-                        else if (ch == 'X')
-                        {
-                            if (!first_write) ImGui::SameLine(0, 1); else first_write = false;
-                            ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.3f, 0.1f), "X");
-                        }
-                        else
-                        {
-                            if (!first_write) ImGui::SameLine(0, 1); else first_write = false;
-                            ImGui::TextColored(ImVec4(0.9f, 0.2f, 0.3f, 0.1f), " ");
-                        }
-                    }
-                    ImGui::EndGroup();
-                }
-
-                if (symbols[n].matches > 0)
-                {
-                    ImGui::TableNextColumn();
-                    if (matches > (ref_matches * pattern->percent / 100.0))
-                    {
-                        ImGui::TextColored(ImVec4(0.2f, matches / (float)average_match, 0.3f, matches / (float)ref_matches),
-                            "%.3g %%", matches / (double)ref_matches * 100.0);
-                    }
-
-                    total_match += matches;
-                }
-            }
-        }
-
-        average_match = total_match / date_count;
-
-        ImGui::EndTable();
-    }
-
-    ImGui::SetWindowFontScale(1.0f);
-}
-
-FOUNDATION_STATIC void pattern_render_lcf(pattern_t* pattern, pattern_graph_data_t& graph)
-{
-    if (!pattern->stock->has_resolve(FetchLevel::EOD))
-    {
-        ImGui::TextUnformatted("Resolving technical end of day data...");
-        return;
-    }
-
-    size_t lcf_count = array_size(pattern->lcf);
-    if (lcf_count > 0 && lcf_count == min(pattern->range, MAX_LCF_DAY_COUNT))
-    {
-        if (pattern->lcf_job && job_completed(pattern->lcf_job))
-        {
-            job_deallocate(pattern->lcf_job);
-            pattern->lcf_job = nullptr;
-        }
-
-        pattern_render_lcf_table(pattern);
-    }
-    else if (pattern->lcf_job == nullptr)
-    {
-        pattern->lcf_job = job_execute(pattern_load_lcf_thread, (payload_t*)pattern);
-    }
-    else
-    {
-        ImGui::TrTextUnformatted("Loading data...");
-    }
-}
-
 FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     if (pattern->intradays == nullptr)
@@ -2416,15 +2073,6 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
                     graph.refresh = true;
             }
         }
-        else if (pattern->type == PATTERN_LONG_COORDINATED_FLEX)
-        {
-            ImGui::SameLine();
-            ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
-            if (ImGui::SliderFloat("##Percent", &pattern->percent, 0, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
-            {
-                graph.refresh = true;
-            }
-        }
     }
 
     ImGui::SameLine();
@@ -2846,10 +2494,6 @@ FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
 
         case PATTERN_GRAPH_INTRADAY:
             pattern_render_graph_intraday(pattern, graph_data);
-            break;
-
-        case PATTERN_LONG_COORDINATED_FLEX:
-            pattern_render_lcf(pattern, graph_data);
             break;
 
         case PATTERN_ACTIVITY:
@@ -3652,16 +3296,6 @@ FOUNDATION_STATIC void pattern_initialize()
 
 FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
 {
-    job_deallocate(pattern->lcf_job);
-
-    foreach(lcfs, pattern->lcf_symbols)
-        array_deallocate(lcfs->sequence);
-    array_deallocate(pattern->lcf_symbols);
-
-    foreach(e, pattern->lcf)
-        array_deallocate(e->symbols);
-    array_deallocate(pattern->lcf);
-
     array_deallocate(pattern->flex);
     array_deallocate(pattern->yy);
 
