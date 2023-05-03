@@ -93,6 +93,13 @@ const char* string_table_decode(string_table_symbol_t symbol)
     return string_table_to_string(GLOBAL_STRING_TABLE, symbol);
 }
 
+string_t string_table_decode(char* buffer, size_t capacity, string_table_symbol_t symbol)
+{
+    SHARED_READ_LOCK(_string_table_lock);
+    string_const_t str = string_table_to_string_const(GLOBAL_STRING_TABLE, symbol);
+    return string_copy(buffer, capacity, str.str, str.length);
+}
+
 string_const_t string_table_decode_const(string_table_symbol_t symbol)
 {
     SHARED_READ_LOCK(_string_table_lock);

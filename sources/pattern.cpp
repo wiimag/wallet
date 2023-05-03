@@ -529,6 +529,19 @@ FOUNDATION_STATIC string_const_t pattern_eod_to_google_exchange(string_const_t e
     return eod_exchange;
 }
 
+FOUNDATION_STATIC string_const_t pattern_tsx_money_url(const pattern_t* pattern)
+{
+    const stock_t* s = pattern->stock;
+    if (s == nullptr)
+        return string_null();
+
+    string_t url_buf = string_static_buffer(2048);
+
+    string_const_t symbol = string_table_decode_const(s->symbol);
+    string_t url = string_format(url_buf.str, url_buf.length, STRING_CONST("https://money.tmx.com/en/quote/%.*s"), STRING_FORMAT(symbol));
+    return string_to_const(url);
+}
+
 FOUNDATION_STATIC string_const_t pattern_google_finance_url(const pattern_t* pattern)
 {
     const stock_t* s = pattern->stock;
@@ -622,7 +635,10 @@ FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
         pattern_render_planning_line(CTEXT(""), pattern, 5);
     pattern_render_planning_url(CTEXT("Google"), pattern_google_finance_url(pattern), pattern, 6);
     pattern_render_planning_url(CTEXT("News"), pattern_google_news_url(pattern), pattern, 7, false, true);
-    pattern_render_planning_line(CTEXT(""), pattern, 8, true);
+    if (s && string_table_symbol_equal(s->exchange, STRING_CONST("TO")))
+        pattern_render_planning_url(CTEXT("TSX"), pattern_tsx_money_url(pattern), pattern, 8, false);
+    else
+        pattern_render_planning_line(CTEXT(""), pattern, 8, true);
     pattern_render_planning_line(CTEXT(""), pattern, 9, true);
     pattern_render_planning_line(CTEXT(""), pattern, 10, true);
     pattern_render_planning_line(CTEXT(""), pattern, 11, true);

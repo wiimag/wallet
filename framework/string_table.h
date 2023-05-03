@@ -275,6 +275,19 @@ string_table_symbol_t string_table_encode_unescape(string_const_t value);
  */
 const char* string_table_decode(string_table_symbol_t symbol);
 
+/*! Decode a string symbol from the global string table.
+ *
+ *  The symbol string content is copied to the buffer while the global string table is locked.
+ *  This version of the function is thread safe.
+ * 
+ *  @param buffer   The buffer to decode the string into
+ *  @param capacity The capacity of the buffer
+ *  @param symbol   The symbol to resolve
+ * 
+ *  @return The string content for the symbol
+ */
+string_t string_table_decode(char* buffer, size_t capacity, string_table_symbol_t symbol);
+
 /*! Returns the string content for a given symbol in the global application string table. 
  * 
  *  @param symbol The symbol to resolve

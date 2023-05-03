@@ -15,6 +15,7 @@
 #include <framework/generics.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/system.h>
 
 #include <foundation/log.h>
 #include <foundation/error.h>
@@ -90,6 +91,9 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
 {
 	#if BUILD_DEBUG
     if (error() == ERROR_ASSERT)
+        return;
+
+    if (system_debugger_attached() && severity <= ERRORLEVEL_DEBUG)
         return;
 	#endif
 

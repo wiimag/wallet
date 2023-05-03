@@ -423,7 +423,8 @@ FOUNDATION_STATIC bool stock_read_eod_intraday_results(stock_index_t index, day_
 {
     SHARED_READ_LOCK(_db_lock);
     stock_t& entry = _db_stocks[index];
-    string_const_t code = SYMBOL_CONST(entry.code);
+
+    string_t code = string_table_decode(SHARED_BUFFER(16), entry.code);
     time_t first_intraday_date = time_add_days(history[0].date, -5);
         
     char first_intraday_date_string[16];

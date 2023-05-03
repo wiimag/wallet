@@ -36,6 +36,31 @@ struct lines_t
     }
 };
 
+// ### Shared buffer ###
+
+/*! A ring buffer shared between threads.
+ *
+ * @tparam BUF_SIZE The size of the buffer (ideally must be a power of 2).
+ */
+template<size_t BUF_SIZE>
+struct SharedBuffer
+{
+    static const size_t RING_COUNT = 6;
+    static thread_local size_t index;
+    static thread_local char buffer[RING_COUNT][BUF_SIZE];
+};
+
+template<size_t BUF_SIZE> thread_local size_t SharedBuffer<BUF_SIZE>::index = 0;
+template<size_t BUF_SIZE> thread_local char SharedBuffer<BUF_SIZE>::buffer[RING_COUNT][BUF_SIZE] = { "", "", "", "", "", "" };
+
+/*! @def SHARED_BUFFER
+ * @brief A macro to declare a thread local shared buffer.
+ *
+ * @param capacity The capacity of the buffer. The capacity will be capped to the next power of 2.
+ */
+#define SHARED_BUFFER(capacity) \
+    SharedBuffer<CPOW2(capacity)>::buffer[(SharedBuffer<CPOW2(capacity)>::index++) % SharedBuffer<CPOW2(capacity)>::RING_COUNT], CPOW2(capacity)
+
 /*! Count the occurrences of a character in a string.
  *
  * @param str The string to search.

@@ -607,3 +607,31 @@ FOUNDATION_FORCEINLINE hash_t hash_combine(hash_t h1, hash_t h2, hash_t h3, hash
 }
 
 
+////////////////////////////////////////////////////////////////////////////
+// ## Compile time templates method
+
+/*! Compile time template function to get next power of 2 of a given value. 
+ * 
+ *  @param VALUE Value to get next power of 2 of.
+ * 
+ *  @return Next power of 2 of VALUE.
+ */
+template<uint32_t VALUE> struct NextPowerOf2
+{
+	template<uint32_t N, uint32_t SHIFT = 0>
+	struct Calculate
+	{
+		static const uint32_t result = Calculate<N/2, SHIFT+1>::result;
+	};
+
+	template<uint32_t SHIFT>
+	struct Calculate<0, SHIFT>
+	{
+		static const uint32_t result = SHIFT;
+	};
+
+	static const uint32_t shift = Calculate<VALUE-1>::result;
+	static const uint32_t value = 1 << shift;
+};
+
+#define CPOW2(n) NextPowerOf2<n>::value
