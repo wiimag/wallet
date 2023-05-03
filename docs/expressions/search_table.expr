@@ -1,0 +1,17 @@
+# Build query
+$query = "medical country:canada"
+
+# Run search query
+$results = SEARCH($query)
+
+# Filter only Toronto stocks
+$results = FILTER($results, ENDS_WITH($1, ".TO"))
+
+# Count results to build table name
+$count = count($results)
+
+# Build table
+TABLE($query + ' (' + $count + ')', $results,
+  ['Symbol', $1, text],
+  ['Price', S($1, close), currency]
+)

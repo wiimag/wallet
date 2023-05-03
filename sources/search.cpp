@@ -1851,6 +1851,116 @@ FOUNDATION_STATIC expr_result_t search_expr_remove_document(const expr_func_t* f
     return search_database_remove_document(db, doc);
 }
 
+FOUNDATION_STATIC expr_result_t search_expr_eval(const expr_func_t* f, vec_expr_t* args, void* context)
+{
+    expr_result_t* results = nullptr;
+    string_const_t search_expression = expr_eval_get_string_arg(args, 0, "Failed to get search expression");
+
+    // Run simple EOD API query if the search text does not contain any special characters
+    if (search_expression.length > 1 &&
+        string_find(STRING_ARGS(search_expression), ':', 1) == STRING_NPOS &&
+        string_find(STRING_ARGS(search_expression), '=', 1) == STRING_NPOS &&
+        string_find(STRING_ARGS(search_expression), '!', 1) == STRING_NPOS &&
+        string_find(STRING_ARGS(search_expression), '<', 1) == STRING_NPOS &&
+        string_find(STRING_ARGS(search_expression), '>', 1) == STRING_NPOS)
+    {
+        eod_fetch("search", search_expression.str, FORMAT_JSON, "limit", "5", [&results](const json_object_t& json)
+        {
+            if (!json.resolved())
+                return;
+
+            for (auto e : json)
+            {
+                string_const_t code = e["Code"].as_string();
+                string_const_t exchange = e["Exchange"].as_string();
+
+                string_t symbol = string_format(SHARED_BUFFER(16), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+                expr_result_t result(string_to_const(symbol));
+                array_push(results, result);
+            }   
+        });
+
+        // If the search text looks like a symbol, i.e. GFL.TO, then lets query the real-time value to see if it resolves.
+        if (search_expression.length > 3 && search_expression.length < 16 && search_expression.str[0] != '.' &&
+            string_find(STRING_ARGS(search_expression), '.', 1) != STRING_NPOS &&
+            string_find(STRING_ARGS(search_expression), ' ', 1) == STRING_NPOS)
+        {
+            eod_fetch("real-time", search_expression.str, FORMAT_JSON, [&results](const json_object_t& json)
+            {
+                if (!json.resolved())
+                    return;
+
+                auto price = json["close"].as_number();
+                if (math_real_is_nan(price))
+                    return;
+
+                string_const_t code = json["code"].as_string();
+                if (string_is_null(code))
+                    return;
+
+                expr_result_t result(code);
+                array_push(results, result);
+            });
+        }
+    }
+
+    if (_search->db)
+    {
+        try
+        {
+            auto* db = _search->db;
+            search_query_handle_t query = search_database_query(db, STRING_ARGS(search_expression));
+            if (search_database_query_is_completed(db, query))
+            {
+                const search_result_t* search_results = search_database_query_results(db, query);
+
+                foreach(r, search_results)
+                {
+                    string_const_t symbol = search_database_document_name(db, (search_document_handle_t)r->id);
+                    if (string_ends_with(STRING_ARGS(symbol), STRING_CONST(".BULK")))
+                        symbol.length -= 5;
+
+                    expr_result_t result(symbol);
+                    array_push(results, result);
+                }
+
+                search_database_query_dispose(db, query);
+            }
+        }
+        catch (SearchQueryException err)
+        {
+            array_deallocate(results);
+            throw ExprError(EXPR_ERROR_EXCEPTION, "Failed to evaluate search expression %s (%d)", err.msg, err.error);
+        }
+    }
+
+    // Remove duplicates
+    if (results)
+    {
+        array_sort(results, [](const expr_result_t& a, const expr_result_t& b)
+        {
+            string_const_t sa = a.as_string();
+            string_const_t sb = b.as_string();
+            return string_compare(sa.str, sa.length, sb.str, sb.length);
+        });
+
+        for (unsigned i = 1, end = array_size(results); i < end; ++i)
+        {
+            expr_result_t& prev = results[i-1];
+            expr_result_t& current = results[i];
+
+            if (prev.value == current.value && prev.index == current.index)
+            {
+                array_erase_ordered_safe(results, i);
+                --i;
+                --end;
+            }
+        }
+    }
+
+    return expr_eval_list(results);
+}
+
 FOUNDATION_STATIC expr_result_t search_expr_keywords(const expr_func_t* f, vec_expr_t* args, void* context)
 {
     search_database_t* db = _search->db;
@@ -2038,6 +2148,7 @@ FOUNDATION_STATIC void search_initialize()
     _search->saved_queries = search_load_queries(STRING_CONST("queries.txt"));
     session_get_string("search_query", STRING_BUFFER(_search->query), "");
 
+    expr_register_function("SEARCH", search_expr_eval, nullptr, 0);
     expr_register_function("SEARCH_KEYWORDS", search_expr_keywords, nullptr, 0);
     expr_register_function("SEARCH_REMOVE_DOCUMENT", search_expr_remove_document, nullptr, 0);
     expr_register_function("SEARCH_INDEX", search_expr_index_document, nullptr, 0);

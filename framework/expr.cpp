@@ -714,6 +714,22 @@ FOUNDATION_STATIC bool expr_set_global_var(const char* name, const expr_result_t
     return true;
 }
 
+FOUNDATION_STATIC expr_result_t expr_eval_string_ends_with(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    string_const_t value = expr_eval_get_string_arg(args, 0, "Invalid value");
+    string_const_t suffix = expr_eval_get_string_arg(args, 1, "Invalid suffix");
+
+    return expr_result_t((bool)string_ends_with(value.str, value.length, suffix.str, suffix.length));
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_string_starts_with(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    string_const_t value = expr_eval_get_string_arg(args, 0, "Invalid value");
+    string_const_t prefix = expr_eval_get_string_arg(args, 1, "Invalid prefix");
+
+    return expr_result_t((bool)string_starts_with(value.str, value.length, prefix.str, prefix.length));
+}
+
 FOUNDATION_STATIC expr_result_t expr_eval_while(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     if (args->len != 2)
@@ -2178,6 +2194,10 @@ FOUNDATION_STATIC void expr_initialize()
 
     // Vectors and matrices functions
     expr_register_vec_mat_functions(_expr_user_funcs);
+
+    // String functions
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ENDS_WITH"), expr_eval_string_ends_with, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("STARTS_WITH"), expr_eval_string_starts_with, NULL, 0 }));
 
     // Time functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("NOW"), expr_eval_time_now, NULL, 0 })); // // ELAPSED_DAYS(TO_DATE(F(SSE.V, General.UpdatedAt)), NOW())
