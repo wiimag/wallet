@@ -40,6 +40,8 @@ struct market_report_t
     symbol_t* symbols;
     table_t* table;
 
+    char search_filter[512];
+
     hash_t hash{ 0 };
 };
 
@@ -502,6 +504,7 @@ FOUNDATION_STATIC market_report_t* symbols_get_or_create_market(const char* mark
 
     _markets = array_push(_markets, market_report_t{});
     market_report_t* market_report = &_markets[array_size(_markets) - 1];
+    market_report->search_filter[0] = 0;
     market_report->market = market_symbol;
     return market_report;
 }
@@ -570,13 +573,12 @@ void symbols_render(const char* market, bool filter_null_isin /*= true*/)
     {
         if (auto lock = scoped_mutex_t(_symbols_lock))
         {
-            market_report->table->search_filter = string_to_const(SETTINGS.search_filter);
             table_render(market_report->table, market_report->symbols, (int)symbol_count, sizeof(symbol_t), 0.0f, 0.0f);
         }
     }
     else
     {
-        ImGui::TrText("No results for %s", market);
+        ImGui::TrText("Loading data...");
     }
 }
 
@@ -665,6 +667,14 @@ FOUNDATION_STATIC void symbols_open_market_window(const char* title, const char*
         char* market = (char*)window_get_user_data(win);
         if (market == nullptr)
             return;
+
+        market_report_t* market_report = symbols_get_or_create_market(STRING_LENGTH(market));
+        FOUNDATION_ASSERT_MSG(market_report, "Failed to get market report");
+        ImGui::ExpandNextItem();
+        if (ImGui::InputTextWithHint("##SearchField", tr("Filter symbols..."), STRING_BUFFER(market_report->search_filter), ImGuiInputTextFlags_AutoSelectAll, 0, 0))
+        {
+            market_report->table->search_filter = string_to_const(market_report->search_filter);
+        }
         symbols_render(market, filter_null_isin);
     });
 

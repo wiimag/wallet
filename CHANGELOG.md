@@ -2,6 +2,7 @@
 
 ## [0.21.4] - 2023-05-03
 - Add intraday pattern view.
+- Add table filter search box to the symbols window.
 - Add TSX money hyperlink to the pattern view when available.
 - Fix EOD data with erronous closing prices from the data source.
 - Hide Realtime window in non-development builds.
