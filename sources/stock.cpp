@@ -193,17 +193,6 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
         if (entry->current.date != d.date && !math_real_is_nan(d.close))
         {
             entry->current = d;
-            #if 0
-            string_const_t ticker = string_table_decode_const(entry->code);
-
-            stock_realtime_t realtime;
-            realtime.price = d.close;
-            realtime.volume = d.volume;
-            realtime.timestamp = d.date;
-            string_copy(realtime.code, sizeof(realtime.code), ticker.str, ticker.length);
-
-            dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)&realtime, sizeof(realtime), DISPATCHER_EVENT_OPTION_COPY_DATA);
-            #endif
         }
         else
         {

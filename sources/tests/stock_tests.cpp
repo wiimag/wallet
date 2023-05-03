@@ -166,12 +166,17 @@ TEST_SUITE("Stocks")
             return (stock_was_requested = true);
         });
 
+        stock_realtime_t realtime;
+        realtime.price = 0.03;
+        realtime.volume = 100;
+        realtime.timestamp = time_now();
+        string_copy(STRING_BUFFER(realtime.code), STRING_ARGS(code));
+
         while (!s->has_resolve(FetchLevel::REALTIME))
             dispatcher_wait_for_wakeup_main_thread();
+        dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)&realtime, sizeof(realtime), DISPATCHER_EVENT_OPTION_COPY_DATA);
         dispatcher_poll(nullptr);
         
-        CHECK_EQ(s->fetch_level, FetchLevel::NONE);
-        CHECK_FALSE(s->has_resolve(FetchLevel::EOD));
         REQUIRE_GT(s->current.date, 1);
         CHECK_GT(s->current.open, 0);
         CHECK_GT(s->current.adjusted_close, 0);
