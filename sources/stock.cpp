@@ -419,6 +419,62 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
     stock_fetch_technical_results(access_level, status, fetch_levels, ticker, index, fn_name, technical_descriptor_t{1, {field_name}, {(uint8_t)offset}});
 }
 
+FOUNDATION_STATIC bool stock_read_eod_intraday_results(stock_index_t index, day_result_t*& history)
+{
+    SHARED_READ_LOCK(_db_lock);
+    stock_t& entry = _db_stocks[index];
+    string_const_t code = SYMBOL_CONST(entry.code);
+    time_t first_intraday_date = time_add_days(history[0].date, -5);
+        
+    char first_intraday_date_string[16];
+    string_from_uint(STRING_BUFFER(first_intraday_date_string), (uint64_t)first_intraday_date, false, 0, 0);
+    return eod_fetch("intraday", code.str, FORMAT_JSON_CACHE, 
+        "interval", "1h", "from", first_intraday_date_string, 
+        [&history](const auto& json)
+    {
+        double previous_close = DNAN;
+        for (auto e : json)
+        {
+            day_result_t intraday{};
+            intraday.volume = e["volume"].as_number();
+
+            if (math_real_is_nan(intraday.volume))
+                continue;
+
+            intraday.date = e["timestamp"].as_time();
+
+            int idx = array_binary_search_compare(history, intraday.date, [](const day_result_t& ed, const time_t& t)
+            {
+                if (ed.date > t)
+                    return -1;
+                if (ed.date < t)
+                    return 1;
+                return 0;
+            });
+
+            if (idx >= 0)
+                continue;
+
+            idx = ~idx;
+            intraday.gmtoffset = (uint8_t)e["gmtoffset"].as_number();
+            intraday.adjusted_close = e["close"].as_number();
+            intraday.price = intraday.adjusted_close;
+            intraday.close = intraday.adjusted_close;
+            intraday.open = e["open"].as_number();
+            intraday.low = e["low"].as_number();
+            intraday.high = e["high"].as_number();
+            intraday.price_factor = 1.0;
+            intraday.change = intraday.close - intraday.open;
+            intraday.change_p = intraday.change * 100.0 / intraday.open;
+            intraday.change_p_high = (max(intraday.close, intraday.high) - min(intraday.open, intraday.low)) * 100.0 / math_ifnan(previous_close, intraday.close);
+                
+            intraday.previous_close = previous_close;
+            previous_close = intraday.close;
+            array_insert_memcpy_safe(history, idx, &intraday);
+        }
+    }, 60 * 60 * 12ULL);
+}
+
 FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_index_t index)
 {
     MEMORY_TRACKER(HASH_STOCK);
@@ -428,7 +484,8 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
         SHARED_READ_LOCK(_db_lock);
         stock_t& entry = _db_stocks[index];
         string_const_t code = SYMBOL_CONST(entry.code);
-        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, STRING_CONST("Stock '%.*s' has no EOD data"), STRING_FORMAT(code));
+        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, 
+            STRING_CONST("Stock '%.*s' has no EOD data"), STRING_FORMAT(code));
         entry.fetch_errors++;
         return entry.mark_resolved(FetchLevel::EOD, true);
     }
@@ -440,6 +497,7 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
     double first_price_factor = DNAN;
     const int element_count = json.root->value_length;
     const json_token_t* e = &json.tokens[json.root->child];
+    double previous_close = 0;
     for (int i = 0; i < element_count; ++i)
     {
         json_object_t jday(json, e);
@@ -459,22 +517,33 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
             d.high = jday["high"].as_number();
             d.adjusted_close = jday["adjusted_close"].as_number();
 
-            d.price_factor = d.adjusted_close / d.close;
-            if (math_real_is_nan(first_price_factor) && !math_real_is_nan(d.price_factor))
-                first_price_factor = d.price_factor;            
-            
-            d.change = d.close - d.open;
-            d.change_p = d.change * 100.0 / d.open;
-            d.change_p_high = (max(d.close, d.high) - min(d.open, d.low)) * 100.0 / math_ifnan(d.previous_close, d.close);
-                
-            d.previous_close = NAN;
-            if (e->sibling != 0)
+            // Skip days with ridiculous prices (probably an error on the server provider)
+            if (math_real_is_finite(previous_close) && d.close >= 0.0025 && d.close < 999999.99)
             {
-                json_object_t yday(json, &json.tokens[e->sibling]);
-                d.previous_close = yday["adjusted_close"].as_number();
-            }
+                d.price_factor = d.adjusted_close / d.close;
+                if (math_real_is_nan(first_price_factor) && !math_real_is_nan(d.price_factor))
+                    first_price_factor = d.price_factor;            
             
-            array_push_memcpy(history, &d);
+                d.change = d.close - d.open;
+                d.change_p = d.change * 100.0 / d.open;
+                d.change_p_high = (max(d.close, d.high) - min(d.open, d.low)) * 100.0 / math_ifnan(d.previous_close, d.close);
+                
+                d.previous_close = NAN;
+                if (e->sibling != 0)
+                {
+                    json_object_t yday(json, &json.tokens[e->sibling]);
+                    d.previous_close = yday["adjusted_close"].as_number();
+                }
+            
+                previous_close = d.adjusted_close;
+                array_push_memcpy(history, &d);
+            }
+            else
+            {
+                log_debugf(HASH_STOCK, 
+                    STRING_CONST("Skipping EOD %.*s with close price %lf"), 
+                    STRING_FORMAT(date_str), d.close);
+            }
         }
         else if (!logged_skip_eod_data)
         {
@@ -491,61 +560,7 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
     }
 
     // Read intraday data from the last few days
-    {
-        SHARED_READ_LOCK(_db_lock);
-        stock_t& entry = _db_stocks[index];
-        string_const_t code = SYMBOL_CONST(entry.code);
-        time_t first_intraday_date = time_add_days(history[0].date, -7);
-        
-        char first_intraday_date_string[16];
-        string_from_uint(STRING_BUFFER(first_intraday_date_string), (uint64_t)first_intraday_date, false, 0, 0);
-        eod_fetch("intraday", code.str, FORMAT_JSON_CACHE, 
-            "interval", "1h", "from", first_intraday_date_string, 
-            [&history](const auto& json)
-            {
-                double previous_close = DNAN;
-                for (auto e : json)
-                {
-                    day_result_t intraday{};
-                    intraday.volume = e["volume"].as_number();
-
-                    if (math_real_is_nan(intraday.volume))
-                        continue;
-
-                    intraday.date = e["timestamp"].as_time();
-
-                    int idx = array_binary_search_compare(history, intraday.date, [](const day_result_t& ed, const time_t& t)
-                    {
-                        if (ed.date > t)
-                            return -1;
-                        if (ed.date < t)
-                            return 1;
-                        return 0;
-                    });
-
-                    if (idx < 0)
-                    {
-                        idx = ~idx;
-
-                        intraday.gmtoffset = (uint8_t)e["gmtoffset"].as_number();
-                        intraday.adjusted_close = e["close"].as_number();
-                        intraday.price = intraday.adjusted_close;
-                        intraday.close = intraday.adjusted_close;
-                        intraday.open = e["open"].as_number();
-                        intraday.low = e["low"].as_number();
-                        intraday.high = e["high"].as_number();
-                        intraday.price_factor = 1.0;
-                        intraday.change = intraday.close - intraday.open;
-                        intraday.change_p = intraday.change * 100.0 / intraday.open;
-                        intraday.change_p_high = (max(intraday.close, intraday.high) - min(intraday.open, intraday.low)) * 100.0 / math_ifnan(previous_close, intraday.close);
-                
-                        intraday.previous_close = previous_close;
-                        previous_close = intraday.close;
-                        array_insert_memcpy_safe(history, idx, &intraday);
-                    }
-                }
-            }, 60 * 60 * 12ULL);
-    }
+    stock_read_eod_intraday_results(index, history);
 
     {
         SHARED_READ_LOCK(_db_lock);
