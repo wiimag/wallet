@@ -550,7 +550,7 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
     }
 
     // Read intraday data from the last few days
-    stock_read_eod_intraday_results(index, history);
+    //stock_read_eod_intraday_results(index, history);
 
     {
         SHARED_READ_LOCK(_db_lock);
@@ -1142,6 +1142,26 @@ double stock_price_on_date(stock_handle_t& handle, time_t at)
         return NAN;
 
     return ed->adjusted_close;
+}
+
+bool stock_valid(const char* symbol, size_t length, double timeout)
+{
+    stock_handle_t handle = stock_request(symbol, length, FetchLevel::REALTIME);
+    if (!handle)
+        return false;
+
+    const tick_t time = time_current();
+    while (!handle->has_resolve(FetchLevel::REALTIME) && time_elapsed(time) < timeout)
+        dispatcher_wait_for_wakeup_main_thread(250);
+
+    const stock_t* s = handle.resolve();
+    if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME))
+        return false;
+
+    if (s->current.price <= 0.0 || !math_real_is_finite(s->current.price))
+        return false;
+
+    return true;
 }
 
 bool stock_get_time_range(const char* symbol, size_t symbol_length, time_t* start_time, time_t* end_time, double timeout_seconds)

@@ -219,7 +219,7 @@ string_t string_from_currency(char* buffer, size_t capacity, double value, const
         return string_format(buffer, capacity, STRING_CONST("%.3gT $"), value / 1e12);
     if (abs_value >= 1e9)
         return string_format(buffer, capacity, STRING_CONST("%.3gB $"), value / 1e9);
-    else if (abs_value >= 1e7)
+    else if (abs_value >= 1e6)
         return string_format(buffer, capacity, STRING_CONST("%.3gM $"), value / 1e6);
 
     if (money_fmt == nullptr)

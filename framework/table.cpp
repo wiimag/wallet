@@ -759,6 +759,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
         string_t cell_id = string_format(STRING_BUFFER(cell_id_buf), STRING_CONST("cell_%d_%d"), element_index, column_index);
         ImGui::PushID(cell_id.str, cell_id.str + cell_id.length);
 
+        ImGui::BeginGroup();
         cell_t cell = column.fetch_value ? column.fetch_value(element, &column) : cell_t{};
         string_const_t str_value = cell_value_to_string(cell, column);
 
@@ -829,10 +830,16 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
                 table_cell_middle_aligned_label(STRING_ARGS(str_value));
             else
                 cell_label(str_value);
+
+            ImGui::SameLine();
+            ImGui::Dummy({ImGui::GetContentRegionAvail().x, 0});
+
         }
 
         if (cell.style.types & COLUMN_COLOR_TEXT)
             ImGui::PopStyleColor();
+
+        ImGui::EndGroup();
 
         // Handle tooltip
         if (ImGui::IsItemHovered())
@@ -867,6 +874,8 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             }
         }
 
+        ImGui::PopID();
+
         // Handle contextual menu
         if (column.context_menu && ImGui::BeginPopupContextItem(cell_id.str))
         {
@@ -881,7 +890,6 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             ImGui::EndPopup();
         }
 
-        ImGui::PopID();
 
         if (*(uintptr_t**)element == nullptr)
             break;

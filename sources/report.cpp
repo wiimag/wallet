@@ -352,12 +352,15 @@ FOUNDATION_STATIC cell_t report_column_average_days_held(table_element_ptr_t ele
 FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element, const column_t* column)
 {
     title_t* t = *(title_t**)element;
-    if (t == nullptr || t->average_quantity == 0 || title_is_index(t))
+    if (t == nullptr || title_is_index(t))
         return nullptr;
 
     // If all titles are sold, return the sold average price.
     if (title_sold(t))
         return t->sell_adjusted_price;
+
+    if (t->average_quantity == 0)
+        return nullptr;
 
     if (t->average_ask_price > 0)
     {

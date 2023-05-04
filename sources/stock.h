@@ -516,3 +516,16 @@ double stock_current_price(stock_handle_t& handle);
  *  @return The stock price at the given date.
  */
 double stock_price_on_date(stock_handle_t& handle, time_t at);
+
+/*! Runs a serie of tests to check if a given symbol is valid.
+ *  Most of all we check that we have some recent real-time data for the symbol.
+ *
+ *  @remark This function blocks until the data is available or the timeout is reached.
+ * 
+ *  @param symbol  The stock symbol code
+ *  @param length  The length of the stock symbol code
+ *  @param timeout The timeout in seconds.
+ * 
+ *  @return True if the symbol is valid.
+ */
+bool stock_valid(const char* symbol, size_t length, double timeout = 5.0);

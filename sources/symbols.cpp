@@ -45,6 +45,12 @@ struct market_report_t
     hash_t hash{ 0 };
 };
 
+struct symbols_load_options_t
+{
+    bool filter_null_isin{ true };
+    bool check_stock_valid{ false };
+};
+
 static market_report_t* _markets;
 static mutex_t* _symbols_lock = nullptr;
 static atom32_t _loading_symbols_id = 0;
@@ -78,7 +84,12 @@ FOUNDATION_STATIC  string_table_symbol_t load_symbol_field_value(const json_obje
     return STRING_TABLE_NULL_SYMBOL;
 }
 
-FOUNDATION_STATIC void symbols_load(int current_symbols_load_id, symbol_t** out_symbols, const json_object_t& data, const char* market, bool filter_null_isin = true)
+FOUNDATION_STATIC void symbols_load(
+    int current_symbols_load_id, 
+    symbol_t** out_symbols, 
+    const json_object_t& data, 
+    const char* market, 
+    const symbols_load_options_t& options = {})
 {
     string_const_t market_cstr = string_const(market, string_length(market));
     if (const auto& lock = scoped_mutex_t(_symbols_lock))
@@ -105,7 +116,7 @@ FOUNDATION_STATIC void symbols_load(int current_symbols_load_id, symbol_t** out_
         if (isin == 0)
             isin = load_symbol_field_value(data, t, "ISIN");
 
-        if (filter_null_isin && isin == 0)
+        if (options.filter_null_isin && isin == 0)
             continue;
 
         string_const_t exchange_code = market_cstr;
@@ -115,6 +126,9 @@ FOUNDATION_STATIC void symbols_load(int current_symbols_load_id, symbol_t** out_
 
         string_const_t exchange = market == nullptr ? exchange_code : string_const(market, string_length(market));
         string_const_t code = string_format_static(STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code_string), STRING_FORMAT(exchange));
+
+        if (options.check_stock_valid && !stock_valid(STRING_ARGS(code)))
+            continue;
 
         symbol_t symbol;
         stock_initialize(STRING_ARGS(code), &symbol.stock);
@@ -136,7 +150,8 @@ FOUNDATION_STATIC void symbols_load(int current_symbols_load_id, symbol_t** out_
 
             if (current_symbols_load_id != _loading_symbols_id)
                 return;
-            *out_symbols = array_push(*out_symbols, symbol);
+
+            array_push(*out_symbols, symbol);
         }
     }
 }
@@ -150,7 +165,9 @@ FOUNDATION_STATIC void symbols_fetch(symbol_t** symbols, const char* market, boo
     if (!eod_fetch_async("exchange-symbol-list", market, FORMAT_JSON_CACHE,
         [loading_symbols_id, market, symbols, filter_null_isin](const json_object_t& data)
         {
-            symbols_load(loading_symbols_id, symbols, data, market, filter_null_isin);
+            symbols_load_options_t options = {};
+            options.filter_null_isin = filter_null_isin;
+            symbols_load(loading_symbols_id, symbols, data, market, options);
         }))
     {
         log_warnf(HASH_SYMBOLS, WARNING_RESOURCE, STRING_CONST("Failed to fetch %s symbols"), market);
@@ -169,7 +186,10 @@ FOUNDATION_STATIC bool symbols_contains(const symbol_t* symbols, string_const_t 
 
 FOUNDATION_STATIC void symbols_read_search_results(int loading_symbols_id, const json_object_t& data, symbol_t** symbols, string_const_t search_filter)
 {
-    symbols_load(loading_symbols_id, symbols, data, nullptr);
+    symbols_load_options_t options = {};
+    options.filter_null_isin = false;
+    options.check_stock_valid = true;
+    symbols_load(loading_symbols_id, symbols, data, nullptr, options);
 }
 
 FOUNDATION_STATIC void symbols_search(symbol_t** symbols, string_const_t search_filter)
@@ -328,7 +348,7 @@ FOUNDATION_STATIC void symbol_description_tooltip(table_element_ptr_const_t elem
         return;
 
     string_const_t tooltip = string_table_decode_const(tooltip_symbol);
-    ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 800.0f);
+    ImGui::PushTextWrapPos(IM_SCALEF(500));
     ImGui::Text("%.*s", STRING_FORMAT(tooltip));
     ImGui::PopTextWrapPos();
 }
@@ -614,11 +634,6 @@ FOUNDATION_STATIC bool symbols_fetch_market_symbols(const char* market, size_t m
 
             // Skip FUND and INDEX symbols
             if (string_equal(STRING_ARGS(type), STRING_CONST("FUND")) || string_equal(STRING_ARGS(type), STRING_CONST("Currency")))
-                continue;
-
-            // Skip stock from the PINK market
-            string_const_t exchange = e["Exchange"].as_string();
-            if (string_equal(STRING_ARGS(exchange), STRING_CONST("PINK")))
                 continue;
 
             string_const_t code = e["Code"].as_string();   

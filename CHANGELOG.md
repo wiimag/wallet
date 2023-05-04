@@ -1,13 +1,15 @@
 # Changelog
 
 ## [0.21.6] - 2023-05-03
+- Add `SEARCH(...)` expression to run serach queries.
+- Add `TABLE(...)` custom type drawers (i.e. `TABLE('Title', $symbols, ['Symbol', $1, symbol])`) 
 - Add intraday pattern view.
-- Add SEARCH(...) expression to run serach queries.
 - Add table filter search box to the symbols window.
 - Add TSX money hyperlink to the pattern view when available.
 - Fix EOD data with erronous closing prices from the data source.
+- Fix window opened outside of monitor work area.
 - Hide Realtime window in non-development builds.
-- Improve R(...) to support multiple field evaluation (i.e. `R(FLEX, [name, price, S($TITLE, close, NOW() - (90 * 24 * 3600))])`)
+- Improve `R(...)` to support multiple field evaluation (i.e. `R(FLEX, [name, price, S($TITLE, close, NOW() - (90 * 24 * 3600))])`)
 
 ## [0.20.12] - 2023-05-01
 - Add basic fundamental pattern analysis.

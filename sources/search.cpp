@@ -682,10 +682,6 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         if (string_is_null(exchange))
             continue;
 
-        // Skip some (speculative) exchanges
-        if (string_equal(STRING_ARGS(exchange), STRING_CONST("PINK")))
-            continue;
-
         string_const_t isin = e["Isin"].as_string();
         string_const_t type = e["Type"].as_string();
 
@@ -712,6 +708,13 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
                 if (search_database_remove_document(db, doc))
                     doc = SEARCH_DOCUMENT_INVALID_ID;
             }
+        }
+
+        // Check that the stock is still valid and current
+        if (!stock_valid(STRING_ARGS(symbol)))
+        {
+            log_debugf(HASH_SEARCH, STRING_CONST("Symbol %.*s is not valid, skipping it for indexing"), STRING_FORMAT(symbol));
+            continue;
         }
 
         // Fetch symbol fundamental data
@@ -1020,15 +1023,17 @@ FOUNDATION_STATIC void search_fetch_search_api_results_callback(hash_t query_has
 
     for (auto e : json)
     {
-        string_const_t code = e["Code"].as_string();
-        string_const_t exchange = e["Exchange"].as_string();
-
         search_window_t* sw = (search_window_t*)window_get_user_data(window_handle);
         if (sw == nullptr)
             break;
 
-        char symbol_buffer[16];
-        string_t symbol = string_format(STRING_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+        string_const_t code = e["Code"].as_string();
+        string_const_t exchange = e["Exchange"].as_string();
+
+        string_t symbol = string_format(SHARED_BUFFER(16), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+        if (!stock_valid(symbol.str, symbol.length))
+            continue;
+
         search_insert_symbol_result(window_handle, query_hash, string_to_const(symbol));
     }        
 }
@@ -1568,7 +1573,7 @@ FOUNDATION_STATIC void search_table_column_description_tooltip(table_element_ptr
     if (tooltip_symbol == 0)
         return;
 
-    ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 800.0f);
+    ImGui::PushTextWrapPos(IM_SCALEF(500));
     if (entry->description.length)
     {
         ImGui::Text("%.*s", STRING_FORMAT(entry->description));
@@ -1617,7 +1622,10 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
         return;
 
     if (pattern_menu_item(STRING_ARGS(symbol)))
+    {
         entry->viewed = true;
+        window_close(entry->window->handle);
+    }
 
     ImGui::Separator();
 
@@ -1640,14 +1648,12 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
         eval(STRING_ARGS(expr));
     }
 
-    #if BUILD_DEVELOPMENT
     if (ImGui::MenuItem(tr("Remove index...")))
     {
         string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s\")"), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
         eval(STRING_ARGS(expr));
         dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);
     }
-    #endif
 }
 
 FOUNDATION_STATIC table_t* search_create_table()
@@ -1879,6 +1885,10 @@ FOUNDATION_STATIC expr_result_t search_expr_eval(const expr_func_t* f, vec_expr_
                 string_const_t exchange = e["Exchange"].as_string();
 
                 string_t symbol = string_format(SHARED_BUFFER(16), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+
+                if (!stock_valid(symbol.str, symbol.length))
+                    return;
+
                 expr_result_t result(string_to_const(symbol));
                 array_push(results, result);
             }   

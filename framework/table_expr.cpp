@@ -21,6 +21,8 @@
  *              ['Name', $2],
  *              ['Shorts', F($1, "Technicals.SharesShort")/F($1, "SharesStats.SharesFloat")*100, percentage],
  *              ['Since %', ($3 - $4) / $4 * 100, percentage])
+ *
+ *           TABLE('Retained Earnings', R('300K', [name, F($TITLE, "Financials.Balance_Sheet.quarterly.0.retainedEarnings")]), ['Name', $2], ['Value', $3, currency])
  */
 
 #include <framework/app.h>
@@ -308,6 +310,13 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
                 table_expr_record_value_t v{ DYNAMIC_TABLE_VALUE_TEXT };
                 string_const_t e_text = cv.as_string();
                 v.text = string_clone(STRING_ARGS(e_text));
+
+                if (c->format == COLUMN_FORMAT_CURRENCY || c->format == COLUMN_FORMAT_PERCENTAGE || c->format == COLUMN_FORMAT_NUMBER)
+                {
+                    if (string_try_convert_number(v.text.str, v.text.length, v.number))
+                        v.type = DYNAMIC_TABLE_VALUE_NUMBER;
+                }
+
                 array_push(record.resolved, v);
             }
             else if (cv.is_set())

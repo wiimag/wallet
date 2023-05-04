@@ -20,6 +20,14 @@
 
 constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 36;
 
+FOUNDATION_FORCEINLINE expr_result_t stock_change_p_range(const stock_t* s, int rel_days)
+{
+    string_const_t code = SYMBOL_CONST(s->code);
+    const double price = s->current.adjusted_close;
+    const double price_rel = stock_get_eod(STRING_ARGS(code), time_add_days(time_now(), -rel_days)).adjusted_close;
+    return expr_result_t((price - price_rel) / price_rel * 100.0);
+}
+
 static struct {
     const char* property_name;
     function<expr_result_t(const title_t* t, const stock_t* s)> handler;
@@ -89,6 +97,22 @@ static struct {
     { "change",     SC2(_2->current.change), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
     { "change_p",   SC2(_2->current.change_p), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
     { "volume",     SC2(_2->current.volume), nullptr, FetchLevel::REALTIME },
+
+    { "change_3d",     SC2(stock_change_p_range(_2, 3)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_5d",     SC2(stock_change_p_range(_2, 5)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_1w",     SC2(stock_change_p_range(_2, 7)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_2w",     SC2(stock_change_p_range(_2, 14)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_4w",     SC2(stock_change_p_range(_2, 28)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_1m",     SC2(stock_change_p_range(_2, 30)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_2m",     SC2(stock_change_p_range(_2, 30 * 2)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_3m",     SC2(stock_change_p_range(_2, 30 * 3)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_6m",     SC2(stock_change_p_range(_2, 30 * 6)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_1y",     SC2(stock_change_p_range(_2, 365)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_2y",     SC2(stock_change_p_range(_2, 365 * 2)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_3y",     SC2(stock_change_p_range(_2, 365 * 3)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_6y",     SC2(stock_change_p_range(_2, 365 * 6)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_10y",     SC2(stock_change_p_range(_2, 365 * 10)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_max",     SC2(stock_change_p_range(_2, 365 * 100)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
 
     { "price_factor",   SC2(_2->current.price_factor), nullptr, FetchLevel::EOD },
     { "change_p_high",  SC2(_2->current.change_p_high), nullptr, FetchLevel::EOD },

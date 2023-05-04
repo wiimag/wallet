@@ -297,9 +297,7 @@ FOUNDATION_STATIC double pattern_mark_change_p(const pattern_t* pattern, int mar
 
         const day_result_t& cd = s->current;
         mark.date = ed->date;
-        mark.change_p = (cd.adjusted_close - ed->adjusted_close) / cd.adjusted_close;
-        if (mark.change_p * 100 < -999)
-            mark.change_p = DNAN;
+        mark.change_p = (cd.adjusted_close - ed->adjusted_close) / ed->adjusted_close;
     }
 
     return mark.change_p;
@@ -1643,7 +1641,7 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
             const double change_p = (ed->close - ed->previous_close) / ed->previous_close * 100.0;
 
             ImPlot::Annotation(x, c.mouse_pos.y, (ImColor)IM_COL32(55, 55, 55, 155), { 0, offset }, true,
-                tr("%s %10.*s \n Price: %5.2lf $ (%.1g %%)\n   SMA: %5.2lf $"), 
+                tr("%s %10.*s \n Price: %5.2lf $ (%.2g %%)\n   SMA: %5.2lf $"), 
                 ed->slope > 0 ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN,
                 STRING_FORMAT(date_str), y, change_p, ed->sma);
             ImPlot::Annotation(x, y, (ImColor)IM_COL32(55, 55, 55, 5), {0, 0}, false, ICON_MD_CIRCLE);
@@ -2437,8 +2435,10 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
     ImPlot::EndPlot();
 }
 
-FOUNDATION_STATIC void pattern_add_to_report_menu(const char* symbol, size_t symbol_length)
+FOUNDATION_STATIC bool pattern_add_to_report_menu(const char* symbol, size_t symbol_length)
 {
+    bool report_opened = false;
+
     // Gather all reports and sort them by alphabetical order
     report_t** reports = report_sort_alphabetically();
 
@@ -2452,9 +2452,12 @@ FOUNDATION_STATIC void pattern_add_to_report_menu(const char* symbol, size_t sym
             string_const_t title_code = string_const(symbol, symbol_length);
             report_add_title(report, STRING_ARGS(title_code));
             report->opened = true;
+            report_opened = true;
         }
     }
     array_deallocate(reports);
+
+    return report_opened;
 }
 
 FOUNDATION_STATIC void pattern_add_to_report_menu(pattern_handle_t handle)
@@ -3240,7 +3243,6 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
                 }
             }
         }
-        
     }
 
     ImGui::Separator();

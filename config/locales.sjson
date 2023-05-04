@@ -3387,8 +3387,8 @@
 		}
 		{
 			hash = "c4bc3d884da0d1d5"
-			en = "%s %10.*s \n Price: %5.2lf $ (%.1g %%)\n   SMA: %5.2lf $"
-			fr = "%s %10.*s \n  Prix: %5.2lf $ (%.1g %%)\n   SMA: %5.2lf $"
+			en = "%s %10.*s \n Price: %5.2lf $ (%.2g %%)\n   SMA: %5.2lf $"
+			fr = "%s %10.*s \n  Prix: %5.2lf $ (%.2g %%)\n   SMA: %5.2lf $"
 		}
 		{
 			hash = "8c141a87ca734ea2"
@@ -3418,12 +3418,52 @@
 		{
 			hash = "ea22ed5a81db2ccc"
 			en = " First transaction: {0:date} ({0:since}) "
-			fr = " Premi\xc3\xa8re transaction: {0:date} ({0:since}) "			
+			fr = " Premi\xc3\xa8re transaction: {0:date} ({0:since}) "
 		}
 		{
 			hash = "67617f8bad9d1d89"
 			en = "\n The days held field reflects the average number of days held \n for each transaction weighted by the quantity of each transaction. "
 			fr = "\n Le champ jours d\xc3\xa9tenus refl\xc3\xa8te le nombre moyen de jours d\xc3\xa9tenus \n pour chaque transaction pond\xc3\xa9r\xc3\xa9 par la quantit\xc3\xa9 de chaque transaction. "
+		}
+		{
+			hash = "b2d84bd926fd35cc"
+			en = "Retained Earnings Total Equity"
+			fr = "B\xc3\xa9n\xc3\xa9fices non r\xc3\xa9partis Capitaux propres"
+		}
+		{
+			hash = "92d7e47486521b79"
+			en = "Cash And Cash Equivalents Changes"
+			fr = "Tr\xc3\xa9sorerie et \xc3\xa9quivalents de tr\xc3\xa9sorerie"
+		}
+		{
+			hash = "685d141c7b607b0a"
+			en = "Cash Flows Other Operating"
+			fr = "Autres flux de tr\xc3\xa9sorerie li\xc3\xa9s aux activit\xc3\xa9s d'exploitation"
+		}
+		{
+			hash = "a2699abf7b96587"
+			en = "Change Receivables"
+			fr = "Changement des comptes clients"
+		}
+		{
+			hash = "45efda15ae656f06"
+			en = "Current Deferred Revenue"
+			fr = "Revenus diff\xc3\xa9r\xc3\xa9s courants"
+		}
+		{
+			hash = "af3804e4086bbf35"
+			en = "Property Plant And Equipment Net"
+			fr = "Immobilisations corporelles nettes"
+		}
+		{
+			hash = "b1dee8336e402b88"
+			en = "Lost"
+			fr = "@TODO"
+		}
+		{
+			hash = "24fd9697ce53096b"
+			en = "Saved"
+			fr = "@TODO"
 		}
 	]
 }
