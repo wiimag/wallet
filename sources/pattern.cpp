@@ -189,8 +189,10 @@ FOUNDATION_STATIC string_const_t pattern_format_currency(double value, double de
 
 FOUNDATION_STATIC string_const_t pattern_format_percentage(double value, double default_value = DNAN)
 {
-    string_const_t fmt = value < 1e3 ? CTEXT("%.3g %%") : CTEXT("%.4g %%");
-    return pattern_format_number(STRING_ARGS(fmt), value, default_value);
+    if (math_abs(value) > 1e3)
+        return pattern_format_number(STRING_CONST("%.3gK %%"), value / 1000.0, default_value);
+    
+    return pattern_format_number(STRING_CONST("%.3g %%"), value, default_value);
 }
 
 FOUNDATION_STATIC int pattern_format_date_label(double value, char* buff, int size, void* user_data)
@@ -308,6 +310,10 @@ FOUNDATION_STATIC string_const_t pattern_mark_change_p_to_string(const pattern_t
     double change_p = pattern_mark_change_p(pattern, mark_index);
     if (math_real_is_nan(change_p))
         return CTEXT("-");
+
+    const double abs_change_p = math_abs(change_p);
+    if (abs_change_p > 10)
+        return string_format_static(STRING_CONST("%.3gK %%"), change_p / 10.0);
 
     return string_format_static(STRING_CONST("%.*g %%"), math_abs(change_p) < 0.01 ? 2 : 3, change_p * 100.0);
 }
@@ -1290,7 +1296,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
         pattern_render_trend(tr("Price"), c, x_axis_inverted);
     }
 
-    if (ImGui::IsWindowHovered() && math_real_is_finite(c.cursor_xy1.x) && math_real_is_finite(c.cursor_xy2.x))
+    if (ImPlot::IsPlotHovered() && !ImGui::IsAnyMouseDown() && math_real_is_finite(c.cursor_xy1.x) && math_real_is_finite(c.cursor_xy2.x))
     {
         // Interpolate the mouse position for xy1 and xy2 points
         const double x1 = c.cursor_xy1.x;
@@ -1308,7 +1314,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
         const time_t then = pattern->date - (time_t)x * time_one_day();
         string_t date_str = string_from_date(STRING_BUFFER(date_buffer), then);
         const auto* ed = stock_get_EOD(pattern->stock, then, false);
-        if (ed)
+        if (ed && math_real_is_finite(y))
         {
             float offset = -20.0f;
             if (c.mouse_pos.y < y)
@@ -1316,7 +1322,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
             ImPlot::Annotation(x, c.mouse_pos.y, (ImColor)IM_COL32(55, 55, 55, 155), { 0, offset }, true,
                 "%s %10.*s  \nPrice: %6.2lf $\n  SMA: %6.2lf $", 
                 ed->slope > 0 ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN,
-                STRING_FORMAT(date_str), y, ed->sma);
+                STRING_FORMAT(date_str), y, math_ifnan(ed->sma, 0));
         }
         ImPlot::Annotation(x, y, (ImColor)IM_COL32(55, 55, 55, 5), {0, 0}, false, ICON_MD_CIRCLE);
 

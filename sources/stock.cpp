@@ -469,13 +469,19 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
 {
     MEMORY_TRACKER(HASH_STOCK);
 
+    string_t code{};
+    char code_buffer[16];
+    {
+        SHARED_READ_LOCK(_db_lock);
+        stock_t& entry = _db_stocks[index];
+        code = string_table_decode(STRING_BUFFER(code_buffer), entry.code);
+    }
+
     if (!json.resolved())
     {
         SHARED_READ_LOCK(_db_lock);
         stock_t& entry = _db_stocks[index];
-        string_const_t code = SYMBOL_CONST(entry.code);
-        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, 
-            STRING_CONST("Stock '%.*s' has no EOD data"), STRING_FORMAT(code));
+        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, STRING_CONST("Stock '%.*s' has no EOD data"), STRING_FORMAT(code));
         entry.fetch_errors++;
         return entry.mark_resolved(FetchLevel::EOD, true);
     }
@@ -487,7 +493,7 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
     double first_price_factor = DNAN;
     const int element_count = json.root->value_length;
     const json_token_t* e = &json.tokens[json.root->child];
-    double previous_close = 0;
+    double next_close = DNAN;
     for (int i = 0; i < element_count; ++i)
     {
         json_object_t jday(json, e);
@@ -508,7 +514,8 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
             d.adjusted_close = jday["adjusted_close"].as_number();
 
             // Skip days with ridiculous prices (probably an error on the server provider)
-            if (math_real_is_finite(previous_close) && d.close >= 0.0025 && d.close < 999999.99)
+            const double diff = i == 0 ? 1.0 : math_abs(math_change_p(d.adjusted_close, next_close, DNAN));
+            if (diff < 8.0 && d.adjusted_close < 99999.99)
             {
                 d.price_factor = d.adjusted_close / d.close;
                 if (math_real_is_nan(first_price_factor) && !math_real_is_nan(d.price_factor))
@@ -525,22 +532,20 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
                     d.previous_close = yday["adjusted_close"].as_number();
                 }
             
-                previous_close = d.adjusted_close;
+                next_close = d.adjusted_close;
                 array_push_memcpy(history, &d);
             }
             else
             {
                 log_debugf(HASH_STOCK, 
-                    STRING_CONST("Skipping EOD %.*s with close price %lf"), 
-                    STRING_FORMAT(date_str), d.close);
+                    STRING_CONST("Skipping %.*s EOD %.*s with close price %lf>%lf"), 
+                    STRING_FORMAT(code), STRING_FORMAT(date_str), d.adjusted_close, next_close);
             }
         }
         else if (!logged_skip_eod_data)
         {
-            SHARED_READ_LOCK(_db_lock);
-            string_const_t ticker = SYMBOL_CONST(_db_stocks[index].code);
             log_debugf(HASH_STOCK, STRING_CONST("Skipping EOD result for %.*s on %.*s using %.*s"), 
-                STRING_FORMAT(ticker), STRING_FORMAT(date_str), STRING_FORMAT(json.query));
+                STRING_FORMAT(code), STRING_FORMAT(date_str), STRING_FORMAT(json.query));
             logged_skip_eod_data = true;
         }
 

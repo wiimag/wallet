@@ -286,6 +286,16 @@ double math_average(const double* pn, size_t count, size_t stride = sizeof(doubl
 */
 double math_median_average(double* values, double& median, double& average);
 
+/*! Compute the relative change between two values.
+ *  @param from The original value.
+ *  @param to The new value.
+ *  @return The relative change between the two values.
+ */
+FOUNDATION_FORCEINLINE double math_change_p(double from, double to, double default_value = 0.0)
+{
+    return !math_real_is_zero(from) ? (to - from) / from : default_value;
+}
+
 // ## Scalar helpers
 
 /*! @brief Returns the given value clamped to the given range.
