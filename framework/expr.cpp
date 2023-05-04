@@ -1071,28 +1071,73 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
 
 FOUNDATION_STATIC expr_result_t expr_eval_array_index(const expr_func_t* f, vec_expr_t* args, void* c)
 {
+    // Examples: INDEX([[0, 'test'], [1, 'sweet']], 1, 1) == 'sweet'
+    //           INDEX([['field1', 33], ['field2', 63]], 'field2') == 63
+
     if (args == nullptr || args->len < 1)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
 
     expr_result_t arr = expr_eval(&args->buf[0]);
     if (!arr.is_set())
-        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Nothing to index (%d)", arr.type);
+        throw ExprError(EXPR_ERROR_EMPTY_SET, "Nothing to index (%d)", arr.type);
 
     for (int i = 1; i < args->len; ++i)
     {
         const expr_result_t& e_index_value = expr_eval(&args->buf[i]);
-        const double index_value = e_index_value.as_number(DNAN);
-        if (math_real_is_nan(index_value))
-            throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid index `%.*s` (%d)", STRING_FORMAT(args->buf[i].token), i);
 
-        expr_result_t elm = arr.element_at((unsigned int)index_value);
-        if (!elm.is_set() || (i + 1) >= args->len)
-            return elm;
+        if (e_index_value.type == EXPR_RESULT_NUMBER)
+        {
+            const double index_value = e_index_value.as_number(DNAN);
+            if (math_real_is_nan(index_value))
+                throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid index `%.*s` (%d)", STRING_FORMAT(args->buf[i].token), i);
 
-        arr = elm;
+            expr_result_t elm;
+            if (index_value >= 0)
+                elm = arr.element_at((unsigned int)index_value);
+            else
+                elm = arr.element_at((unsigned int)(arr.element_count() + index_value));
+
+            if (!elm.is_set() || (i + 1) >= args->len)
+                return elm;
+
+            arr = elm;
+        }
+        else
+        {
+            string_const_t name = e_index_value.as_string();
+            if (name.length == 0)
+                throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid index name `%.*s` (%d)", STRING_FORMAT(args->buf[i].token), i);
+
+            // Find element with [name, value, ...]
+            bool found = false;
+            for (auto e : arr)
+            {
+                expr_result_t e_name = e.element_at(0);
+                string_const_t s_name = e_name.as_string();
+                if (string_equal(s_name.str, s_name.length, name.str, name.length))
+                {
+                    if ((i + 1) >= args->len)
+                    {
+                        if (e.element_count() == 2)
+                            return e.element_at(1);
+                        return e;
+                    }
+
+                    arr = e;
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found)
+            {
+                if ((i + 1) >= args->len)
+                    return NIL;
+                throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Index `%.*s` not found (%d)", STRING_FORMAT(args->buf[i].token), i);
+            }
+        }
     }
 
-    FOUNDATION_ASSERT_FAIL("Unsupported");
     return arr;
 }
 
@@ -2151,7 +2196,9 @@ void expr_log_evaluation_result(string_const_t expression_string, const expr_res
         {
             if (expression_string.length + result_string.length > 64)
             {
-                log_infof(HASH_EXPR, STRING_CONST("%.*s =>\n\t%.*s"), STRING_FORMAT(expression_string), STRING_FORMAT(result_string));
+                log_infof(HASH_EXPR, STRING_CONST("%.*s =>"), STRING_FORMAT(expression_string));
+                LOG_PREFIX(false);
+                log_infof(HASH_EXPR, STRING_CONST("\t%.*s"), STRING_FORMAT(result_string));
             }
             else
             {

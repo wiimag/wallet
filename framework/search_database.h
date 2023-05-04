@@ -126,3 +126,13 @@ string_t* search_database_property_keywords(search_database_t* database);
  *  @param database The search database to print statistics for.
  */
 void search_database_print_stats(search_database_t* database);
+
+/*! Remove database documents that are older than #reference.
+ *
+ *  @param database The search database to remove old documents from.
+ *  @param reference The reference time to compare document timestamps against.
+ *  @param timeout_seconds The timeout in seconds after which we stop removing documents. If 0.0 then we remove all documents.
+ *
+ *  @return True if any documents were removed and the timeout was not reached, false otherwise.
+ */
+bool search_database_remove_old_documents(search_database_t* database, time_t reference, double timeout_seconds = 0.0);

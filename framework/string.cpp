@@ -2141,6 +2141,9 @@ bool string_try_convert_date(const char* str, size_t length, time_t& date)
 
 bool string_try_convert_number(const char* str, size_t length, double& out_value)
 {
+    if (str == nullptr || length == 0)
+        return false;
+
     char* end = (char*)str + length;
     out_value = strtod(str, &end);
     return end == str + length;

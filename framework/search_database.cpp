@@ -1305,14 +1305,8 @@ bool search_database_save(search_database_t* db, stream_t* stream)
     return true;
 }
 
-bool search_database_remove_document(search_database_t* db, search_document_handle_t document)
+FOUNDATION_STATIC bool search_database_remove_document_nolock(search_database_t* db, search_document_handle_t document)
 {
-    FOUNDATION_ASSERT(db);
-    FOUNDATION_ASSERT(document < array_size(db->documents));
-    FOUNDATION_ASSERT(document != 0);
-
-    SHARED_WRITE_LOCK(db->mutex);
-
     bool document_removed = false;
     search_document_t* doc = &db->documents[document];
     if (doc->type == SearchDocumentType::Removed)
@@ -1386,6 +1380,43 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
     db->dirty |= document_removed;
     string_deallocate(doc->name);
     return document_removed;
+}
+
+bool search_database_remove_document(search_database_t* db, search_document_handle_t document)
+{
+    FOUNDATION_ASSERT(db);
+    FOUNDATION_ASSERT(document < array_size(db->documents));
+    FOUNDATION_ASSERT(document != 0);
+
+    SHARED_WRITE_LOCK(db->mutex);
+    return search_database_remove_document_nolock(db, document);
+}
+
+bool search_database_remove_old_documents(search_database_t* db, time_t reference, double timeout_seconds)
+{
+    FOUNDATION_ASSERT(db);
+    SHARED_WRITE_LOCK(db->mutex);
+
+    tick_t time = 0;
+    for (unsigned i = 1, end = array_size(db->documents); i < end; ++i)
+    {
+        if (time > 0 && timeout_seconds > 0 && time_elapsed(time) > timeout_seconds)
+            return false;
+
+        search_document_t& doc = db->documents[i];
+        if (doc.timestamp < reference)
+        {
+            log_debugf(0, STRING_CONST("Removing old document: %.*s"), STRING_FORMAT(doc.name));
+            if (search_database_remove_document_nolock(db, i))
+            {
+                // Start the timer
+                if (time == 0)
+                    time = time_current();
+            }
+        }
+    }
+
+    return time > 0;
 }
 
 void search_database_print_stats(search_database_t* db)

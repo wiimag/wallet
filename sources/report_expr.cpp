@@ -403,6 +403,67 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock(const expr_func_t* f, vec
     throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid field name %.*s", STRING_FORMAT(field_name));
 }
 
+FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const json_object_t& json)
+{
+    if (json.root->type == JSON_PRIMITIVE)
+    {
+        string_const_t s = json.as_string();
+
+        if (s.length == 0 || string_equal_nocase(s.str, s.length, STRING_CONST("null")))
+            return NIL;
+
+        double n;
+        if (string_try_convert_number(s.str, s.length, n))
+            return expr_result_t(n);
+        
+        if (string_equal_nocase(s.str, s.length, STRING_CONST("true")))
+            return expr_result_t(true);
+        
+        if (string_equal_nocase(s.str, s.length, STRING_CONST("false")))
+            return expr_result_t(false);
+        
+        return expr_result_t(s);
+    }
+
+    if (json.root->type == JSON_STRING)
+    {
+        string_const_t s = json.as_string();
+        if (string_equal_nocase(s.str, s.length, STRING_CONST("NA")))
+            return NIL;
+        return expr_result_t(s);
+    }
+
+    if (json.root->type == JSON_ARRAY)
+    {
+        expr_result_t* results = nullptr;
+        for (auto e : json)
+        {
+            expr_result_t r = report_expr_eval_stock_fundamental(e);
+            array_push(results, r);
+        }
+
+        return expr_eval_list(results);
+    }
+
+    if (json.root->type == JSON_OBJECT)
+    {
+        expr_result_t* results = nullptr;
+        for (auto e : json)
+        {
+            expr_result_t* kvp = nullptr;    
+
+            string_const_t id = e.id();
+            expr_result_t r = report_expr_eval_stock_fundamental(e);
+            array_push(kvp, expr_result_t(id));
+            array_push(kvp, r);
+            array_push(results, expr_eval_list(kvp));
+        }
+        return expr_eval_list(results);
+    }
+
+    return NIL;
+}
+
 FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Examples: F(PFE.NEO, "General.ISIN")
@@ -410,56 +471,18 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
     //           F("U.US", "Technicals")
 
     string_const_t code = expr_eval_get_string_arg(args, 0, "Invalid symbol code");
-    string_const_t field = expr_eval_get_string_arg(args, 1, "Invalid field name");
+    string_const_t field_arg = expr_eval_get_string_arg(args, 1, "Invalid field name");
 
-    expr_result_t value;
-    eod_fetch("fundamentals", code.str, FORMAT_JSON_CACHE, [field, &value](const json_object_t& json)
+    string_t field_name = string_copy(SHARED_BUFFER(256), field_arg.str, field_arg.length);
+    field_name = string_replace(field_name.str, field_name.length, 256, STRING_CONST("."), STRING_CONST("::"), true);
+
+    expr_result_t value = NIL;
+    eod_fetch("fundamentals", code.str, FORMAT_JSON_CACHE, "filter", field_name.str, [&value](const json_object_t& json)
     {
-        const bool allow_nulls = false;
-        json_object_t ref = json.find(STRING_ARGS(field), allow_nulls);
-        if (ref.is_null())
+        if (json.root == nullptr)
             return;
 
-        if (ref.root->type == JSON_STRING)
-        {
-            value.type = EXPR_RESULT_SYMBOL;
-            value.value = string_table_encode(ref.as_string());
-        }
-        else if (ref.root->type == JSON_ARRAY)
-        {
-            expr_result_t* child_fields = nullptr;
-
-            for (const auto& e : ref)
-            {
-                if (e.root->type == JSON_PRIMITIVE)
-                    array_push(child_fields, e.as_number());
-                else
-                    array_push(child_fields, e.as_string());
-            }
-
-            value = expr_eval_list(child_fields);
-        }
-        else if (ref.root->type == JSON_OBJECT)
-        {
-            expr_result_t* child_fields = nullptr;
-
-            for (const auto& e : ref)
-            {
-                string_const_t id = e.id();
-
-                if (e.root->type == JSON_PRIMITIVE)
-                    array_push(child_fields, expr_eval_pair(id, e.as_number()));
-                else
-                {
-                    string_const_t evalue = e.as_string();
-                    array_push(child_fields, expr_eval_pair(id, evalue));
-                }
-            }
-
-            value = expr_eval_list(child_fields);
-        }
-        else
-            value = ref.as_number();
+        value = report_expr_eval_stock_fundamental(json);
     }, 5 * 24 * 60ULL * 60ULL);
 
     return value;
@@ -531,7 +554,18 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
                 expr_set_or_create_global_var(STRING_CONST("$REPORT"), expr_result_t(report_name));
 
                 bool was_evaluated = false;
-                expr_result_t fe_result = expr_eval(fe);
+                expr_result_t fe_result = NIL;
+                try
+                {
+                    fe_result = expr_eval(fe);
+                }
+                catch (ExprError e)
+                {
+                    // Consider other expression empty set errors as null values
+                    if (e.code != EXPR_ERROR_EMPTY_SET)
+                        throw e;
+                }
+
                 if (fe_result.type == EXPR_RESULT_SYMBOL)
                 {
                     string_const_t field_name = fe_result.as_string();

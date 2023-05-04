@@ -313,8 +313,12 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
 
                 if (c->format == COLUMN_FORMAT_CURRENCY || c->format == COLUMN_FORMAT_PERCENTAGE || c->format == COLUMN_FORMAT_NUMBER)
                 {
-                    if (string_try_convert_number(v.text.str, v.text.length, v.number))
+                    string_t text = v.text;
+                    if (string_try_convert_number(text.str, text.length, v.number))
+                    {
                         v.type = DYNAMIC_TABLE_VALUE_NUMBER;
+                        string_deallocate(text);
+                    }
                 }
 
                 array_push(record.resolved, v);

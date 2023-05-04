@@ -168,8 +168,6 @@ static struct SEARCH_MODULE {
     string_t*                   exchanges{ nullptr };
     shared_mutex                exchanges_lock{};
 
-    search_database_t*          transient_db{ nullptr };
-
 } *_search;
 
 //
@@ -308,17 +306,6 @@ FOUNDATION_STATIC void search_index_news_data(const json_object_t& json, search_
             continue;
 
         search_database_index_property(db, doc, STRING_CONST("news"), (double)date);
-
-        #if 0
-        for (auto s : n["symbols"])
-        {
-            string_const_t symbol = s.as_string();
-            if (string_is_null(symbol))
-                continue;
-
-            search_database_index_property(db, doc, STRING_CONST("news"), STRING_ARGS(symbol), false);
-        }
-        #endif
 
         for (auto t : n["tags"])
         {
@@ -472,6 +459,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     if (doc == SEARCH_DOCUMENT_INVALID_ID)
     {
         new_document_added = true;
+        FOUNDATION_ASSERT(symbol.length);
         doc = search_database_add_document(db, STRING_ARGS(symbol));
     }
 
@@ -702,12 +690,6 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
             const double days_old = time_elapsed_days(doc_timestamp, time_now());
             if (days_old < 7.0)
                 continue;
-
-            if (days_old > 25)
-            {
-                if (search_database_remove_document(db, doc))
-                    doc = SEARCH_DOCUMENT_INVALID_ID;
-            }
         }
 
         // Check that the stock is still valid and current
@@ -758,6 +740,7 @@ FOUNDATION_STATIC void search_index_transient_db(const char* market, size_t leng
                 search_database_remove_document(db, doc);
             }
 
+            FOUNDATION_ASSERT(id.length);
             doc = search_database_add_document(db, STRING_ARGS(id));
             if (doc == SEARCH_DOCUMENT_INVALID_ID)
                 continue;
@@ -840,6 +823,12 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
         TIME_TRACKER("Loading search database");
         search_database_load(_search->db, search_db_stream);
         stream_deallocate(search_db_stream);
+
+        if (thread_try_wait(0))
+            return 0;
+
+        // Remove old documents so that we don't keep growing the database with invalidated data.
+        search_database_remove_old_documents(_search->db, time_add_days(time_now(), -25), 5.0);
 
         if (thread_try_wait(0))
             return 0;

@@ -2732,6 +2732,8 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
 {
     const size_t title_count = array_size(report->titles);
 
+    job_t** update_jobs = nullptr;
+
     // Trigger updates
     for (size_t i = 0; i < title_count; ++i)
     {
@@ -2741,10 +2743,26 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
 
         if (!title_is_resolved(t))
         {
-            log_debugf(HASH_REPORT, STRING_CONST("Syncing title %s"), t->code);
-            title_update(t, 0);
+            job_t* job = job_execute([](void* context)->int
+            {
+                title_t* t = (title_t*)context;
+                log_debugf(HASH_REPORT, STRING_CONST("Syncing title %s"), t->code);
+                title_update(t, 5.0);
+                return 0;
+            }, t);
+            array_push(update_jobs, job);
         }
     }
+
+    // Wait for updates
+    for (unsigned i = 0, count = array_size(update_jobs); i < count; ++i)
+    {
+        job_t* job = update_jobs[i];
+        while (!job_completed(job))
+            dispatcher_wait_for_wakeup_main_thread();
+        job_deallocate(job);
+    }
+    array_deallocate(update_jobs);
 
     // Wait for title resolution
     tick_t timer = time_current();

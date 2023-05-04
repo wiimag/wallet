@@ -1,0 +1,7 @@
+TABLE('Retained Earnings', R('300K', 
+  [name, INDEX(F($TITLE, "Financials.Balance_Sheet.quarterly"), 0, 1, "retainedEarnings")]), 
+  ['#', $1, symbol],
+  ['Name', $2], 
+  ['1Y', S($1, change_1y), percentage],
+  ['Value', $3, currency]
+)
