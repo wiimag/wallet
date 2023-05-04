@@ -1288,6 +1288,15 @@ bool expr_unregister_function(const char* name, exprfn_t fn = nullptr);
  */
 expr_var_t* expr_get_or_create_global_var(const char* name, size_t name_length = 0ULL);
 
+/*! Return the variable value if any. 
+ * 
+ *  @param name Name of the variable.
+ *  @param name_length Length of the name, or 0 if null terminated.
+ * 
+ *  @return Variable value if found, or a null value if not found.
+ */
+expr_result_t expr_get_global_var_value(const char* name, size_t name_length = 0ULL);
+
 /*! Set or create a global variable accessible thought the expression system.
  *
  *  @param name  Name of the variable.
@@ -1341,6 +1350,16 @@ expr_result_t expr_eval_merge(const expr_result_t& key, const expr_result_t& val
  *  @return String value of the argument.
  */
 string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message);
+
+/*! Evaluates the expression argument at a given index to a data set value. 
+ * 
+ *  @param args     Expression argument vector.
+ *  @param idx      Index of the argument to evaluate.
+ *  @param message  Error message if evaluation fails.
+ * 
+ *  @return Data set value of the argument.
+ */
+expr_result_t expr_eval_get_set_arg(const vec_expr_t* args, size_t idx, const char* message);
 
 /*! Log expression result to the console
  * 

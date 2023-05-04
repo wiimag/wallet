@@ -11,7 +11,9 @@
 #include <framework/module.h>
 #include <framework/profiler.h>
 #include <framework/dispatcher.h>
+#include <framework/plot_expr.h>
 #include <framework/table_expr.h>
+#include <framework/array.h>
 
 #include <foundation/random.h>
 #include <foundation/system.h>
@@ -296,14 +298,28 @@ expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& valu
     return expr_result_t(kvp, 1ULL);
 }
 
-string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message)
+expr_result_t expr_eval_get_set_arg(const vec_expr_t* args, size_t idx, const char* message)
 {
     if (idx >= args->len)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Missing arguments: %s", message);
 
-    const expr_t& arg = vec_nth(args, idx);
-    if (arg.type != OP_VAR || arg.token.length == 0)
-        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid argument %.*s: %s", STRING_FORMAT(arg.token), message);
+    expr_result_t value = expr_eval(&args->buf[idx]);
+    if (value.is_set())
+        return value;
+
+    if (value.is_null())
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Set cannot be null: %s", STRING_FORMAT(args->buf[idx].token), message);
+
+    // If we have a single value, wrap it in a set
+    expr_result_t* single_value_set = nullptr;
+    array_push(single_value_set, value);
+    return expr_eval_list(single_value_set);
+}
+
+string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message)
+{
+    if (idx >= args->len)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Missing arguments: %s", message);
 
     return expr_eval(&args->buf[idx]).as_string();
 }
@@ -1044,10 +1060,13 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a result set");
 
     expr_result_t* results = nullptr;
+
     for (auto e : elements)
     {
+        expr_result_t* var_stack = nullptr;
         if (!e.is_set())
         {
+            array_push(var_stack, expr_get_global_var_value("$1"));
             expr_set_or_create_global_var(STRING_CONST("$1"), e);
         }
         else
@@ -1057,6 +1076,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
             for (auto m : e)
             {
                 string_t macro = string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), i);
+                array_push(var_stack, expr_get_global_var_value(STRING_ARGS(macro)));
                 expr_set_or_create_global_var(STRING_ARGS(macro), m);
                 i++;
             }
@@ -1064,6 +1084,15 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
 
         expr_result_t r = expr_eval(&args->buf[1]);
         array_push_memcpy(results, &r);
+
+        // Restore global variables
+        for (unsigned i = 0, end = array_size(var_stack); i < end; ++i)
+        {
+            char varname[4];
+            string_t macro = string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), i+1);
+            expr_set_or_create_global_var(STRING_ARGS(macro), var_stack[i]);
+        }
+        array_deallocate(var_stack);
     }
 
     return expr_eval_list(results);
@@ -2113,6 +2142,19 @@ expr_var_t* expr_find_global_var(const char* name, size_t name_length)
     return nullptr;
 }
 
+FOUNDATION_STATIC expr_var_t* expr_get_global_var(const char* name, size_t name_length /*= 0ULL*/)
+{
+    name_length = name_length == 0ULL ? string_length(name) : name_length;
+    expr_var_t* v = expr_find_global_var(name, name_length);
+    return v;
+}
+
+expr_result_t expr_get_global_var_value(const char* name, size_t name_length /*= 0ULL*/)
+{
+    expr_var_t* v = expr_get_global_var(name, name_length);
+    return v ? v->value : NIL;
+}
+
 expr_var_t* expr_get_or_create_global_var(const char* name, size_t name_length /*= 0ULL*/)
 {
     name_length = name_length == 0ULL ? string_length(name) : name_length;
@@ -2121,6 +2163,7 @@ expr_var_t* expr_get_or_create_global_var(const char* name, size_t name_length /
     {
         v = (expr_var_t*)memory_allocate(HASH_EXPR, sizeof(expr_var_t) + name_length + 1, 0, MEMORY_PERSISTENT);
         v->name = string_copy((char*)v + sizeof(expr_var_t), name_length + 1, name, name_length);
+        v->value = NIL;
         v->next = _global_vars.head;
         _global_vars.head = v;
     }
@@ -2268,6 +2311,7 @@ FOUNDATION_STATIC void expr_initialize()
     expr_set_global_var("true", expr_result_t(true));
     expr_set_global_var("false", expr_result_t(false));
 
+    plot_expr_initialize();
     table_expr_initialize();
 
     string_const_t eval_expression;
@@ -2314,6 +2358,7 @@ FOUNDATION_STATIC void expr_initialize()
 
 FOUNDATION_STATIC void expr_shutdown()
 {
+    plot_expr_shutdown();
     table_expr_shutdown();
 
     for (size_t i = 0; i < array_size(_expr_lists); ++i)

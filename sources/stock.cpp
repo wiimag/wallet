@@ -1151,6 +1151,20 @@ double stock_price_on_date(stock_handle_t& handle, time_t at)
 
 bool stock_valid(const char* symbol, size_t length, double timeout)
 {
+    string_t ticker = string_copy(SHARED_BUFFER(16), symbol, length);
+    bool valid = false;
+    if (!eod_fetch("real-time", ticker.str, FORMAT_JSON_CACHE, "validate", "true", [&valid](const auto& res)
+    {
+        string_const_t timestamp = res["timestamp"].as_string();
+        valid = !string_equal(STRING_ARGS(timestamp), STRING_CONST("NA"));
+    }, 3600 * 24 * 10ULL))
+    {
+        return false;
+    }
+
+    return valid;
+
+    #if 0
     stock_handle_t handle = stock_request(symbol, length, FetchLevel::REALTIME);
     if (!handle)
         return false;
@@ -1167,6 +1181,7 @@ bool stock_valid(const char* symbol, size_t length, double timeout)
         return false;
 
     return true;
+    #endif
 }
 
 bool stock_get_time_range(const char* symbol, size_t symbol_length, time_t* start_time, time_t* end_time, double timeout_seconds)

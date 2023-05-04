@@ -60,11 +60,8 @@ FOUNDATION_STATIC void installer_manifest_data(const json_object_t& json)
         return;
     }
 
-    char app_data_local_install_path_buffer[BUILD_MAX_PATHLEN];
-    string_t app_data_local_install_path = string_copy(STRING_BUFFER(app_data_local_install_path_buffer), STRING_ARGS(_installer->app_data_local_path));
-
-    char normalized_name_buffer[BUILD_MAX_PATHLEN];
-    string_t normalized_name = path_normalize_name(STRING_BUFFER(normalized_name_buffer), STRING_ARGS(app_name), '_');
+    string_t app_data_local_install_path = string_copy(SHARED_BUFFER(BUILD_MAX_PATHLEN), STRING_ARGS(_installer->app_data_local_path));
+    string_t normalized_name = path_normalize_name(SHARED_BUFFER(BUILD_MAX_PATHLEN), STRING_ARGS(app_name), '_');
     app_data_local_install_path = path_append(STRING_ARGS(app_data_local_install_path), BUILD_MAX_PATHLEN, STRING_ARGS(normalized_name));
     app_data_local_install_path = path_clean(STRING_ARGS(app_data_local_install_path), BUILD_MAX_PATHLEN);
 

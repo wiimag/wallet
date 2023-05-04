@@ -404,7 +404,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
 
     string_const_t code = General["Code"].as_string();
     if (string_is_null(code))
-        return;
+        return; // TODO: Mark symbol as invalid in some cache
         
     const bool is_delisted = General["IsDelisted"].as_boolean();
     if (is_delisted || json.token_count <= 1)
@@ -440,7 +440,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
 
     string_const_t description = General["Description"].as_string();
     if (string_is_null(description) || string_equal(STRING_ARGS(description), STRING_CONST("NA")))
-        return;
+        return;  // TODO: Mark symbol as invalid in some cache
 
     string_const_t name = General["Name"].as_string();
     string_const_t country = General["Country"].as_string();

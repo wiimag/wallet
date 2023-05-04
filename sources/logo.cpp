@@ -583,8 +583,7 @@ FOUNDATION_STATIC bool logo_icon_selected_callback(string_const_t symbol, string
         symbol_code.length = dot_pos;
 
     // Format destination path
-    char dest_path_buffer[BUILD_MAX_PATHLEN];
-    string_t dest_path = string_format(STRING_BUFFER(dest_path_buffer), 
+    string_t dest_path = string_format(SHARED_BUFFER(BUILD_MAX_PATHLEN),
         STRING_CONST("%.*s/%.*s.icon.png"), STRING_FORMAT(thumbnail_dir), STRING_FORMAT(symbol_code));
 
     // Copy the icon in the thumbnail cache
@@ -620,8 +619,7 @@ FOUNDATION_STATIC bool logo_banner_selected_callback(string_const_t symbol, stri
         symbol_code.length = dot_pos;
 
     // Format destination path
-    char dest_path_buffer[BUILD_MAX_PATHLEN];
-    string_t dest_path = string_format(STRING_BUFFER(dest_path_buffer), 
+    string_t dest_path = string_format(SHARED_BUFFER(BUILD_MAX_PATHLEN), 
         STRING_CONST("%.*s/%.*s.png"), STRING_FORMAT(thumbnail_dir), STRING_FORMAT(symbol_code));
 
     // Copy the icon in the thumbnail cache

@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.22.0] - 2023-05-04
+- Improve TABLE(...) and PLOT(...) expressions.
+
 ## [0.21.6] - 2023-05-03
 - Add `SEARCH(...)` expression to run serach queries.
 - Add `TABLE(...)` custom type drawers (i.e. `TABLE('Title', $symbols, ['Symbol', $1, symbol])`) 
@@ -57,6 +60,7 @@
 
 # TODO
 
+- [ ] 2023-05-04: Add list of invalid symbols to quickly discard them from the search index
 - [ ] 2023-04-27: Check alerts in a job
 - [ ] 2023-04-20: Use the new search window to add a new title
 - [ ] 2023-04-20: Check if we can download a first search index database from the backend

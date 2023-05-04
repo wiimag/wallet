@@ -210,8 +210,7 @@ FOUNDATION_STATIC void window_restore_settings(window_t* win, config_handle_t co
 
 FOUNDATION_STATIC string_const_t window_get_imgui_save_path(window_t* win)
 {
-    char normalized_window_id_buffer[BUILD_MAX_PATHLEN];
-    string_t normalized_window_id = path_normalize_name(normalized_window_id_buffer, sizeof(normalized_window_id_buffer), STRING_ARGS(win->id));
+    string_t normalized_window_id = path_normalize_name(SHARED_BUFFER(BUILD_MAX_PATHLEN), STRING_ARGS(win->id));
     string_const_t window_imgui_save_path = session_get_user_file_path(
         STRING_ARGS(normalized_window_id),
         STRING_CONST("imgui"),
@@ -981,7 +980,9 @@ void window_update()
             return 0;
         }, win, [](void* args, const char* file, size_t length)
         {
+            window_t* win = (window_t*)args;
             log_errorf(HASH_WINDOW, ERROR_EXCEPTION, "Exception in window render: %.*s", (int)length, file);
+            window_close(win->handle);
         }, STRING_CONST("window_dump"));
         
         // Check if the window should be closed
