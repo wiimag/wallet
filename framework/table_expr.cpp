@@ -31,6 +31,14 @@
 
 #define HASH_TABLE_EXPRESSION static_hash_string("table_expr", 10, 0x20a95260d96304aULL)
 
+struct table_expr_type_drawer_t
+{
+    string_t type{};
+    function<void(const cell_t& cell)> handler{};
+};
+
+static table_expr_type_drawer_t* _table_expr_type_drawers{ nullptr };
+
 typedef enum TableExprValueType {
     DYNAMIC_TABLE_VALUE_NULL = 0,
     DYNAMIC_TABLE_VALUE_TRUE = 1,
@@ -46,6 +54,7 @@ struct table_expr_column_t
     expr_t* ee;
     int value_index;
     column_format_t format{ COLUMN_FORMAT_TEXT };
+    table_expr_type_drawer_t* drawer{ nullptr };
 };
 
 struct table_expr_record_value_t
@@ -114,6 +123,26 @@ FOUNDATION_STATIC void table_expr_deallocate(table_expr_t* report)
     memory_deallocate(report);
 }
 
+FOUNDATION_STATIC cell_t table_expr_cell_value(const table_expr_record_value_t* v)
+{
+    if (v->type == DYNAMIC_TABLE_VALUE_NULL)
+        return cell_t(nullptr);
+                
+    if (v->type == DYNAMIC_TABLE_VALUE_TRUE)
+        return cell_t(STRING_CONST("true"));
+
+    if (v->type == DYNAMIC_TABLE_VALUE_FALSE)
+        return cell_t(STRING_CONST("false"));
+
+    if (v->type == DYNAMIC_TABLE_VALUE_TEXT)
+        return cell_t(string_to_const(v->text));
+
+    if (v->type == DYNAMIC_TABLE_VALUE_NUMBER)
+        return cell_t(v->number);
+
+    return cell_t();
+}
+
 FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
 {
     if (report->table == nullptr)
@@ -121,28 +150,23 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
         report->table = table_allocate(report->name.str, TABLE_SUMMARY | TABLE_HIGHLIGHT_HOVERED_ROW);
         foreach(c, report->columns)
         {
+            column_flags_t column_flags = COLUMN_SORTABLE;
+            if (c->format == COLUMN_FORMAT_TEXT)
+                column_flags |= COLUMN_SEARCHABLE;
+            if (c->drawer)
+                column_flags |= COLUMN_CUSTOM_DRAWING;
             table_add_column(report->table, STRING_ARGS(c->name), [c](table_element_ptr_t element, const column_t* column) 
             {
                 table_expr_record_t* record = (table_expr_record_t*)element;
-                
                 const table_expr_record_value_t* v = &record->resolved[c->value_index];
-                if (v->type == DYNAMIC_TABLE_VALUE_NULL)
-                    return cell_t(nullptr);
-                
-                if (v->type == DYNAMIC_TABLE_VALUE_TRUE)
-                    return cell_t(STRING_CONST("true"));
 
-                if (v->type == DYNAMIC_TABLE_VALUE_FALSE)
-                    return cell_t(STRING_CONST("false"));
+                const cell_t cell = table_expr_cell_value(v);
 
-                if (v->type == DYNAMIC_TABLE_VALUE_TEXT)
-                    return cell_t(string_to_const(v->text));
+                if ((column->flags & COLUMN_RENDER_ELEMENT) && c->drawer)
+                    c->drawer->handler.invoke(cell);
 
-                if (v->type == DYNAMIC_TABLE_VALUE_NUMBER)
-                    return cell_t(v->number);
-
-                return cell_t();
-            }, c->format, COLUMN_SORTABLE | (c->format == COLUMN_FORMAT_TEXT ? COLUMN_SEARCHABLE : COLUMN_OPTIONS_NONE));
+                return cell;
+            }, c->format, column_flags);
         }
     }
 
@@ -193,6 +217,7 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
         table_expr_column_t col;
         col.ee = args->get(i);
         col.format = COLUMN_FORMAT_TEXT;
+        col.drawer = nullptr;
         if (col.ee->type == OP_SET && col.ee->args.len >= 2)
         {
             // Get the column name
@@ -211,6 +236,19 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
                         col.format = COLUMN_FORMAT_DATE;
                     else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("number")))
                         col.format = COLUMN_FORMAT_NUMBER;
+                    else
+                    {
+                        // Check if we have a registered drawer for the format string
+                        for (unsigned int j = 0; j < array_size(_table_expr_type_drawers); ++j)
+                        {
+                            auto* drawer = _table_expr_type_drawers + j;
+                            if (string_equal_nocase(STRING_ARGS(format_string), STRING_ARGS(drawer->type)))
+                            {
+                                col.drawer = drawer;
+                                break;
+                            }
+                        }
+                    }
                 }
             }
             
@@ -306,10 +344,28 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
 }
 
 //
-// # SYSTEM
+// # PUBLIC
 //
+
+void table_expr_add_type_drawer(const char* type, size_t length, const function<void(const cell_t& value)>& handler)
+{
+    table_expr_type_drawer_t drawer{};
+    drawer.type = string_clone(type, length);
+    drawer.handler = handler;
+    array_push_memcpy(_table_expr_type_drawers, &drawer);
+}
 
 void table_expr_initialize()
 {
     expr_register_function("TABLE", table_expr_eval);
+}
+
+void table_expr_shutdown()
+{
+    for (unsigned i = 0, end = array_size(_table_expr_type_drawers); i < end; ++i)
+    {
+        table_expr_type_drawer_t* drawer = _table_expr_type_drawers + i;
+        string_deallocate(drawer->type);
+    }
+    array_deallocate(_table_expr_type_drawers);
 }

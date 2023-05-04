@@ -12,6 +12,7 @@ $count = count($results)
 
 # Build table
 TABLE($query + ' (' + $count + ')', $results,
-  ['Symbol', $1, text],
+  ['Symbol', $1, symbol],
+  ['Industry', F($1, "General.Industry"), text],
   ['Price', S($1, close), currency]
 )

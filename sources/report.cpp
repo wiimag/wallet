@@ -1993,7 +1993,7 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
     report_t* report = array_last(_reports);
 
     // Ensure default structure
-    report->data = data ? data : config_allocate(CONFIG_VALUE_OBJECT);
+    report->data = data ? data : config_allocate(CONFIG_VALUE_OBJECT, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
     report->wallet = wallet_allocate(report->data["wallet"]);
 
     auto cid = report->data["id"];
@@ -2015,8 +2015,8 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
 
     report->save_index = data["order"].as_integer();
     report->show_summary = data["show_summary"].as_boolean();
-    report->show_sold_title = data["show_sold_title"].as_boolean();
-    report->show_no_transaction_title = data["show_no_transaction_title"].as_boolean();
+    report->show_sold_title = data["show_sold_title"].as_boolean(true);
+    report->show_no_transaction_title = data["show_no_transaction_title"].as_boolean(true);
     report->opened = data["opened"].as_boolean(true);
 
     for (auto e : data["columns"])

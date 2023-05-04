@@ -2267,6 +2267,8 @@ FOUNDATION_STATIC void expr_initialize()
 
 FOUNDATION_STATIC void expr_shutdown()
 {
+    table_expr_shutdown();
+
     for (size_t i = 0; i < array_size(_expr_lists); ++i)
         array_deallocate(_expr_lists[i]);
     array_deallocate(_expr_lists);

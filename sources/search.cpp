@@ -23,6 +23,7 @@
 #include <framework/search_database.h>
 #include <framework/profiler.h>
 #include <framework/table.h>
+#include <framework/table_expr.h>
 #include <framework/expr.h>
 #include <framework/window.h>
 #include <framework/array.h>
@@ -1284,6 +1285,31 @@ FOUNDATION_STATIC void search_table_column_symbol_selected(table_element_ptr_con
     }
 }
 
+FOUNDATION_STATIC void search_table_draw_symbol(string_const_t symbol, bool viewed)
+{
+    ImGui::BeginGroup();
+    if (viewed)
+        ImGui::PushStyleColor(ImGuiCol_Text, SEARCH_PATTERN_VIEWED_COLOR);
+            
+    const float font_size = ImGui::GetFontSize();
+    ImGui::Text("%.*s", STRING_FORMAT(symbol));
+
+    if (viewed)
+        ImGui::PopStyleColor();
+
+    #if BUILD_APPLICATION
+    ImGui::SameLine(ImGui::GetContentRegionAvail().x - font_size, 0.0f);
+    ImVec2 logo_size{ font_size, font_size };
+    ImRect logo_rect{};
+    if (logo_render_icon(STRING_ARGS(symbol), logo_size, false, true, &logo_rect))
+    {
+        ImGui::SetCursorScreenPos(logo_rect.Min);
+        ImGui::Dummy(logo_size);
+    }
+    #endif
+    ImGui::EndGroup();
+}
+
 FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element, const column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
@@ -1294,29 +1320,7 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
     {
         string_const_t code = SYMBOL_CONST(s->code);
         if (column->flags & COLUMN_RENDER_ELEMENT)
-        {
-            ImGui::BeginGroup();
-            if (entry->viewed)
-                ImGui::PushStyleColor(ImGuiCol_Text, SEARCH_PATTERN_VIEWED_COLOR);
-            
-            const float font_size = ImGui::GetFontSize();
-            ImGui::Text("%.*s", STRING_FORMAT(code));
-
-            if (entry->viewed)
-                ImGui::PopStyleColor();
-
-            #if BUILD_APPLICATION
-            ImGui::SameLine(ImGui::GetContentRegionAvail().x - font_size, 0.0f);
-            ImVec2 logo_size{ font_size, font_size };
-            ImRect logo_rect{};
-            if (logo_render_icon(STRING_ARGS(code), logo_size, false, true, &logo_rect))
-            {
-                ImGui::SetCursorScreenPos(logo_rect.Min);
-                ImGui::Dummy(logo_size);
-            }
-            #endif
-            ImGui::EndGroup();
-        }
+            search_table_draw_symbol(code, entry->viewed);
         
         return code;
     }
@@ -2135,6 +2139,28 @@ bool search_render_settings()
     return updated;
 }
 
+FOUNDATION_STATIC void search_table_expr_symbol_drawer(const cell_t& value)
+{
+    string_const_t code{};
+    if (value.format == COLUMN_FORMAT_SYMBOL)
+        code = SYMBOL_CONST(value.symbol);
+    else if (value.format == COLUMN_FORMAT_TEXT)
+        code = string_to_const(value.text);
+
+    if (code.length)
+    {
+        ImGui::PushID(code.str);
+        search_table_draw_symbol(code, false);
+        ImGui::PopID();
+        if (ImGui::BeginPopupContextItem(code.str))
+        {
+            pattern_menu_item(code.str, code.length);
+            ImGui::EndPopup();
+        }
+        
+    }
+}
+
 //
 // # SYSTEM
 //
@@ -2153,6 +2179,8 @@ FOUNDATION_STATIC void search_initialize()
     expr_register_function("SEARCH_REMOVE_DOCUMENT", search_expr_remove_document, nullptr, 0);
     expr_register_function("SEARCH_INDEX", search_expr_index_document, nullptr, 0);
     expr_register_function("SEARCH_STATS", search_expr_stats, nullptr, 0);
+
+    table_expr_add_type_drawer(STRING_CONST("symbol"), search_table_expr_symbol_drawer);
 
     module_register_menu(HASH_SEARCH, search_menu);
 }

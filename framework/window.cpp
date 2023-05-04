@@ -1093,6 +1093,14 @@ FOUNDATION_STATIC GLFWwindow* window_create(const char* window_title, size_t win
     if (monitor == glfwGetPrimaryMonitor())
         glfwWindowHint(GLFW_MAXIMIZED, window_maximized ? GLFW_TRUE : GLFW_FALSE);
 
+    // Make sure the window is not outside the monitor work area
+    int mposx, mposy, mwidth, mheight;
+    glfwGetMonitorWorkarea(monitor, &mposx, &mposy, &mwidth, &mheight);
+    if (window_x < mposx || window_x > mposx + mwidth)
+        window_x = mposx;
+    if (window_y < mposy || window_y > mposy + mheight)
+        window_y = mposy;
+
     float scale_x = 1.0f, scale_y = 1.0f;
     #if FOUNDATION_PLATFORM_WINDOWS
         glfwGetMonitorContentScale(monitor, &scale_x, &scale_y);
