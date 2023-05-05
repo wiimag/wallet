@@ -899,10 +899,10 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
         auto fetch_fn = [market, &stop_indexing](const json_object_t& data) { search_index_exchange_symbols(data, STRING_ARGS(*market), &stop_indexing); };
         if (!eod_fetch("exchange-symbol-list", market->str, FORMAT_JSON_CACHE, fetch_fn, 30 * 24 * 60 * 60ULL))
         {
-            log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s symbols"), STRING_FORMAT(*market));
+            tr_warn(HASH_SEARCH, WARNING_RESOURCE, "Failed to fetch {0} symbols", *market);
         }
 
-        log_infof(HASH_SEARCH, STRING_CONST("Search indexing completed for the market %.*s"), STRING_FORMAT(*market));
+        tr_info(HASH_SEARCH, "Search indexing completed for the market {0}", *market);
     }    
 
     return 0;

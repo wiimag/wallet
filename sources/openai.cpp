@@ -166,7 +166,7 @@ FOUNDATION_STATIC void openai_check_connectivity()
         _openai_module->connected = res.is_valid();
         if (_openai_module->connected)
         {
-            log_infof(HASH_OPENAI, STRING_CONST("OpenAI connectivity check succeeded (%d,%d)"), res.error_code, res.status_code);
+            tr_info(HASH_OPENAI, "OpenAI connectivity check succeeded ({0},{1})", (int)res.error_code, (int)res.status_code);
         }
         else
         {

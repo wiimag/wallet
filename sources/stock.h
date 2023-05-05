@@ -529,3 +529,12 @@ double stock_price_on_date(stock_handle_t& handle, time_t at);
  *  @return True if the symbol is valid.
  */
 bool stock_valid(const char* symbol, size_t length, double timeout = 5.0);
+
+/* Fetch stock real-time data if any. This is a convenience function that calls #eod_fetch.
+ * 
+ *  @param symbol  The stock symbol code
+ *  @param length  The length of the stock symbol code
+ * 
+ *  @return The stock real-time data.
+ */
+day_result_t stock_realtime_record(const char* symbol, size_t length);

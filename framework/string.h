@@ -281,6 +281,9 @@ string_const_t string_remove_line_returns(char* buffer, size_t capacity, const c
 
 /*! Remove all line returns in a string. The string is allocated and must be freed.
  *
+ * If the returned string is null, i.e. {}, then it means the input string 
+ * must be used instead and no allocate was done.
+ *
  * @param str The string to remove the line returns from.
  * @param length The length of the string.
  * @return The string without line returns.

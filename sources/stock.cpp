@@ -32,6 +32,13 @@ struct technical_descriptor_t
     uint8_t field_offsets[4];
 };
 
+struct stock_invalid_symbol_t
+{
+    hash_t key{0};
+    char symbol[16]{0};
+    time_t last_checked{ 0 };
+};
+
 static size_t _db_capacity;
 static shared_mutex _db_lock;
 static day_result_t** _trashed_history = nullptr;
@@ -162,11 +169,15 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
     string_const_t timestamp = json["timestamp"].as_string();
     if (string_equal(STRING_ARGS(timestamp), STRING_CONST("NA")))
     {
-        log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, STRING_CONST("Stock '%.*s' has no real time data"), STRING_FORMAT(code));
-        SHARED_READ_LOCK(_db_lock);
-        stock_t* entry = &_db_stocks[index];
-        entry->fetch_errors++;
-        entry->mark_resolved(FetchLevel::REALTIME, true);
+        tr_warn(HASH_STOCK, WARNING_INVALID_VALUE, "Stock {0} has no real time data", code);
+
+        if (index > 0)
+        {
+            SHARED_READ_LOCK(_db_lock);
+            stock_t* entry = &_db_stocks[index];
+            entry->fetch_errors++;
+            entry->mark_resolved(FetchLevel::REALTIME, true);
+        }
         return false;
     }
     
@@ -183,6 +194,7 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
     d.volume = json_read_number(json, STRING_CONST("volume"));
     d.price_factor = NAN;
 
+    if (index > 0)
     {
         SHARED_READ_LOCK(_db_lock);
         stock_t* entry = &_db_stocks[index];
@@ -384,7 +396,7 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
             }
             else if (entry->fetch_errors < 10)
             {
-                log_warnf(HASH_STOCK, WARNING_RESOURCE, STRING_CONST("[%u] Still missing EOD data to fetch technical results %d for %s"),
+                log_debugf(HASH_STOCK, STRING_CONST("[%u] Still missing EOD data to fetch technical results %d for %s"),
                     entry->fetch_errors, access_level, ticker);
 
                 entry->fetch_errors++;
@@ -1147,6 +1159,21 @@ double stock_price_on_date(stock_handle_t& handle, time_t at)
         return NAN;
 
     return ed->adjusted_close;
+}
+
+day_result_t stock_realtime_record(const char* symbol, size_t length)
+{
+    day_result_t result = {};
+    stock_index_t index = stock_index(symbol, length);
+    string_t ticker = string_copy(SHARED_BUFFER(16), symbol, length);
+    eod_fetch("real-time", ticker.str, FORMAT_JSON_CACHE, "validate", "true", 
+        [index, &result](const json_object_t& res) 
+        { 
+            stock_read_real_time_results(index, res, result); 
+        }, 
+        5 * 60 * 60ULL);
+    
+    return result;
 }
 
 bool stock_valid(const char* symbol, size_t length, double timeout)

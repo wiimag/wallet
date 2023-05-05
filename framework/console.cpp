@@ -151,9 +151,8 @@ FOUNDATION_STATIC void logger(hash_t context, error_level_t severity, const char
             m.msg_symbol = console_string_encode(msg, length);
         }
 
-        char preview_buffer[256];
         string_const_t log_msg = string_table_to_string_const(_console_module->strings, m.msg_symbol);
-        string_const_t preview = string_remove_line_returns(STRING_BUFFER(preview_buffer), STRING_ARGS(log_msg));
+        string_const_t preview = string_remove_line_returns(SHARED_BUFFER(256), STRING_ARGS(log_msg));
 
         m.preview_symbol = console_string_encode(STRING_ARGS(preview));
         array_push_memcpy(_console_module->messages, &m);
@@ -308,7 +307,7 @@ FOUNDATION_STATIC void console_render_toolbar()
     static const float button_frame_padding = IM_SCALEF(8.0f);
     ImGui::BeginGroup();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - clear_button_width - button_frame_padding);
-    if (ImGui::InputTextWithHint("##SearchLog", "Search logs...", STRING_BUFFER(_console_module->search_filter)))
+    if (ImGui::InputTextWithHint("##SearchLog", tr("Search logs..."), STRING_BUFFER(_console_module->search_filter)))
     {
         _console_module->filtered_message_count = 0;
         const size_t filter_length = string_length(_console_module->search_filter);
@@ -408,9 +407,7 @@ FOUNDATION_STATIC void console_render_evaluator()
         expr_result_t result = eval(expression_string);
         if (EXPR_ERROR_CODE == 0)
         {
-            //_console_concat_messages = true;
             expr_log_evaluation_result(expression_string, result);
-            //_console_concat_messages = false;
         }
         else if (EXPR_ERROR_CODE != 0)
         {

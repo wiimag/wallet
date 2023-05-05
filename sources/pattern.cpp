@@ -132,6 +132,7 @@ struct pattern_graph_data_t
     double min_p{ DBL_MAX }, max_p{ -DBL_MAX };
 
     bool refresh{ false };
+    bool compact{ false };
 };
 
 static pattern_t* _patterns = nullptr;
@@ -963,6 +964,245 @@ FOUNDATION_STATIC bool pattern_render_decision_mark(const pattern_t* pattern, un
     return clicked;
 }
 
+FOUNDATION_STATIC pattern_graph_data_t const pattern_render_build_graph_data(pattern_t* pattern)
+{
+    pattern_graph_data_t graph_data{ pattern };
+    for (int i = 0; i < ARRAY_COUNT(FIXED_MARKS); ++i)
+    {
+        graph_data.x_data[i] = math_round((pattern->date - pattern->marks[i].date) / (double)time_one_day());
+        graph_data.y_data[i] = pattern_mark_change_p(pattern, i) * 100.0;
+    }
+
+    const size_t x_count = graph_data.x_count;
+    for (int i = 0; i < x_count; ++i)
+    {
+        const bool is_valid = !math_real_is_nan(graph_data.y_data[i]);
+        double xdd = !is_valid ? FIXED_MARKS[i] : graph_data.x_data[i];
+        graph_data.min_d = max(1.0, min(graph_data.min_d, xdd));
+        if (i == 0 || is_valid)
+            graph_data.max_d = max(graph_data.max_d, xdd);
+        graph_data.min_p = min(graph_data.min_p, graph_data.y_data[i]);
+        graph_data.max_p = max(graph_data.y_data[i], graph_data.max_p);
+    }
+
+    return graph_data;
+}
+
+FOUNDATION_STATIC void pattern_render_graph_limit(const char* label, double min, double max, double value)
+{
+    const double range[]{ min, max };
+    const double limit[]{ value, value };
+    ImPlot::PlotLine(label, range, limit, ARRAY_COUNT(limit), ImPlotLineFlags_NoClip);
+}
+
+FOUNDATION_STATIC void pattern_render_graph_limit(const char* label, pattern_graph_data_t& graph, double value)
+{
+    pattern_render_graph_limit(label, graph.min_d, graph.max_d, value);
+}
+
+FOUNDATION_STATIC void pattern_compute_trend(wallet_plot_context_t& c)
+{
+    // Trend
+    // Y = a + bX
+    //        c      d e         f         d  
+    // b = (Σ(xy) - (ΣxΣy)/n) / (Σ(x^2) - (Σx)^2/n)
+    //      e          d
+    // a = (Σy)/n - b((Σx)/n)
+
+    c.b = (c.c - (c.d * c.e) / c.n) / (c.f - math_pow(c.d, 2) / c.n);
+    c.a = (c.e / c.n) - c.b * (c.d / c.n);
+}
+
+FOUNDATION_STATIC bool pattern_build_trend(wallet_plot_context_t& c, double x, double y)
+{
+    if (math_real_is_nan(x) || math_real_is_nan(y))
+        return false;
+    c.n++;
+    c.x_min = min(c.x_min, x);
+    c.x_max = max(x, c.x_max);
+    c.c += x * y;
+    c.d += x;
+    c.e += y;
+    c.f += math_pow(x, 2);
+    return true;
+}
+
+FOUNDATION_STATIC void pattern_render_graph_trend(const char* label, double x1, double x2, double a, double b, bool x_axis_inverted, bool show_equation)
+{
+    // Y = a + bX
+    const double x_diff = x2 - x1;
+    const double range[]{ x1, x2 };
+    const double trend[]{ a + b * x1, a + b * x2};
+    double y_diff = trend[1] - trend[0];
+    if (math_real_is_nan(trend[0]) || math_real_is_nan(trend[1]))
+        return;
+
+    ImColor pc = ImPlot::GetLastItemColor();
+    ImPlot::SetNextLineStyle(pc);
+
+    if (x_axis_inverted)
+    {
+        b *= -1.0;
+        a += y_diff;
+        y_diff *= -1.0;
+    }
+
+    const char* tag = string_format_static_const("%s %s", label, b > 0 ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
+    ImPlot::TagY(a + b * (x_axis_inverted ? x2 : x1), pc, "%s", tag);
+    ImPlot::PlotLine(tag, range, trend, ARRAY_COUNT(trend), ImPlotLineFlags_NoClip);
+
+    if (show_equation)
+    {
+        ImPlot::Annotation(x_axis_inverted ? x1 : x2, x_axis_inverted ? trend[0] : trend[1], ImVec4(0.3f, 0.3f, 0.5f, 1.0f),
+            ImVec2(0, 10.0f * (b > 0 ? -1.0f : 1.0f)), true,
+            "%s = %.2g %s %.1gx (" ICON_MD_CHANGE_HISTORY  "%.2g)", label, a, b < 0 ? "-" : "+", math_abs(b), y_diff);
+    }
+}
+
+FOUNDATION_STATIC void pattern_render_trend(const char* label, const wallet_plot_context_t& c, bool x_axis_inverted)
+{
+    if (c.n <= 0)
+        return;
+    ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 1.5f);
+    pattern_render_graph_trend(label, c.x_min, c.x_max, c.a, c.b, x_axis_inverted, c.show_trend_equation);
+    ImPlot::PopStyleVar(1);
+}
+
+FOUNDATION_STATIC void pattern_render_graph_end(pattern_t* pattern, const stock_t* s, pattern_graph_data_t& graph)
+{
+    if ((graph.refresh || !pattern->autofit) && (s == nullptr || s->has_resolve(FETCH_ALL)))
+    {
+        ImPlot::SetNextAxesToFit();
+        pattern->autofit = true;
+        graph.refresh = false;
+    }
+}
+
+FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_graph_data_t& graph, ImVec2 graph_size = {})
+{
+    const stock_t* s = pattern->stock;
+    if (s == nullptr)
+    {
+        ImGui::TextUnformatted("No data");
+        return;
+    }
+
+    const auto& plot_screen_pos = ImGui::GetCursorScreenPos();
+
+    if (graph_size.x == 0)
+        graph_size = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
+
+    ImPlotFlags flags = ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle;
+    if (graph.compact)
+        flags = ImPlotFlags_CanvasOnly;
+    if (!ImPlot::BeginPlot("Pattern Trends##1", graph_size, flags))
+        return;
+
+    ImPlot::SetupLegend(ImPlotLocation_NorthWest);
+
+    static time_t trend_date = /*1663606289*/ time_now();
+    const size_t iteration_count = (size_t)pattern->range + (pattern->date - trend_date) / time_one_day();
+
+    const double trend_min_d = max(graph.min_d, 1.0);
+    const double trend_max_d = pattern->range + math_ceil(iteration_count / 4.3) * 2.0;
+    ImPlotAxisFlags trend_axis_flags = ImPlotAxisFlags_LockMin | ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight | (pattern->x_axis_inverted ? ImPlotAxisFlags_Invert : 0);
+    if (graph.compact)
+        trend_axis_flags |= ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_AutoFit;
+
+    ImPlot::SetupAxis(ImAxis_X1, "##Days", trend_axis_flags);
+    ImPlot::SetupAxisLimits(ImAxis_X1, trend_min_d, trend_max_d, ImPlotCond_Once);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, trend_min_d, trend_max_d);
+    ImPlot::SetupAxisFormat(ImAxis_X1, pattern_formatx_label, nullptr);
+    if (pattern->range > 365 * 2)
+    {
+        ImPlot::SetupAxisTicks(ImAxis_X1, graph.x_data, (int)graph.x_count - (graph.x_data[10] > graph.x_data[11] ? 1 : 0), DAY_LABELS, false);
+        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+    }
+    else
+    {
+        ImPlot::SetupAxisTicks(ImAxis_X1, trend_min_d, trend_max_d, 10);
+    }
+
+    ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_date_label, &graph);
+
+    ImPlotAxisFlags trend_axis_flags_y = ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch;
+    if (graph.compact)
+        trend_axis_flags_y |= ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_AutoFit;
+    ImPlot::SetupAxis(ImAxis_Y1, "##Values", trend_axis_flags_y);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, "%.4g");
+
+    // Render limits
+    if (pattern->show_limits)
+    {
+        ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.0f);
+        pattern_render_graph_limit(tr("Zero"), graph, 0);
+
+        ImPlot::PopStyleVar(1);
+    }
+
+    if (s->has_resolve(FetchLevel::TECHNICAL_SLOPE | FetchLevel::TECHNICAL_CCI))
+    {
+        ImPlot::SetAxis(ImAxis_Y1);
+        wallet_plot_context_t c{ trend_date, min(s->history_count, iteration_count), 1, s->history };
+        c.show_trend_equation = pattern->show_trend_equation;
+        c.lx = 0.0;
+        c.ly = (math_ifnan(s->beta, 0.5) + math_ifnan(s->short_ratio - 1.0, 0.0))
+            * math_ifzero(max(max(math_ifnan(s->pe, 1.0), s->forward_pe), s->revenue_per_share_ttm), 1.0) 
+            * math_ifzero(math_abs(s->profit_margin), 1.0)
+            * math_ifzero(s->peg, math_ifzero(s->pe, 1.0));
+        c.lz = s->diluted_eps_ttm * 2.0;
+        c.acc = pattern->range;
+        ImPlot::PlotLineG("##Slopes", [](int idx, void* user_data)->ImPlotPoint
+        {
+            wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
+            constexpr const time_t ONE_DAY = time_one_day();
+
+            const day_result_t* history = c->history;
+            const day_result_t* ed = &history[idx];
+            if (idx == 0 || (ed->date / ONE_DAY) >= (c->ref / ONE_DAY))
+                return ImPlotPoint(DNAN, DNAN);
+
+            size_t send = array_size(history);
+            int yedi = idx + math_round(c->acc);
+            if (yedi >= send)
+                return ImPlotPoint(DNAN, DNAN);
+
+            if (c->lx == 0)
+            {
+                const day_result_t* yed = &history[idx + yedi];
+                c->lx = yed->adjusted_close;
+            }
+            double ps = (ed->ema - ed->sar) / ed->sar;
+            double x = math_round((c->ref - ed->date) / (double)ONE_DAY);
+            double y = ed->slope * ps * c->lx * c->ly;
+
+            if (!pattern_build_trend(*c, x, y))
+                return ImPlotPoint(DNAN, DNAN);
+
+            return ImPlotPoint(x, y);
+        }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+            
+        pattern_compute_trend(c);
+        pattern_render_trend(tr("Trend"), c, pattern->x_axis_inverted);
+    }
+    else
+    {
+        ImPlot::Annotation((trend_max_d - trend_min_d) / 2.0, 0, ImVec4(0.8f, 0.6f, 0.54f, 0.8f), ImVec2(0,-10), true, tr("Loading data..."));
+    }
+
+    ImPlot::EndPlot();
+
+    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+    {
+        ImGui::SetCursorScreenPos(ImVec2(plot_screen_pos.x + 350, plot_screen_pos.y + 20));
+        ImGui::SetNextItemWidth(250.0f);
+        tm tm_date = *localtime(&trend_date);
+        if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true))
+            trend_date = mktime(&tm_date);
+    }
+    pattern_render_graph_end(pattern, s, graph);
+}
+
 FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
 {
     ImGuiTableFlags flags =
@@ -971,6 +1211,7 @@ FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
         ImGuiTableFlags_NoHostExtendY |
         ImGuiTableFlags_PreciseWidths |
         ImGuiTableFlags_NoBordersInBody |
+        //ImGuiTableFlags_NoClip | 
         ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoPadInnerX;
 
     if (!ImGui::BeginTable("Decisions", 3, flags))
@@ -994,6 +1235,14 @@ FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
         "\n"))
     {
         pattern->type = (int)PATTERN_GRAPH_TRENDS;
+    }
+
+    if (pattern->type != PATTERN_GRAPH_TRENDS)
+    {
+        pattern_graph_data_t gd = pattern_render_build_graph_data(pattern);
+        gd.compact = true;
+        gd.refresh = true;
+        pattern_render_graph_trends(pattern, gd, { -ImGui::GetStyle().CellPadding.x, IM_SCALEF(100) });
     }
 
     if (pattern_render_decision_mark(pattern, 2, 
@@ -1144,74 +1393,6 @@ FOUNDATION_STATIC void pattern_render_graph_change_acc(pattern_t* pattern, const
 
     if (c.acc != 0)
         ImPlot::Annotation(pattern->range, c.acc, ImVec4(1.0f, 0, 0, 1.0f), ImVec2(4, -4), true, true);
-}
-
-FOUNDATION_STATIC void pattern_compute_trend(wallet_plot_context_t& c)
-{
-    // Trend
-    // Y = a + bX
-    //        c      d e         f         d  
-    // b = (Σ(xy) - (ΣxΣy)/n) / (Σ(x^2) - (Σx)^2/n)
-    //      e          d
-    // a = (Σy)/n - b((Σx)/n)
-
-    c.b = (c.c - (c.d * c.e) / c.n) / (c.f - math_pow(c.d, 2) / c.n);
-    c.a = (c.e / c.n) - c.b * (c.d / c.n);
-}
-
-FOUNDATION_STATIC bool pattern_build_trend(wallet_plot_context_t& c, double x, double y)
-{
-    if (math_real_is_nan(x) || math_real_is_nan(y))
-        return false;
-    c.n++;
-    c.x_min = min(c.x_min, x);
-    c.x_max = max(x, c.x_max);
-    c.c += x * y;
-    c.d += x;
-    c.e += y;
-    c.f += math_pow(x, 2);
-    return true;
-}
-
-FOUNDATION_STATIC void pattern_render_graph_trend(const char* label, double x1, double x2, double a, double b, bool x_axis_inverted, bool show_equation)
-{
-    // Y = a + bX
-    const double x_diff = x2 - x1;
-    const double range[]{ x1, x2 };
-    const double trend[]{ a + b * x1, a + b * x2};
-    double y_diff = trend[1] - trend[0];
-    if (math_real_is_nan(trend[0]) || math_real_is_nan(trend[1]))
-        return;
-
-    ImColor pc = ImPlot::GetLastItemColor();
-    ImPlot::SetNextLineStyle(pc);
-
-    if (x_axis_inverted)
-    {
-        b *= -1.0;
-        a += y_diff;
-        y_diff *= -1.0;
-    }
-
-    const char* tag = string_format_static_const("%s %s", label, b > 0 ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
-    ImPlot::TagY(a + b * (x_axis_inverted ? x2 : x1), pc, "%s", tag);
-    ImPlot::PlotLine(tag, range, trend, ARRAY_COUNT(trend), ImPlotLineFlags_NoClip);
-
-    if (show_equation)
-    {
-        ImPlot::Annotation(x_axis_inverted ? x1 : x2, x_axis_inverted ? trend[0] : trend[1], ImVec4(0.3f, 0.3f, 0.5f, 1.0f),
-            ImVec2(0, 10.0f * (b > 0 ? -1.0f : 1.0f)), true,
-            "%s = %.2g %s %.1gx (" ICON_MD_CHANGE_HISTORY  "%.2g)", label, a, b < 0 ? "-" : "+", math_abs(b), y_diff);
-    }
-}
-
-FOUNDATION_STATIC void pattern_render_trend(const char* label, const wallet_plot_context_t& c, bool x_axis_inverted)
-{
-    if (c.n <= 0)
-        return;
-    ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 1.5f);
-    pattern_render_graph_trend(label, c.x_min, c.x_max, c.a, c.b, x_axis_inverted, c.show_trend_equation);
-    ImPlot::PopStyleVar(1);
 }
 
 FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool x_axis_inverted, bool relative_dates = true)
@@ -1430,28 +1611,6 @@ FOUNDATION_STATIC void pattern_render_graph_setup_days_axis(pattern_t* pattern, 
     ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_date_label, &graph);
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, max(graph.min_d, 1.0), graph.max_d);
-}
-
-FOUNDATION_STATIC void pattern_render_graph_limit(const char* label, double min, double max, double value)
-{
-    const double range[]{ min, max };
-    const double limit[]{ value, value };
-    ImPlot::PlotLine(label, range, limit, ARRAY_COUNT(limit), ImPlotLineFlags_NoClip);
-}
-
-FOUNDATION_STATIC void pattern_render_graph_limit(const char* label, pattern_graph_data_t& graph, double value)
-{
-    pattern_render_graph_limit(label, graph.min_d, graph.max_d, value);
-}
-
-FOUNDATION_STATIC void pattern_render_graph_end(pattern_t* pattern, const stock_t* s, pattern_graph_data_t& graph)
-{
-    if ((graph.refresh || !pattern->autofit) && (s == nullptr || s->has_resolve(FETCH_ALL)))
-    {
-        ImPlot::SetNextAxesToFit();
-        pattern->autofit = true;
-        graph.refresh = false;
-    }
 }
 
 FOUNDATION_STATIC void pattern_render_graph_flex(pattern_t* pattern, pattern_graph_data_t& graph)
@@ -1717,118 +1876,6 @@ FOUNDATION_STATIC void pattern_render_graph_yoy(pattern_t* pattern, pattern_grap
     ImPlot::EndPlot();
 }
 
-FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_graph_data_t& graph)
-{
-    const stock_t* s = pattern->stock;
-    if (s == nullptr)
-    {
-        ImGui::TextUnformatted("No data");
-        return;
-    }
-
-    const auto& plot_screen_pos = ImGui::GetCursorScreenPos();
-
-    const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
-    if (!ImPlot::BeginPlot("Pattern Trends##1", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
-        return;
-
-    ImPlot::SetupLegend(ImPlotLocation_NorthWest);
-
-    static time_t trend_date = /*1663606289*/ time_now();
-    const size_t iteration_count = (size_t)pattern->range + (pattern->date - trend_date) / time_one_day();
-
-    const double trend_min_d = max(graph.min_d, 1.0);
-    const double trend_max_d = pattern->range + math_ceil(iteration_count / 4.3) * 2.0;
-    ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_LockMin | ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight | (pattern->x_axis_inverted ? ImPlotAxisFlags_Invert : 0));
-    ImPlot::SetupAxisLimits(ImAxis_X1, trend_min_d, trend_max_d, ImPlotCond_Once);
-    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, trend_min_d, trend_max_d);
-    ImPlot::SetupAxisFormat(ImAxis_X1, pattern_formatx_label, nullptr);
-    if (pattern->range > 365 * 2)
-    {
-        ImPlot::SetupAxisTicks(ImAxis_X1, graph.x_data, (int)graph.x_count - (graph.x_data[10] > graph.x_data[11] ? 1 : 0), DAY_LABELS, false);
-        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
-    }
-    else
-    {
-        ImPlot::SetupAxisTicks(ImAxis_X1, trend_min_d, trend_max_d, 10);
-    }
-
-    ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_date_label, &graph);
-    ImPlot::SetupAxis(ImAxis_Y1, "##Values", ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch);
-    ImPlot::SetupAxisFormat(ImAxis_Y1, "%.4g");
-
-    // Render limits
-    if (pattern->show_limits)
-    {
-        ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.0f);
-        pattern_render_graph_limit(tr("Zero"), graph, 0);
-
-        ImPlot::PopStyleVar(1);
-    }
-
-    if (s->has_resolve(FetchLevel::TECHNICAL_SLOPE | FetchLevel::TECHNICAL_CCI))
-    {
-        ImPlot::SetAxis(ImAxis_Y1);
-        wallet_plot_context_t c{ trend_date, min(s->history_count, iteration_count), 1, s->history };
-        c.show_trend_equation = pattern->show_trend_equation;
-        c.lx = 0.0;
-        c.ly = (math_ifnan(s->beta, 0.5) + math_ifnan(s->short_ratio - 1.0, 0.0))
-            * math_ifzero(max(max(math_ifnan(s->pe, 1.0), s->forward_pe), s->revenue_per_share_ttm), 1.0) 
-            * math_ifzero(math_abs(s->profit_margin), 1.0)
-            * math_ifzero(s->peg, math_ifzero(s->pe, 1.0));
-        c.lz = s->diluted_eps_ttm * 2.0;
-        c.acc = pattern->range;
-        ImPlot::PlotLineG("##Slopes", [](int idx, void* user_data)->ImPlotPoint
-        {
-            wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-            constexpr const time_t ONE_DAY = time_one_day();
-
-            const day_result_t* history = c->history;
-            const day_result_t* ed = &history[idx];
-            if (idx == 0 || (ed->date / ONE_DAY) >= (c->ref / ONE_DAY))
-                return ImPlotPoint(DNAN, DNAN);
-
-            size_t send = array_size(history);
-            int yedi = idx + math_round(c->acc);
-            if (yedi >= send)
-                return ImPlotPoint(DNAN, DNAN);
-
-            if (c->lx == 0)
-            {
-                const day_result_t* yed = &history[idx + yedi];
-                c->lx = yed->adjusted_close;
-            }
-            double ps = (ed->ema - ed->sar) / ed->sar;
-            double x = math_round((c->ref - ed->date) / (double)ONE_DAY);
-            double y = ed->slope * ps * c->lx * c->ly;
-
-            if (!pattern_build_trend(*c, x, y))
-                return ImPlotPoint(DNAN, DNAN);
-
-            return ImPlotPoint(x, y);
-        }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
-            
-        pattern_compute_trend(c);
-        pattern_render_trend(tr("Trend"), c, pattern->x_axis_inverted);
-    }
-    else
-    {
-        ImPlot::Annotation((trend_max_d - trend_min_d) / 2.0, 0, ImVec4(0.8f, 0.6f, 0.54f, 0.8f), ImVec2(0,-10), true, tr("Loading data..."));
-    }
-
-    ImPlot::EndPlot();
-
-    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
-    {
-        ImGui::SetCursorScreenPos(ImVec2(plot_screen_pos.x + 350, plot_screen_pos.y + 20));
-        ImGui::SetNextItemWidth(250.0f);
-        tm tm_date = *localtime(&trend_date);
-        if (ImGui::DateChooser("##Date", tm_date, "%Y-%m-%d", true))
-            trend_date = mktime(&tm_date);
-    }
-    pattern_render_graph_end(pattern, s, graph);
-}
-
 FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     // FIXME: stock would need to be locked here...
@@ -2086,30 +2133,6 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
         graph.refresh = true;
         pattern->autofit = false;
     }
-}
-
-FOUNDATION_STATIC pattern_graph_data_t const pattern_render_build_graph_data(pattern_t* pattern)
-{
-    pattern_graph_data_t graph_data{ pattern };
-    for (int i = 0; i < ARRAY_COUNT(FIXED_MARKS); ++i)
-    {
-        graph_data.x_data[i] = math_round((pattern->date - pattern->marks[i].date) / (double)time_one_day());
-        graph_data.y_data[i] = pattern_mark_change_p(pattern, i) * 100.0;
-    }
-
-    const size_t x_count = graph_data.x_count;
-    for (int i = 0; i < x_count; ++i)
-    {
-        const bool is_valid = !math_real_is_nan(graph_data.y_data[i]);
-        double xdd = !is_valid ? FIXED_MARKS[i] : graph_data.x_data[i];
-        graph_data.min_d = max(1.0, min(graph_data.min_d, xdd));
-        if (i == 0 || is_valid)
-            graph_data.max_d = max(graph_data.max_d, xdd);
-        graph_data.min_p = min(graph_data.min_p, graph_data.y_data[i]);
-        graph_data.max_p = max(graph_data.y_data[i], graph_data.max_p);
-    }
-
-    return graph_data;
 }
 
 FOUNDATION_STATIC pattern_activity_t* pattern_find_activity(pattern_activity_t* activities, time_t d)

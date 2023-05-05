@@ -216,6 +216,9 @@ string_t string_format_allocate_template(const char* format, size_t format_lengt
 
 string_t string_format_template(char* buffer, size_t capacity, const char* format, size_t format_length, string_argument_type_t t1, ...);
 
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const char* fmt, size_t length) { return string_clone(fmt, length); }
+template<size_t N> FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N]) { return string_clone(format, N - 1); }
+
 // 1
 template<typename P1>
 FOUNDATION_FORCEINLINE string_t string_template(char* buffer, size_t capacity, const string_const_t& format, const P1& p1)
@@ -233,6 +236,12 @@ template<size_t N, typename P1>
 FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N], const P1& p1)
 {
     return string_format_allocate_template(format, N - 1, string_template_type(p1), p1);
+}
+
+template<typename P1>
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const char* format, size_t length, const P1& p1)
+{
+    return string_format_allocate_template(format, length, string_template_type(p1), p1);
 }
 
 template<size_t N, typename P1>
@@ -261,6 +270,12 @@ FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N],
     return string_format_allocate_template(format, N - 1, string_template_type(p1), p1, string_template_type(p2), p2);
 }
 
+template<typename P1, typename P2>
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const char* format, size_t length, const P1& p1, const P2& p2)
+{
+    return string_format_allocate_template(format, length, string_template_type(p1), p1, string_template_type(p2), p2);
+}
+
 template<size_t N, typename P1, typename P2>
 FOUNDATION_FORCEINLINE string_const_t string_template_static(const char(&format)[N], const P1& p1, const P2& p2)
 {
@@ -285,6 +300,12 @@ template<size_t N, typename P1, typename P2, typename P3>
 FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N], const P1& p1, const P2& p2, const P3& p3)
 {
     return string_format_allocate_template(format, N - 1, string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3);
+}
+
+template<typename P1, typename P2, typename P3>
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const char* format, size_t length, const P1& p1, const P2& p2, const P3& p3)
+{
+    return string_format_allocate_template(format, length, string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3);
 }
 
 template<size_t N, typename P1, typename P2, typename P3>
@@ -314,6 +335,13 @@ FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N],
 {
     return string_format_allocate_template(format, N - 1,
         string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, string_template_type(p4), p4);
+}
+
+template<typename P1, typename P2, typename P3, typename P4>
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const char* format, size_t length, const P1& p1, const P2& p2, const P3& p3, const P4& p4)
+{
+    return string_format_allocate_template(format, length,
+           string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, string_template_type(p4), p4);
 }
 
 template<size_t N, typename P1, typename P2, typename P3, typename P4>
@@ -346,6 +374,13 @@ FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N],
         string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, string_template_type(p4), p4, string_template_type(p5), p5);
 }
 
+template<typename P1, typename P2, typename P3, typename P4, typename P5>
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const char* format, size_t length, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5)
+{
+    return string_format_allocate_template(format, length,
+              string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, string_template_type(p4), p4, string_template_type(p5), p5);
+}
+
 template<size_t N, typename P1, typename P2, typename P3, typename P4, typename P5>
 FOUNDATION_FORCEINLINE string_const_t string_template_static(const char(&format)[N], const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5)
 {
@@ -376,6 +411,14 @@ FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N],
     return string_format_allocate_template(format, N - 1,
         string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, 
         string_template_type(p4), p4, string_template_type(p5), p5, string_template_type(p6), p6);
+}
+
+template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const char* format, size_t length, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6)
+{
+    return string_format_allocate_template(format, length,
+           string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, 
+            string_template_type(p4), p4, string_template_type(p5), p5, string_template_type(p6), p6);
 }
 
 template<size_t N, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6>
@@ -412,6 +455,14 @@ FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N],
         string_template_type(p5), p5, string_template_type(p6), p6, string_template_type(p7), p7);
 }
 
+template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const char* format, size_t length, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7)
+{
+    return string_format_allocate_template(format, length,
+           string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, string_template_type(p4), p4, 
+           string_template_type(p5), p5, string_template_type(p6), p6, string_template_type(p7), p7);
+}
+
 template<size_t N, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7>
 FOUNDATION_FORCEINLINE string_const_t string_template_static(const char(&format)[N], const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7)
 {
@@ -442,6 +493,14 @@ template<size_t N, typename P1, typename P2, typename P3, typename P4, typename 
 FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N], const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8)
 {
     return string_format_allocate_template(format, N - 1,
+        string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, string_template_type(p4), p4, 
+        string_template_type(p5), p5, string_template_type(p6), p6, string_template_type(p7), p7, string_template_type(p8), p8);
+}
+
+template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8>
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const char* format, size_t length, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8)
+{
+    return string_format_allocate_template(format, length,
         string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, string_template_type(p4), p4, 
         string_template_type(p5), p5, string_template_type(p6), p6, string_template_type(p7), p7, string_template_type(p8), p8);
 }
@@ -480,6 +539,14 @@ FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N],
         string_template_type(p5), p5, string_template_type(p6), p6, string_template_type(p7), p7, string_template_type(p8), p8, string_template_type(p9), p9);
 }
 
+template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
+FOUNDATION_FORCEINLINE string_t string_allocate_template(const string_const_t& format, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8, const P9& p9)
+{
+    return string_format_allocate_template(STRING_ARGS(format), string_template_type(p1), p1, string_template_type(p2), p2, 
+           string_template_type(p3), p3, string_template_type(p4), p4, string_template_type(p5), p5, string_template_type(p6), p6, 
+           string_template_type(p7), p7, string_template_type(p8), p8, string_template_type(p9), p9);
+}
+
 template<size_t N, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9>
 FOUNDATION_FORCEINLINE string_const_t string_template_static(const char(&format)[N], const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8, const P9& p9)
 {
@@ -514,6 +581,15 @@ FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N],
         string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, string_template_type(p4), p4, 
         string_template_type(p5), p5, string_template_type(p6), p6, string_template_type(p7), p7, string_template_type(p8), p8, 
         string_template_type(p9), p9, string_template_type(p10), p10);
+}
+
+template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9, typename P10>
+FOUNDATION_FORCEINLINE string_const_t string_template_static(const string_const_t& format, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8, const P9& p9, const P10& p10)
+{
+    string_t buffer = string_static_buffer(max(SIZE_C(256), SIZE_C(format.length + 32 * 10)), false);
+    return string_to_const(string_format_template(buffer.str, buffer.length, STRING_ARGS(format), string_template_type(p1), p1, string_template_type(p2), p2, 
+           string_template_type(p3), p3, string_template_type(p4), p4, string_template_type(p5), p5, string_template_type(p6), p6, 
+           string_template_type(p7), p7, string_template_type(p8), p8, string_template_type(p9), p9, string_template_type(p10), p10));
 }
 
 template<size_t N, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9, typename P10>
@@ -551,6 +627,15 @@ FOUNDATION_FORCEINLINE string_t string_allocate_template(const char(&format)[N],
         string_template_type(p1), p1, string_template_type(p2), p2, string_template_type(p3), p3, string_template_type(p4), p4, string_template_type(p5), p5, 
         string_template_type(p6), p6, string_template_type(p7), p7, string_template_type(p8), p8, string_template_type(p9), p9, string_template_type(p10), p10, 
         string_template_type(p11), p11);
+}
+
+template<typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9, typename P10, typename P11>
+FOUNDATION_FORCEINLINE string_const_t string_template_static(const string_const_t& format, const P1& p1, const P2& p2, const P3& p3, const P4& p4, const P5& p5, const P6& p6, const P7& p7, const P8& p8, const P9& p9, const P10& p10, const P11& p11)
+{
+    string_t buffer = string_static_buffer(max(SIZE_C(256), SIZE_C(format.length + 32 * 11)), false);
+    return string_to_const(string_format_template(buffer.str, buffer.length, STRING_ARGS(format), string_template_type(p1), p1, string_template_type(p2), p2, 
+           string_template_type(p3), p3, string_template_type(p4), p4, string_template_type(p5), p5, string_template_type(p6), p6, string_template_type(p7), p7, 
+           string_template_type(p8), p8, string_template_type(p9), p9, string_template_type(p10), p10, string_template_type(p11), p11));
 }
 
 template<size_t N, typename P1, typename P2, typename P3, typename P4, typename P5, typename P6, typename P7, typename P8, typename P9, typename P10, typename P11>

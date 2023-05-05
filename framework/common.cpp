@@ -379,7 +379,7 @@ bool time_is_working_hours()
         return false;
 
     const int hour = tm_now.tm_hour;
-    return (hour >= 10) && (hour < 16);
+    return (hour >= 9) && (hour < 17);
 }
 
 string_t path_normalize_name(char* buff, size_t capacity, const char* _path, size_t path_length, const char replacement_char /*= '_'*/)

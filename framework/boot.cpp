@@ -374,7 +374,62 @@ extern void main_render(GLFWwindow* window, const app_render_handler_t& render, 
     if (window && render)
     {
         PERFORMANCE_TRACKER("app_render");
-        render(window, frame_width, frame_height);
+
+        struct main_render_args_t
+        {
+            GLFWwindow* window;
+            int frame_width;
+            int frame_height;
+            const app_render_handler_t* handler;
+            ImGuiContext* imgui_context;
+        };
+
+        static assert_handler_fn prev_assert_handler = nullptr;
+        main_render_args_t render_args = { window, frame_width, frame_height, &render, ImGui::GetCurrentContext() };
+
+        if (prev_assert_handler)
+        {
+            assert_set_handler(prev_assert_handler);
+            prev_assert_handler = nullptr;
+        }
+
+        exception_try([](void* args)
+        {
+            const main_render_args_t* render = (const main_render_args_t*)args;
+            render->handler->invoke(render->window, render->frame_width, render->frame_height);
+            return 0;
+        }, &render_args, [](void* args, const char* file, size_t length)
+        {
+            prev_assert_handler = assert_handler();
+            assert_set_handler([](hash_t context, const char* condition, size_t cond_length, const char* file,
+                size_t file_length, unsigned int line, const char* msg, size_t msg_length)
+            {
+                // Ignore IMGUI asserts while handling the exception
+                return 0;
+            });
+            ImGui::ErrorCheckEndWindowRecover([](void* user_data, const char* fmt, ...)
+            {
+                va_list args;
+                va_start(args, fmt);
+                string_t msg = string_vformat(SHARED_BUFFER(1024), STRING_LENGTH(fmt), args);
+                va_end(args);
+                log_error(0, ERROR_EXCEPTION, msg.str, msg.length);
+            }, args);
+
+            ImGui::ErrorCheckEndFrameRecover([](void* user_data, const char* fmt, ...)
+            {
+                va_list args;
+                va_start(args, fmt);
+                string_t msg = string_vformat(SHARED_BUFFER(1024), STRING_LENGTH(fmt), args);
+                va_end(args);
+                log_error(0, ERROR_EXCEPTION, msg.str, msg.length);
+            }, args);
+
+            assert_set_handler(prev_assert_handler);
+            prev_assert_handler = nullptr;
+
+            log_errorf(0, ERROR_EXCEPTION, "Exception while rendering application (%.*s)", (int)length, file);
+        }, STRING_CONST("main_render"));
     }
     
     if (window)

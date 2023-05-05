@@ -198,4 +198,59 @@ bool localization_set_current_language(const char* lang, size_t lang_length);
  */
 string_t localization_string_from_time(char* buffer, size_t capacity, tick_t time, bool since = false);
 
+#else
+
+#define localization_current_language() string_const(STRING_CONST("en"))
+#define localization_current_language_name() string_const(STRING_CONST("English"))
+#define localization_supported_language_count() 1
+#define localization_language_code(index) string_const(STRING_CONST("en"))
+#define localization_language_name(index) string_const(STRING_CONST("English"))
+#define localization_set_current_language(lang, lang_length) false
+#define localization_string_from_time(buffer, capacity, time, since) string_from_time(buffer, capacity, time, true)
+
 #endif
+
+/*! Log a translated informative message.
+ * 
+ *  @param context Context of the message.
+ *  @param fmt Format string.
+ *  @param ... Format arguments.
+ */
+template<size_t N, typename... Args>
+void tr_info(hash_t context, const char(&fmt)[N], Args&&... args)
+{
+    string_const_t fmttr = tr(fmt, N-1, true);
+    string_t lstr = string_allocate_template(STRING_ARGS(fmttr), std::forward<Args>(args)...);
+    log_info(context, STRING_ARGS(lstr));
+    string_deallocate(lstr.str);
+}
+
+/*! Log a translated warning message.
+ * 
+ *  @param context Context of the message.
+ *  @param fmt Format string.
+ *  @param ... Format arguments.
+ */
+template<size_t N, typename... Args>
+void tr_warn(hash_t context, warning_t warn, const char(&fmt)[N], Args&&... args)
+{
+    string_const_t fmttr = tr(fmt, N-1, true);
+    string_t lstr = string_allocate_template(STRING_ARGS(fmttr), std::forward<Args>(args)...);
+    log_warn(context, warn, STRING_ARGS(lstr));
+    string_deallocate(lstr.str);
+}
+
+/*! Log a translated error message.
+ * 
+ *  @param context Context of the message.
+ *  @param fmt Format string.
+ *  @param ... Format arguments.
+ */
+template<size_t N, typename... Args>
+void tr_error(hash_t context, error_t err, const char(&fmt)[N], Args&&... args)
+{
+    string_const_t fmttr = tr(fmt, N-1, true);
+    string_t lstr = string_allocate_template(STRING_ARGS(fmttr), std::forward<Args>(args)...);
+    log_error(context, err, STRING_ARGS(lstr));
+    string_deallocate(lstr.str);
+}

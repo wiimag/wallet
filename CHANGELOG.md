@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.22.1] - 2023-05-05
+## [0.22.2] - 2023-05-05
+- Add support to automatically update wallet tracking history on a daily basis.
 - Fix day gain summary taking into account index changes.
 - Improve `TABLE(...)` and `PLOT(...)` expressions.
 

@@ -407,7 +407,7 @@ FOUNDATION_STATIC bool logo_download_image(logo_t* logo, logo_image_t* image)
     if (image->data == nullptr)
     {
         stream_deallocate(download_stream);
-        log_errorf(HASH_LOGO, ERROR_EXCEPTION, STRING_CONST("Failed to decode logo %s"), string_table_decode(logo->symbol));
+        log_debugf(HASH_LOGO, STRING_CONST("Failed to decode logo %s"), string_table_decode(logo->symbol));
         return (image->data ? (image->status = STATUS_OK) : (image->status = STATUS_ERROR_LOAD_FAILURE)) >= 0;
     }
 

@@ -3463,7 +3463,37 @@
 		{
 			hash = "24fd9697ce53096b"
 			en = "Saved"
-			fr = "Économisé"
+			fr = "\xc3\x89conomis\xc3\xa9"
+		}
+		{
+			hash = "5cc2dac6a332776d"
+			en = "Updating wallet history entry for {0} on {1}"
+			fr = "Mise \xc3\xa0 jour de l'historique du portefeuille pour {0} le {1}"
+		}
+		{
+			hash = "251dea64e0ffbfbd"
+			en = "Refreshing report {0,st}"
+			fr = "Rafra\xc3\xaechissement du rapport {0,st}"
+		}
+		{
+			hash = "6b0097b4cbabd8ca"
+			en = "Stock {0} has no real time data"
+			fr = "Le titre {0} n'a pas de donn\xc3\xa9es en temps r\xc3\xa9el"
+		}
+		{
+			hash = "80c7ceaf84edbb5a"
+			en = "Search logs..."
+			fr = "Rechercher dans les messages de la console..."
+		}
+		{
+			hash = "20fe1f5cf82a457a"
+			en = "OpenAI connectivity check succeeded ({0},{1})"
+			fr = "V\xc3\xa9rification de la connectivit\xc3\xa9 OpenAI r\xc3\xa9ussie ({0},{1})"
+		}
+		{
+			hash = "a52ad237daa999c6"
+			en = "Search indexing completed for the market {0}"
+			fr = "Indexation de recherche termin\xc3\xa9e pour le march\xc3\xa9 {0}"
 		}
 	]
 }

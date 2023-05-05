@@ -216,11 +216,11 @@ string_t string_from_currency(char* buffer, size_t capacity, double value, const
 
     const double abs_value = math_abs(value);
     if (abs_value >= 1e12)
-        return string_format(buffer, capacity, STRING_CONST("%.3gT $"), value / 1e12);
+        return string_format(buffer, capacity, STRING_CONST("%.4gT $"), value / 1e12);
     if (abs_value >= 1e9)
-        return string_format(buffer, capacity, STRING_CONST("%.3gB $"), value / 1e9);
+        return string_format(buffer, capacity, STRING_CONST("%.4gB $"), value / 1e9);
     else if (abs_value >= 1e6)
-        return string_format(buffer, capacity, STRING_CONST("%.3gM $"), value / 1e6);
+        return string_format(buffer, capacity, STRING_CONST("%.4gM $"), value / 1e6);
 
     if (money_fmt == nullptr)
     {
@@ -394,14 +394,14 @@ string_t* string_split(string_const_t str, string_const_t sep)
 string_const_t string_remove_line_returns(char* buffer, size_t capacity, const char* str, size_t length)
 {
     if (string_find(str, length, '\n', 0) == STRING_NPOS)
-        return {};
+        return {str, length};
 
     bool space_injected = false;
     string_t result = {buffer, 0};
     for (size_t i = 0; i < length && result.length < capacity-1; ++i)
     {
         const char tok = str[i];
-        if (tok < ' ')
+        if (tok > 0 && tok < ' ')
         {
             if (!space_injected)
             {
@@ -2201,7 +2201,7 @@ string_t string_remove_line_returns(const char* str, size_t length)
     for (size_t i = 0; i < length; ++i)
     {
         const char tok = str[i];
-        if (tok < ' ')
+        if (tok > 0 && tok < ' ')
         {
             if (!space_injected)
             {

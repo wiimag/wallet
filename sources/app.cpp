@@ -185,7 +185,6 @@ extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(ImVec2((float)frame_width, (float)frame_height));
 
-    static bool reset_imgui = false;
     if (ImGui::Begin(app_title(), nullptr,
         ImGuiWindowFlags_NoBringToFrontOnFocus |
         ImGuiWindowFlags_NoResize |
@@ -195,17 +194,7 @@ extern void app_render(GLFWwindow* window, int frame_width, int frame_height)
         ImGuiWindowFlags_MenuBar))
     {
         app_main_menu_begin(window);
-
-        exception_try([](void* args)
-        {
-            app_tabs();
-            return 0;
-        }, nullptr, [](void* args, const char* file, size_t length)
-        {
-            log_errorf(0, ERROR_EXCEPTION, "Exception while rendering tabs (%.*s)", (int)length, file);
-            //goto reset_imgui;
-        }, STRING_CONST("app_render"));
-
+        app_tabs();
         app_main_menu_end(window);
 
         module_foreach_window();

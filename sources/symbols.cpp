@@ -662,13 +662,27 @@ FOUNDATION_STATIC void symbols_open_random_stock_pattern()
     }
 
     // Select a random symbol from the list.
-    const unsigned random_symbol_index = random32_range(0, array_size(symbols));
-    string_t random_symbol = string_clone(STRING_ARGS(symbols[random_symbol_index]));
-    dispatch([random_symbol]()
+    for (unsigned i = 0; i < 16; ++i)
     {
-        pattern_open_window(STRING_ARGS(random_symbol));
-        string_deallocate(random_symbol.str);
-    });
+        const unsigned random_symbol_index = random32_range(0, array_size(symbols));
+
+        // Check if we have some volume
+        day_result_t rt = stock_realtime_record(STRING_ARGS(symbols[random_symbol_index]));
+        if (rt.volume == 0 || !math_real_is_finite(rt.price))
+            continue;
+
+        string_t random_symbol = string_clone(STRING_ARGS(symbols[random_symbol_index]));
+        dispatch([random_symbol]()
+        {
+            pattern_open_window(STRING_ARGS(random_symbol));
+            string_deallocate(random_symbol.str);
+        });
+
+        string_array_deallocate(symbols);
+        return;
+    }
+
+    tr_warn(HASH_SYMBOLS, WARNING_INVALID_VALUE, "Failed to find a random symbol with some valid data");
     string_array_deallocate(symbols);
 }
 

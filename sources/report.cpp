@@ -1980,7 +1980,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
 
     report_filter_out_titles(report);
     report_summary_update(report);
-    wallet_update_history(report, report->wallet);
+    wallet_update_tracking_history(report, report->wallet);
 
     log_debugf(HASH_REPORT, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
     if (report->table)
@@ -2625,7 +2625,7 @@ void report_render(report_t* report)
 
     if (shortcut_executed(ImGuiKey_F5))
     {
-        log_warnf(HASH_REPORT, WARNING_PERFORMANCE, STRING_CONST("Refreshing report %s"), string_table_decode(report->name));
+        tr_warn(HASH_REPORT, WARNING_PERFORMANCE, "Refreshing report {0,st}", report->name);
         report_refresh(report);
     }
 
@@ -2807,6 +2807,12 @@ bool report_sync_titles(report_t* report, double timeout_seconds /*= 60.0*/)
 title_t* report_add_title(report_t* report, const char* code, size_t code_length)
 {
     return report_title_add(report, string_const(code, code_length));
+}
+
+string_const_t report_name(report_t* report)
+{
+    FOUNDATION_ASSERT(report);
+    return SYMBOL_CONST(report->name);
 }
 
 report_t** report_sort_alphabetically()

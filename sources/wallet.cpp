@@ -29,20 +29,21 @@ struct wallet_plot_context_t
 
     union {
         const void* data;
-        const history_t* history;
+        const wallet_history_t* history;
     };
 
     double x_min{ DBL_MAX }, x_max{ -DBL_MAX }, n{ 0 };
     double a{ 0 }, b{ 0 }, c{ 0 }, d{ 0 }, e{ 0 }, f{ 0 };
 };
 
-FOUNDATION_STATIC void wallet_update_history_entry(report_t* report, wallet_t* wallet, history_t* entry)
+FOUNDATION_STATIC void wallet_history_update_entry(report_t* report, wallet_t* wallet, wallet_history_t* entry)
 {
     FOUNDATION_ASSERT(report);
     FOUNDATION_ASSERT(wallet);
     FOUNDATION_ASSERT(entry);
 
     entry->date = time_now();
+    entry->source = wallet;
     entry->funds = wallet_total_funds(wallet);
     entry->investments = report->total_investment;
     entry->total_value = report->total_value;
@@ -61,13 +62,13 @@ FOUNDATION_STATIC void wallet_render_funds_text(float available_space, float pad
 
 FOUNDATION_STATIC void wallet_history_sort(wallet_t* wallet)
 {
-    array_sort(wallet->history, [](const history_t& a, const history_t& b)
+    array_sort(wallet->history, [](const wallet_history_t& a, const wallet_history_t& b)
     {
         return b.date - a.date;
     });
 }
 
-FOUNDATION_STATIC bool wallet_history_update_entry(report_t* report, wallet_t* wallet, history_t& entry)
+FOUNDATION_STATIC bool wallet_history_update_entry_ui(report_t* report, wallet_t* wallet, wallet_history_t& entry)
 {
     if (!report_sync_titles(report))
     {
@@ -78,7 +79,7 @@ FOUNDATION_STATIC bool wallet_history_update_entry(report_t* report, wallet_t* w
     
     entry.source = wallet;
     entry.show_edit_ui = true;
-    wallet_update_history_entry(report, wallet, &entry);
+    wallet_history_update_entry(report, wallet, &entry);
     
     return true;
 }
@@ -92,7 +93,7 @@ FOUNDATION_STATIC void wallet_history_add_new_entry(report_t* report, wallet_t* 
     {
         if (time_date_equal(today, h->date))
         {
-            if (wallet_history_update_entry(report, wallet, *h))
+            if (wallet_history_update_entry_ui(report, wallet, *h))
             {
                 h->show_edit_ui = true;
                 return;
@@ -100,22 +101,22 @@ FOUNDATION_STATIC void wallet_history_add_new_entry(report_t* report, wallet_t* 
         }
     }
 
-    history_t new_entry{ today };
-    if (wallet_history_update_entry(report, wallet, new_entry))
+    wallet_history_t new_entry{ today };
+    if (wallet_history_update_entry_ui(report, wallet, new_entry))
     {
         if (array_size(wallet->history) > 0)
         {
-            const history_t& fh = wallet->history[0];
+            const wallet_history_t& fh = wallet->history[0];
             new_entry.broker_value = fh.broker_value;
             new_entry.other_assets = fh.other_assets;
         }
 
-        wallet->history = array_push(wallet->history, new_entry);
+        array_push(wallet->history, new_entry);
         wallet_history_sort(wallet);
     }
 }
 
-FOUNDATION_STATIC void wallet_history_delete_entry(report_t* report, history_t* h)
+FOUNDATION_STATIC void wallet_history_delete_entry(report_t* report, wallet_history_t* h)
 {
     size_t pos = h - &h->source->history[0];
     array_erase(h->source->history, pos);
@@ -195,7 +196,7 @@ FOUNDATION_STATIC report_handle_t wallet_history_select_initial_report()
             report_t* report = report_get_at(i);
             if (report->wallet->track_history && array_size(report->wallet->history))
             {
-                const history_t& fh = report->wallet->history[0];
+                const wallet_history_t& fh = report->wallet->history[0];
                 if (fh.date > recent)
                 {
                     recent = fh.date;
@@ -210,7 +211,7 @@ FOUNDATION_STATIC report_handle_t wallet_history_select_initial_report()
 
 FOUNDATION_STATIC cell_t wallet_history_column_date(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
 
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {
@@ -238,31 +239,31 @@ FOUNDATION_STATIC cell_t wallet_history_column_date(table_element_ptr_t element,
 
 FOUNDATION_STATIC cell_t wallet_history_column_funds(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     return h->funds;
 }
 
 FOUNDATION_STATIC cell_t wallet_history_column_broker_value(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     return h->broker_value;
 }
 
 FOUNDATION_STATIC cell_t wallet_history_column_investments(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     return h->investments;
 }
 
 FOUNDATION_STATIC cell_t wallet_history_column_total_value(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     return h->total_value;
 }
 
 FOUNDATION_STATIC cell_t wallet_history_column_total_gain(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     const double total_gain = h->total_value - h->investments;
     const double adjusted_total_gain = total_gain + h->gain;
     return math_ifzero(adjusted_total_gain, total_gain);
@@ -270,16 +271,16 @@ FOUNDATION_STATIC cell_t wallet_history_column_total_gain(table_element_ptr_t el
 
 FOUNDATION_STATIC cell_t wallet_history_column_assets(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     return h->other_assets;
 }
 
-FOUNDATION_STATIC double wallet_history_total_value_gain(const history_t* h)
+FOUNDATION_STATIC double wallet_history_total_value_gain(const wallet_history_t* h)
 {
     return (h->total_value - h->investments) + (h->gain + h->funds);
 }
 
-FOUNDATION_STATIC const history_t* wallet_history_get_previous(const history_t* h)
+FOUNDATION_STATIC const wallet_history_t* wallet_history_get_previous(const wallet_history_t* h)
 {
     if (!h->source)
         return nullptr;
@@ -288,8 +289,8 @@ FOUNDATION_STATIC const history_t* wallet_history_get_previous(const history_t* 
     if (h_count < 2)
         return nullptr;
 
-    const history_t* p = h + 1;
-    const size_t pos = pointer_diff(p, &h->source->history[0]) / sizeof(history_t);
+    const wallet_history_t* p = h + 1;
+    const size_t pos = pointer_diff(p, &h->source->history[0]) / sizeof(wallet_history_t);
 
     if (pos >= h_count)
         return nullptr;
@@ -306,7 +307,7 @@ FOUNDATION_STATIC const history_t* wallet_history_get_previous(const history_t* 
     return p;
 }
 
-FOUNDATION_STATIC double wallet_history_total_gain_p(const history_t* h)
+FOUNDATION_STATIC double wallet_history_total_gain_p(const wallet_history_t* h)
 {
     if (h->investments == 0)
         return NAN;
@@ -320,34 +321,34 @@ FOUNDATION_STATIC double wallet_history_total_gain_p(const history_t* h)
 
 FOUNDATION_STATIC cell_t wallet_history_column_total_gain_p(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     return wallet_history_total_gain_p(h);
 }
 
-FOUNDATION_STATIC double wallet_history_wealth(const history_t* h)
+FOUNDATION_STATIC double wallet_history_wealth(const wallet_history_t* h)
 {
     return wallet_history_total_value_gain(h) + h->other_assets;
 }
 
 FOUNDATION_STATIC cell_t wallet_history_column_wealth(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     return wallet_history_wealth(h);
 }
 
 FOUNDATION_STATIC cell_t wallet_history_column_change(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
-    const history_t* p = wallet_history_get_previous(h);
+    wallet_history_t* h = (wallet_history_t*)element;
+    const wallet_history_t* p = wallet_history_get_previous(h);
     if (!p)
         return NAN;
 
     return wallet_history_total_value_gain(h) - wallet_history_total_value_gain(p);
 }
 
-FOUNDATION_STATIC double wallet_history_change_p(const history_t* h)
+FOUNDATION_STATIC double wallet_history_change_p(const wallet_history_t* h)
 {
-    const history_t* p = wallet_history_get_previous(h);
+    const wallet_history_t* p = wallet_history_get_previous(h);
     if (!p)
         return NAN;
 
@@ -364,7 +365,7 @@ FOUNDATION_STATIC double wallet_history_change_p(const history_t* h)
 
 FOUNDATION_STATIC cell_t wallet_history_column_change_p(table_element_ptr_t element, const column_t* column)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     cell_t cv(wallet_history_change_p(h));
     
     if (cv.number <= 0)
@@ -383,7 +384,7 @@ FOUNDATION_STATIC cell_t wallet_history_column_change_p(table_element_ptr_t elem
 
 FOUNDATION_STATIC void wallet_history_edit_value(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
-    history_t* h = (history_t*)element;
+    wallet_history_t* h = (wallet_history_t*)element;
     h->show_edit_ui = true;
 }
 
@@ -409,7 +410,7 @@ FOUNDATION_STATIC table_t* wallet_history_create_table(report_t* report)
     return history_table;
 }
 
-FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, history_t* h)
+FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, wallet_history_t* h)
 {
     ImGui::SetNextWindowSize(ImVec2(IM_SCALEF(255), IM_SCALEF(240)), ImGuiCond_FirstUseEver);
     string_const_t fmttr = RTEXT("Edit History (%.*s)###EH20");
@@ -493,7 +494,7 @@ FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, histo
         {
             ImGui::NextColumn();
             if (ImGui::Button(tr("Update"), { IM_SCALEF(80), IM_SCALEF(20) }))
-                wallet_history_update_entry(report, h->source, *h);
+                wallet_history_update_entry_ui(report, h->source, *h);
 
             ImGui::NextColumn();
             ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(80));
@@ -638,7 +639,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
             ImPlot::PlotLineG(tr(ICON_MD_WALLET " Funds"), [](int idx, void* user_data)->ImPlotPoint
             {
                 const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-                const history_t& h = c->history[idx];
+                const wallet_history_t& h = c->history[idx];
                 const double x = (double)h.date;
                 const double y = h.funds;
                 return ImPlotPoint(x, y);
@@ -651,7 +652,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::PlotBarsG(tr(ICON_MD_SAVINGS " Investments"), [](int idx, void* user_data)->ImPlotPoint
     {
         const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-        const history_t& h = c->history[idx];
+        const wallet_history_t& h = c->history[idx];
         const double x = (double)h.date;
         const double y = h.investments;
         return ImPlotPoint(x, y);
@@ -662,7 +663,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::PlotLineG(tr(ICON_MD_ACCOUNT_BALANCE_WALLET " Value"), [](int idx, void* user_data)->ImPlotPoint
     {
         const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-        const history_t& h = c->history[idx];
+        const wallet_history_t& h = c->history[idx];
         const double x = (double)h.date;
         const double y = wallet_history_total_value_gain(&h);
         return ImPlotPoint(x, y);
@@ -678,7 +679,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
             ImPlot::PlotLineG(tr(ICON_MD_REAL_ESTATE_AGENT " Broker"), [](int idx, void* user_data)->ImPlotPoint
             {
                 const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-                const history_t& h = c->history[idx];
+                const wallet_history_t& h = c->history[idx];
                 const double x = (double)h.date;
                 const double y = h.broker_value;
                 return ImPlotPoint(x, y);
@@ -690,7 +691,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::PlotLineG(tr(ICON_MD_PRICE_CHANGE " Gain %"), [](int idx, void* user_data)->ImPlotPoint
     {
         const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-        const history_t& h = c->history[idx];
+        const wallet_history_t& h = c->history[idx];
         const double x = (double)h.date;
         const double y = wallet_history_total_gain_p(&h);
         return ImPlotPoint(x, y);
@@ -703,7 +704,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
         ImPlot::PlotLineG(ICON_MD_CHANGE_HISTORY "##Change %", [](int idx, void* user_data)->ImPlotPoint
         {
             const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-            const history_t& h = c->history[idx];
+            const wallet_history_t& h = c->history[idx];
             const double x = (double)h.date;
             const double y = wallet_history_change_p(&h);
             return ImPlotPoint(x, y);
@@ -726,13 +727,13 @@ FOUNDATION_STATIC void wallet_history_draw_summary(report_handle_t report_id)
 
     const unsigned history_count = array_size(wallet->history);
     wallet->history_table->search_filter = string_to_const(SETTINGS.search_filter);
-    table_render(wallet->history_table, wallet->history, history_count, sizeof(history_t), 0, ImGui::GetContentRegionAvail().y * 0.3f);
+    table_render(wallet->history_table, wallet->history, history_count, sizeof(wallet_history_t), 0, ImGui::GetContentRegionAvail().y * 0.3f);
 
     wallet_history_draw_graph(report, wallet);
 
     for (int i = 0, end = history_count; i != end; ++i)
     {
-        history_t* h = &report->wallet->history[i];
+        wallet_history_t* h = &report->wallet->history[i];
         if (h->show_edit_ui)
             report_render_history_edit_dialog(report, h);
     }
@@ -783,7 +784,7 @@ wallet_t* wallet_allocate(config_handle_t wallet_data)
 
     for (const auto c : wallet_data["history"])
     {
-        history_t h{};
+        wallet_history_t h{};
         h.date = string_to_date(STRING_ARGS(c["date"].as_string()));
         h.funds = c["funds"].as_number();
         h.broker_value = c["broker"].as_number();
@@ -823,7 +824,7 @@ void wallet_save(wallet_t* wallet, config_handle_t wallet_data)
     config_handle_t history_data = config_set_array(wallet_data, STRING_CONST("history"));
     for (size_t i = 0; i < array_size(wallet->history); ++i)
     {
-        const history_t& h = wallet->history[i];
+        const wallet_history_t& h = wallet->history[i];
         auto c = config_array_push(history_data, CONFIG_VALUE_OBJECT);
         config_set(c, "date", string_from_date(h.date));
         config_set(c, "funds", h.funds);
@@ -870,7 +871,7 @@ double wallet_total_funds(wallet_t* wallet)
     return total;
 }
 
-void wallet_update_history(report_t* report, wallet_t* wallet)
+void wallet_update_tracking_history(report_t* report, wallet_t* wallet)
 {
     FOUNDATION_ASSERT(report);
     FOUNDATION_ASSERT(wallet);
@@ -882,11 +883,36 @@ void wallet_update_history(report_t* report, wallet_t* wallet)
     const time_t today = time_now();
     foreach (h, wallet->history)
     {
-        if (time_date_equal(today, h->date))
-            return wallet_update_history_entry(report, wallet, h);
+        if (!time_date_equal(today, h->date))
+            continue;
+
+        if (!time_is_working_hours())
+            return;
+
+        if (time_elapsed_days(h->date, today) < 0.01)
+            return; // Already up-to-date (or almost, lets retry later)
+
+        string_const_t report_name = ::report_name(report);
+        tr_info(HASH_REPORT, "Updating wallet history entry for {0} on {1}", report_name, string_from_date(today));
+        return wallet_history_update_entry(report, wallet, h);
     }
 
     // Add a new entry if none already
+    wallet_history_t new_entry{ today };
+    wallet_history_update_entry(report, wallet, &new_entry);
+    if (array_size(wallet->history) > 0)
+    {
+        const wallet_history_t& fh = wallet->history[0];
+        new_entry.broker_value = fh.broker_value;
+        new_entry.other_assets = fh.other_assets;
+    }
+
+    array_push_memcpy(wallet->history, &new_entry);
+    wallet_history_sort(wallet);
+
+    string_const_t report_name = ::report_name(report);
+    string_const_t date_str = string_from_date(new_entry.date);
+    tr_info(HASH_REPORT, "Added new wallet history entry for {0} on {1}", report_name, date_str);
 }
 
 bool wallet_draw(wallet_t* wallet, float available_space)

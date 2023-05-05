@@ -258,3 +258,6 @@ title_t* report_add_title(report_t* report, const char* code, size_t code_length
  * @return  The sorted reports. The list must be deallocated with #array_deallocate
  */
 report_t** report_sort_alphabetically();
+
+/*! Returns the name of a report. */
+string_const_t report_name(report_t* report);

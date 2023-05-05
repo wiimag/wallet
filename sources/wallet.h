@@ -17,9 +17,9 @@ typedef enum HistoryPeriod {
     WALLET_HISTORY_ALL = 0,
     WALLET_HISTORY_MONTLY,
     WALLET_HISTORY_YEARLY
-} history_period_t;
+} wallet_history_period_t;
 
-struct history_t
+struct wallet_history_t
 {
     time_t date{ 0 };
     double funds{ 0 };
@@ -56,17 +56,16 @@ struct wallet_t
     double enhanced_earnings{ NAN };
     double total_dividends{ 0 };
 
-    history_period_t history_period{ WALLET_HISTORY_ALL };
-
     bool show_extra_charts{ false };
     bool show_add_historical_data_ui{ false };
 
     bool track_history{ false };
     string_t preferred_currency{};
 
-    history_t* history{ nullptr };
+    wallet_history_t* history{ nullptr };
     table_t* history_table{ nullptr };
     double* history_dates{ nullptr };
+    wallet_history_period_t history_period{ WALLET_HISTORY_ALL };
 };
 
 /*! Draw the wallet table summary. 
@@ -116,4 +115,4 @@ double wallet_total_funds(wallet_t* wallet);
  * 
  *  @param[in] wallet The wallet to update the history for.
  */
-void wallet_update_history(report_t* report, wallet_t* wallet);
+void wallet_update_tracking_history(report_t* report, wallet_t* wallet);
