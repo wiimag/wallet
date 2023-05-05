@@ -1,4 +1,4 @@
-Title=@PRODUCT_NAME@ v.@VERSION_MAJOR@.@VERSION_MINOR@
+Title=@PRODUCT_NAME@ v.@VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@
 Path=%LOCALAPPDATA%\@PRODUCT_NAME@
 SavePath
 Update=U
@@ -27,7 +27,7 @@ Text
 
 }
 
-License=@PRODUCT_NAME@ v.@VERSION_MAJOR@.@VERSION_MINOR@ (EODHD Terms and Conditions)
+License=@PRODUCT_NAME@ v.@VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@ (EODHD Terms and Conditions)
 {
 Please read these Terms and Conditions carefully; they impose legal obligations on you. By using the Services, you are acknowledging that you have read and understood these Terms of Service and agree to be legally bound by them.
 

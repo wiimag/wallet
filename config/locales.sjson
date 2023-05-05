@@ -3458,12 +3458,12 @@
 		{
 			hash = "b1dee8336e402b88"
 			en = "Lost"
-			fr = "@TODO"
+			fr = "Perdu"
 		}
 		{
 			hash = "24fd9697ce53096b"
 			en = "Saved"
-			fr = "@TODO"
+			fr = "Économisé"
 		}
 	]
 }

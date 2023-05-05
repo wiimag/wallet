@@ -141,10 +141,12 @@ FILES_TO_PACKAGE=()
 # Add file patterns to be packaged
 FILES_TO_PACKAGE+=("$BUILD_FOLDER_PATH/*.exe")
 FILES_TO_PACKAGE+=("$BUILD_FOLDER_PATH/*.dll")
-FILES_TO_PACKAGE+=("$BUILD_FOLDER_PATH/*.pdb")
 
 # Add root CHANGELOG.md
 FILES_TO_PACKAGE+=("CHANGELOG.md")
+
+# Add *.expr files
+FILES_TO_PACKAGE+=("docs/*.expr")
 
 # Print the files to be packaged
 echo "Files to be packaged:"
@@ -157,10 +159,10 @@ done
 # Command line switches: https://techshelps.github.io/WinRAR/html/HELPSwitches.htm
 #
 "$WIN_RAR_EXE_PATH" \
-  a -afzip -sfx -z"$SFX_SETUP_SCRIPT" \
+  a -ma5 -mc- -afzip -sfx -z"$SFX_SETUP_SCRIPT" \
   -iicon"$PACKAGE_ICON" -iimg"$SFX_BANNER_LOW_RES" -iimg"$SFX_BANNER_HIGH_RES" \
-  -r -ep1 -m5 -ed -cfg- \
-  -mt4 -xsetup.* -x*.pdb \
+  -r -ep1 -ed -cfg- \
+  -mt4 -xsetup.* \
   "$ZIP_OUTPUT_PATH" ${FILES_TO_PACKAGE[@]}
 
 # Use Winrar to print the file list contained in the zip file
@@ -191,6 +193,10 @@ WINDOWS_DEFENDER_PATH="C:\Program Files\Windows Defender\MpCmdRun.exe"
 if [ -f "$WINDOWS_DEFENDER_PATH" ]; then
   # Run Windows Defender to scan the zip file
   "$WINDOWS_DEFENDER_PATH" -Scan -ScanType 3 -File "$ZIP_OUTPUT_PATH"
+  if [ $? -ne 0 ]; then
+    echo "Windows Defender scan failed"
+    #exit 1
+  fi
 
   # If command line has --run, run the produced exe
   if [[ "$*" == *-run* ]]; then
@@ -203,6 +209,12 @@ if [ -f "$WINDOWS_DEFENDER_PATH" ]; then
     BALLET_RELEASE_PATH="../ballet/public/releases/win32/wallet_release_latest_backend.exe"
     cp "$ZIP_OUTPUT_PATH" "$BALLET_RELEASE_PATH"
     echo "Copied to ballet repo: $BALLET_RELEASE_PATH"
+
+    cp "CHANGELOG.md" "../ballet/public/"
+    echo "Copied to ballet repo: ../ballet/public/CHANGELOG.md"
+
+    cp "$PROJECT_EXE_PATH" "../ballet/public/releases/win32/wallet_release_latest_backend_portable.exe"
+    echo "Copied to ballet repo: ../ballet/public/releases/win32/wallet_release_latest_backend_portable.exe"
   fi
 
 else

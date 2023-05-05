@@ -14,6 +14,7 @@
 #include <framework/dispatcher.h>
 #include <framework/array.h>
 #include <framework/system.h>
+#include <framework/expr.h>
 
 #include <foundation/memory.h>
 
