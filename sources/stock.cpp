@@ -19,11 +19,17 @@
 #include <framework/string.h>
 #include <framework/array.h>
 #include <framework/localization.h>
+#include <framework/database.h>
+#include <framework/session.h>
 
 #include <foundation/path.h>
 #include <foundation/hashtable.h>
+#include <foundation/stream.h>
 
 #define HASH_STOCK static_hash_string("stock", 5, 0x1a0dd7af24ebee7aLL)
+
+constexpr char INVALID_SYMBOLS_HEADER[] = "INVALID_SYMBOLS##1";
+constexpr CHAR INVALID_SYMBOLS_FILE_NAME[] = "invalid_symbols.db";
 
 struct technical_descriptor_t
 {
@@ -35,9 +41,16 @@ struct technical_descriptor_t
 struct stock_invalid_symbol_t
 {
     hash_t key{0};
-    char symbol[16]{0};
     time_t last_checked{ 0 };
+    char symbol[16]{0};
 };
+
+FOUNDATION_FORCEINLINE hash_t stock_invalid_symbol_hash(const stock_invalid_symbol_t& s)
+{
+    return s.key;
+}
+
+typedef database<stock_invalid_symbol_t, stock_invalid_symbol_hash> stock_invalid_symbol_db_t;
 
 static size_t _db_capacity;
 static shared_mutex _db_lock;
@@ -45,6 +58,7 @@ static day_result_t** _trashed_history = nullptr;
 static stock_t* _db_stocks = nullptr;
 static hashtable64_t* _db_hashes = nullptr;
 static hashtable64_t* _exchange_rates = nullptr;
+static stock_invalid_symbol_db_t* _invalid_symbols = nullptr;
 
 FOUNDATION_STATIC void stock_grow_db()
 {
@@ -599,6 +613,47 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
             });
         }
     }
+}
+
+FOUNDATION_STATIC void stock_load_invalid_symbols(stock_invalid_symbol_db_t* db)
+{
+    FOUNDATION_ASSERT(db);
+
+    string_const_t invalid_symbols_file_path = session_get_user_file_path(STRING_CONST(INVALID_SYMBOLS_FILE_NAME));
+    if (!fs_is_file(STRING_ARGS(invalid_symbols_file_path)))
+        return;
+
+    stream_t* fs = stream_open(STRING_ARGS(invalid_symbols_file_path), STREAM_IN | STREAM_BINARY);
+    if (fs == nullptr)
+        return;
+    
+    char header[sizeof(INVALID_SYMBOLS_HEADER)] = "";
+    stream_read(fs, header, sizeof(header) - 1);
+    if (string_equal(header, sizeof(header) - 1, STRING_CONST(INVALID_SYMBOLS_HEADER)))
+    {
+        stock_invalid_symbol_t e;
+        while (stream_read(fs, &e, sizeof(e)) == sizeof(e) && time_elapsed_days(e.last_checked, time_now()) < 15.0)
+            db->put(e);
+    }
+
+    stream_deallocate(fs);
+}
+
+FOUNDATION_STATIC void stock_save_invalid_symbols(const stock_invalid_symbol_db_t* db)
+{
+    FOUNDATION_ASSERT(db);
+
+    string_const_t invalid_symbols_file_path = session_get_user_file_path(STRING_CONST(INVALID_SYMBOLS_FILE_NAME));
+    
+    stream_t* fs = stream_open(STRING_ARGS(invalid_symbols_file_path), STREAM_OUT | STREAM_BINARY | STREAM_TRUNCATE | STREAM_CREATE);
+    if (fs == nullptr)
+        return;
+    
+    stream_write(fs, INVALID_SYMBOLS_HEADER, sizeof(INVALID_SYMBOLS_HEADER) - 1);
+    for (const auto& e : *db)
+        stream_write(fs, &e, sizeof(e));
+
+    stream_deallocate(fs);
 }
 
 //
@@ -1176,39 +1231,45 @@ day_result_t stock_realtime_record(const char* symbol, size_t length)
     return result;
 }
 
-bool stock_valid(const char* symbol, size_t length, double timeout)
+bool stock_ignore_symbol(const char* symbol, size_t length, hash_t key)
 {
-    string_t ticker = string_copy(SHARED_BUFFER(16), symbol, length);
-    bool valid = false;
-    if (!eod_fetch("real-time", ticker.str, FORMAT_JSON_CACHE, "validate", "true", [&valid](const auto& res)
+    if (_invalid_symbols == nullptr)
+        return false;
+
+    if (key == 0)
+        key = string_hash(symbol, length);
+
+    // Track invalid symbols to avoid spamming the API.
+    stock_invalid_symbol_t invalid_symbol{ key };
+    invalid_symbol.last_checked = time_now();
+    string_t s = string_copy(STRING_BUFFER(invalid_symbol.symbol), symbol, length);
+
+    // TODO: Add and log reason for ignoring symbol.
+    log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, STRING_CONST("Ignoring symbol %.*s (%" PRIhash ")"), STRING_FORMAT(s), key);
+    return _invalid_symbols->insert(invalid_symbol) != INVALID_KEY;
+}
+
+bool stock_valid(const char* symbol, size_t length)
+{
+    const hash_t symbol_key = string_hash(symbol, length);
+    if (_invalid_symbols->contains(symbol_key))
     {
-        string_const_t timestamp = res["timestamp"].as_string();
-        valid = !string_equal(STRING_ARGS(timestamp), STRING_CONST("NA"));
-    }, 3600 * 24 * 10ULL))
-    {
+        log_debugf(HASH_STOCK, STRING_CONST("Symbol %.*s (%" PRIhash ") is invalid"), to_int(length), symbol, symbol_key);
         return false;
     }
 
+    bool valid = false;
+    string_t ticker = string_copy(SHARED_BUFFER(16), symbol, length);
+    eod_fetch("real-time", ticker.str, FORMAT_JSON_CACHE, "validate", "true", [&valid](const auto& res)
+    {
+        string_const_t timestamp = res["timestamp"].as_string();
+        valid = !string_equal(STRING_ARGS(timestamp), STRING_CONST("NA"));
+    }, 3600 * 24 * 10ULL);
+
+    if (!valid)
+        stock_ignore_symbol(symbol, length, symbol_key);
+
     return valid;
-
-    #if 0
-    stock_handle_t handle = stock_request(symbol, length, FetchLevel::REALTIME);
-    if (!handle)
-        return false;
-
-    const tick_t time = time_current();
-    while (!handle->has_resolve(FetchLevel::REALTIME) && time_elapsed(time) < timeout)
-        dispatcher_wait_for_wakeup_main_thread(250);
-
-    const stock_t* s = handle.resolve();
-    if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME))
-        return false;
-
-    if (s->current.price <= 0.0 || !math_real_is_finite(s->current.price))
-        return false;
-
-    return true;
-    #endif
 }
 
 bool stock_get_time_range(const char* symbol, size_t symbol_length, time_t* start_time, time_t* end_time, double timeout_seconds)
@@ -1246,10 +1307,16 @@ FOUNDATION_STATIC void stock_initialize()
     _db_capacity = 256;
     _db_hashes = hashtable64_allocate(_db_capacity);
     array_push(_db_stocks, stock_t{});
+
+    _invalid_symbols = MEM_NEW(HASH_STOCK, stock_invalid_symbol_db_t);
+    stock_load_invalid_symbols(_invalid_symbols);
 }
 
 FOUNDATION_STATIC void stock_shutdown()
 {
+    stock_save_invalid_symbols(_invalid_symbols);
+    MEM_DELETE(_invalid_symbols);
+
     hashtable64_deallocate(_exchange_rates);
     _exchange_rates = nullptr;
 

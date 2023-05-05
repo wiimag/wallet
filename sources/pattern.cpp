@@ -1070,6 +1070,9 @@ FOUNDATION_STATIC void pattern_render_trend(const char* label, const wallet_plot
 
 FOUNDATION_STATIC void pattern_render_graph_end(pattern_t* pattern, const stock_t* s, pattern_graph_data_t& graph)
 {
+    if (graph.compact)
+        return;
+
     if ((graph.refresh || !pattern->autofit) && (s == nullptr || s->has_resolve(FETCH_ALL)))
     {
         ImPlot::SetNextAxesToFit();
@@ -1241,7 +1244,6 @@ FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
     {
         pattern_graph_data_t gd = pattern_render_build_graph_data(pattern);
         gd.compact = true;
-        gd.refresh = true;
         pattern_render_graph_trends(pattern, gd, { -ImGui::GetStyle().CellPadding.x, IM_SCALEF(100) });
     }
 

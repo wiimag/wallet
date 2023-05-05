@@ -3495,5 +3495,10 @@
 			en = "Search indexing completed for the market {0}"
 			fr = "Indexation de recherche termin\xc3\xa9e pour le march\xc3\xa9 {0}"
 		}
+		{
+			hash = "103635800275c235"
+			en = "You've made %u transactions since %.*s"
+			fr = "@TODO"
+		}
 	]
 }

@@ -405,7 +405,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
 
     string_const_t code = General["Code"].as_string();
     if (string_is_null(code))
-        return; // TODO: Mark symbol as invalid in some cache
+        return (void)stock_ignore_symbol(STRING_ARGS(symbol));
         
     const bool is_delisted = General["IsDelisted"].as_boolean();
     if (is_delisted || json.token_count <= 1)
@@ -419,10 +419,10 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     if (string_try_convert_date(STRING_ARGS(updated_at_string), updated_at))
     {
         const double updated_elapsed_time = time_elapsed_days(updated_at, time_now());
-        if (updated_elapsed_time > 90)
+        if (updated_elapsed_time > 180)
         {
-            log_debugf(HASH_SEARCH, STRING_CONST("%.*s is too old, skipping for indexing"), STRING_FORMAT(code));
-            return;
+            log_debugf(HASH_SEARCH, STRING_CONST("%.*s is too old (%lf days), skipping for indexing"), STRING_FORMAT(symbol), updated_elapsed_time);
+            return (void)stock_ignore_symbol(STRING_ARGS(symbol));
         }
     }
     
@@ -441,7 +441,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
 
     string_const_t description = General["Description"].as_string();
     if (string_is_null(description) || string_equal(STRING_ARGS(description), STRING_CONST("NA")))
-        return;  // TODO: Mark symbol as invalid in some cache
+        return (void)stock_ignore_symbol(STRING_ARGS(symbol));
 
     string_const_t name = General["Name"].as_string();
     string_const_t country = General["Country"].as_string();
@@ -668,8 +668,12 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
             continue;
 
         string_const_t exchange = e["Exchange"].as_string();
+        string_t symbol = string_format(SHARED_BUFFER(16), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), to_int(market_length), market);
         if (string_is_null(exchange))
+        {
+            stock_ignore_symbol(STRING_ARGS(symbol));
             continue;
+        }
 
         string_const_t isin = e["Isin"].as_string();
         string_const_t type = e["Type"].as_string();
@@ -680,9 +684,6 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
 
         if (string_is_null(isin) && string_equal_nocase(STRING_ARGS(type), STRING_CONST("ETF")))
             continue;
-
-        char symbol_buffer[SEARCH_INDEX_WORD_MAX_LENGTH];
-        string_t symbol = string_format(STRING_BUFFER(symbol_buffer), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), to_int(market_length), market);
 
         search_document_handle_t doc = search_database_find_document(db, STRING_ARGS(symbol));
         if (doc != SEARCH_DOCUMENT_INVALID_ID)

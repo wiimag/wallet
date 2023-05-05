@@ -528,7 +528,17 @@ double stock_price_on_date(stock_handle_t& handle, time_t at);
  * 
  *  @return True if the symbol is valid.
  */
-bool stock_valid(const char* symbol, size_t length, double timeout = 5.0);
+bool stock_valid(const char* symbol, size_t length);
+
+/*! Mark a symbol as invalid. Therefore it will be ignored until removed from the list.
+ *
+ *  An ignored symbol will be skipped by #stock_valid.
+ *  The system will remove it from the list after a while (i.e. 15 days).
+ * 
+ *  @param symbol  The stock symbol code
+ *  @param length  The length of the stock symbol code
+ */
+bool stock_ignore_symbol(const char* symbol, size_t length, hash_t key = 0);
 
 /* Fetch stock real-time data if any. This is a convenience function that calls #eod_fetch.
  * 

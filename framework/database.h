@@ -18,6 +18,8 @@ hash_t hash(const T& value)
     return hash(&value, FOUNDATION_ALIGNOF(T));
 }
 
+constexpr const hash_t INVALID_KEY{ 0 };
+
 template<typename T, 
     hash_t(*HASHER)(const T& v) = [](const T& v) { return hash(v); }>
 struct database
@@ -26,8 +28,6 @@ struct database
     size_t capacity;
     hashtable64_t* hashes;
     mutable shared_mutex mutex;
-
-    static constexpr const hash_t INVALID_KEY{ 0 };
 
     database()
         : elements(nullptr)
