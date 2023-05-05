@@ -3498,7 +3498,7 @@
 		{
 			hash = "103635800275c235"
 			en = "You've made %u transactions since %.*s"
-			fr = "@TODO"
+			fr = "Vous avez effectu\xc3\xa9 %u transactions depuis le %.*s"
 		}
 	]
 }
