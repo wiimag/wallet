@@ -21,7 +21,7 @@
 #include <foundation/hash.h>
 #include <foundation/uuid.h>
 
-struct plot_context_t
+struct wallet_plot_context_t
 {
     time_t ref;
     size_t range;
@@ -36,182 +36,27 @@ struct plot_context_t
     double a{ 0 }, b{ 0 }, c{ 0 }, d{ 0 }, e{ 0 }, f{ 0 };
 };
 
+FOUNDATION_STATIC void wallet_update_history_entry(report_t* report, wallet_t* wallet, history_t* entry)
+{
+    FOUNDATION_ASSERT(report);
+    FOUNDATION_ASSERT(wallet);
+    FOUNDATION_ASSERT(entry);
+
+    entry->date = time_now();
+    entry->funds = wallet_total_funds(wallet);
+    entry->investments = report->total_investment;
+    entry->total_value = report->total_value;
+    entry->gain = report->wallet->sell_total_gain;
+            
+    report->dirty = true;
+}
+
 FOUNDATION_STATIC void wallet_render_funds_text(float available_space, float padding, string_const_t fundsstr)
 {
     const float tw = ImGui::CalcTextSize(STRING_RANGE(fundsstr)).x;
     const float iw = ImGui::GetItemRectSize().x;
     ImGui::MoveCursor(available_space - tw - iw + IM_SCALEF(10) - padding, 0, true);
     ImGui::TextUnformatted(fundsstr.str);
-}
-
-bool wallet_draw(wallet_t* wallet, float available_space)
-{
-    bool updated = false;
-
-    float last_item_size = 0;
-    const float control_padding = IM_SCALEF(14.0f) + (ImGui::GetScrollMaxY() > 0 ? IM_SCALEF(8) : 0);
-
-    // Draw wallet history tracking check box
-    {
-        ImGui::AlignTextToFramePadding();
-        ImGui::TrTextUnformatted("History");
-        last_item_size = ImGui::GetItemRectSize().x;
-        ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(20.0f) - control_padding, 0, true);
-        if (ImGui::Checkbox("##History", &wallet->track_history))
-            updated |= true;
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(tr("Track historical data for this report."));
-    }
-    
-    // Draw wallet target percentage
-    {
-        ImGui::AlignTextToFramePadding();
-        ImGui::TrTextUnformatted("Target %");
-        last_item_size = ImGui::GetItemRectSize().x;
-
-        const float control_width = IM_SCALEF(60.0f);
-        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
-        ImGui::SetNextItemWidth(control_width);
-        double p100 = wallet->main_target * 100.0;
-        if (ImGui::InputDouble("##Target%", &p100, 0, 0, "%.3g %%", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
-        {
-            wallet->main_target = p100 / 100.0;
-            updated |= true;
-        }
-    }
-
-    // Draw wallet preferred currency
-    {
-        ImGui::AlignTextToFramePadding();
-        ImGui::TrTextUnformatted("Currency");
-        last_item_size = ImGui::GetItemRectSize().x;
-
-        char currency[64];
-        string_copy(STRING_BUFFER(currency), STRING_ARGS(wallet->preferred_currency));
-
-        const float control_width = IM_SCALEF(60.0f);
-        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(currency), ImGuiInputTextFlags_AutoSelectAll))
-        {
-            char* old = wallet->preferred_currency.str;
-            wallet->preferred_currency = string_clone(currency, string_length(currency));
-            string_deallocate(old);
-            updated |= true;
-        }
-    }
-
-    // Draw wallet funds (expands to all currencies)
-    {
-        string_const_t fundsstr = tr_format_static("{0,currency}", wallet_get_total_funds(wallet));
-        ImGui::MoveCursor(-IM_SCALEF(4), 0);
-        if (ImGui::TreeNode(tr("Funds")))
-        {
-            wallet_render_funds_text(available_space, control_padding, fundsstr);
-            ImGui::SetWindowFontScale(0.9f);
-
-            ImGui::Columns(2, "funds", true);
-            foreach(f, wallet->funds)
-            {
-                char currency_code[8];
-                string_copy(STRING_BUFFER(currency_code), STRING_ARGS(f->currency));
-
-                ImGui::PushID(f);
-                if (i > 0)
-                    ImGui::NextColumn();
-
-                if (ImGui::Button(ICON_MD_DELETE))
-                {
-                    array_erase(wallet->funds, i);
-                    updated |= true;
-                    ImGui::PopID();
-                    break;
-                }
-
-                ImGui::SameLine();
-                ImGui::ExpandNextItem();
-                if (ImGui::InputTextWithHint("##Currency", "USD", STRING_BUFFER(currency_code), ImGuiInputTextFlags_AutoSelectAll))
-                {
-                    updated |= true;
-                    string_deallocate(f->currency);
-                    const size_t len = string_length(currency_code);
-                    f->currency = string_clone(currency_code, len);
-                }
-
-                ImGui::NextColumn();
-                ImGui::ExpandNextItem();
-                if (ImGui::InputDouble("##Amount", &f->amount, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
-                    updated |= true;
-
-                ImGui::PopID();
-            }
-
-            static bool add_new = false;
-
-            if (add_new)
-            {
-                ImGui::PushID("new fund");
-                bool added = false;
-                static double new_fund_amount = 0.0;
-                static char new_fund_currency[8] = { 0 };
-
-                if (!array_empty(wallet->funds))
-                    ImGui::NextColumn();
-                ImGui::ExpandNextItem();
-                if (ImGui::InputTextWithHint("##Currency", "USD", STRING_BUFFER(new_fund_currency), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
-                    added = true;
-
-                ImGui::NextColumn();
-                ImGui::ExpandNextItem();
-                if (ImGui::InputDouble("##Amount", &new_fund_amount, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
-                    added = true;
-
-                const size_t currency_length = string_length(new_fund_currency);
-                if (added && currency_length > 1)
-                {
-                    wallet_fund_t fund{};
-                    fund.amount = new_fund_amount;
-                    fund.currency = string_clone(new_fund_currency, currency_length);
-                    array_push_memcpy(wallet->funds, &fund);
-
-                    new_fund_amount = 0.0;
-                    new_fund_currency[0] = 0;
-
-                    updated |= true;
-                    add_new = false;
-                }
-                ImGui::PopID();
-
-                ImGui::ExpandNextItem();
-                if (ImGui::SmallButton(tr("Cancel")))
-                {
-                    add_new = false;
-                    new_fund_amount = 0.0;
-                    new_fund_currency[0] = 0;
-                }
-            }
-            else
-            {
-                ImGui::NextColumn();
-                ImGui::ExpandNextItem();
-                if (ImGui::SmallButton(tr("Add currency")))
-                {
-                    add_new = true;
-                }
-            }
-
-            ImGui::Columns(1, "##closefunds", false);
-
-            ImGui::SetWindowFontScale(1.0f);
-            ImGui::TreePop();
-        }
-        else
-        {
-            wallet_render_funds_text(available_space, control_padding, fundsstr);
-        }
-    }
-
-    return updated;
 }
 
 FOUNDATION_STATIC void wallet_history_sort(wallet_t* wallet)
@@ -231,15 +76,10 @@ FOUNDATION_STATIC bool wallet_history_update_entry(report_t* report, wallet_t* w
         return false;
     }
     
-    report->dirty = true;
-    entry.date = time_now();
     entry.source = wallet;
     entry.show_edit_ui = true;
-    entry.funds = wallet_get_total_funds(wallet);
-    entry.investments = report->total_investment;
-    entry.total_value = report->total_value;
-    entry.gain = report->wallet->sell_total_gain;
-
+    wallet_update_history_entry(report, wallet, &entry);
+    
     return true;
 }
 
@@ -788,7 +628,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y2, 0.0, INFINITY);
     ImPlot::SetupAxisFormat(ImAxis_Y2, wallet_history_format_currency, nullptr);
 
-    plot_context_t c{ time_now(), history_count, 1, wallet->history };
+    wallet_plot_context_t c{ time_now(), history_count, 1, wallet->history };
 
     if (wallet->show_extra_charts)
     {    
@@ -797,7 +637,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
             ImPlot::SetAxis(ImAxis_Y2);
             ImPlot::PlotLineG(tr(ICON_MD_WALLET " Funds"), [](int idx, void* user_data)->ImPlotPoint
             {
-                const plot_context_t* c = (plot_context_t*)user_data;
+                const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
                 const history_t& h = c->history[idx];
                 const double x = (double)h.date;
                 const double y = h.funds;
@@ -810,7 +650,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::HideNextItem(true, ImPlotCond_Once);
     ImPlot::PlotBarsG(tr(ICON_MD_SAVINGS " Investments"), [](int idx, void* user_data)->ImPlotPoint
     {
-        const plot_context_t* c = (plot_context_t*)user_data;
+        const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
         const history_t& h = c->history[idx];
         const double x = (double)h.date;
         const double y = h.investments;
@@ -821,7 +661,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 3);
     ImPlot::PlotLineG(tr(ICON_MD_ACCOUNT_BALANCE_WALLET " Value"), [](int idx, void* user_data)->ImPlotPoint
     {
-        const plot_context_t* c = (plot_context_t*)user_data;
+        const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
         const history_t& h = c->history[idx];
         const double x = (double)h.date;
         const double y = wallet_history_total_value_gain(&h);
@@ -837,7 +677,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
             ImPlot::HideNextItem(true, ImPlotCond_Once);
             ImPlot::PlotLineG(tr(ICON_MD_REAL_ESTATE_AGENT " Broker"), [](int idx, void* user_data)->ImPlotPoint
             {
-                const plot_context_t* c = (plot_context_t*)user_data;
+                const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
                 const history_t& h = c->history[idx];
                 const double x = (double)h.date;
                 const double y = h.broker_value;
@@ -849,7 +689,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::SetAxis(ImAxis_Y1);
     ImPlot::PlotLineG(tr(ICON_MD_PRICE_CHANGE " Gain %"), [](int idx, void* user_data)->ImPlotPoint
     {
-        const plot_context_t* c = (plot_context_t*)user_data;
+        const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
         const history_t& h = c->history[idx];
         const double x = (double)h.date;
         const double y = wallet_history_total_gain_p(&h);
@@ -862,7 +702,7 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
         ImPlot::HideNextItem(true, ImPlotCond_Once);
         ImPlot::PlotLineG(ICON_MD_CHANGE_HISTORY "##Change %", [](int idx, void* user_data)->ImPlotPoint
         {
-            const plot_context_t* c = (plot_context_t*)user_data;
+            const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
             const history_t& h = c->history[idx];
             const double x = (double)h.date;
             const double y = wallet_history_change_p(&h);
@@ -1012,7 +852,7 @@ void wallet_deallocate(wallet_t* wallet)
     memory_deallocate(wallet);
 }
 
-double wallet_get_total_funds(wallet_t* wallet)
+double wallet_total_funds(wallet_t* wallet)
 {
     double total = 0.0;
     foreach(f, wallet->funds)
@@ -1028,4 +868,193 @@ double wallet_get_total_funds(wallet_t* wallet)
     }
 
     return total;
+}
+
+void wallet_update_history(report_t* report, wallet_t* wallet)
+{
+    FOUNDATION_ASSERT(report);
+    FOUNDATION_ASSERT(wallet);
+
+    if (!wallet->track_history)
+        return;
+
+    // Check that we have an entry for today.
+    const time_t today = time_now();
+    foreach (h, wallet->history)
+    {
+        if (time_date_equal(today, h->date))
+            return wallet_update_history_entry(report, wallet, h);
+    }
+
+    // Add a new entry if none already
+}
+
+bool wallet_draw(wallet_t* wallet, float available_space)
+{
+    bool updated = false;
+
+    float last_item_size = 0;
+    const float control_padding = IM_SCALEF(14.0f) + (ImGui::GetScrollMaxY() > 0 ? IM_SCALEF(8) : 0);
+
+    // Draw wallet history tracking check box
+    {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TrTextUnformatted("History");
+        last_item_size = ImGui::GetItemRectSize().x;
+        ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(20.0f) - control_padding, 0, true);
+        if (ImGui::Checkbox("##History", &wallet->track_history))
+            updated |= true;
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(tr("Track historical data for this report."));
+    }
+    
+    // Draw wallet target percentage
+    {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TrTextUnformatted("Target %");
+        last_item_size = ImGui::GetItemRectSize().x;
+
+        const float control_width = IM_SCALEF(60.0f);
+        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
+        ImGui::SetNextItemWidth(control_width);
+        double p100 = wallet->main_target * 100.0;
+        if (ImGui::InputDouble("##Target%", &p100, 0, 0, "%.3g %%", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+        {
+            wallet->main_target = p100 / 100.0;
+            updated |= true;
+        }
+    }
+
+    // Draw wallet preferred currency
+    {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TrTextUnformatted("Currency");
+        last_item_size = ImGui::GetItemRectSize().x;
+
+        char currency[64];
+        string_copy(STRING_BUFFER(currency), STRING_ARGS(wallet->preferred_currency));
+
+        const float control_width = IM_SCALEF(60.0f);
+        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
+        ImGui::SetNextItemWidth(control_width);
+        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(currency), ImGuiInputTextFlags_AutoSelectAll))
+        {
+            char* old = wallet->preferred_currency.str;
+            wallet->preferred_currency = string_clone(currency, string_length(currency));
+            string_deallocate(old);
+            updated |= true;
+        }
+    }
+
+    // Draw wallet funds (expands to all currencies)
+    {
+        string_const_t fundsstr = tr_format_static("{0,currency}", wallet_total_funds(wallet));
+        ImGui::MoveCursor(-IM_SCALEF(4), 0);
+        if (ImGui::TreeNode(tr("Funds")))
+        {
+            wallet_render_funds_text(available_space, control_padding, fundsstr);
+            ImGui::SetWindowFontScale(0.9f);
+
+            ImGui::Columns(2, "funds", true);
+            foreach(f, wallet->funds)
+            {
+                char currency_code[8];
+                string_copy(STRING_BUFFER(currency_code), STRING_ARGS(f->currency));
+
+                ImGui::PushID(f);
+                if (i > 0)
+                    ImGui::NextColumn();
+
+                if (ImGui::Button(ICON_MD_DELETE))
+                {
+                    array_erase(wallet->funds, i);
+                    updated |= true;
+                    ImGui::PopID();
+                    break;
+                }
+
+                ImGui::SameLine();
+                ImGui::ExpandNextItem();
+                if (ImGui::InputTextWithHint("##Currency", "USD", STRING_BUFFER(currency_code), ImGuiInputTextFlags_AutoSelectAll))
+                {
+                    updated |= true;
+                    string_deallocate(f->currency);
+                    const size_t len = string_length(currency_code);
+                    f->currency = string_clone(currency_code, len);
+                }
+
+                ImGui::NextColumn();
+                ImGui::ExpandNextItem();
+                if (ImGui::InputDouble("##Amount", &f->amount, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+                    updated |= true;
+
+                ImGui::PopID();
+            }
+
+            static bool add_new = false;
+
+            if (add_new)
+            {
+                ImGui::PushID("new fund");
+                bool added = false;
+                static double new_fund_amount = 0.0;
+                static char new_fund_currency[8] = { 0 };
+
+                if (!array_empty(wallet->funds))
+                    ImGui::NextColumn();
+                ImGui::ExpandNextItem();
+                if (ImGui::InputTextWithHint("##Currency", "USD", STRING_BUFFER(new_fund_currency), ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+                    added = true;
+
+                ImGui::NextColumn();
+                ImGui::ExpandNextItem();
+                if (ImGui::InputDouble("##Amount", &new_fund_amount, 0, 0, "%.2lf $", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+                    added = true;
+
+                const size_t currency_length = string_length(new_fund_currency);
+                if (added && currency_length > 1)
+                {
+                    wallet_fund_t fund{};
+                    fund.amount = new_fund_amount;
+                    fund.currency = string_clone(new_fund_currency, currency_length);
+                    array_push_memcpy(wallet->funds, &fund);
+
+                    new_fund_amount = 0.0;
+                    new_fund_currency[0] = 0;
+
+                    updated |= true;
+                    add_new = false;
+                }
+                ImGui::PopID();
+
+                ImGui::ExpandNextItem();
+                if (ImGui::SmallButton(tr("Cancel")))
+                {
+                    add_new = false;
+                    new_fund_amount = 0.0;
+                    new_fund_currency[0] = 0;
+                }
+            }
+            else
+            {
+                ImGui::NextColumn();
+                ImGui::ExpandNextItem();
+                if (ImGui::SmallButton(tr("Add currency")))
+                {
+                    add_new = true;
+                }
+            }
+
+            ImGui::Columns(1, "##closefunds", false);
+
+            ImGui::SetWindowFontScale(1.0f);
+            ImGui::TreePop();
+        }
+        else
+        {
+            wallet_render_funds_text(available_space, control_padding, fundsstr);
+        }
+    }
+
+    return updated;
 }

@@ -11,6 +11,7 @@
 
 struct table_t;
 struct wallet_t;
+struct report_t;
 
 typedef enum HistoryPeriod {
     WALLET_HISTORY_ALL = 0,
@@ -109,4 +110,10 @@ void wallet_deallocate(wallet_t* wallet);
  * 
  *  @return The total funds in the wallet.
  */
-double wallet_get_total_funds(wallet_t* wallet);
+double wallet_total_funds(wallet_t* wallet);
+
+/*! Update the wallet history with the latest data. 
+ * 
+ *  @param[in] wallet The wallet to update the history for.
+ */
+void wallet_update_history(report_t* report, wallet_t* wallet);

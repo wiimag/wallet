@@ -1747,7 +1747,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     report_render_summary_line(report, tr("Day Gain"), report->total_day_gain, currency_fmt, true);
     ImGui::PopStyleColor(1);
 
-    const double total_funds = wallet_get_total_funds(report->wallet);
+    const double total_funds = wallet_total_funds(report->wallet);
     const double capital = max(0.0, total_funds - report->total_investment);
     report_render_summary_line(report, tr("Dividends"), report->wallet->total_dividends, currency_fmt);
 
@@ -1980,7 +1980,9 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
 
     report_filter_out_titles(report);
     report_summary_update(report);
-    log_infof(HASH_REPORT, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
+    wallet_update_history(report, report->wallet);
+
+    log_debugf(HASH_REPORT, STRING_CONST("Fully resolved %s"), string_table_decode(report->name));
     if (report->table)
         report->table->needs_sorting = true;
 

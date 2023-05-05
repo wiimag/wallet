@@ -163,6 +163,7 @@ static struct SEARCH_MODULE {
     char                        query[1024] = { 0 };
     dispatcher_thread_handle_t  indexing_thread{};
     string_t*                   saved_queries{ nullptr };
+    event_handle_t              startup_signal{};
 
     /*! Stock exchanges to index. */
     string_t*                   exchanges{ nullptr };
@@ -810,6 +811,24 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
 
     // Load search database
     _search->db = search_database_allocate(SearchDatabaseFlags::SkipCommonWords);
+
+    // Wait a few seconds before starting the indexing process.
+    // Delaying the start of the indexing process helps when the users wants to
+    // quickly close the application after starting it, as the indexing process
+    // takes a few seconds just to load the search database
+    if (_search->startup_signal.wait(30000))
+    {
+        log_debugf(0, STRING_CONST("Search indexing kick off"));
+    }
+
+    // Check if the thread was aborted before starting
+    if (thread_try_wait(0))
+    {
+        log_warnf(0, WARNING_PERFORMANCE,
+            STRING_CONST("Search indexing thread aborted before starting"));
+        return 0;
+    }
+
     string_const_t search_db_path = session_get_user_file_path(STRING_CONST("search.db"));
     stream_t* search_db_stream = fs_open_file(STRING_ARGS(search_db_path), STREAM_IN | STREAM_BINARY);
     if (search_db_stream)
@@ -1776,6 +1795,7 @@ FOUNDATION_STATIC void search_open_quick_search()
 {
     FOUNDATION_ASSERT(_search->db);
 
+    _search->startup_signal.signal();
     search_window_t* search_window = search_window_allocate();
     search_window->handle = window_open(HASH_SEARCH, STRING_CONST("Search"), 
         L1(search_window_render(window_get_user_data(_1))),
@@ -1854,6 +1874,8 @@ FOUNDATION_STATIC expr_result_t search_expr_eval(const expr_func_t* f, vec_expr_
 {
     expr_result_t* results = nullptr;
     string_const_t search_expression = expr_eval_get_string_arg(args, 0, "Failed to get search expression");
+
+    _search->startup_signal.signal();
 
     // Run simple EOD API query if the search text does not contain any special characters
     if (search_expression.length > 1 &&
@@ -2048,6 +2070,10 @@ FOUNDATION_STATIC void search_start_indexing()
 
 FOUNDATION_STATIC bool search_stop_indexing(bool save_db)
 {
+    // Make sure we stop waiting for initial startup
+    dispatcher_thread_signal(_search->indexing_thread);
+    _search->startup_signal.signal();
+
     if (!dispatcher_thread_stop(_search->indexing_thread))
         return false;
     _search->indexing_thread = 0;

@@ -499,6 +499,15 @@ FOUNDATION_FORCEINLINE dispatcher_thread_handle_t dispatch_fire(function<void(vo
  */
 bool dispatcher_thread_stop(dispatcher_thread_handle_t thread_id, double timeout_seconds = 30.0);
 
+/*! Signal the dispatcher thread. This will cause the thread to wake up and process any pending 
+ *  events.
+ * 
+ *  @param thread_id Handle to the thread to signal
+ * 
+ *  @return True if the thread was signaled successfully, false otherwise.
+ */
+bool dispatcher_thread_signal(dispatcher_thread_handle_t thread_id);
+
 /*! Checks if the dispatcher thread is still running. 
  * 
  *  @param thread_id Handle to the thread to check

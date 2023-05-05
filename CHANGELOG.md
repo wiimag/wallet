@@ -2,7 +2,7 @@
 
 ## [0.22.1] - 2023-05-05
 - Fix day gain summary taking into account index changes.
-- Improve TABLE(...) and PLOT(...) expressions.
+- Improve `TABLE(...)` and `PLOT(...)` expressions.
 
 ## [0.21.6] - 2023-05-03
 - Add `SEARCH(...)` expression to run serach queries.
