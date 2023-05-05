@@ -540,8 +540,10 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
             d.adjusted_close = jday["adjusted_close"].as_number();
 
             // Skip days with ridiculous prices (probably an error on the server provider)
-            const double diff = i == 0 ? 1.0 : math_abs(math_change_p(d.adjusted_close, next_close, DNAN));
-            if (diff < 8.0 && d.adjusted_close < 99999.99)
+            const double diff = i == 0 ? 1.0 : math_abs(
+                max(math_change_p(d.adjusted_close, next_close, DNAN),
+                    math_change_p(next_close, d.adjusted_close, DNAN)));
+            if (diff < 8.0/* && d.adjusted_close < 999998.99*/)
             {
                 d.price_factor = d.adjusted_close / d.close;
                 if (math_real_is_nan(first_price_factor) && !math_real_is_nan(d.price_factor))

@@ -1,9 +1,10 @@
 # Changelog
 
-## [0.22.3] - 2023-05-05
+## [0.22.4] - 2023-05-05
 - Add support to automatically update wallet tracking history on a daily basis.
 - Add support to ignore invalid symbols from the search index.
 - Fix day gain summary taking into account index changes.
+- Fix EOD data with erronous closing prices from the data source (i.e. Berkshire Hathaway Inc. (`BRK.A`))
 - Improve `TABLE(...)` and `PLOT(...)` expressions.
 
 ## [0.21.6] - 2023-05-03
