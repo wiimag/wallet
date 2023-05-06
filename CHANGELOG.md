@@ -1,12 +1,13 @@
 # Changelog
 
-## [0.22.7] - 2023-05-06
+## [0.22.8] - 2023-05-06
 - Add link to web site in the help menu.
 - Add support to automatically update wallet tracking history on a daily basis.
 - Add support to ignore invalid symbols from the search index.
 - Fix day gain summary taking into account index changes.
 - Fix EOD data with erronous closing prices from the data source (i.e. Berkshire Hathaway Inc. (`BRK.A`))
 - Fix loading reports overflow of the report directory string.
+- Fix MSI package launching when looking for updates.
 - Improve `TABLE(...)` and `PLOT(...)` expressions.
 - Improve installation and update process using WiX Toolset.
 

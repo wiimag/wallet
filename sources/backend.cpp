@@ -152,11 +152,11 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res,
                 stream_deallocate(new_version_download);
 
                 // Rename file to .EXE
-                string_t package_path_exe = string_concat(STRING_BUFFER(package_path_buffer), STRING_ARGS(package_path), STRING_CONST(".exe"));
-                if (fs_move_file(STRING_ARGS(package_path), STRING_ARGS(package_path_exe)))
+                string_t package_msi_path = string_concat(STRING_BUFFER(package_path_buffer), STRING_ARGS(package_path), STRING_CONST(".msi"));
+                if (fs_move_file(STRING_ARGS(package_path), STRING_ARGS(package_msi_path)))
                 {
-                    log_debugf(HASH_BACKEND, STRING_CONST("Renamed new version to %.*s"), STRING_FORMAT(package_path_exe));
-                    package_path = package_path_exe;
+                    log_debugf(HASH_BACKEND, STRING_CONST("Renamed new version to %.*s"), STRING_FORMAT(package_msi_path));
+                    package_path = package_msi_path;
 
                     system_execute_command(STRING_ARGS(package_path));
 
