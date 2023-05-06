@@ -218,6 +218,11 @@ FOUNDATION_STATIC void backend_establish_connection()
     });
 }
 
+FOUNDATION_STATIC bool backend_open_web_site(const dispatcher_event_args_t& args)
+{
+    return system_execute_command("https://wallet.wiimag.com");
+}
+
 //
 // ## PUBLIC
 //
@@ -303,6 +308,8 @@ FOUNDATION_STATIC void backend_initialize()
     _backend_module = MEM_NEW(HASH_BACKEND, BACKEND_MODULE);
 
     backend_establish_connection();
+
+    dispatcher_register_event_listener(EVENT_ABOUT_OPEN_WEBSITE, backend_open_web_site);
 }
 
 FOUNDATION_STATIC void backend_shutdown()

@@ -13,6 +13,8 @@
 
 constexpr const char EVENT_CHECK_NEW_VERSIONS[] = "CHECK_NEW_VERSIONS";
 
+constexpr const char EVENT_ABOUT_OPEN_WEBSITE[] = "ABOUT_OPEN_WEBSITE";
+
 /*! Initialize about module.
  *
  *  We use #FOUNDATION_LINKER_INCLUDE in order to force the linker to include the #about module.

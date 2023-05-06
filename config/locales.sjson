@@ -1528,7 +1528,7 @@
 		{
 			hash = "db7f29cfe3fa3b66"
 			en = "About - %s##8"
-			fr = "A propos - %s##8"
+			fr = "À propos - %s##8"
 		}
 		{
 			hash = "6a525d4314aa4b1f"
@@ -1618,7 +1618,7 @@
 		{
 			hash = "4ce3491c214c6d9c"
 			en = "About"
-			fr = "A propos"
+			fr = "À propos"
 		}
 		{
 			hash = "ddd7f5b631f37a03"
@@ -2518,7 +2518,7 @@
 		{
 			hash = "bf49f03299b10641"
 			en = "Check for new version..."
-			fr = "V\xc3\xa9rifier les mises \xc3\xa0 jour..."
+			fr = "Rechercher les mises \xc3\xa0 jour..."
 		}
 		{
 			hash = "4dd758bd40dd596c"
@@ -3504,6 +3504,11 @@
 			hash = "ab69e836e551a38a"
 			en = "Added new wallet history entry for {0} on {1}"
 			fr = "Ajout d'une nouvelle entr\xc3\xa9e d'historique de portefeuille pour {0} le {1}"
+		}
+		{
+			hash = "a5cf8ace20bef505"
+			en = "Web Site"
+			fr = "Site Web"
 		}
 	]
 }

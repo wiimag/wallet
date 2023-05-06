@@ -120,6 +120,10 @@ void about_initialize()
     }
 
     app_register_menu(HASH_ABOUT, 
+        STRING_CONST("Help/Web Site"), 
+        nullptr, 0, AppMenuFlags::Append, L1(dispatcher_post_event(EVENT_ABOUT_OPEN_WEBSITE)));
+
+    app_register_menu(HASH_ABOUT, 
         STRING_CONST("Help/About"), 
         STRING_CONST("F1"), AppMenuFlags::Append, about_menu_open_dialog);
 }

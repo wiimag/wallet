@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.22.6] - 2023-05-06
+## [0.22.7] - 2023-05-06
+- Add link to web site in the help menu.
 - Add support to automatically update wallet tracking history on a daily basis.
 - Add support to ignore invalid symbols from the search index.
 - Fix day gain summary taking into account index changes.

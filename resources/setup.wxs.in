@@ -66,6 +66,23 @@
           KeyPath="yes" />
 
       </Component>
+
+      <Component Id="CHANGELOG.md" Guid="a51c5481-f3d7-4680-9884-404d860b2c0e">
+        <File Id="CHANGELOG.md" Source="CHANGELOG.md" />
+      </Component>
+
+      <Component Id="FolderContent" Guid="285475c1-45ed-4fae-bf26-92301a12e893">
+        <CreateFolder/>
+        <Directory Id="ExpressionsFolder" Name="expressions">
+          <Component Id="ExpressionFiles" Guid="a5168af1-c17e-4802-b417-6b29e2b89b5a">
+            <File Source="docs\expressions\plot_dividends_per_year.expr"/>
+            <File Source="docs\expressions\retained_earnings.expr"/>
+            <File Source="docs\expressions\search_table.expr"/>
+            <File Source="docs\expressions\table_shares.expr"/>
+          </Component>
+        </Directory>
+    </Component>
+
     </ComponentGroup>
 
     <Feature Id="ProductFeature" Title="@PRODUCT_NAME@" Level="1">
