@@ -1990,7 +1990,7 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     return fully_resolved;
 }
 
-FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_length, const config_handle_t& data)
+FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_length, config_handle_t data)
 {
     string_table_symbol_t name_symbol = string_table_encode(name, name_length);
 
@@ -2004,15 +2004,20 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
     array_push(_reports, report_t{ name_symbol });
     report_t* report = array_last(_reports);
 
+    if (!data)
+    {
+        log_warnf(HASH_REPORT, WARNING_RESOURCE, STRING_CONST("Creating new report with empty data: %.*s"), (int)name_length, name);
+    }
+
     // Ensure default structure
-    report->data = data ? data : config_allocate(CONFIG_VALUE_OBJECT, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+    report->data = config_is_valid(data) ? data : config_allocate(CONFIG_VALUE_OBJECT, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
     report->wallet = wallet_allocate(report->data["wallet"]);
 
     auto cid = report->data["id"];
     auto cname = config_set(report->data, STRING_CONST("name"), name, name_length);
     auto ctitles = config_set_object(report->data, STRING_CONST("titles"));
 
-    if (cid)
+    if (config_is_valid(cid))
     {
         string_const_t id = cid.as_string();
         report->id = string_to_uuid(STRING_ARGS(id));
@@ -2020,18 +2025,17 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
     else
     {
         report->id = uuid_generate_time();
-
         string_const_t id_str = string_from_uuid_static(report->id);
         cid = config_set(report->data, STRING_CONST("id"), STRING_ARGS(id_str));
     }
 
-    report->save_index = data["order"].as_integer();
-    report->show_summary = data["show_summary"].as_boolean();
-    report->show_sold_title = data["show_sold_title"].as_boolean(true);
-    report->show_no_transaction_title = data["show_no_transaction_title"].as_boolean(true);
-    report->opened = data["opened"].as_boolean(true);
+    report->save_index = report->data["order"].as_integer();
+    report->show_summary = report->data["show_summary"].as_boolean();
+    report->show_sold_title = report->data["show_sold_title"].as_boolean(true);
+    report->show_no_transaction_title = report->data["show_no_transaction_title"].as_boolean(true);
+    report->opened = report->data["opened"].as_boolean(true);
 
-    for (auto e : data["columns"])
+    for (auto e : report->data["columns"])
     {
         string_const_t name = e["name"].as_string();
         string_const_t expr = e["expression"].as_string();
@@ -2045,12 +2049,11 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
 
     // Load titles
     title_t** titles = nullptr;
-    array_reserve(titles, config_size(ctitles));
     for (auto title_data : ctitles)
     {
         string_const_t code = config_name(title_data);
         title_t* title = title_allocate(report->wallet, title_data);
-        titles = array_push(titles, title);
+        array_push(titles, title);
     }
     report->titles = titles;
 
@@ -2558,7 +2561,7 @@ report_handle_t report_load(string_const_t report_file_path)
         CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS |
         CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS;
 
-    config_handle_t data;
+    config_handle_t data{};
     if (fs_is_file(STRING_ARGS(report_file_path)))
     {
         data = config_parse_file(STRING_ARGS(report_file_path), report_json_flags);
@@ -2835,14 +2838,35 @@ report_t** report_sort_alphabetically()
 
 FOUNDATION_STATIC void report_initialize()
 {
-    string_const_t report_dir_path = session_get_user_file_path(STRING_ARGS(REPORTS_DIR_NAME));
-    fs_make_directory(STRING_ARGS(report_dir_path));
+    char report_dir_path_buffer[BUILD_MAX_PATHLEN];
+    string_t report_dir_path = session_get_user_file_path(
+        STRING_BUFFER(report_dir_path_buffer), 
+        STRING_ARGS(REPORTS_DIR_NAME), 
+        nullptr, 0, 
+        nullptr, 0, 
+        false);
+    
+    if (!fs_make_directory(STRING_ARGS(report_dir_path)))
+    {
+        log_errorf(HASH_REPORT, ERROR_INTERNAL_FAILURE, 
+            STRING_CONST("Reports directory at %.*s is not a directory"),
+            STRING_FORMAT(report_dir_path));
+    }
+
+    log_infof(HASH_REPORT, STRING_CONST("Loading reports from %.*s"), STRING_FORMAT(report_dir_path));
 
     string_t* paths = fs_matching_files(STRING_ARGS(report_dir_path), STRING_CONST("^.*\\.json$"), false);
     foreach (e, paths)
     {
         char report_path_buffer[1024];
         string_t report_path = path_concat(STRING_BUFFER(report_path_buffer), STRING_ARGS(report_dir_path), STRING_ARGS(*e));
+        if (!fs_is_file(STRING_ARGS(report_path)))
+        {
+            log_warnf(HASH_REPORT, WARNING_SUSPICIOUS,
+                STRING_CONST("Report file '%.*s' is not a file, skipping"),
+                STRING_FORMAT(report_path));
+            continue;
+        }
         report_load(string_to_const(report_path));
     }
     string_array_deallocate(paths);

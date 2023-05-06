@@ -159,10 +159,10 @@ done
 # Command line switches: https://techshelps.github.io/WinRAR/html/HELPSwitches.htm
 #
 "$WIN_RAR_EXE_PATH" \
-  a -ma5 -mc- -afzip -sfx -z"$SFX_SETUP_SCRIPT" \
-  -iicon"$PACKAGE_ICON" -iimg"$SFX_BANNER_LOW_RES" -iimg"$SFX_BANNER_HIGH_RES" \
+  a -ma4 -mce -sfx -z"$SFX_SETUP_SCRIPT" \
   -r -ep1 -ed -cfg- \
   -mt4 -xsetup.* \
+  -iicon"$PACKAGE_ICON" -iimg"$SFX_BANNER_LOW_RES" -iimg"$SFX_BANNER_HIGH_RES" \
   "$ZIP_OUTPUT_PATH" ${FILES_TO_PACKAGE[@]}
 
 # Use Winrar to print the file list contained in the zip file

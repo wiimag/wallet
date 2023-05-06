@@ -61,6 +61,28 @@ string_const_t session_get_user_file_path(
     const char* extension = nullptr, size_t extension_length = 0,
     bool mkdir = false);
 
+/*! Returns the full path of a user configuration file. 
+ *  The path is written to the buffer and the buffer is returned.
+ * 
+ *  @param buffer           The buffer to write the path to.
+ *  @param capacity         The capacity of the buffer.
+ *  @param filename         The name of the file to retrieve.
+ *  @param length           The length of the file name.
+ *  @param prefix           The prefix to add to the file name.
+ *  @param prefix_length    The length of the prefix.
+ *  @param extension        The extension to add to the file name.
+ *  @param extension_length The length of the extension.
+ *  @param mkdir            True if the directory should be created if it does not exist.
+ * 
+ *  @return The full path of the user configuration file.
+ */
+string_t session_get_user_file_path(
+    char* buffer, size_t capacity,
+    const char* filename, size_t length,
+    const char* prefix, size_t prefix_length,
+    const char* extension, size_t extension_length,
+    bool mkdir);
+
 /*! Checks if a user settings key exists. 
  * 
  *  @param keyname The name of the setting to check.

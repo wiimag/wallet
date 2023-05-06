@@ -59,8 +59,8 @@ struct config_tag_t
 
 struct config_handle_t
 {
-    config_t* config;
-    config_index_t index;
+    config_t* config{ nullptr };
+    config_index_t index{ 0 };
     
     config_handle_t(std::nullptr_t = nullptr) noexcept
         : config(nullptr)

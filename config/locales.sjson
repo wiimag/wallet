@@ -3500,5 +3500,10 @@
 			en = "You've made %u transactions since %.*s"
 			fr = "Vous avez effectu\xc3\xa9 %u transactions depuis le %.*s"
 		}
+		{
+			hash = "ab69e836e551a38a"
+			en = "Added new wallet history entry for {0} on {1}"
+			fr = "Ajout d'une nouvelle entr\xc3\xa9e d'historique de portefeuille pour {0} le {1}"
+		}
 	]
 }

@@ -210,38 +210,47 @@ string_const_t session_get_user_dir()
     return string_to_const(user_dir);
 }
 
-string_const_t session_get_user_file_path(const char* filename, size_t length, const char* prefix, size_t prefix_length, const char* extension, size_t extension_length, bool mkdir /*= false*/)
+string_t session_get_user_file_path(
+    char* buffer, size_t capacity,
+    const char* filename, size_t length,
+    const char* prefix, size_t prefix_length,
+    const char* extension, size_t extension_length,
+    bool mkdir)
 {
-    string_t user_file_path_buffer = string_static_buffer(BUILD_MAX_PATHLEN);
     string_const_t user_dir = session_get_user_dir();
-
-    string_t user_file_path = string_copy(STRING_ARGS(user_file_path_buffer), STRING_ARGS(user_dir));
+    string_t user_file_path = string_copy(buffer, capacity, STRING_ARGS(user_dir));
     if (prefix != nullptr && prefix_length > 0)
     {
         user_file_path = path_concat(
-            STRING_ARGS(user_file_path_buffer),
+            buffer, capacity,
             STRING_ARGS(user_file_path),
             prefix, prefix_length);
     }
 
     user_file_path = path_concat(
-        STRING_ARGS(user_file_path_buffer),
+        buffer, capacity,
         STRING_ARGS(user_file_path),
         filename, length);
 
     if (extension != nullptr && extension_length > 0)
     {
-        user_file_path = string_concat(STRING_ARGS(user_file_path_buffer), STRING_ARGS(user_file_path), STRING_CONST("."));
-        user_file_path = string_concat(STRING_ARGS(user_file_path_buffer), STRING_ARGS(user_file_path), extension, extension_length);
+        user_file_path = string_concat(buffer, capacity, STRING_ARGS(user_file_path), STRING_CONST("."));
+        user_file_path = string_concat(buffer, capacity, STRING_ARGS(user_file_path), extension, extension_length);
     }
 
-    user_file_path_buffer.str[user_file_path.length] = '\0';
     if (mkdir)
     {
         string_const_t dir_path = path_directory_name(STRING_ARGS(user_file_path));
         fs_make_directory(STRING_ARGS(dir_path));
     }
-    return string_const(user_file_path.str, user_file_path.length);
+
+    return user_file_path;
+}
+
+string_const_t session_get_user_file_path(const char* filename, size_t length, const char* prefix, size_t prefix_length, const char* extension, size_t extension_length, bool mkdir /*= false*/)
+{
+    string_t file_path = session_get_user_file_path(SHARED_BUFFER(BUILD_MAX_PATHLEN), filename, length, prefix, prefix_length, extension, extension_length, mkdir);
+    return string_to_const(file_path);
 }
 
 bool session_key_exists(const char* keyname)

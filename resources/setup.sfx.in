@@ -3,8 +3,8 @@ Path=%LOCALAPPDATA%\@PRODUCT_NAME@
 SavePath
 Update=U
 Overwrite=1
-Setup=@PROJECT_ID@.exe
 Shortcut=D, @PROJECT_ID@.exe, , @PRODUCT_NAME@, @PRODUCT_NAME@, 
+Setup=@PROJECT_ID@.exe
 
 Text
 {

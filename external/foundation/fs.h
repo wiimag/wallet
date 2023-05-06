@@ -72,7 +72,7 @@ fs_is_file(const char* path, size_t length);
 Success includes case where all paths already exists.
 \param path   Path
 \param length Length of path
-\return       true if success, false if not */
+\return       true if success and directory exists, false if not */
 FOUNDATION_API bool
 fs_make_directory(const char* path, size_t length);
 
