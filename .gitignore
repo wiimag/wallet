@@ -23,6 +23,7 @@ projects/.build
 # Installer
 releases/
 resources/setup.sfx
+resources/setup.wxs
 
 # File patterns
 

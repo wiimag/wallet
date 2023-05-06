@@ -30,17 +30,18 @@ if [ "$BRANCH_NAME" = "main" ]; then
 fi
 
 # Load the WinRar path from Program Files
-UNRAR_EXE_PATH="C:\Program Files\WinRAR\UnRAR.exe"
-WIN_RAR_EXE_PATH="C:\Program Files\WinRAR\WinRAR.exe"
+WIX_BIN_DIR="C:\Tools\wix311-binaries"
+WIX_CANDLE_EXE_PATH="$WIX_BIN_DIR\candle.exe"
+WIX_LIGHT_EXE_PATH="$WIX_BIN_DIR\light.exe"
 
-# Make sure UnRAR and WinRAR exist
-if [ ! -f "$UNRAR_EXE_PATH" ]; then
-  echo "The UnRAR.exe file does not exist in the Program Files folder"
+# Make sure WiX candle and light are available
+if [ ! -f "$WIX_CANDLE_EXE_PATH" ]; then
+  echo "The WiX candle.exe file does not exist in the Program Files folder"
   exit 1
 fi
 
-if [ ! -f "$WIN_RAR_EXE_PATH" ]; then
-  echo "The WinRAR.exe file does not exist in the Program Files folder"
+if [ ! -f "$WIX_LIGHT_EXE_PATH" ]; then
+  echo "The WiX light.exe file does not exist in the Program Files folder"
   exit 1
 fi
 
@@ -108,80 +109,70 @@ TODAY=$(date +"%Y_%m_%d")
 # Create a copy of the exe named *_app.exe to provide a standalone exe
 cp "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}_portable.exe"
 
-# Define the zip output path
-ZIP_OUTPUT_PATH="releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.exe"
+# Define the msi output path
+MSI_OUTPUT_PATH="releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.msi"
+MSI_WIX_OBJ_OUTPUT_PATH="artifacts/installer/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.wixobj"
 
 # Define sfx banner low and high res
 SFX_BANNER_LOW_RES="resources/banner_low_93_302.png"
 SFX_BANNER_HIGH_RES="resources/banner_high_186_604.png"
 
-# Define license file path
-LICENSE_FILE_PATH="resources/license.txt"
-
 # Define package icon
 PACKAGE_ICON="resources/main.ico"
 
 # Define SFX setup script
-SFX_SETUP_SCRIPT="resources/setup.sfx"
+WIX_SETUP_SCRIPT="resources/setup.wxs"
 
 # Check if SFX config files exist
-if [ ! -f "$SFX_SETUP_SCRIPT" ]; then
+if [ ! -f "$WIX_SETUP_SCRIPT" ]; then
   echo "The SFX setup script does not exist, it can be generated with \`./run generate\`"
   exit 1
 fi
 
-# Delete any existing zip file
-if [ -f "$ZIP_OUTPUT_PATH" ]; then
-  rm "$ZIP_OUTPUT_PATH" || exit 1
+# Delete any existing msi release file
+if [ -f "$MSI_OUTPUT_PATH" ]; then
+  rm "$MSI_OUTPUT_PATH" || exit 1
 fi
 
-# Define files to be packaged
-FILES_TO_PACKAGE=()
+# Define WiX command line extensions usage
+WIX_COMMAND_LINE_EXT="-ext WixUIExtension -ext WixUtilExtension -ext WixBalExtension -ext WixNetFxExtension"
 
-# Add file patterns to be packaged
-FILES_TO_PACKAGE+=("$BUILD_FOLDER_PATH/*.exe")
-FILES_TO_PACKAGE+=("$BUILD_FOLDER_PATH/*.dll")
+# Compile with WiX candle and link with WiX light
+echo
+echo "Compiling with WiX candle"
+echo
+"$WIX_CANDLE_EXE_PATH" -arch x64 -out "$MSI_WIX_OBJ_OUTPUT_PATH" "$WIX_SETUP_SCRIPT" $WIX_COMMAND_LINE_EXT
+if [ $? -ne 0 ]; then
+  echo "WiX candle failed"
+  exit 1
+fi
 
-# Add root CHANGELOG.md
-FILES_TO_PACKAGE+=("CHANGELOG.md")
+# Define path to output wixpdb file
+WIX_PDB_OUTPUT_PATH="artifacts/installer/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.wixpdb"
 
-# Add *.expr files
-FILES_TO_PACKAGE+=("docs/*.expr")
+# Define command line to output wixpdb file
+WIX_PDB_COMMAND_LINE="-pdbout $WIX_PDB_OUTPUT_PATH"
 
-# Print the files to be packaged
-echo "Files to be packaged:"
-for file in "${FILES_TO_PACKAGE[@]}"; do
-  echo "  $file"
-done
-
-# Execute the WinRar to build a sfx zip file
-# SFX: https://techshelps.github.io/WinRAR/html/HELPSFXAdvOpt.htm
-# Command line switches: https://techshelps.github.io/WinRAR/html/HELPSwitches.htm
-#
-"$WIN_RAR_EXE_PATH" \
-  a -ma4 -mce -sfx -z"$SFX_SETUP_SCRIPT" \
-  -r -ep1 -ed -cfg- \
-  -mt4 -xsetup.* \
-  -iicon"$PACKAGE_ICON" -iimg"$SFX_BANNER_LOW_RES" -iimg"$SFX_BANNER_HIGH_RES" \
-  "$ZIP_OUTPUT_PATH" ${FILES_TO_PACKAGE[@]}
-
-# Use Winrar to print the file list contained in the zip file
-#"$UNRAR_EXE_PATH" l "$ZIP_OUTPUT_PATH"
+echo
+echo "Linking with WiX light"
+echo
+"$WIX_LIGHT_EXE_PATH" -out "$MSI_OUTPUT_PATH" "$MSI_WIX_OBJ_OUTPUT_PATH" $WIX_COMMAND_LINE_EXT $WIX_PDB_COMMAND_LINE
+echo
 
 # Check if the zip file was created
-if [ ! -f "$ZIP_OUTPUT_PATH" ]; then
-  echo "The zip file was not created"
+if [ ! -f "$MSI_OUTPUT_PATH" ]; then
+  echo "The MSI file was not created"
   exit 1
 fi
 
 # Make the zip output path absolute and convert to windows path using cygwin
-ZIP_OUTPUT_PATH=$(cygpath -w $(realpath $ZIP_OUTPUT_PATH))
+MSI_OUTPUT_PATH=$(cygpath -w $(realpath $MSI_OUTPUT_PATH))
 
 # Convert the zip output path to a file:// url
-ZIP_OUTPUT_PATH=${ZIP_OUTPUT_PATH//\\/\/}
+MSI_OUTPUT_PATH=${MSI_OUTPUT_PATH//\\/\/}
 
 # Print the build zip path
-echo "Build package: file://$ZIP_OUTPUT_PATH"
+echo "Build package: file://$MSI_OUTPUT_PATH"
 
 # Run Windows Defender to scan the zip file
 # https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-defender-antivirus/command-line-arguments-windows-defender-antivirus
@@ -189,10 +180,15 @@ echo "Build package: file://$ZIP_OUTPUT_PATH"
 # Define the Windows Defender path
 WINDOWS_DEFENDER_PATH="C:\Program Files\Windows Defender\MpCmdRun.exe"
 
+# Define ballet release path
+BALLET_RELEASE_DIR_PATH="../ballet/public/releases/win32/"
+BALLET_RELEASE_DIR_PATH=$(cygpath -w $(realpath $BALLET_RELEASE_DIR_PATH))
+echo "Ballet release dir path: file://${MSI_OUTPUT_PATH//\\/\/}"
+
 # Make sure the Windows Defender path exists
 if [ -f "$WINDOWS_DEFENDER_PATH" ]; then
   # Run Windows Defender to scan the zip file
-  "$WINDOWS_DEFENDER_PATH" -Scan -ScanType 3 -File "$ZIP_OUTPUT_PATH"
+  "$WINDOWS_DEFENDER_PATH" -Scan -ScanType 3 -File "$MSI_OUTPUT_PATH"
   if [ $? -ne 0 ]; then
     echo "Windows Defender scan failed"
     #exit 1
@@ -200,23 +196,26 @@ if [ -f "$WINDOWS_DEFENDER_PATH" ]; then
 
   # If command line has --run, run the produced exe
   if [[ "$*" == *-run* ]]; then
-    echo "Running $ZIP_OUTPUT_PATH"
-    "$ZIP_OUTPUT_PATH"
+    echo "Running $MSI_OUTPUT_PATH"
+    start "$MSI_OUTPUT_PATH"
   fi
 
   # Copy to ballet repo
   if [[ "$*" == *backend* ]]; then
-    BALLET_RELEASE_PATH="../ballet/public/releases/win32/wallet_release_latest_backend.exe"
-    cp "$ZIP_OUTPUT_PATH" "$BALLET_RELEASE_PATH"
-    echo "Copied to ballet repo: $BALLET_RELEASE_PATH"
 
+    # Copy changelog to ballet repo
     cp "CHANGELOG.md" "../ballet/public/"
     echo "Copied to ballet repo: ../ballet/public/CHANGELOG.md"
 
-    cp "$PROJECT_EXE_PATH" "../ballet/public/releases/win32/wallet_release_latest_backend_portable.exe"
-    echo "Copied to ballet repo: ../ballet/public/releases/win32/wallet_release_latest_backend_portable.exe"
+    BALLET_RELEASE_PATH="$BALLET_RELEASE_DIR_PATH/wallet_release_latest_backend.msi"
+    cp "$MSI_OUTPUT_PATH" "$BALLET_RELEASE_PATH"
+    echo "Copied to ballet repo: $BALLET_RELEASE_PATH"
+
+    # Copy portable exe to ballet repo
+    cp "$PROJECT_EXE_PATH" "$BALLET_RELEASE_DIR_PATH/wallet_release_latest_backend_portable.exe"
+    echo "Copied to ballet repo: $BALLET_RELEASE_DIR_PATH/wallet_release_latest_backend_portable.exe"
   fi
 
 else
-  echo "Cannot scan the zip file with Windows Defender, the MpCmdRun.exe file does not exist in the Program Files folder"
+  echo "Cannot scan the MSI file with Windows Defender, the MpCmdRun.exe file does not exist in the Program Files folder"
 fi

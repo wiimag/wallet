@@ -41,8 +41,8 @@ source_group("bundle" FILES ${RESOURCES_FILES})
 # Configure SFX installer script
 #
 configure_file(
-    "${ROOT_DIR}/resources/setup.sfx.in"
-    "${ROOT_DIR}/resources/setup.sfx"
+    "${ROOT_DIR}/resources/setup.wxs.in"
+    "${ROOT_DIR}/resources/setup.wxs"
     @ONLY
 )
 
