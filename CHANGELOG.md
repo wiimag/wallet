@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.22.8] - 2023-05-06
+## [0.22.9] - 2023-05-06
 - Add link to web site in the help menu.
+- Add support for `YEAR(...)` to get the year of a date. This was useful to plot annual earnings using `PLOT(...)`.
 - Add support to automatically update wallet tracking history on a daily basis.
 - Add support to ignore invalid symbols from the search index.
 - Fix day gain summary taking into account index changes.

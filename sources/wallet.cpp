@@ -879,6 +879,9 @@ void wallet_update_tracking_history(report_t* report, wallet_t* wallet)
     if (!wallet->track_history)
         return;
 
+    if (!time_is_weekend())
+        return;
+
     // Check that we have an entry for today.
     const time_t today = time_now();
     foreach (h, wallet->history)

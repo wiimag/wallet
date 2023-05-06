@@ -341,8 +341,45 @@ FOUNDATION_STATIC expr_result_t expr_eval_date_to_string(const expr_func_t* f, v
     return string_from_date(time);
 }
 
+FOUNDATION_STATIC expr_result_t expr_eval_year_from_date(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    if (args->len != 1)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments: YEAR(<unix time stamp>|'2032-10-11')");
+
+    expr_result_t value = expr_eval(args->get(0));
+
+    tm ytm{};
+    if (value.type == EXPR_RESULT_SYMBOL)
+    {
+        string_const_t datestr = value.as_string();
+        string_to_date(datestr.str, datestr.length, &ytm);
+    }
+    else
+    {
+        time_t time = (time_t)value.as_number(0);
+        time_to_local(time, &ytm);
+    }
+
+    return (double)ytm.tm_year + 1900;
+}
+
 FOUNDATION_STATIC expr_result_t expr_eval_create_date(const expr_func_t* f, vec_expr_t* args, void* c)
 {
+    // Try to parse a date string with format YYYY-MM-DD
+    if (args->len == 1)
+    {
+        expr_result_t value = expr_eval(args->get(0));
+        if (value.type == EXPR_RESULT_SYMBOL)
+        {
+            string_const_t datestr = value.as_string();
+            if (datestr.length != 10)
+                throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid date string, must be YYYY-MM-DD");
+
+            return (double)string_to_date(datestr.str, datestr.length);
+        }
+    }
+
+    // Try to parse a date with individual arguments DATE(YYYY, MM, DD)
     if (args->len != 3)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid argument count for DATE");
 
@@ -1019,27 +1056,37 @@ FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_
     expr_result_t* results = nullptr;
     for (auto e : elements)
     {
+         expr_result_t* var_stack = nullptr;
         if (!e.is_set())
         {
+            array_push(var_stack, expr_get_global_var_value("$1"));
             expr_set_or_create_global_var(STRING_CONST("$1"), e);
         }
         else
         {
-            char varname[4];
             int i = 1;
+            char varname[4];
             for (auto m : e)
             {
                 string_t macro = string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), i);
+                array_push(var_stack, expr_get_global_var_value(STRING_ARGS(macro)));
                 expr_set_or_create_global_var(STRING_ARGS(macro), m);
                 i++;
             }
         }
 
         expr_result_t r = expr_eval(&args->buf[1]);
-        if (r.type == EXPR_RESULT_FALSE)
-            continue;
-        if (r.type == EXPR_RESULT_TRUE || r.as_number() != 0)
+        if (r.type != EXPR_RESULT_FALSE && (r.type == EXPR_RESULT_TRUE || r.as_number() != 0))
             array_push_memcpy(results, &e);
+
+        // Restore global variables
+        for (unsigned i = 0, end = array_size(var_stack); i < end; ++i)
+        {
+            char varname[4];
+            string_t macro = string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), i+1);
+            expr_set_or_create_global_var(STRING_ARGS(macro), var_stack[i]);
+        }
+        array_deallocate(var_stack);
     }
 
     return expr_eval_list(results);
@@ -2293,6 +2340,7 @@ FOUNDATION_STATIC void expr_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("NOW"), expr_eval_time_now, NULL, 0 })); // // ELAPSED_DAYS(TO_DATE(F(SSE.V, General.UpdatedAt)), NOW())
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATE"), expr_eval_create_date, NULL, 0 }));
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATESTR"), expr_eval_date_to_string, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("YEAR"), expr_eval_year_from_date, NULL, 0 }));
     
     // Must always be last
     array_push(_expr_user_funcs, (expr_func_t{ NULL, 0, NULL, NULL, 0 }));

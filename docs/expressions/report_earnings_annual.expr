@@ -1,0 +1,23 @@
+# Annual Earnings for all active titles in a report
+
+# Set report to work with
+$report='300K'
+
+# Grab active titles (i.e. exclude indexes and sold titles)
+$titles=FILTER(R($report, active), $2)
+
+# Map annual earnings data
+$titles = MAP($titles, [$1, F($1, "Earnings.Annual")])
+
+# Remove titles with no annual earnings (i.e. null)
+$titles = FILTER($titles, IF($2, true, false))
+
+# Remap data to get [[CTC-A.TO, [[2023-03-31, 0], .., [2022-12-31, 18.85], ...
+$titles = MAP($titles, [$1, MAP($2, MAP($2, $2))])
+
+# Filter out the current year since it is usually 0 in most cases
+$current_year=YEAR(NOW())
+$titles = MAP($titles, [$1, FILTER($2, YEAR($1) < $current_year)])
+
+# Plot all earnings in the same window by titles
+MAP($titles, PLOT('Earnings Annual#' + $1, MAP($2, YEAR($1)), MAP($2, $2)))
