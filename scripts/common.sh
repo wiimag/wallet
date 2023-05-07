@@ -64,7 +64,7 @@ is_number() {
 # Function to convert a path to the platform specific format
 function convert_path_to_platform() {
   if [ $PLATFORM_WINDOWS -eq 1 ]; then
-    win_path=$(cygpath -w "$1")
+    win_path=$(cygpath -w $(realpath $1))
     # Replace all \ with / in the path
     echo "${win_path//\\/\/}"
   else
@@ -76,7 +76,7 @@ function convert_path_to_platform() {
 function convert_path_to_file_link() {
   local_path=$(convert_path_to_platform $1)
   if [ $machine = "MinGw" ]; then
-    echo "file:///${local_path//\\/\/}"
+    echo "file://${local_path//\\/\/}"
   else
     echo "$1"
   fi
@@ -147,4 +147,26 @@ function has_command_line_arg() {
     fi
   done
   echo $result
+}
+
+# Functin to copy a file to a destination and report it to the console
+function publish_file() {
+  local source=$1
+  local source_file_name=$(basename $source)
+
+  # Check if source file exists
+  if [ ! -f "$source" ]; then
+    echo "The source file $source does not exist"
+    exit 1
+  fi
+
+  # Copy the file to the destination
+  local dest=$2
+  cp "$source" "$dest"
+  if [ $? -ne 0 ]; then
+    echo "Failed to copy $source to $dest"
+    exit 1
+  fi
+
+  echo "Published $source_file_name to $(convert_path_to_file_link "$dest")"
 }

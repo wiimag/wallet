@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.22.10] - 2023-05-06
+## [0.22.10] - 2023-05-07
 - Add link to web site in the help menu.
 - Add support for `YEAR(...)` to get the year of a date. This was useful to plot annual earnings using `PLOT(...)`.
 - Add support to automatically update wallet tracking history on a daily basis.
@@ -8,6 +8,7 @@
 - Fix day gain summary taking into account index changes.
 - Fix EOD data with erronous closing prices from the data source (i.e. Berkshire Hathaway Inc. (`BRK.A`))
 - Fix loading reports overflow of the report directory string.
+- Fix logging new wallet history entries on the weekend.
 - Fix MSI package launching when looking for updates.
 - Improve `TABLE(...)` and `PLOT(...)` expressions.
 - Improve how split factor is computed when the stock just split.

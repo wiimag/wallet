@@ -1,6 +1,9 @@
 #!/bin/bash
 # 
-# Zip the build application folder using WinRar
+# Copyright 2023 Wiimag Inc. All rights reserved.
+# License: https://equals-forty-two.com/LICENSE
+#
+# Build the application installation package using WiX
 #
 
 # Set the directory containing additional scripts
@@ -15,33 +18,40 @@ source $SCRIPT_DIR/common.sh
 # Load the project name
 SHORT_NAME=$(build_setting "PROJECT_ID")
 
+# Define today's date as YYYY_MM_DD
+TODAY=$(date +"%Y_%m_%d")
+
 # Get branch current branch name and replace / with _
 BRANCH_NAME=$(git rev-parse --abbrev-ref HEAD)
 BRANCH_NAME=${BRANCH_NAME//\//_}
 
-# If branch name is empty, use setup
+# If branch name is empty, use default
 if [ -z "$BRANCH_NAME" ]; then
   BRANCH_NAME="release"
 fi
 
-# If branch name is main, rename to setup
+# If branch name is main, rename to default
 if [ "$BRANCH_NAME" = "main" ]; then
   BRANCH_NAME="release"
 fi
 
-# Load the WinRar path from Program Files
-WIX_BIN_DIR="C:\Tools\wix311-binaries"
-WIX_CANDLE_EXE_PATH="$WIX_BIN_DIR\candle.exe"
-WIX_LIGHT_EXE_PATH="$WIX_BIN_DIR\light.exe"
+# Set the WiX binary paths
+if [ -z "$WIX_BIN_DIR" ]; then
+  WIX_BIN_DIR="C:\Tools\wix311-binaries"
+fi
+if [ -z "$WIX_CANDLE_EXE_PATH" ]; then
+  WIX_CANDLE_EXE_PATH="$WIX_BIN_DIR\candle.exe"
+fi
+if [ -z "$WIX_LIGHT_EXE_PATH" ]; then
+  WIX_LIGHT_EXE_PATH="$WIX_BIN_DIR\light.exe"
+fi
 
 # Make sure WiX candle and light are available
 if [ ! -f "$WIX_CANDLE_EXE_PATH" ]; then
-  echo "The WiX candle.exe file does not exist in the Program Files folder"
+  echo "The WiX candle.exe exectable cannot be found"
   exit 1
-fi
-
-if [ ! -f "$WIX_LIGHT_EXE_PATH" ]; then
-  echo "The WiX light.exe file does not exist in the Program Files folder"
+elif [ ! -f "$WIX_LIGHT_EXE_PATH" ]; then
+  echo "The WiX light.exe executable cannot be found"
   exit 1
 fi
 
@@ -62,15 +72,15 @@ if [[ "$*" == *-build* ]]; then
     exit 1
   fi
 
+  # Set default build options when building the package.
   BUILD_OPTIONS=()
   BUILD_OPTIONS+=("-DBUILD_ENABLE_TESTS=OFF")
+  BUILD_OPTIONS+=("-DBUILD_ENABLE_DEVELOPMENT=OFF")
 
   if [[ "$*" == *backend* ]]; then
-    BUILD_OPTIONS+=("-DBUILD_ENABLE_BACKEND=ON")
-    BUILD_OPTIONS+=("-DBUILD_ENABLE_DEVELOPMENT=OFF")
-
     # Add _backend suffix to the branch name
     BRANCH_NAME="${BRANCH_NAME}_backend"
+    BUILD_OPTIONS+=("-DBUILD_ENABLE_BACKEND=ON")
   else
     BUILD_OPTIONS+=("-DBUILD_ENABLE_BACKEND=OFF")
   fi
@@ -81,7 +91,7 @@ if [[ "$*" == *-build* ]]; then
     echo "  $option"
   done
 
-  # Check if deploy is in the command line
+  # Check if deploy is in the command line, if so build accordingly
   if [[ "$*" == *deploy* ]]; then
     ./run build deploy generate ${BUILD_OPTIONS[@]}
   else
@@ -95,6 +105,7 @@ PROJECT_EXE_PATH="$BUILD_FOLDER_PATH/$SHORT_NAME.exe"
 # Make sure the project exe is in the build folder
 if [ ! -f "$PROJECT_EXE_PATH" ]; then
   echo "The project exe ${PROJECT_EXE_PATH} does not exist in the build folder"
+  echo "Make sure you the project was built successfully before running this script"
   exit 1
 fi
 
@@ -103,25 +114,12 @@ if [ ! -d "releases" ]; then
   mkdir releases
 fi
 
-# Define today's date as YYYY_MM_DD
-TODAY=$(date +"%Y_%m_%d")
-
-# Create a copy of the exe named *_app.exe to provide a standalone exe
-cp "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}_portable.exe"
+# Define SFX setup script
+WIX_SETUP_SCRIPT="resources/setup.wxs"
 
 # Define the msi output path
 MSI_OUTPUT_PATH="releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.msi"
 MSI_WIX_OBJ_OUTPUT_PATH="artifacts/installer/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.wixobj"
-
-# Define sfx banner low and high res
-SFX_BANNER_LOW_RES="resources/banner_low_93_302.png"
-SFX_BANNER_HIGH_RES="resources/banner_high_186_604.png"
-
-# Define package icon
-PACKAGE_ICON="resources/main.ico"
-
-# Define SFX setup script
-WIX_SETUP_SCRIPT="resources/setup.wxs"
 
 # Check if SFX config files exist
 if [ ! -f "$WIX_SETUP_SCRIPT" ]; then
@@ -134,88 +132,56 @@ if [ -f "$MSI_OUTPUT_PATH" ]; then
   rm "$MSI_OUTPUT_PATH" || exit 1
 fi
 
+# Start the package building process
+
+echo "Building package for branch $BRANCH_NAME"
+echo
+
 # Define WiX command line extensions usage
-WIX_COMMAND_LINE_EXT="-ext WixUIExtension -ext WixUtilExtension -ext WixBalExtension -ext WixNetFxExtension"
+WIX_COMMAND_LINE_EXT="-nologo -ext WixUIExtension -ext WixUtilExtension -ext WixBalExtension -ext WixNetFxExtension"
 
 # Compile with WiX candle and link with WiX light
-echo
-echo "Compiling with WiX candle"
-echo
-"$WIX_CANDLE_EXE_PATH" -arch x64 -out "$MSI_WIX_OBJ_OUTPUT_PATH" "$WIX_SETUP_SCRIPT" $WIX_COMMAND_LINE_EXT
+echo "Compiling with WiX candle..."
+echo -ne
+"$WIX_CANDLE_EXE_PATH" -arch x64 -out "$MSI_WIX_OBJ_OUTPUT_PATH" "$WIX_SETUP_SCRIPT" $WIX_COMMAND_LINE_EXT >/dev/null
 if [ $? -ne 0 ]; then
   echo "WiX candle failed"
   exit 1
 fi
 
-# Define path to output wixpdb file
+echo "Linking with WiX light ..."
+echo
 WIX_PDB_OUTPUT_PATH="artifacts/installer/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.wixpdb"
-
-# Define command line to output wixpdb file
 WIX_PDB_COMMAND_LINE="-pdbout $WIX_PDB_OUTPUT_PATH"
-
-echo
-echo "Linking with WiX light"
-echo
-"$WIX_LIGHT_EXE_PATH" -out "$MSI_OUTPUT_PATH" "$MSI_WIX_OBJ_OUTPUT_PATH" $WIX_COMMAND_LINE_EXT $WIX_PDB_COMMAND_LINE -sw1076
-echo
+"$WIX_LIGHT_EXE_PATH" -out "$MSI_OUTPUT_PATH" "$MSI_WIX_OBJ_OUTPUT_PATH" $WIX_COMMAND_LINE_EXT $WIX_PDB_COMMAND_LINE -sw1076 >/dev/null
 
 # Check if the zip file was created
 if [ ! -f "$MSI_OUTPUT_PATH" ]; then
-  echo "The MSI file was not created"
+  echo "Failed to create MSI package"
   exit 1
 fi
 
-# Make the zip output path absolute and convert to windows path using cygwin
-MSI_OUTPUT_PATH=$(cygpath -w $(realpath $MSI_OUTPUT_PATH))
+# Copy to ballet repo
+if [[ "$*" == *backend* ]]; then
 
-# Convert the zip output path to a file:// url
-MSI_OUTPUT_PATH=${MSI_OUTPUT_PATH//\\/\/}
+  PROJECT_PACKAGE_NAME="${SHORT_NAME}_${BRANCH_NAME}_latest_backend"
 
-# Print the build zip path
-echo "Build package: file://$MSI_OUTPUT_PATH"
+  # Define ballet release path
+  BALLET_RELEASE_DIR_PATH="../ballet/public/releases/win32/"
+  BALLET_RELEASE_DIR_PATH=$(cygpath -w $(realpath $BALLET_RELEASE_DIR_PATH))
 
-# Run Windows Defender to scan the zip file
-# https://docs.microsoft.com/en-us/windows/security/threat-protection/windows-defender-antivirus/command-line-arguments-windows-defender-antivirus
-
-# Define the Windows Defender path
-WINDOWS_DEFENDER_PATH="C:\Program Files\Windows Defender\MpCmdRun.exe"
-
-# Define ballet release path
-BALLET_RELEASE_DIR_PATH="../ballet/public/releases/win32/"
-BALLET_RELEASE_DIR_PATH=$(cygpath -w $(realpath $BALLET_RELEASE_DIR_PATH))
-echo "Ballet release dir path: file://${MSI_OUTPUT_PATH//\\/\/}"
-
-# Make sure the Windows Defender path exists
-if [ -f "$WINDOWS_DEFENDER_PATH" ]; then
-  # Run Windows Defender to scan the zip file
-  "$WINDOWS_DEFENDER_PATH" -Scan -ScanType 3 -File "$MSI_OUTPUT_PATH"
-  if [ $? -ne 0 ]; then
-    echo "Windows Defender scan failed"
-    #exit 1
-  fi
-
-  # If command line has --run, run the produced exe
-  if [[ "$*" == *-run* ]]; then
-    echo "Running $MSI_OUTPUT_PATH"
-    start "$MSI_OUTPUT_PATH"
-  fi
-
-  # Copy to ballet repo
-  if [[ "$*" == *backend* ]]; then
-
-    # Copy changelog to ballet repo
-    cp "CHANGELOG.md" "../ballet/public/"
-    echo "Copied to ballet repo: ../ballet/public/CHANGELOG.md"
-
-    BALLET_RELEASE_PATH="$BALLET_RELEASE_DIR_PATH/wallet_release_latest_backend.msi"
-    cp "$MSI_OUTPUT_PATH" "$BALLET_RELEASE_PATH"
-    echo "Copied to ballet repo: $BALLET_RELEASE_PATH"
-
-    # Copy portable exe to ballet repo
-    cp "$PROJECT_EXE_PATH" "$BALLET_RELEASE_DIR_PATH/wallet_release_latest_backend_portable.exe"
-    echo "Copied to ballet repo: $BALLET_RELEASE_DIR_PATH/wallet_release_latest_backend_portable.exe"
-  fi
+  # Publish files to the ballet repo
+  publish_file "CHANGELOG.md" "../ballet/public/"
+  publish_file "$PROJECT_EXE_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}_portable.exe"
+  publish_file "$MSI_OUTPUT_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}.msi"  
 
 else
-  echo "Cannot scan the MSI file with Windows Defender, the MpCmdRun.exe file does not exist in the Program Files folder"
+
+  # Create a copy of the exe named *_app.exe to provide a standalone exe
+  publish_file "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}_portable.exe"
+
 fi
+
+# Print the build zip path
+echo
+echo "Built package: $(convert_path_to_file_link "$MSI_OUTPUT_PATH")"
