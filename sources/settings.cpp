@@ -70,6 +70,7 @@ void settings_draw()
         #if BUILD_ENABLE_LOCALIZATION
         ImGui::NextColumn();
         #endif
+        #if BUILD_DEVELOPMENT
         ImGui::AlignTextToFramePadding();
         ImGui::TextURL(tr("EOD API Service URL"), nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
 
@@ -88,6 +89,7 @@ void settings_draw()
     // EOD API KEY
     {
         ImGui::NextColumn();
+        #endif
         string_t eod_key = eod_get_key();
         ImGui::AlignTextToFramePadding();
         ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));

@@ -3513,33 +3513,22 @@
 		{
 			hash = "1693549b690ac4b7"
 			en = "Current Split factor: %.3lg"
-			fr = "@TODO"
-		}
-		{
-			hash = "4ba696d59cfb6704"
-			en = " Split Factor: %.3lg"
-		}
-		{
-			hash = "fccf784aa369f561"
-			en = " Split Price: %.2lf $ (%d)"
-		}
-		{
-			hash = "84266ac21589c663"
-			en = "EOD exchange rate for %.*s to %.*s: %.2lf $"
+			fr = "Facteur de division actuel: %.3lg"
 		}
 		{
 			hash = "d93d5a18ce88f977"
 			en = "EOD exchange rate for %.*s to %.*s: %.4lf $"
-			fr = "@TODO"
+			fr = "Taux de change EOD pour %.*s vers %.*s: %.4lf $"
 		}
 		{
 			hash = "ff8a04b535f6b686"
 			en = "\xee\x89\x81 Orders {0}###Orders_{0}_4"
-			fr = "@TODO"
+			fr = "\xee\x89\x81 D\xc3\xa9tails des transactions {0}###Ordres_{0}_4"
 		}
 		{
 			hash = "68379d52fe40e2da"
 			en = " Sold at an average price of %.2lf $ "
+			fr = " Vendu \xc3\xa0 un prix moyen de %.2lf $ "
 		}
 	]
 }

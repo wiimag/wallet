@@ -70,7 +70,8 @@
 - Improve wallet history edit dialog.
 
 # TODO
-
+- [ ] 2023-05-07: Notify about split factor changes for a given report (use an alert?)
+- [ ] 2023-05-07: Visualize report data in pattern view when owned.
 - [ ] 2023-05-06: Improve title statistics when the stock just split.
 - [ ] 2023-05-04: Add list of invalid symbols to quickly discard them from the search index
 - [ ] 2023-04-27: Check alerts in a job

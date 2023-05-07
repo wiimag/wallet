@@ -115,7 +115,11 @@ if [ ! -d "releases" ]; then
 fi
 
 # Define SFX setup script
-WIX_SETUP_SCRIPT="resources/setup.wxs"
+WIX_SETUP_SCRIPT="tools/installer/setup.wxs"
+if [ ! -f "$WIX_SETUP_SCRIPT" ]; then
+  echo "The WiX setup script does not exist, it can be generated with \`./run generate\`"
+  exit 1
+fi
 
 # Define the msi output path
 MSI_OUTPUT_PATH="releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.msi"
@@ -141,19 +145,19 @@ echo
 WIX_COMMAND_LINE_EXT="-nologo -ext WixUIExtension -ext WixUtilExtension -ext WixBalExtension -ext WixNetFxExtension"
 
 # Compile with WiX candle and link with WiX light
-echo "Compiling with WiX candle..."
+echo "Compiling $WIX_SETUP_SCRIPT with WiX candle..."
 echo -ne
-"$WIX_CANDLE_EXE_PATH" -arch x64 -out "$MSI_WIX_OBJ_OUTPUT_PATH" "$WIX_SETUP_SCRIPT" $WIX_COMMAND_LINE_EXT >/dev/null
+"$WIX_CANDLE_EXE_PATH" -arch x64 -out "$MSI_WIX_OBJ_OUTPUT_PATH" "$WIX_SETUP_SCRIPT" $WIX_COMMAND_LINE_EXT 1>/dev/null
 if [ $? -ne 0 ]; then
   echo "WiX candle failed"
   exit 1
 fi
 
-echo "Linking with WiX light ..."
+echo "Linking $MSI_WIX_OBJ_OUTPUT_PATH with WiX light ..."
 echo
 WIX_PDB_OUTPUT_PATH="artifacts/installer/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.wixpdb"
 WIX_PDB_COMMAND_LINE="-pdbout $WIX_PDB_OUTPUT_PATH"
-"$WIX_LIGHT_EXE_PATH" -out "$MSI_OUTPUT_PATH" "$MSI_WIX_OBJ_OUTPUT_PATH" $WIX_COMMAND_LINE_EXT $WIX_PDB_COMMAND_LINE -sw1076 >/dev/null
+"$WIX_LIGHT_EXE_PATH" -out "$MSI_OUTPUT_PATH" "$MSI_WIX_OBJ_OUTPUT_PATH" $WIX_COMMAND_LINE_EXT $WIX_PDB_COMMAND_LINE -sw1076 1>/dev/null
 
 # Check if the zip file was created
 if [ ! -f "$MSI_OUTPUT_PATH" ]; then
@@ -164,7 +168,7 @@ fi
 # Copy to ballet repo
 if [[ "$*" == *backend* ]]; then
 
-  PROJECT_PACKAGE_NAME="${SHORT_NAME}_${BRANCH_NAME}_latest_backend"
+  PROJECT_PACKAGE_NAME="${SHORT_NAME}_release_latest_backend"
 
   # Define ballet release path
   BALLET_RELEASE_DIR_PATH="../ballet/public/releases/win32/"

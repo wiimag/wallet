@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 
+  Copyright 2023 Wiimag Inc. All rights reserved.
+  License: https://equals-forty-two.com/LICENSE
+-->
+
+<!-- Build: /c/Tools/wix311-binaries/candle.exe tools/installer/setup.wxs -out artifacts/installer/wallet.wixobj -->
+<!-- Link: /c/Tools/wix311-binaries/light.exe artifacts/installer/wallet.wixobj -out artifacts/installer/wallet.msi -->
+
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+    <Product Id="*"
+      Language="1033"
+      Name="@PRODUCT_NAME@"
+      Version="@VERSION_MAJOR@.@VERSION_MINOR@.@VERSION_PATCH@"
+      Manufacturer="@PRODUCT_COMPANY@"
+      UpgradeCode="7d3968ea-758a-4d6d-a453-5a55525e1911">
+
+		<!-- Define package properties -->
+        <Package InstallerVersion="300" Compressed="yes" InstallScope="perUser" />
+		
+		<!-- Define bundling properties -->
+        <MediaTemplate EmbedCab="yes" />
+
+        <!-- Setup upgrade rules -->
+        <MajorUpgrade
+            AllowDowngrades="no"
+            AllowSameVersionUpgrades="yes"
+            DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+
+        <!-- Setup icon -->
+        <Icon Id="SetupIcon" SourceFile="resources\main.ico" />
+        <Property Id="ARPPRODUCTICON" Value="SetupIcon" />
+
+		<!-- Declare application folder structure -->
+        <Directory Id="TARGETDIR" Name="SourceDir">
+            <Directory Id="DesktopFolder" Name="Desktop"/>
+            <Directory Id="LocalAppDataFolder">
+                <Directory Id="INSTALLFOLDER" Name="@PRODUCT_NAME@">
+                    <Directory Id="ExpressionsFolder" Name="expressions" />
+                </Directory>
+            </Directory>
+        </Directory>
+
+        <!-- Remove installation folder on uninstall -->
+        <DirectoryRef Id="INSTALLFOLDER">
+            <Component Id="RemoveFolder" Guid="055f61f5-4752-4d28-8549-881f8cc181f1">
+                <RemoveFolder Id="INSTALLFOLDER" On="uninstall"/>
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="0" KeyPath="yes"/>
+            </Component>
+        </DirectoryRef>
+
+	    <!-- Bundle main executable and changelog -->
+        <ComponentGroup Id="ProductComponents" Directory="INSTALLFOLDER">
+            <Component Id="@PROJECT_ID@.exe" Guid="18d0223c-67d0-42a1-9866-ebb1f2bb49e9">
+                <File Id="@PROJECT_ID@.exe" Source="build\@PROJECT_ID@.exe" />
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
+
+            <Component Id="CHANGELOG.md" Guid="a51c5481-f3d7-4680-9884-404d860b2c0e">
+                <File Id="CHANGELOG.md" Source="CHANGELOG.md" />
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            </Component>
+        </ComponentGroup>
+
+		<!-- Create application shortcut on desktop -->
+        <DirectoryRef Id="DesktopFolder">
+            <Component Id="ApplicationShortcutDesktop" Guid="27654af3-93a5-4241-93cf-5c3b18ceff76">
+                <Shortcut Id="ApplicationDesktopShortcut"
+              Name="@PRODUCT_NAME@"
+              Description="@PRODUCT_DESCRIPTION@"
+              Target="[INSTALLFOLDER]@PROJECT_ID@.exe"
+              WorkingDirectory="INSTALLFOLDER" />
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+            </Component>
+        </DirectoryRef>
+
+		<!-- Bundle expression files -->
+		<DirectoryRef Id="ExpressionsFolder">
+			<Component Id="RemoveExpressionsFolder" Guid="8b36095b-ae1a-4b6a-8ed8-e576436bcabd">
+				<RemoveFolder Id="ExpressionsFolder" On="uninstall"/>
+				<RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="0" KeyPath="yes"/>
+			</Component>
+		</DirectoryRef>
+
+        <ComponentGroup Id="ExpressionFiles" Directory="ExpressionsFolder">
+            <Component Id="plot_dividends_per_year" Guid="df04a47f-7ea4-4a3d-b843-eebe43860da2">
+                <File Id="plot_dividends_per_year.expr" Source="docs\expressions\plot_dividends_per_year.expr"/>
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            </Component>
+            <Component Id="retained_earnings" Guid="bea1edc3-01e6-4561-914f-226ad541fbe1">
+                <File Id="retained_earnings.expr" Source="docs\expressions\retained_earnings.expr"/>
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            </Component>
+            <Component Id="search_table" Guid="19333f07-6799-4255-a86d-68e601f6adb3">
+                <File Id="search_table.expr" Source="docs\expressions\search_table.expr"/>
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            </Component>
+            <Component Id="table_shares" Guid="3d5309cb-051d-45fa-b83d-20cdf18af24f">
+                <File Id="table_shares.expr" Source="docs\expressions\table_shares.expr"/>
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            </Component>
+            <Component Id="report_earnings_annual" Guid="58bbc33c-25ea-470e-a922-a8665d99fec6">
+                <File Id="report_earnings_annual.expr" Source="docs\expressions\report_earnings_annual.expr"/>
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            </Component>
+        </ComponentGroup>
+
+		<!-- Declare installation features -->
+        <Feature Id="ProductFeature" Title="@PRODUCT_NAME@" Level="1">
+            <ComponentGroupRef Id="ProductComponents" />
+            <ComponentRef Id="ApplicationShortcutDesktop" />
+            <ComponentGroupRef Id="ExpressionFiles" />
+            <ComponentRef Id="RemoveExpressionsFolder" />
+            <ComponentRef Id="RemoveFolder" />
+        </Feature>
+
+		<!-- Launch application after installation -->
+        <CustomAction Id="EXECUTE_AFTER_FINALIZE"
+                  Execute="immediate"
+                  Return="asyncNoWait"
+                  FileKey="@PROJECT_ID@.exe"
+                  ExeCommand="" />
+
+        <InstallExecuteSequence>
+            <Custom Action="EXECUTE_AFTER_FINALIZE" After="InstallFinalize">NOT Installed</Custom>
+            <InstallInitialize />
+            <InstallFinalize />
+        </InstallExecuteSequence>
+
+    </Product>
+</Wix>
