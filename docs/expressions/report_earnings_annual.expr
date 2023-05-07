@@ -19,5 +19,8 @@ $titles = MAP($titles, [$1, MAP($2, MAP($2, $2))])
 $current_year=YEAR(NOW())
 $titles = MAP($titles, [$1, FILTER($2, YEAR($1) < $current_year)])
 
+# Remove titles with no annual earnings (i.e. null)
+$titles = FILTER($titles, IF($2, true, false))
+
 # Plot all earnings in the same window by titles
 MAP($titles, PLOT('Earnings Annual#' + $1, MAP($2, YEAR($1)), MAP($2, $2)))
