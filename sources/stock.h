@@ -65,6 +65,20 @@ FOUNDATION_ALIGNED_STRUCT(stock_realtime_t, 8)
     stock_realtime_record_t* records{ nullptr };
 };
 
+FOUNDATION_ALIGNED_STRUCT(stock_eod_record_t, 8)
+{
+    time_t timestamp;
+    double open;
+    double high;
+    double low;
+    union {
+        double close;
+        double price;
+    };
+    double adjusted_close;
+    double volume;
+};
+
 /*! Represents a stock day results. */
 FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
 {
@@ -548,3 +562,13 @@ bool stock_ignore_symbol(const char* symbol, size_t length, hash_t key = 0);
  *  @return The stock real-time data.
  */
 day_result_t stock_realtime_record(const char* symbol, size_t length);
+
+/*! Get synchronously the EOD data at a given date.
+ * 
+ *  @param symbol  The stock symbol code
+ *  @param length  The length of the stock symbol code
+ *  @param at      Query date
+ * 
+ *  @return The stock EOD data at the given date.
+ */
+stock_eod_record_t stock_eod_record(const char* symbol, size_t length, time_t at, uint64_t invalid_cache_query_after_seconds = 7 * 24 * 60 * 60ULL);

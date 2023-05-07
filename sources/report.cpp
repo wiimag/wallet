@@ -407,25 +407,31 @@ FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_con
     }
 
     const double avg = math_ifzero(t->average_price, t->stock->current.adjusted_close);
-    const double c_avg = t->stock->current.adjusted_close;
-    const double average_fg = (t->average_price + t->stock->current.adjusted_close) / 2.0;
-    const double days_held = title_average_days_held(t);
-    const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (days_held - t->wallet->average_days) / 20.0 / 100.0);
     if (!math_real_is_nan(avg))
     {
         if (t->average_quantity == 0 && math_ifnan(t->sell_total_adjusted_qty, 0) > 0)
         {
             const double sell_gain_diff = (t->sell_adjusted_price - t->stock->current.adjusted_close) * t->sell_total_adjusted_qty;
+            ImGui::TextColored(ImColor(sell_gain_diff < 0 ? TEXT_BAD_COLOR : TOOLTIP_TEXT_COLOR), 
+                tr(" Sold at an average price of %.2lf $ "), t->sell_adjusted_price);
             ImGui::TextColored(ImColor(sell_gain_diff < 0 ? TEXT_BAD_COLOR : TOOLTIP_TEXT_COLOR), " %s %.*s ",
                 sell_gain_diff > 0 ? tr("Saved") : tr("Lost"), STRING_FORMAT(string_from_currency(math_abs(sell_gain_diff), "999 999 999 $")));
         }
-        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-            tr(" Bought Price Gain: %.3g %% \n"
-            " Current Price Gain: %.3g %% (" ICON_MD_EXPOSURE " %.2lf $) \n"
-            " Ask Safe Price Gain: %.2lf $ (" ICON_MD_EXPOSURE " %.3g %%) \n"),
-            (cell->number - avg) / avg * 100.0,
-            (cell->number - c_avg) / c_avg * 100.0, (cell->number - c_avg),
-            if_gain_price, (cell->number - if_gain_price) / if_gain_price * -100.0);
+        else
+        {
+            const double c_avg = t->stock->current.adjusted_close;
+            const double average_fg = (t->average_price + t->stock->current.adjusted_close) / 2.0;
+            const double days_held = title_average_days_held(t);
+            const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (days_held - t->wallet->average_days) / 20.0 / 100.0);
+
+            ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
+                tr(" Bought Price Gain: %.3g %% \n"
+                    " Current Price Gain: %.3g %% (" ICON_MD_EXPOSURE " %.2lf $) \n"
+                    " Ask Safe Price Gain: %.2lf $ (" ICON_MD_EXPOSURE " %.3g %%) \n"),
+                (cell->number - avg) / avg * 100.0,
+                (cell->number - c_avg) / c_avg * 100.0, (cell->number - c_avg),
+                if_gain_price, (cell->number - if_gain_price) / if_gain_price * -100.0);
+        }
     }
     else
     {
@@ -1963,20 +1969,35 @@ FOUNDATION_STATIC bool report_initial_sync(report_t* report)
     if (!fully_resolved)
         return false;
 
+    job_t** update_jobs = nullptr;
+
     foreach (title, report->titles)
     {
-        title_refresh(*title);
+        job_t* job = job_execute([](void* context)->int
+        {
+            title_t** title = (title_t**)context;
+            title_refresh(*title);
 
-        #if 1
-        stock_realtime_t realtime;
-        realtime.price = (*title)->stock->current.price;
-        realtime.volume = (*title)->stock->current.volume;
-        realtime.timestamp = (*title)->stock->current.date;
-        string_copy(realtime.code, sizeof(realtime.code), (*title)->code, (*title)->code_length);
+            stock_realtime_t realtime;
+            realtime.price = (*title)->stock->current.price;
+            realtime.volume = (*title)->stock->current.volume;
+            realtime.timestamp = (*title)->stock->current.date;
+            string_copy(realtime.code, sizeof(realtime.code), (*title)->code, (*title)->code_length);
 
-        dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)&realtime, sizeof(realtime), DISPATCHER_EVENT_OPTION_COPY_DATA);
-        #endif
+            return dispatcher_post_event(EVENT_STOCK_REQUESTED, (void*)&realtime, sizeof(realtime), DISPATCHER_EVENT_OPTION_COPY_DATA);
+        }, title);
+        array_push(update_jobs, job);
     }
+
+    // Wait for updates
+    for (unsigned i = 0, count = array_size(update_jobs); i < count; ++i)
+    {
+        job_t* job = update_jobs[i];
+        while (!job_completed(job))
+            dispatcher_wait_for_wakeup_main_thread();
+        job_deallocate(job);
+    }
+    array_deallocate(update_jobs);
 
     report_filter_out_titles(report);
     report_summary_update(report);

@@ -63,9 +63,8 @@ FOUNDATION_STATIC double report_order_fetch_close_price(report_title_order_t* or
     if (math_real_is_nan(order->close_price))
     {
         const time_t odate = report_order_get_date(order);
-        const day_result_t* d = stock_get_EOD(order->title->stock, odate, true);
-        if (d)
-            order->close_price = d->close;
+        const stock_eod_record_t d = stock_eod_record(order->title->code, order->title->code_length, odate);
+        order->close_price = d.close;
     }
 
     return order->close_price;
@@ -76,9 +75,8 @@ FOUNDATION_STATIC double report_order_fetch_adjusted_price(report_title_order_t*
     if (math_real_is_nan(order->adjusted_price))
     {
         const time_t odate = report_order_get_date(order);
-        const day_result_t* d = stock_get_EOD(order->title->stock, odate, true);
-        if (d)
-            order->adjusted_price = d->adjusted_close;
+        const stock_eod_record_t d = stock_eod_record(order->title->code, order->title->code_length, odate);
+        order->adjusted_price = d.adjusted_close;
     }
 
     return order->adjusted_price;
@@ -232,11 +230,37 @@ FOUNDATION_STATIC cell_t report_order_column_exchange_rate(table_element_ptr_t e
     if (math_real_is_nan(order->exchange_rate))
     {
         string_const_t currency = SYMBOL_CONST(order->title->stock->currency);
-        order->exchange_rate = stock_exchange_rate(
+        order->exchange_rate = order->data["xcg"].as_number(stock_exchange_rate(
             STRING_ARGS(currency),
             STRING_ARGS(order->report->wallet->preferred_currency),
-            report_order_get_date(order));
+            report_order_get_date(order)));
     }
+
+    if (column->flags & COLUMN_RENDER_ELEMENT)
+    {
+        ImGui::ExpandNextItem();
+        if (ImGui::InputDouble("##ExchangeRate", &order->exchange_rate, 0.01f, 0.1f, "%.2lf $", ImGuiInputTextFlags_None))
+        {
+            config_set(order->data, STRING_CONST("xcg"), order->exchange_rate);
+            title_refresh(order->title);
+            report_trigger_update(order->report);
+        }
+        else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+        {
+            ImGui::BeginTooltip();
+            string_const_t currency = SYMBOL_CONST(order->title->stock->currency);
+            const double current_exchange_rate = stock_exchange_rate(
+                STRING_ARGS(currency),
+                STRING_ARGS(order->report->wallet->preferred_currency),
+                report_order_get_date(order));
+                ImGui::TrText("EOD exchange rate for %.*s to %.*s: %.4lf $",
+                    STRING_FORMAT(currency),
+                    STRING_FORMAT(order->report->wallet->preferred_currency),
+                    current_exchange_rate);
+            ImGui::EndTooltip();
+        }
+    }
+
     return order->exchange_rate;
 }
 
@@ -245,11 +269,33 @@ FOUNDATION_STATIC cell_t report_order_column_split_price(table_element_ptr_t ele
     report_title_order_t* order = (report_title_order_t*)element;
     const double split_price = report_order_fetch_split_price(order);
 
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) && ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+    if (column->flags & COLUMN_RENDER_ELEMENT)
     {
         if (math_real_is_nan(order->split_factor))
-            order->split_factor = stock_get_split_factor(order->title->code, order->title->code_length, report_order_get_date(order));
-        return order->split_factor;
+        {
+            const time_t order_date = report_order_get_date(order);
+            order->split_factor = order->data["split"].as_number(
+                stock_get_split_factor(order->title->code, order->title->code_length, order_date));
+        }
+
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("%.2lf $", split_price);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+        {
+            ImGui::BeginTooltip();
+            double current_split_factor = stock_get_split_factor(order->title->code, order->title->code_length, report_order_get_date(order));
+            ImGui::TrText("Current Split factor: %.3lg", current_split_factor);
+            ImGui::EndTooltip();
+        }
+        ImGui::SameLine();
+        ImGui::ExpandNextItem();
+        
+        if (ImGui::InputDouble("##SplitFactor", &order->split_factor, 1.0f, 10.0f, "%.3lg", ImGuiInputTextFlags_None))
+        {
+            config_set(order->data, STRING_CONST("split"), order->split_factor);
+            title_refresh(order->title);
+            report_trigger_update(order->report);
+        }
     }
 
     return split_price;
@@ -423,19 +469,19 @@ FOUNDATION_STATIC table_t* report_create_title_details_table(const bool title_is
         .set_width(IM_SCALEF(120.0f));
 
     table_add_column(table, STRING_CONST("Close " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Close Price"),
-        report_order_column_close_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
+        report_order_column_close_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
         .set_width(IM_SCALEF(80.0f));
 
     table_add_column(table, STRING_CONST("Split " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Split Price"),
-        report_order_column_split_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
+        report_order_column_split_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_LEFT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE)
         .set_width(IM_SCALEF(80.0f));
 
     table_add_column(table, STRING_CONST("Rate " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"),
-        report_order_column_exchange_rate, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
+        report_order_column_exchange_rate, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_LEFT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE )
         .set_width(IM_SCALEF(80.0f));
 
     table_add_column(table, STRING_CONST("Adjusted " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Adjusted Price"),
-        report_order_column_adjusted_price, COLUMN_FORMAT_CURRENCY, COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH)
+        report_order_column_adjusted_price, COLUMN_FORMAT_CURRENCY, COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
         .set_width(IM_SCALEF(95.0f));
 
     table_add_column(table, STRING_CONST("Ask " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Ask Price"), report_order_column_ask_price,
@@ -448,7 +494,7 @@ FOUNDATION_STATIC table_t* report_create_title_details_table(const bool title_is
         .set_width(IM_SCALEF(100.0f));
 
     table_add_column(table, STRING_CONST("           Gain " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain"),
-        report_order_column_total_gain, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_RIGHT_ALIGN | COLUMN_CUSTOM_DRAWING);
+        report_order_column_total_gain, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_RIGHT_ALIGN | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE);
 
     table_add_column(table, STRING_CONST(ICON_MD_SMART_BUTTON "||" ICON_MD_SMART_BUTTON " Actions"), report_order_column_actions,
         COLUMN_FORMAT_TEXT, COLUMN_CUSTOM_DRAWING | COLUMN_STRETCH | COLUMN_LEFT_ALIGN);

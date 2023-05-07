@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.22.9] - 2023-05-06
+## [0.22.10] - 2023-05-06
 - Add link to web site in the help menu.
 - Add support for `YEAR(...)` to get the year of a date. This was useful to plot annual earnings using `PLOT(...)`.
 - Add support to automatically update wallet tracking history on a daily basis.
@@ -10,6 +10,7 @@
 - Fix loading reports overflow of the report directory string.
 - Fix MSI package launching when looking for updates.
 - Improve `TABLE(...)` and `PLOT(...)` expressions.
+- Improve how split factor is computed when the stock just split.
 - Improve installation and update process using WiX Toolset.
 
 ## [0.21.6] - 2023-05-03
@@ -69,6 +70,7 @@
 
 # TODO
 
+- [ ] 2023-05-06: Improve title statistics when the stock just split.
 - [ ] 2023-05-04: Add list of invalid symbols to quickly discard them from the search index
 - [ ] 2023-04-27: Check alerts in a job
 - [ ] 2023-04-20: Use the new search window to add a new title

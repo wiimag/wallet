@@ -1102,7 +1102,7 @@ double stock_get_split_factor(const char* code, size_t code_length, time_t at)
     if (math_abs(time_elapsed_days(at, time_now())) <= 3)
         return 1.0;
 
-    day_result_t eod = stock_get_eod(code, code_length, at);
+    stock_eod_record_t eod = stock_eod_record(code, code_length, at);
     if ((math_abs(eod.adjusted_close - eod.close) / min(eod.close, eod.adjusted_close)) < 1.0)
         return 1.0;
         
@@ -1225,10 +1225,31 @@ day_result_t stock_realtime_record(const char* symbol, size_t length)
     string_t ticker = string_copy(SHARED_BUFFER(16), symbol, length);
     eod_fetch("real-time", ticker.str, FORMAT_JSON_CACHE, "validate", "true", 
         [index, &result](const json_object_t& res) 
-        { 
-            stock_read_real_time_results(index, res, result); 
-        }, 
-        5 * 60 * 60ULL);
+    { 
+        stock_read_real_time_results(index, res, result); 
+    }, 5 * 60 * 60ULL);
+    
+    return result;
+}
+
+stock_eod_record_t stock_eod_record(const char* symbol, size_t length, time_t at, uint64_t invalid_cache_query_after_seconds)
+{
+    stock_eod_record_t result;
+    string_t ticker = string_copy(SHARED_BUFFER(16), symbol, length);
+    string_t datestr = string_from_date(SHARED_BUFFER(16), at);
+    eod_fetch("eod", ticker.str, FORMAT_JSON_CACHE, "from", datestr.str, "to", datestr.str,
+        [&result](const json_object_t& res) 
+    {
+        auto eod = res[0ULL];
+        string_const_t date = eod["date"].as_string();
+        result.timestamp = string_to_date(STRING_ARGS(date));
+        result.open = eod["open"].as_number();
+        result.high = eod["high"].as_number();
+        result.low = eod["low"].as_number();
+        result.close = eod["close"].as_number();
+        result.adjusted_close = eod["adjusted_close"].as_number();
+        result.volume = eod["volume"].as_number();
+    }, 7 * 24 * 60 * 60ULL);
     
     return result;
 }

@@ -98,6 +98,10 @@
         <File Id="table_shares.expr" Source="docs\expressions\table_shares.expr"/>
         <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
       </Component>
+      <Component Id="report_earnings_annual" Guid="58bbc33c-25ea-470e-a922-a8665d99fec6">
+        <File Id="report_earnings_annual.expr" Source="docs\expressions\report_earnings_annual.expr"/>
+        <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+      </Component>
     </ComponentGroup>
 
     <Feature Id="ProductFeature" Title="@PRODUCT_NAME@" Level="1">

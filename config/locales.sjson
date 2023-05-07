@@ -1528,7 +1528,7 @@
 		{
 			hash = "db7f29cfe3fa3b66"
 			en = "About - %s##8"
-			fr = "À propos - %s##8"
+			fr = "\xc3\x80 propos - %s##8"
 		}
 		{
 			hash = "6a525d4314aa4b1f"
@@ -1618,7 +1618,7 @@
 		{
 			hash = "4ce3491c214c6d9c"
 			en = "About"
-			fr = "À propos"
+			fr = "\xc3\x80 propos"
 		}
 		{
 			hash = "ddd7f5b631f37a03"
@@ -3509,6 +3509,33 @@
 			hash = "a5cf8ace20bef505"
 			en = "Web Site"
 			fr = "Site Web"
+		}
+		{
+			hash = "1693549b690ac4b7"
+			en = "Current Split factor: %.3lg"
+			fr = "@TODO"
+		}
+		{
+			hash = "4ba696d59cfb6704"
+			en = " Split Factor: %.3lg"
+		}
+		{
+			hash = "fccf784aa369f561"
+			en = " Split Price: %.2lf $ (%d)"
+		}
+		{
+			hash = "84266ac21589c663"
+			en = "EOD exchange rate for %.*s to %.*s: %.2lf $"
+		}
+		{
+			hash = "d93d5a18ce88f977"
+			en = "EOD exchange rate for %.*s to %.*s: %.4lf $"
+			fr = "@TODO"
+		}
+		{
+			hash = "ff8a04b535f6b686"
+			en = "\xee\x89\x81 Orders {0}###Orders_{0}_4"
+			fr = "@TODO"
 		}
 	]
 }

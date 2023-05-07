@@ -12,6 +12,7 @@
 #include <framework/query.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/jobs.h>
 
 #define FIELD_FILTERS_INTERNAL "::filters"
 
@@ -289,6 +290,8 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     const config_tag_t TITLE_QTY = config_get_tag(data, STRING_CONST("qty"));
     const config_tag_t TITLE_PRICE = config_get_tag(data, STRING_CONST("price"));
     const config_tag_t TITLE_ASK_PRICE = config_get_tag(data, STRING_CONST("ask"));
+    const config_tag_t TITLE_EXCHANGE_RATE = config_get_tag(data, STRING_CONST("xcg"));
+    const config_tag_t TITLE_SPLIT_FACTOR = config_get_tag(data, STRING_CONST("split"));
 
     t->data = data;
     t->wallet = wallet;
@@ -361,15 +364,35 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
         string_const_t date = order[TITLE_DATE].as_string();
         const time_t order_date = string_to_date(STRING_ARGS(date));
 
-        double order_split_factor = 1.0;
-        double order_exchange_rate = 1.0;
-        const day_result_t* order_day_results = nullptr;
+        double adjusted_factor = 1.0;
+        double order_split_factor = order[TITLE_SPLIT_FACTOR].as_number();
+        double order_exchange_rate = order[TITLE_EXCHANGE_RATE].as_number();
         if (s)
         {
-            order_day_results = stock_get_EOD(s, order_date, true);
-            order_exchange_rate = stock_exchange_rate(STRING_ARGS(stock_currency), STRING_ARGS(preferred_currency), order_date);
-            order_exchange_rate = math_ifzero(order_exchange_rate, 1.0);
-            order_split_factor = stock_get_split_factor(STRING_ARGS(title_code), order_date);
+            const day_result_t* order_day_results = stock_get_EOD(s, order_date, true);
+            if (order_day_results && math_real_is_finite(order_day_results->price_factor))
+                adjusted_factor = order_day_results->price_factor;
+
+            if (math_real_is_nan(order_split_factor))
+            {
+                order_split_factor = stock_get_split_factor(STRING_ARGS(title_code), order_date);
+                config_set(order, "split", order_split_factor);
+            }
+
+            if (math_real_is_nan(order_exchange_rate))
+            {
+                order_exchange_rate = stock_exchange_rate(STRING_ARGS(stock_currency), STRING_ARGS(preferred_currency), order_date);
+                order_exchange_rate = math_ifzero(order_exchange_rate, 1.0);
+                config_set(order, "xcg", order_exchange_rate);
+            }
+        }
+        else
+        {
+            if (math_real_is_nan(order_split_factor))
+                order_split_factor = 1.0;
+
+            if (math_real_is_nan(order_exchange_rate))
+                order_exchange_rate = 1.0;
         }
 
         total_exchange_rate_count += qty;
@@ -396,7 +419,6 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
         }
 
         const double split_quantity = qty / order_split_factor;
-        const double adjusted_factor = order_day_results ? math_ifnan(order_day_results->price_factor, 1.0) : 1.0;
         const double split_adjusted_factor = order_split_factor / adjusted_factor;
 
         if (buy)
@@ -440,12 +462,30 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     t->buy_adjusted_price = t->buy_total_adjusted_qty > 0 ? t->buy_total_adjusted_price / t->buy_total_adjusted_qty : 0;
     t->sell_adjusted_price = t->sell_total_adjusted_qty > 0 ? t->sell_total_adjusted_price / t->sell_total_adjusted_qty : 0;
 
+    // Update the average buy price
     t->average_buy_price = math_ifnan(t->buy_total_adjusted_price / t->buy_total_quantity, 0);
-    t->average_quantity = (double)math_round(math_ifzero(t->buy_total_adjusted_qty - t->sell_total_adjusted_qty, t->remaining_shares));
-    t->average_price = t->average_quantity > 0 ? math_ifzero(
-        (t->buy_total_adjusted_price - t->sell_total_adjusted_price) / t->average_quantity, 
-        (t->buy_total_price - t->sell_total_price) / t->remaining_shares
-    ) : t->average_buy_price;
+
+    // Fix the average quantity
+    if (!math_real_is_zero(t->buy_total_count - t->sell_total_count))
+    {
+        t->average_quantity = (double)math_round(math_ifzero(t->buy_total_adjusted_qty - t->sell_total_adjusted_qty, t->remaining_shares));
+        FOUNDATION_ASSERT(t->average_quantity >= 0);
+    }
+    else
+    {
+        // Fix to 0 here since split cost might not be all accounted for yet.
+        t->average_quantity = 0;
+    }
+
+    // Update the average price
+    if (math_real_is_zero(t->average_quantity))
+        t->average_price = t->average_buy_price;
+    else
+    {
+        t->average_price = (t->buy_total_adjusted_price - t->sell_total_adjusted_price) / t->average_quantity;
+        if (math_real_is_zero(t->average_price) || math_real_is_nan(t->average_price))
+            t->average_price = (t->buy_total_price - t->sell_total_price) / t->remaining_shares;
+    }
 
     t->average_buy_price_rated = math_ifnan(t->buy_total_price_rated_adjusted / t->buy_total_quantity, 0);
     t->average_price_rated = t->average_quantity > 0 ? math_ifzero(
