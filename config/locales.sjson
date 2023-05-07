@@ -3537,5 +3537,9 @@
 			en = "\xee\x89\x81 Orders {0}###Orders_{0}_4"
 			fr = "@TODO"
 		}
+		{
+			hash = "68379d52fe40e2da"
+			en = " Sold at an average price of %.2lf $ "
+		}
 	]
 }

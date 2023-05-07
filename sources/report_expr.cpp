@@ -474,15 +474,17 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
     string_const_t field_arg = expr_eval_get_string_arg(args, 1, "Invalid field name");
 
     string_t field_name = string_copy(SHARED_BUFFER(256), field_arg.str, field_arg.length);
-    field_name = string_replace(field_name.str, field_name.length, 256, STRING_CONST("."), STRING_CONST("::"), true);
+    //field_name = string_replace(field_name.str, field_name.length, 256, STRING_CONST("."), STRING_CONST("::"), true);
 
     expr_result_t value = NIL;
-    eod_fetch("fundamentals", code.str, FORMAT_JSON_CACHE, "filter", field_name.str, [&value](const json_object_t& json)
+    eod_fetch("fundamentals", code.str, FORMAT_JSON_CACHE, [&value, field_name](const json_object_t& json)
     {
         if (json.root == nullptr)
             return;
 
-        value = report_expr_eval_stock_fundamental(json);
+        json_object_t field_data = json.find(STRING_ARGS(field_name), true);
+        if (field_data.is_valid())
+            value = report_expr_eval_stock_fundamental(field_data);
     }, 5 * 24 * 60ULL * 60ULL);
 
     return value;

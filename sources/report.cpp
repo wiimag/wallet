@@ -861,8 +861,17 @@ FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t e
         }
     }
 
-    if (!title_is_resolved(title) || report_is_loading(report))
-        return DNAN;
+    if (string_find_string(ec->expression, expression_length, STRING_CONST("$TITLE"), 0) != STRING_NPOS)
+    {
+        if (!title_is_resolved(title))
+            return DNAN;
+    }
+
+    if (string_find_string(ec->expression, expression_length, STRING_CONST("$REPORT"), 0) != STRING_NPOS)
+    {
+        if (report_is_loading(report))
+            return DNAN;
+    }
 
     cvalue.key = key;
     cvalue.format = ec->format;
