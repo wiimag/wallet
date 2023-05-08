@@ -1368,16 +1368,16 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
     table_add_column(table, STRING_CONST("   " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_EXCHANGE_RATE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE);
 
-    table_add_column(table, STRING_CONST(" R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"),
+    table_add_column(table, STRING_CONST("R. " ICON_MD_ASSIGNMENT_RETURN "||" ICON_MD_ASSIGNMENT_RETURN " Return Rate (Yield)"),
         L2(report_column_get_dividends_yield(_1, _2)), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ZERO_USE_DASH)
         .set_tooltip_callback(report_title_dividends_total_tooltip);
 
-    table_add_column(table, STRING_CONST("      I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"),
+    table_add_column(table, STRING_CONST("     I. " ICON_MD_SAVINGS "||" ICON_MD_SAVINGS " Total Investments (based on average cost)"),
         report_column_get_total_investment, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER | COLUMN_ZERO_USE_DASH);
-    table_add_column(table, STRING_CONST("      V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"),
+    table_add_column(table, STRING_CONST("     V. " ICON_MD_ACCOUNT_BALANCE_WALLET "||" ICON_MD_ACCOUNT_BALANCE_WALLET " Total Value (as of today)"),
         report_column_get_total_value, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_ROUND_NUMBER | COLUMN_ZERO_USE_DASH);
 
-    table_add_column(table, STRING_CONST("   Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"),
+    table_add_column(table, STRING_CONST(" Gain " ICON_MD_DIFFERENCE "||" ICON_MD_DIFFERENCE " Total Gain (as of today)"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_TOTAL_GAIN), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE/* | COLUMN_ROUND_NUMBER*/)
         .set_style_formatter(report_title_total_gain_alerts_formatter)
         .set_tooltip_callback(report_title_gain_total_tooltip);

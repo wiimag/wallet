@@ -469,19 +469,19 @@ FOUNDATION_STATIC table_t* report_create_title_details_table(const bool title_is
         .set_width(IM_SCALEF(120.0f));
 
     table_add_column(table, STRING_CONST("Close " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Close Price"),
-        report_order_column_close_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
+        report_order_column_close_price, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
         .set_width(IM_SCALEF(80.0f));
 
-    table_add_column(table, STRING_CONST("Split " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Split Price"),
-        report_order_column_split_price, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_LEFT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE)
+    table_add_column(table, report_order_column_split_price, "Split " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Split Price",
+        COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_LEFT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE)
         .set_width(IM_SCALEF(80.0f));
 
-    table_add_column(table, STRING_CONST("Rate " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate"),
-        report_order_column_exchange_rate, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_LEFT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE )
+    table_add_column(table, report_order_column_exchange_rate, "Rate " ICON_MD_CURRENCY_EXCHANGE "||" ICON_MD_CURRENCY_EXCHANGE " Exchange Rate",
+        COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_LEFT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE )
         .set_width(IM_SCALEF(80.0f));
 
-    table_add_column(table, STRING_CONST("Adjusted " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Adjusted Price"),
-        report_order_column_adjusted_price, COLUMN_FORMAT_CURRENCY, COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
+    table_add_column(table, report_order_column_adjusted_price, "Adjusted " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Adjusted Price",
+        COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_RIGHT_ALIGN | COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
         .set_width(IM_SCALEF(95.0f));
 
     table_add_column(table, STRING_CONST("Ask " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Ask Price"), report_order_column_ask_price,
@@ -494,9 +494,9 @@ FOUNDATION_STATIC table_t* report_create_title_details_table(const bool title_is
         .set_width(IM_SCALEF(100.0f));
 
     table_add_column(table, STRING_CONST("           Gain " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain"),
-        report_order_column_total_gain, COLUMN_FORMAT_CURRENCY, COLUMN_HIDE_DEFAULT | COLUMN_RIGHT_ALIGN | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE);
+        report_order_column_total_gain, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE);
 
-    table_add_column(table, STRING_CONST(ICON_MD_SMART_BUTTON "||" ICON_MD_SMART_BUTTON " Actions"), report_order_column_actions,
+    table_add_column(table, STRING_CONST(THIN_SPACE THIN_SPACE ICON_MD_SMART_BUTTON "||" ICON_MD_SMART_BUTTON " Actions"), report_order_column_actions,
         COLUMN_FORMAT_TEXT, COLUMN_CUSTOM_DRAWING | COLUMN_STRETCH | COLUMN_LEFT_ALIGN);
 
     return table;
@@ -505,15 +505,16 @@ FOUNDATION_STATIC table_t* report_create_title_details_table(const bool title_is
 FOUNDATION_STATIC string_const_t report_title_order_window_id(const title_t* title)
 {
     const stock_t* s = title->stock;
+    string_const_t id = string_const(title->code, title->code_length);
     if (s == nullptr || math_real_is_nan(s->current.close))
-        return tr_format_static(ICON_MD_FORMAT_LIST_BULLETED " Orders {0}###Orders_{0}_4", string_const(title->code, title->code_length));
+        return tr_format_static(ICON_MD_FORMAT_LIST_BULLETED " Orders {0}###Orders_{0}_4", id);
 
     if (title_sold(title))
-        return string_format_static(STRING_CONST(ICON_MD_FORMAT_LIST_BULLETED " Orders %.*s [SOLD] (%.2lf $)###Orders_%.*s_4"),
-            (int)title->code_length, title->code, title->stock->current.close, (int)title->code_length, title->code);
+        return tr_format_static(ICON_MD_FORMAT_LIST_BULLETED " Orders {0} [SOLD] ({1,currency})###Orders_{0}_4",
+            id, title->stock->current.close);
     
-    return tr_format_static(ICON_MD_FORMAT_LIST_BULLETED " Orders {0} ({1,currency})###Orders_%.*s_4", 
-        string_const(title->code, title->code_length), title->stock->current.close);
+    return tr_format_static(ICON_MD_FORMAT_LIST_BULLETED " Orders {0} ({1,currency})###Orders_{0}_4", 
+        id, title->stock->current.close);
 }
 
 void report_render_title_details(report_t* report, title_t* title)
@@ -521,9 +522,7 @@ void report_render_title_details(report_t* report, title_t* title)
     const bool title_is_sold = title_sold(title);
     const bool show_ask_price = title->average_ask_price > 0 || (title->average_quantity == 0 && title->sell_total_quantity == 0);
 
-    const float window_base_size = 1600.0f;
-    ImGui::SetNextWindowSize(ImVec2(show_ask_price ? window_base_size + 200.0f : window_base_size, 650.0f), ImGuiCond_Once);
-
+    ImGui::SetNextWindowSize(ImVec2(show_ask_price || title_is_sold ? IM_SCALEF(950) : IM_SCALEF(550), IM_SCALEF(350)), ImGuiCond_FirstUseEver);
     string_const_t id = report_title_order_window_id(title);
     if (!report_render_dialog_begin(id, &title->show_details_ui, ImGuiWindowFlags_NoCollapse))
         return;

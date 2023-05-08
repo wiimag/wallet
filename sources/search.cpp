@@ -846,12 +846,6 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
 
         if (thread_try_wait(0))
             return 0;
-
-        // Remove old documents so that we don't keep growing the database with invalidated data.
-        search_database_remove_old_documents(_search->db, time_add_days(time_now(), -25), 5.0);
-
-        if (thread_try_wait(0))
-            return 0;
     }
     
     dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);
@@ -875,6 +869,12 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
         log_warnf(HASH_SEARCH, WARNING_SUSPICIOUS, STRING_CONST("Batch mode, skipping search indexing"));
         return 0;
     }
+
+    // Remove old documents so that we don't keep growing the database with invalidated data.
+    search_database_remove_old_documents(_search->db, time_add_days(time_now(), -25), 5.0);
+
+    if (thread_try_wait(0))
+        return 0;
     
     // Fetch all titles from stock exchange market
     SHARED_READ_LOCK(_search->exchanges_lock);

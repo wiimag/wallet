@@ -742,18 +742,18 @@
 		}
 		{
 			hash = "5ee1fffa19128806"
-			en = "      I. \xee\x8b\xab||\xee\x8b\xab Total Investments (based on average cost)"
-			fr = "      I. \xee\x8b\xab||\xee\x8b\xab Investissement Total (bas\xc3\xa9 sur le prix moyen)"
+			en = "     I. \xee\x8b\xab||\xee\x8b\xab Total Investments (based on average cost)"
+			fr = "     I. \xee\x8b\xab||\xee\x8b\xab Investissement Total (bas\xc3\xa9 sur le prix moyen)"
 		}
 		{
 			hash = "4f743c9957329d7a"
-			en = "      V. \xee\xa1\x90||\xee\xa1\x90 Total Value (as of today)"
-			fr = "      V. \xee\xa1\x90||\xee\xa1\x90 Valeur totale (aujourd'hui)"
+			en = "     V. \xee\xa1\x90||\xee\xa1\x90 Total Value (as of today)"
+			fr = "     V. \xee\xa1\x90||\xee\xa1\x90 Valeur totale (aujourd'hui)"
 		}
 		{
 			hash = "595f681f7c9f118d"
-			en = "   Gain \xee\xad\xbd||\xee\xad\xbd Total Gain (as of today)"
-			fr = "   Gain \xee\xad\xbd||\xee\xad\xbd Gain total (aujourd'hui)"
+			en = " Gain \xee\xad\xbd||\xee\xad\xbd Total Gain (as of today)"
+			fr = " Gain \xee\xad\xbd||\xee\xad\xbd Gain total (aujourd'hui)"
 		}
 		{
 			hash = "f00ab2c582ae7d3"
@@ -922,8 +922,8 @@
 		}
 		{
 			hash = "ff4f6a2ea20d3b1"
-			en = " R. \xee\xa1\xa0||\xee\xa1\xa0 Return Rate (Yield)"
-			fr = " R. \xee\xa1\xa0||\xee\xa1\xa0 Taux de Rendement"
+			en = "R. \xee\xa1\xa0||\xee\xa1\xa0 Return Rate (Yield)"
+			fr = "R. \xee\xa1\xa0||\xee\xa1\xa0 Taux de Rendement"
 		}
 		{
 			hash = "d66a916b0f366a2c"
@@ -1049,11 +1049,6 @@
 			hash = "6da7a4dc730bb37b"
 			en = "           Gain \xef\x81\x8a||\xef\x81\x8a Total Gain"
 			fr = "           Gain \xef\x81\x8a||\xef\x81\x8a Gain Total"
-		}
-		{
-			hash = "b3997a9adb262c8a"
-			en = "\xef\x87\x81||\xef\x87\x81 Actions"
-			fr = "\xef\x87\x81||\xef\x87\x81 Actions"
 		}
 		{
 			hash = "4d89195bc358fe6e"
@@ -3286,11 +3281,6 @@
 			fr = "Samedi"
 		}
 		{
-			hash = "9a410ced9d2edd16"
-			en = "\xee\x89\x81 Orders {0} ({1,currency})###Orders_%.*s_4"
-			fr = "\xee\x89\x81 D\xc3\xa9tails des transactions {0} ({1,currency})###Ordres_%.*s_4"
-		}
-		{
 			hash = "987ff9869c977ded"
 			en = "You are using the latest version {0}"
 			fr = "Vous utilisez la derniere version {0}"
@@ -3521,14 +3511,29 @@
 			fr = "Taux de change EOD pour %.*s vers %.*s: %.4lf $"
 		}
 		{
+			hash = "68379d52fe40e2da"
+			en = " Sold at an average price of %.2lf $ "
+			fr = " Vendu \xc3\xa0 un prix moyen de %.2lf $ "
+		}
+		{
 			hash = "ff8a04b535f6b686"
 			en = "\xee\x89\x81 Orders {0}###Orders_{0}_4"
 			fr = "\xee\x89\x81 D\xc3\xa9tails des transactions {0}###Ordres_{0}_4"
 		}
 		{
-			hash = "68379d52fe40e2da"
-			en = " Sold at an average price of %.2lf $ "
-			fr = " Vendu \xc3\xa0 un prix moyen de %.2lf $ "
+			hash = "667960d6f9da56e7"
+			en = "\xee\x89\x81 Orders {0} [SOLD] ({1,currency})###Orders_{0}_4"
+			fr = "\xee\x89\x81 D\xc3\xa9tails des transactions {0} [VENDU] ({1,currency})###Ordres_{0}_4"
+		}
+		{
+			hash = "5631e91e89186c2"
+			en = "\xee\x89\x81 Orders {0} ({1,currency})###Orders_{0}_4"
+			fr = "\xee\x89\x81 D\xc3\xa9tails des transactions {0} ({1,currency})###Ordres_{0}_4"
+		}
+		{
+			hash = "5ced572e2299615e"
+			en = "\xe2\x80\x89\xe2\x80\x89\xef\x87\x81||\xef\x87\x81 Actions"
+			fr = "\xe2\x80\x89\xe2\x80\x89\xef\x87\x81||\xef\x87\x81 Actions"
 		}
 	]
 }
