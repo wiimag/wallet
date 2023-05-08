@@ -5,4 +5,6 @@
 
 #pragma once
 
+#include <foundation/types.h>
+
 void news_open_window(const char* symbol, size_t symbol_length);

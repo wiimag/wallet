@@ -21,6 +21,9 @@ constexpr const char EVENT_ABOUT_OPEN_WEBSITE[] = "ABOUT_OPEN_WEBSITE";
  */
 FOUNDATION_EXTERN void FOUNDATION_LINKER_INCLUDE(about_initialize)();
 
+/* Explicitly initialize the about module. */
+void about_initialize();
+
 /*! Opens the about dialog. */
 void about_open_window();
 

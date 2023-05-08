@@ -29,7 +29,7 @@
 #define HASH_STOCK static_hash_string("stock", 5, 0x1a0dd7af24ebee7aLL)
 
 constexpr char INVALID_SYMBOLS_HEADER[] = "INVALID_SYMBOLS##1";
-constexpr CHAR INVALID_SYMBOLS_FILE_NAME[] = "invalid_symbols.db";
+constexpr char INVALID_SYMBOLS_FILE_NAME[] = "invalid_symbols.db";
 
 struct technical_descriptor_t
 {
@@ -1240,7 +1240,7 @@ stock_eod_record_t stock_eod_record(const char* symbol, size_t length, time_t at
     eod_fetch("eod", ticker.str, FORMAT_JSON_CACHE, "from", datestr.str, "to", datestr.str,
         [&result](const json_object_t& res) 
     {
-        auto eod = res[0ULL];
+        auto eod = res[(size_t)0];
         string_const_t date = eod["date"].as_string();
         result.timestamp = string_to_date(STRING_ARGS(date));
         result.open = eod["open"].as_number();

@@ -1,4 +1,4 @@
-﻿/*
+/*
  * Copyright 2022-2023 - All rights reserved.
  * License: https://equals-forty-two.com/LICENSE
  */
@@ -452,7 +452,7 @@ string_t localization_string_from_time(char* buffer, size_t capacity, tick_t tim
         struct tm* gtm = local ? localtime(&ts) : gmtime(&ts);
     #else
         struct tm tm;
-        struct tm* gtm = local ? localtime_r(&ts, &tm) : gmtime_r(&ts, &tm);
+        struct tm* gtm = localtime_r(&ts, &tm);
     #endif
 
     const char* day_name = "Monday";

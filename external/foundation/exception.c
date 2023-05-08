@@ -192,7 +192,7 @@ FOUNDATION_DECLARE_THREAD_LOCAL(const char*, dump_name, 0)
 FOUNDATION_DECLARE_THREAD_LOCAL(exception_env_t, exception_env, 0)
 
 static string_t
-create_mini_dump(void* context, string_const_t name, string_t dump_file) {
+create_mini_dump(void* context, string_const_t name, string_t dump_file, bool print_dump_written_log) {
 	string_const_t tmp_dir;
 	string_const_t uuid_str;
 	if (!name.length)

@@ -400,6 +400,7 @@ extern void main_render(GLFWwindow* window, const app_render_handler_t& render, 
             return 0;
         }, &render_args, [](void* args, const char* file, size_t length)
         {
+            #if FOUNDATION_PLATFORM_WINDOWS
             prev_assert_handler = assert_handler();
             assert_set_handler([](hash_t context, const char* condition, size_t cond_length, const char* file,
                 size_t file_length, unsigned int line, const char* msg, size_t msg_length)
@@ -427,7 +428,7 @@ extern void main_render(GLFWwindow* window, const app_render_handler_t& render, 
 
             assert_set_handler(prev_assert_handler);
             prev_assert_handler = nullptr;
-
+            #endif
             log_errorf(0, ERROR_EXCEPTION, "Exception while rendering application (%.*s)", (int)length, file);
         }, STRING_CONST("main_render"));
     }

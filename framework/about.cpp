@@ -109,6 +109,11 @@ void about_open_window()
 
 void about_initialize()
 {
+    static bool initialized = false;
+    if (initialized)
+        return;
+    
+    #if FOUNDATION_PLATFORM_WINDOWS
     string_const_t versions_url = CTEXT(PRODUCT_VERSIONS_URL);
     if (versions_url.length)
     {
@@ -118,6 +123,7 @@ void about_initialize()
             dispatcher_post_event(EVENT_CHECK_NEW_VERSIONS, nullptr, 0);
         }, nullptr);
     }
+    #endif
 
     app_register_menu(HASH_ABOUT, 
         STRING_CONST("Help/Web Site"), 
@@ -126,6 +132,8 @@ void about_initialize()
     app_register_menu(HASH_ABOUT, 
         STRING_CONST("Help/About"), 
         STRING_CONST("F1"), AppMenuFlags::Append, about_menu_open_dialog);
+    
+    initialized = true;
 }
 
 DEFINE_MODULE(ABOUT, about_initialize, nullptr, MODULE_PRIORITY_UI);

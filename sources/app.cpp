@@ -21,6 +21,7 @@
 #include <framework/session.h>
 #include <framework/dispatcher.h>
 #include <framework/localization.h>
+#include <framework/about.h>
 
 #include <foundation/version.h>
 #include <foundation/process.h>
@@ -149,6 +150,10 @@ extern int app_initialize(GLFWwindow* window)
     // App systems
     settings_initialize();
     module_initialize();
+    
+    #if FOUNDATION_PLATFORM_MACOS
+    about_initialize();
+    #endif
 
     return 0;
 }
