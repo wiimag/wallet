@@ -71,7 +71,6 @@ FOUNDATION_ALIGNED_STRUCT(title_t, 8)
 
     // Average price (adjusted but not exchange rated)
     double average_price{ NAN };
-    double average_price_rated{ NAN };
     double average_quantity{ NAN };
     double average_buy_price{ NAN };
     double average_buy_price_rated{ NAN };

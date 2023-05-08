@@ -1,10 +1,11 @@
 # Changelog
 
-## [0.22.12] - 2023-05-08
+## [0.22.13] - 2023-05-08
 - Add link to web site in the help menu.
 - Add support for `YEAR(...)` to get the year of a date. This was useful to plot annual earnings using `PLOT(...)`.
 - Add support to automatically update wallet tracking history on a daily basis.
 - Add support to ignore invalid symbols from the search index.
+- Fix average buy cost when the stock got sold and we bought it again.
 - Fix day gain summary taking into account index changes.
 - Fix EOD data with erronous closing prices from the data source (i.e. Berkshire Hathaway Inc. (`BRK.A`))
 - Fix loading reports overflow of the report directory string.

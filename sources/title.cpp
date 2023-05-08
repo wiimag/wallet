@@ -198,7 +198,7 @@ double title_get_total_investment(const title_t* t)
 {
     if (title_sold(t))
         return t->buy_total_price_rated_adjusted;
-    return t->average_quantity * t->average_price_rated;
+    return t->average_quantity * t->average_buy_price_rated;
 }
 
 double title_get_total_gain(const title_t* t)
@@ -326,7 +326,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
 
     t->average_price = 0;
     t->average_quantity = 0;
-    t->average_price_rated = 0;
+    t->average_buy_price = 0;
 
     t->total_dividends = 0;
     t->average_ask_price = 0;
@@ -349,6 +349,10 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     double total_buy_limit_price = 0;
     double total_exchange_rate = 0;
     double total_exchange_rate_count = 0;
+    
+    double total_current_quantity = 0;
+    double total_current_adjusted_value = 0;
+    double total_current_adjusted_rated_value = 0;
     
     const stock_t* s = title_is_resolved(t) ? t->stock : nullptr;
     string_t preferred_currency = t->wallet->preferred_currency;
@@ -436,6 +440,10 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
             t->buy_total_adjusted_qty += split_quantity;
             t->buy_total_adjusted_price += adjusted_buy_cost;
             t->buy_total_price_rated_adjusted += adjusted_buy_cost * order_exchange_rate;
+
+            total_current_quantity += split_quantity;
+            total_current_adjusted_value += adjusted_buy_cost;
+            total_current_adjusted_rated_value += adjusted_buy_cost * order_exchange_rate;
         }
         else
         {
@@ -452,7 +460,14 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
             t->sell_total_adjusted_qty += split_quantity;
             t->sell_total_adjusted_price += adjusted_sell_cost;
             t->sell_total_price_rated_adjusted += adjusted_sell_cost * order_exchange_rate;
+
+            total_current_adjusted_value -= t->average_buy_price * split_quantity;
+            total_current_adjusted_rated_value -= t->average_buy_price_rated * split_quantity;
+            total_current_quantity -= split_quantity;
         }
+
+        t->average_buy_price = math_ifnan(total_current_adjusted_value / total_current_quantity, 0);
+        t->average_buy_price_rated = math_ifnan(total_current_adjusted_rated_value / total_current_quantity, 0);
     }
 
     t->remaining_shares = t->buy_total_quantity - t->sell_total_quantity; // not adjusted
@@ -461,9 +476,6 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     
     t->buy_adjusted_price = t->buy_total_adjusted_qty > 0 ? t->buy_total_adjusted_price / t->buy_total_adjusted_qty : 0;
     t->sell_adjusted_price = t->sell_total_adjusted_qty > 0 ? t->sell_total_adjusted_price / t->sell_total_adjusted_qty : 0;
-
-    // Update the average buy price
-    t->average_buy_price = math_ifnan(t->buy_total_adjusted_price / t->buy_total_quantity, 0);
 
     // Fix the average quantity
     if (!math_real_is_zero(t->buy_total_count - t->sell_total_count))
@@ -478,21 +490,10 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     }
 
     // Update the average price
-    if (math_real_is_zero(t->average_quantity))
+    t->average_price = 0;
+    if (!math_real_is_zero(t->average_quantity))
         t->average_price = t->average_buy_price;
-    else
-    {
-        t->average_price = (t->buy_total_adjusted_price - t->sell_total_adjusted_price) / t->average_quantity;
-        if (math_real_is_zero(t->average_price) || math_real_is_nan(t->average_price))
-            t->average_price = (t->buy_total_price - t->sell_total_price) / t->remaining_shares;
-    }
-
-    t->average_buy_price_rated = math_ifnan(t->buy_total_price_rated_adjusted / t->buy_total_quantity, 0);
-    t->average_price_rated = t->average_quantity > 0 ? math_ifzero(
-        (t->buy_total_price_rated_adjusted - t->sell_total_price_rated_adjusted) / t->average_quantity,
-        (t->buy_total_price_rated - t->sell_total_price_rated) / t->remaining_shares
-    ) : t->average_buy_price_rated;
-
+    
     if (valid_dates > 0)
     {
         t->date_average /= valid_dates;
@@ -643,7 +644,8 @@ double title_get_bought_price(const title_t* t)
 
 double title_get_sell_gain_rated(const title_t* t)
 {
-    return t->sell_total_price_rated - ((t->buy_total_price_rated / t->buy_total_quantity) * t->sell_total_quantity);
+    const double non_sold_total = t->buy_total_price_rated - (t->average_buy_price_rated * t->average_quantity);
+    return t->sell_total_price_rated - non_sold_total;
 }
 
 double title_get_ask_price(const title_t* title)

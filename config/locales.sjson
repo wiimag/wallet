@@ -3535,5 +3535,35 @@
 			en = "\xe2\x80\x89\xe2\x80\x89\xef\x87\x81||\xef\x87\x81 Actions"
 			fr = "\xe2\x80\x89\xe2\x80\x89\xef\x87\x81||\xef\x87\x81 Actions"
 		}
+		{
+			hash = "d1f2fea554e2b948"
+			en = "Rename##1"
+			fr = "Renommer##1"
+		}
+		{
+			hash = "b0c40880d67eff4d"
+			en = "Edit in Console"
+			fr = "Modifier dans la console"
+		}
+		{
+			hash = "4ba696d59cfb6704"
+			en = " Split Factor: %.3lg"
+			fr = " Facteur de division: %.3lg"
+		}
+		{
+			hash = "fccf784aa369f561"
+			en = " Split Price: %.2lf $ (%d)"
+			fr = " Prix de division: %.2lf $ (%d)"
+		}
+		{
+			hash = "2b7653e29718caa6"
+			en = " Adjust Factor: %.3lg"
+			fr = " Facteur d'ajustement: %.3lg"
+		}
+		{
+			hash = "8535811b333eefc4"
+			en = " Adjusted Price: %.3lf $ "
+			fr = " Prix ajust\xc3\xa9: %.3lf $ "
+		}
 	]
 }

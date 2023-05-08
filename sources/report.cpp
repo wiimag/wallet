@@ -308,15 +308,15 @@ FOUNDATION_STATIC cell_t report_column_get_buy_price(table_element_ptr_t element
     if (!show_alternate_buy_price && title_sold(t))
         return cell_t(t->buy_adjusted_price);
 
-    const double adjusted_price = math_ifzero(show_alternate_buy_price ? t->average_price_rated : t->average_price, t->buy_adjusted_price);
+    const double adjusted_price = t->average_price;
 
-    cell_t buy_price_cell(adjusted_price);
-    if (t->average_price_rated > adjusted_price)
+    cell_t buy_price_cell(t->average_buy_price);
+    if (t->average_buy_price > adjusted_price)
     {
         buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
         buy_price_cell.style.text_color = TEXT_WARN_COLOR;
     }
-    else if (t->average_price_rated < 0)
+    else if (t->average_buy_price < 0)
     {
         buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
         buy_price_cell.style.text_color = TEXT_GOOD_COLOR;
@@ -1223,13 +1223,16 @@ FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_con
         return;
 
     const double bought_price = title_get_bought_price(t);
-    ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-        tr(" (%s $) Bought Price: %.2lf $ "),
-        string_table_decode(t->stock->currency), bought_price);
+    if (!math_real_is_nan(bought_price))
+    {
+        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
+            tr(" (%s $) Bought Price: %.2lf $ "),
+            string_table_decode(t->stock->currency), bought_price);
+    }
 
     ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
         tr(" (%.*s $) Average Cost: %.3lf $ "),
-        STRING_FORMAT(t->wallet->preferred_currency), math_ifzero(t->average_price_rated, 0));
+        STRING_FORMAT(t->wallet->preferred_currency), math_ifzero(t->average_buy_price_rated, 0));
 
     if (t->buy_adjusted_price != bought_price)
     {
@@ -1448,9 +1451,11 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
         {
             ImGui::ExpandNextItem();
             ImGui::InputText("##Expression", c->expression, sizeof(c->expression));
-            if (ImGui::IsMouseDoubleClicked(0) && ImGui::IsItemHovered())
+            if (ImGui::BeginPopupContextItem())
             {
-                console_set_expression(c->expression, string_length(c->expression));
+                if (ImGui::TrMenuItem("Edit in Console"))
+                    console_set_expression(c->expression, string_length(c->expression));
+                ImGui::EndPopup();
             }
         }
 

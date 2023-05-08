@@ -1236,6 +1236,20 @@ stock_eod_record_t stock_eod_record(const char* symbol, size_t length, time_t at
 {
     stock_eod_record_t result;
     string_t ticker = string_copy(SHARED_BUFFER(16), symbol, length);
+
+    if (time_same_day(at, time_now()))
+    {
+        auto ed = stock_realtime_record(symbol, length);
+        result.timestamp = ed.date;
+        result.open = ed.open;
+        result.high = ed.high;
+        result.low = ed.low;
+        result.close = ed.close;
+        result.adjusted_close = ed.adjusted_close;
+        result.volume = ed.volume;
+        return result;
+    }
+
     string_t datestr = string_from_date(SHARED_BUFFER(16), at);
     eod_fetch("eod", ticker.str, FORMAT_JSON_CACHE, "from", datestr.str, "to", datestr.str,
         [&result](const json_object_t& res) 

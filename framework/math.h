@@ -296,6 +296,11 @@ FOUNDATION_FORCEINLINE double math_change_p(double from, double to, double defau
     return !math_real_is_zero(from) ? (to - from) / from : default_value;
 }
 
+FOUNDATION_FORCEINLINE int math_round(double value, int at)
+{
+    return math_round(value / at) * at;
+}
+
 // ## Scalar helpers
 
 /*! @brief Returns the given value clamped to the given range.

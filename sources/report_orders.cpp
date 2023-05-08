@@ -580,8 +580,11 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
     static double quantity = 100.0f;
     static double price = 0.0f;
     static double price_scale = 1.0f;
+    static double exchange_rate = 1.0;
     static tm tm_date;
     static bool reset_date = true;
+
+    string_t preferred_currency = report->wallet->preferred_currency;
 
     if (ImGui::IsWindowAppearing() || math_real_is_nan(price))
     {
@@ -589,8 +592,15 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         price = title->stock->current.adjusted_close;
         price_scale = price / 10.0f;
         reset_date = true;
+        exchange_rate= DNAN;
 
         ImGui::SetDateToday(&tm_date);
+    }
+
+    if (math_real_is_nan(exchange_rate) && title->stock->has_resolve(FetchLevel::FUNDAMENTALS))
+    {
+        string_const_t stock_currency = SYMBOL_CONST(title->stock->currency);
+        exchange_rate = math_ifnan(stock_exchange_rate(STRING_ARGS(preferred_currency), STRING_ARGS(stock_currency)), 1.0);
     }
 
     const ImVec2 content_size = ImVec2(IM_SCALEF(560.0f), IM_SCALEF(105.0f));
@@ -609,7 +619,7 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         ImGui::Columns(3);
 
         ImGui::SetNextItemWidth(control_width);
-        ImGui::InputDouble("##Quantity", &quantity, 10.0f, 100.0f, "%.0lf", ImGuiInputTextFlags_None);
+        ImGui::InputDouble("##Quantity", &quantity, quantity <= 10 ? 1.0f : 10.0f, 100.0f, "%.0lf", ImGuiInputTextFlags_None);
         if (quantity < 0)
             quantity = 0;
 
@@ -633,15 +643,27 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
         ImGui::Columns(3);
         ImGui::MoveCursor(0, IM_SCALEF(10.0f));
 
-        double orig_buy_value = quantity * price;
+        double orig_buy_value = quantity * price / exchange_rate;
         double buy_value = orig_buy_value;
-        ImGui::SetNextItemWidth(control_width);
+        ImGui::AlignTextToFramePadding();
+        ImGui::Text("%.*s", STRING_FORMAT(preferred_currency));
+        ImGui::SameLine();
+        ImGui::ExpandNextItem(-IM_SCALEF(10));
         if (ImGui::InputDouble("##BuyValue", &buy_value, price * 10.0, price * 100.0,
             math_real_is_nan(price) ? "-" : (buy_value < 0.5 ? "%.3lf $" : "%.2lf $"),
             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CharsNoBlank) || buy_value != orig_buy_value)
         {
             if (!math_real_is_nan(price))
-                quantity = math_round(buy_value / price);
+                quantity = math_round(buy_value / price * exchange_rate);
+
+            if (quantity > 2 && quantity < 10)
+                quantity = math_round(quantity, 5);
+            else if (quantity >= 10 && quantity < 100)
+                quantity = math_round(quantity, 10);
+            else if (quantity >= 100 && quantity < 1000)
+                quantity = math_round(quantity, 100);
+            else if (quantity >= 1000)
+                quantity = math_round(quantity, 1000);
         }
 
         ImGui::NextColumn();

@@ -18,6 +18,11 @@ source $SCRIPT_DIR/common.sh
 # Load the project name
 SHORT_NAME=$(build_setting "PROJECT_ID")
 
+# Load version numbers
+VERSION_MAJOR=$(build_setting "VERSION_MAJOR")
+VERSION_MINOR=$(build_setting "VERSION_MINOR")
+VERSION_PATCH=$(build_setting "VERSION_PATCH")
+
 # Define today's date as YYYY_MM_DD
 TODAY=$(date +"%Y_%m_%d")
 
@@ -188,4 +193,4 @@ fi
 
 # Print the build zip path
 echo
-echo "Built package: $(convert_path_to_file_link "$MSI_OUTPUT_PATH")"
+echo "Built package: $(convert_path_to_file_link "$MSI_OUTPUT_PATH") ($VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH)"
