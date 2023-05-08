@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.22.13] - 2023-05-08
+## [0.22.14] - 2023-05-08
 - Add link to web site in the help menu.
 - Add support for `YEAR(...)` to get the year of a date. This was useful to plot annual earnings using `PLOT(...)`.
 - Add support to automatically update wallet tracking history on a daily basis.
@@ -11,6 +11,7 @@
 - Fix loading reports overflow of the report directory string.
 - Fix logging new wallet history entries on the weekend.
 - Fix MSI package launching when looking for updates.
+- Fix title average rated buy price rated when no transaction was made.
 - Improve `TABLE(...)` and `PLOT(...)` expressions.
 - Improve how split factor is computed when the stock just split.
 - Improve installation and update process using WiX Toolset.

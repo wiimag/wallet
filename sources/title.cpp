@@ -327,6 +327,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     t->average_price = 0;
     t->average_quantity = 0;
     t->average_buy_price = 0;
+    t->average_buy_price_rated = 0;
 
     t->total_dividends = 0;
     t->average_ask_price = 0;
