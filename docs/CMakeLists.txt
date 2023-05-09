@@ -15,6 +15,7 @@ project(docs)
 # Add markdown files to the project
 file(GLOB_RECURSE MARKDOWN_FILES
     "${ROOT_DIR}/*.md"
+    "${ROOT_DIR}/*.expr"
 )
 source_group(TREE ${ROOT_DIR} FILES ${MARKDOWN_FILES})
 

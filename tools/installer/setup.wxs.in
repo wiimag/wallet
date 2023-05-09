@@ -104,6 +104,12 @@
                 <File Id="report_earnings_annual.expr" Source="docs\expressions\report_earnings_annual.expr"/>
                 <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
             </Component>
+
+            <Component Id="report_slope_down" Guid="635bbcdf-faca-4c7d-8a9a-e6e7203c1f2c">
+                <File Id="report_slope_down.expr" Source="docs\expressions\report_slope_down.expr"/>
+                <RegistryValue Root="HKCU" Key="Software\[Manufacturer]\[ProductName]" Name="installed" Type="integer" Value="1" KeyPath="yes"/>
+            </Component>
+
         </ComponentGroup>
 
 		<!-- Declare installation features -->
