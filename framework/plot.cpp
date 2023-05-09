@@ -29,7 +29,7 @@ FOUNDATION_STATIC void plot_render_graph_trend(const char* label, double x1, dou
         y_diff *= -1.0;
     }
 
-    const char* tag = string_format_static_const("%s %s", label, b > 0 ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
+    const char* tag = string_format_static_const("%s %s", label, (!context.flipped && !context.x_axis_inverted ? b < 0 : b > 0) ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
     ImPlot::TagY(a + b * (context.flipped || context.x_axis_inverted ? x2 : x1), pc, "%s", tag);
     ImPlot::PlotLine(tag, range, trend, ARRAY_COUNT(trend), ImPlotLineFlags_NoClip);
 
