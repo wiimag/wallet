@@ -33,7 +33,7 @@ FOUNDATION_STATIC void wallet_history_update_entry(report_t* report, wallet_t* w
     entry->funds = wallet_total_funds(wallet);
     entry->investments = report->total_investment;
     entry->total_value = report->total_value;
-    entry->gain = report->wallet->sell_total_gain;
+    entry->gain = report->wallet->sell_total_gain + report->wallet->total_dividends;
             
     report->dirty = true;
 }
@@ -837,7 +837,7 @@ void wallet_update_tracking_history(report_t* report, wallet_t* wallet)
         if (!time_is_working_hours())
             return;
 
-        if (time_elapsed_days(h->date, today) < 0.05)
+        if (time_elapsed_days(h->date, today) < 0.1)
             return; // Already up-to-date (or almost, lets retry later)
 
         string_const_t report_name = ::report_name(report);
@@ -869,56 +869,6 @@ bool wallet_draw(wallet_t* wallet, float available_space)
 
     float last_item_size = 0;
     const float control_padding = IM_SCALEF(14.0f) + (ImGui::GetScrollMaxY() > 0 ? IM_SCALEF(8) : 0);
-
-    // Draw wallet history tracking check box
-    {
-        ImGui::AlignTextToFramePadding();
-        ImGui::TrTextUnformatted("History");
-        last_item_size = ImGui::GetItemRectSize().x;
-        ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(20.0f) - control_padding, 0, true);
-        if (ImGui::Checkbox("##History", &wallet->track_history))
-            updated |= true;
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(tr("Track historical data for this report."));
-    }
-    
-    // Draw wallet target percentage
-    {
-        ImGui::AlignTextToFramePadding();
-        ImGui::TrTextUnformatted("Target %");
-        last_item_size = ImGui::GetItemRectSize().x;
-
-        const float control_width = IM_SCALEF(60.0f);
-        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
-        ImGui::SetNextItemWidth(control_width);
-        double p100 = wallet->main_target * 100.0;
-        if (ImGui::InputDouble("##Target%", &p100, 0, 0, "%.3g %%", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
-        {
-            wallet->main_target = p100 / 100.0;
-            updated |= true;
-        }
-    }
-
-    // Draw wallet preferred currency
-    {
-        ImGui::AlignTextToFramePadding();
-        ImGui::TrTextUnformatted("Currency");
-        last_item_size = ImGui::GetItemRectSize().x;
-
-        char currency[64];
-        string_copy(STRING_BUFFER(currency), STRING_ARGS(wallet->preferred_currency));
-
-        const float control_width = IM_SCALEF(60.0f);
-        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
-        ImGui::SetNextItemWidth(control_width);
-        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(currency), ImGuiInputTextFlags_AutoSelectAll))
-        {
-            char* old = wallet->preferred_currency.str;
-            wallet->preferred_currency = string_clone(currency, string_length(currency));
-            string_deallocate(old);
-            updated |= true;
-        }
-    }
 
     // Draw wallet funds (expands to all currencies)
     {
@@ -1027,6 +977,56 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         else
         {
             wallet_render_funds_text(available_space, control_padding, fundsstr);
+        }
+    }
+
+    // Draw wallet history tracking check box
+    {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TrTextUnformatted("History");
+        last_item_size = ImGui::GetItemRectSize().x;
+        ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(22.0f) - control_padding, 0, true);
+        if (ImGui::Checkbox("##History", &wallet->track_history))
+            updated |= true;
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip(tr("Track historical data for this report."));
+    }
+
+    // Draw wallet preferred currency
+    {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TrTextUnformatted("Currency");
+        last_item_size = ImGui::GetItemRectSize().x;
+
+        char currency[64];
+        string_copy(STRING_BUFFER(currency), STRING_ARGS(wallet->preferred_currency));
+
+        const float control_width = IM_SCALEF(60.0f);
+        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
+        ImGui::SetNextItemWidth(control_width);
+        if (ImGui::InputTextWithHint("##Currency", "i.e. USD", STRING_BUFFER(currency), ImGuiInputTextFlags_AutoSelectAll))
+        {
+            char* old = wallet->preferred_currency.str;
+            wallet->preferred_currency = string_clone(currency, string_length(currency));
+            string_deallocate(old);
+            updated |= true;
+        }
+    }
+    
+    // Draw wallet target percentage
+    {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TrTextUnformatted("Target %");
+        last_item_size = ImGui::GetItemRectSize().x;
+
+        const float control_width = IM_SCALEF(60.0f);
+        ImGui::MoveCursor(available_space - last_item_size - control_width - control_padding, 0, true);
+        ImGui::SetNextItemWidth(control_width);
+        double p100 = wallet->main_target * 100.0;
+        if (ImGui::InputDouble("##Target%", &p100, 0, 0, "%.3g %%", ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll))
+        {
+            wallet->main_target = p100 / 100.0;
+            updated |= true;
         }
     }
 

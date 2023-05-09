@@ -969,6 +969,9 @@ struct expr_result_t
         if (type == EXPR_RESULT_FALSE)
             return expr_result_t(true);
 
+        if (type == EXPR_RESULT_SYMBOL)
+            return !math_real_is_zero(value) && index > 0;
+
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
     }

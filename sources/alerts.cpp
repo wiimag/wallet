@@ -373,7 +373,7 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
                         ImGui::EndTooltip();
                     }
                 }
-                else if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+                else if (!ImGui::IsEditingItem() && ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
                 {
                     ImGui::AlignTextToFramePadding();
 

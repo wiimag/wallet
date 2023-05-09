@@ -18,7 +18,7 @@
 #define IS_NOT_A_NUMBER SC1(math_real_is_nan(_1.as_number()))
 #define EVAL_STOCK_FIELD(field_name) FOUNDATION_PREPROCESSOR_TOSTRING(field_name), SC2(_2->field_name), IS_NOT_A_NUMBER, FetchLevel::FUNDAMENTALS
 
-constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 35;
+constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 36;
 
 FOUNDATION_FORCEINLINE expr_result_t stock_change_p_range(const stock_t* s, int rel_days)
 {
@@ -75,8 +75,9 @@ static struct {
     { "date_min",       SC2((double)_1->date_min), IS_NOT_A_NUMBER },                                       /*28*/
     { "date_max",       SC2((double)_1->date_max), IS_NOT_A_NUMBER },
     { "date_average",   SC2((double)_1->date_average), IS_NOT_A_NUMBER},
+    { "days_held",      SC2((double)title_average_days_held(_1)), IS_NOT_A_NUMBER},
 
-    { "title",                  SC2(_1->code), SL1(_1.index == 0) },                                        /*31*/
+    { "title",                  SC2(_1->code), SL1(_1.index == 0) },                                        /*32*/
     { "ps",                     SC2(_1->ps.fetch()), IS_NOT_A_NUMBER },                                 
     { "ask",                    SC2(_1->ask_price.fetch()), nullptr },
     { "today_exchange_rate",    SC2(_1->today_exchange_rate.fetch()), nullptr },

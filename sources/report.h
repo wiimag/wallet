@@ -259,5 +259,63 @@ title_t* report_add_title(report_t* report, const char* code, size_t code_length
  */
 report_t** report_sort_alphabetically();
 
-/*! Returns the name of a report. */
+/*! Returns the name of a report. 
+ *
+ *  @param report    The report to get the name for.
+ *
+ *  @return          The name of the report.
+ */
 string_const_t report_name(report_t* report);
+
+/*! Initialize the report expression columns module. */
+void report_expression_columns_initialize();
+
+/*! Finalize the report expression columns module. */
+void report_expression_columns_finalize();
+
+/*! Load report expression columns into a table.
+ * 
+ * @param report_handle The report to load the expression columns for.
+ * @param table         The table to load the expression columns into.
+ */
+void report_add_expression_columns(report_handle_t report_handle, table_t* table);
+
+/*! Open the report expression columns dialog.
+ * 
+ * @param report_handle The report to open the dialog for.
+ */
+void report_open_expression_columns_dialog(report_handle_t report_handle);
+
+/*! Load expression columns from the report data. 
+ * 
+ * @param report    The report to load the expression columns for.
+ */
+void report_load_expression_columns(report_t* report);
+
+/*! Reset the expression columns of a report. 
+ *
+ *  @remark This is usually done when refreshing the report.
+ * 
+ *  @param report    The report to reset the expression columns for.
+ */
+void report_expression_column_reset(report_t* report);
+
+/*! Save the expression columns of a report. 
+ *
+ *  @param report    The report to save the expression columns for.
+ */
+void report_expression_columns_save(report_t* report);
+
+/*! Returns the report handle for a given report.
+ *
+ *  @param report_ptr   The report to get the handle for.
+ *
+ *  @return             The report handle.
+ */
+report_handle_t report_get_handle(const report_t* report_ptr);
+
+/*! Update or rebuild the report table. 
+ * 
+ * @param report    The report to update the table for.
+ */
+void report_table_rebuild(report_t* report);

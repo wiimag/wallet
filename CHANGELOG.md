@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.23.0] - 2023-05-09
+## [0.23.1] - 2023-05-09
 - Add history value trend to the Wallet view.
+- Improve and simply the report summary panel.
 
 ## [0.22.14] - 2023-05-08
 - Add link to web site in the help menu.

@@ -439,6 +439,19 @@ namespace ImGui
         va_end(args);
     }
 
+    FOUNDATION_FORCEINLINE void TrTooltip(const char* fmt, ...)
+    {
+        va_list args;
+        va_start(args, fmt);
+        #if BUILD_ENABLE_LOCALIZATION
+        string_const_t fmtstr = tr(fmt, string_length(fmt), false);
+        SetTooltipV(fmtstr.str, args);
+        #else
+        SetTooltipV(fmt, args);
+        #endif
+        va_end(args);
+    }
+
     /*! Draw an unformatted text label with translated text. 
      * 
      *  @param fmt The format string.
@@ -535,5 +548,14 @@ namespace ImGui
         const ImVec2 center = ImVec2(pos.x + avail.x * 0.5f, pos.y + avail.y * 0.5f);
         ImGui::SetCursorPos(center - size * 0.5f);
         return ImGui::ButtonEx(label, size, ImGuiButtonFlags_AlignTextBaseLine);
+    }
+
+    /*! Check if we are currently editing an item. i.e. a TextInput field. 
+     * 
+     *  @return True if we are editing an item.
+     */
+    FOUNDATION_FORCEINLINE bool IsEditingItem()
+    {
+        return ImGui::GetIO().WantTextInput;
     }
 }

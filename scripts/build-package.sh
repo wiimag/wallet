@@ -82,14 +82,6 @@ if [[ "$*" == *-build* ]]; then
   BUILD_OPTIONS+=("-DBUILD_ENABLE_TESTS=OFF")
   BUILD_OPTIONS+=("-DBUILD_ENABLE_DEVELOPMENT=OFF")
 
-  if [[ "$*" == *backend* ]]; then
-    # Add _backend suffix to the branch name
-    BRANCH_NAME="${BRANCH_NAME}_backend"
-    BUILD_OPTIONS+=("-DBUILD_ENABLE_BACKEND=ON")
-  else
-    BUILD_OPTIONS+=("-DBUILD_ENABLE_BACKEND=OFF")
-  fi
-
   # Print build options
   echo "Build options:"
   for option in "${BUILD_OPTIONS[@]}"; do
@@ -171,25 +163,16 @@ if [ ! -f "$MSI_OUTPUT_PATH" ]; then
 fi
 
 # Copy to ballet repo
-if [[ "$*" == *backend* ]]; then
+PROJECT_PACKAGE_NAME="${SHORT_NAME}_release_latest_backend"
 
-  PROJECT_PACKAGE_NAME="${SHORT_NAME}_release_latest_backend"
+# Define ballet release path
+BALLET_RELEASE_DIR_PATH="../ballet/public/releases/win32/"
+BALLET_RELEASE_DIR_PATH=$(cygpath -w $(realpath $BALLET_RELEASE_DIR_PATH))
 
-  # Define ballet release path
-  BALLET_RELEASE_DIR_PATH="../ballet/public/releases/win32/"
-  BALLET_RELEASE_DIR_PATH=$(cygpath -w $(realpath $BALLET_RELEASE_DIR_PATH))
-
-  # Publish files to the ballet repo
-  publish_file "CHANGELOG.md" "../ballet/public/"
-  publish_file "$PROJECT_EXE_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}_portable.exe"
-  publish_file "$MSI_OUTPUT_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}.msi"  
-
-else
-
-  # Create a copy of the exe named *_app.exe to provide a standalone exe
-  publish_file "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}_portable.exe"
-
-fi
+# Publish files to the ballet repo
+publish_file "CHANGELOG.md" "../ballet/public/"
+publish_file "$PROJECT_EXE_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}_portable.exe"
+publish_file "$MSI_OUTPUT_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}.msi"  
 
 # Print the build zip path
 echo

@@ -3565,5 +3565,40 @@
 			en = " Adjusted Price: %.3lf $ "
 			fr = " Prix ajust\xc3\xa9: %.3lf $ "
 		}
+		{
+			hash = "42c58ba5ac9d40f6"
+			en = "Expression||Macros:\n$TITLE: Represents the active title symbol code, i.e. \"ZM.US\"\n$REPORT: Represents the active report name, i.e. \"MyReport\"\n\nDouble click the input field to edit and test in the console window"
+			fr = "Expression||Macros:\n$TITLE: Repr\xc3\xa9sente le code du titre actif, par exemple \"ZM.US\"\n$REPORT: Repr\xc3\xa9sente le nom du rapport actif, par exemple \"MyReport\"\n\nDouble-cliquez sur le champ de saisie pour le modifier et le tester dans la fen\xc3\xaatre de la console"
+		}
+		{
+			hash = "cff49de038de65c3"
+			en = "Format"
+			fr = "Format"
+		}
+		{
+			hash = "c464ef709d5f1762"
+			en = "Column name"
+			fr = "Nom de la colonne"
+		}
+		{
+			hash = "4af6c2ab92030edd"
+			en = "Expression i.e. S(GFL.TO, open)"
+			fr = "Expression p.e. S(GFL.TO, open)"
+		}
+		{
+			hash = "156b5fc0a1f7f4fd"
+			en = "Total Dividends"
+			fr = "Valeur Dividendes"
+		}
+		{
+			hash = "b8bf909fcdc37973"
+			en = "Adjusted target based on the report current performance."
+			fr = "Cible ajust\xc3\xa9e en fonction des performances actuelles du rapport."
+		}
+		{
+			hash = "99b65146470d90"
+			en = "Adjusted target based on the report overall performance and timelapse."
+			fr = "Cible ajust\xc3\xa9e en fonction des performances globales et de la dur\xc3\xa9e du rapport."
+		}
 	]
 }

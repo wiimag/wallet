@@ -121,6 +121,14 @@ void title_deallocate(title_t*& title);
  */
 double title_get_total_investment(const title_t* t);
 
+/*! Returns the total amount of shares bought.
+ *
+ *  @param t The title to get the total bought quantity for.
+ *
+ *  @return The total bought quantity.
+ */
+double title_total_bought_price(const title_t* t);
+
 /*! Get the title percentage day change.
  *
  *  @remark We take into account the exchange rate to get the percentage day change.

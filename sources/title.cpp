@@ -186,12 +186,19 @@ double title_get_total_value(const title_t* t)
     const stock_t* s = t->stock;
     if (s && s->has_resolve(FetchLevel::REALTIME))
     {
-        const double total_value = t->total_dividends + t->average_quantity *
-                s->current.adjusted_close * t->today_exchange_rate.fetch();
+        const double total_value = t->average_quantity * s->current.adjusted_close * t->today_exchange_rate.fetch();
         return total_value;
     }
 
-    return t->total_dividends + t->average_quantity * t->average_price * t->average_exchange_rate;
+    return t->average_quantity * t->average_price * t->average_exchange_rate;
+}
+
+double title_total_bought_price(const title_t* t)
+{
+    if (title_sold(t))
+        return 0;
+
+    return t->buy_total_price_rated - t->sell_total_price_rated;
 }
 
 double title_get_total_investment(const title_t* t)
