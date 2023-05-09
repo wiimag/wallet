@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.23.0] - 2023-05-09
+- Add history value trend to the Wallet view.
+
 ## [0.22.14] - 2023-05-08
 - Add link to web site in the help menu.
 - Add support for `YEAR(...)` to get the year of a date. This was useful to plot annual earnings using `PLOT(...)`.

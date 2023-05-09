@@ -17,24 +17,10 @@
 #include <framework/math.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/plot.h>
 
 #include <foundation/hash.h>
 #include <foundation/uuid.h>
-
-struct wallet_plot_context_t
-{
-    time_t ref;
-    size_t range;
-    size_t stride;
-
-    union {
-        const void* data;
-        const wallet_history_t* history;
-    };
-
-    double x_min{ DBL_MAX }, x_max{ -DBL_MAX }, n{ 0 };
-    double a{ 0 }, b{ 0 }, c{ 0 }, d{ 0 }, e{ 0 }, f{ 0 };
-};
 
 FOUNDATION_STATIC void wallet_history_update_entry(report_t* report, wallet_t* wallet, wallet_history_t* entry)
 {
@@ -538,48 +524,6 @@ FOUNDATION_STATIC void wallet_history_min_max_date(wallet_t* wallet, time_t& min
     }
 }
 
-FOUNDATION_STATIC int wallet_history_format_currency(double value, char* buff, int size, void* user_data)
-{
-    double abs_value = math_abs(value);
-    if (abs_value >= 1e12)
-        return (int)string_format(buff, size, STRING_CONST("%.2gT $"), value / 1e12).length;
-    if (abs_value >= 1e9)
-        return (int)string_format(buff, size, STRING_CONST("%.2gB $"), value / 1e9).length;
-    else if (abs_value >= 1e6)
-        return (int)string_format(buff, size, STRING_CONST("%.3gM $"), value / 1e6).length;
-    else if (abs_value >= 1e3)
-        return (int)string_format(buff, size, STRING_CONST("%.3gK $"), value / 1e3).length;
-
-    return (int)string_format(buff, size, STRING_CONST("%.2lf $"), value).length;
-}
-
-FOUNDATION_STATIC int wallet_history_format_date(double value, char* buff, int size, void* user_data)
-{
-    time_t d = (time_t)value;
-    if (d == 0 || d == -1)
-        return 0;
-
-    string_const_t date_str = string_from_date(d);
-    return (int)string_copy(buff, size, STRING_ARGS(date_str)).length;
-}
-
-FOUNDATION_STATIC int wallet_history_format_date_monthly(double value, char* buff, int size, void* user_data)
-{
-    time_t d = (time_t)value;
-    if (d == 0 || d == -1)
-        return 0;
-
-    double day_space = *(double*)user_data;
-    string_const_t date_str = string_from_date(d);
-    if (date_str.length == 0)
-        return 0;
-
-    if (day_space <= 5)
-        return (int)string_copy(buff, size, date_str.str + 5, 5).length;
-
-    return (int)string_copy(buff, size, date_str.str, min(date_str.length, (size_t)7)).length;
-}
-
 FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wallet)
 {
     const unsigned history_count = array_size(wallet->history);
@@ -616,20 +560,20 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::SetupLegend(ImPlotLocation_NorthWest, ImPlotLegendFlags_Horizontal);
 
     ImPlot::SetupAxis(ImAxis_X1, "##Date", ImPlotAxisFlags_LockMax | ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight);
-    ImPlot::SetupAxisFormat(ImAxis_X1, wallet_history_format_date_monthly, &day_space);
+    ImPlot::SetupAxisFormat(ImAxis_X1, plot_value_format_date_monthly, &day_space);
     ImPlot::SetupAxisTicks(ImAxis_X1, wallet->history_dates, (int)array_size(wallet->history_dates), nullptr, false);
     ImPlot::SetupAxisLimits(ImAxis_X1, (double)min_d - time_one_day() * day_space, (double)max_d + time_one_day() * day_space, ImPlotCond_Once);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, (double)min_d - time_one_day() * day_space, (double)max_d + time_one_day() * day_space/*, ImPlotCond_Once*/);
-    ImPlot::SetupAxisFormat(ImAxis_X1, wallet_history_format_date, nullptr);
+    ImPlot::SetupAxisFormat(ImAxis_X1, plot_value_format_date, nullptr);
 
     ImPlot::SetupAxis(ImAxis_Y1, "##Percentage", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight);
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.3g %%");
 
     ImPlot::SetupAxis(ImAxis_Y2, "##Currency", ImPlotAxisFlags_LockMin | ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_Opposite);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y2, 0.0, INFINITY);
-    ImPlot::SetupAxisFormat(ImAxis_Y2, wallet_history_format_currency, nullptr);
+    ImPlot::SetupAxisFormat(ImAxis_Y2, plot_value_format_currency_short, nullptr);
 
-    wallet_plot_context_t c{ time_now(), history_count, 1, wallet->history };
+    plot_context_t c{ time_now(), history_count, 1, wallet->history };
 
     if (wallet->show_extra_charts)
     {    
@@ -638,8 +582,8 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
             ImPlot::SetAxis(ImAxis_Y2);
             ImPlot::PlotLineG(tr(ICON_MD_WALLET " Funds"), [](int idx, void* user_data)->ImPlotPoint
             {
-                const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-                const wallet_history_t& h = c->history[idx];
+                const plot_context_t* c = (plot_context_t*)user_data;
+                const wallet_history_t& h = ((const wallet_history_t*)c->user_data)[idx];
                 const double x = (double)h.date;
                 const double y = h.funds;
                 return ImPlotPoint(x, y);
@@ -651,23 +595,24 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::HideNextItem(true, ImPlotCond_Once);
     ImPlot::PlotBarsG(tr(ICON_MD_SAVINGS " Investments"), [](int idx, void* user_data)->ImPlotPoint
     {
-        const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-        const wallet_history_t& h = c->history[idx];
+        const plot_context_t* c = (plot_context_t*)user_data;
+        const wallet_history_t& h = ((const wallet_history_t*)c->user_data)[idx];
         const double x = (double)h.date;
         const double y = h.investments;
         return ImPlotPoint(x, y);
     }, &c, (int)c.range, bar_width, ImPlotBarsFlags_None);
 
-    ImPlot::SetAxis(ImAxis_Y2);
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 3);
-    ImPlot::PlotLineG(tr(ICON_MD_ACCOUNT_BALANCE_WALLET " Value"), [](int idx, void* user_data)->ImPlotPoint
+    c.flipped = true;
+    c.axis_y = ImAxis_Y2;
+    c.title = tr(ICON_MD_ACCOUNT_BALANCE_WALLET " Value");
+    plot_render_line_with_trend(c, [](int idx, plot_context_t* c)->ImPlotPoint
     {
-        const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-        const wallet_history_t& h = c->history[idx];
+        const wallet_history_t& h = c->get_user_data<wallet_history_t>()[idx];
         const double x = (double)h.date;
         const double y = wallet_history_total_value_gain(&h);
         return ImPlotPoint(x, y);
-    }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+    });
 
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2);
     if (wallet->show_extra_charts)
@@ -678,8 +623,8 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
             ImPlot::HideNextItem(true, ImPlotCond_Once);
             ImPlot::PlotLineG(tr(ICON_MD_REAL_ESTATE_AGENT " Broker"), [](int idx, void* user_data)->ImPlotPoint
             {
-                const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-                const wallet_history_t& h = c->history[idx];
+                const plot_context_t* c = (plot_context_t*)user_data;
+                const wallet_history_t& h = ((const wallet_history_t*)c->user_data)[idx];
                 const double x = (double)h.date;
                 const double y = h.broker_value;
                 return ImPlotPoint(x, y);
@@ -690,8 +635,8 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
     ImPlot::SetAxis(ImAxis_Y1);
     ImPlot::PlotLineG(tr(ICON_MD_PRICE_CHANGE " Gain %"), [](int idx, void* user_data)->ImPlotPoint
     {
-        const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-        const wallet_history_t& h = c->history[idx];
+        const plot_context_t* c = (plot_context_t*)user_data;
+        const wallet_history_t& h = ((const wallet_history_t*)c->user_data)[idx];
         const double x = (double)h.date;
         const double y = wallet_history_total_gain_p(&h);
         return ImPlotPoint(x, y);
@@ -703,8 +648,8 @@ FOUNDATION_STATIC void wallet_history_draw_graph(report_t* report, wallet_t* wal
         ImPlot::HideNextItem(true, ImPlotCond_Once);
         ImPlot::PlotLineG(ICON_MD_CHANGE_HISTORY "##Change %", [](int idx, void* user_data)->ImPlotPoint
         {
-            const wallet_plot_context_t* c = (wallet_plot_context_t*)user_data;
-            const wallet_history_t& h = c->history[idx];
+            const plot_context_t* c = (plot_context_t*)user_data;
+            const wallet_history_t& h = ((const wallet_history_t*)c->user_data)[idx];
             const double x = (double)h.date;
             const double y = wallet_history_change_p(&h);
             return ImPlotPoint(x, y);
@@ -892,7 +837,7 @@ void wallet_update_tracking_history(report_t* report, wallet_t* wallet)
         if (!time_is_working_hours())
             return;
 
-        if (time_elapsed_days(h->date, today) < 0.01)
+        if (time_elapsed_days(h->date, today) < 0.05)
             return; // Already up-to-date (or almost, lets retry later)
 
         string_const_t report_name = ::report_name(report);

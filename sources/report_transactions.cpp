@@ -14,15 +14,16 @@
 #include <framework/math.h>
 #include <framework/string.h>
 #include <framework/array.h>
+#include <framework/plot.h>
 
 #include <foundation/random.h>
- 
-FOUNDATION_STATIC void report_graph_limit(const char* label, double min, double max, double value)
+
+struct report_transaction_plot_context_t
 {
-    const double range[]{ min, max };
-    const double limit[]{ value, value };
-    ImPlot::PlotLine(label, range, limit, ARRAY_COUNT(limit), ImPlotLineFlags_NoClip);
-}
+    report_transaction_t* transactions{ nullptr };
+    title_t* active_title{ nullptr };
+    bool shown{ false };
+};
 
 void report_graph_show_transactions(report_t* report)
 {
@@ -123,13 +124,6 @@ void report_graph_show_transactions(report_t* report)
     if (!ImPlot::BeginPlot(tr("Transactions"), graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
         return ImGui::End();
 
-    struct plot_axis_format_t
-    {
-        bool print_short_value{ true };
-        int print_stage{ 0 };
-        time_t last_year{ 0 };
-        ImPlotRect limits;
-    };
     plot_axis_format_t axis_format{};
 
     ImPlot::SetupLegend(ImPlotLocation_NorthWest, ImPlotLegendFlags_Horizontal | ImPlotLegendFlags_Outside);
@@ -192,20 +186,13 @@ void report_graph_show_transactions(report_t* report)
     axis_format.limits = limits;
     axis_format.print_short_value = false;
 
-    struct plot_context_t
-    {
-        report_transaction_t* transactions{ nullptr };
-        title_t* active_title{ nullptr };
-        bool shown{ false };
-    };
-
-    report_graph_limit(tr("Value"), min_d, max_d, report->total_value);
-    report_graph_limit(tr("Funds"), min_d, max_d, wallet_total_funds(report->wallet));
+    plot_render_limit(tr("Value"), min_d, max_d, report->total_value);
+    plot_render_limit(tr("Funds"), min_d, max_d, wallet_total_funds(report->wallet));
 
     if (array_size(report->wallet->history) > 0)
-        report_graph_limit(tr("Broker"), min_d, max_d, array_last(report->wallet->history)->broker_value);
+        plot_render_limit(tr("Broker"), min_d, max_d, array_last(report->wallet->history)->broker_value);
 
-    plot_context_t c{ report->transactions };
+    report_transaction_plot_context_t c{ report->transactions };
 
     for (const auto& t : generics::fixed_array(report->titles))
     {
@@ -241,7 +228,7 @@ void report_graph_show_transactions(report_t* report)
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.0f);
     ImPlot::PlotLineG(tr("Investments"), [](int idx, void* user_data)->ImPlotPoint
     {
-        const plot_context_t* c = (plot_context_t*)user_data;
+        const report_transaction_plot_context_t* c = (report_transaction_plot_context_t*)user_data;
         const report_transaction_t& t = c->transactions[idx];
         const double x = (double)t.date;
         const double y = t.acc;
