@@ -158,6 +158,9 @@ FOUNDATION_STATIC string_const_t cell_value_to_string(const cell_t& cell, const 
     if (cell.format == COLUMN_FORMAT_SYMBOL)
         return string_table_decode_const(cell.symbol);
 
+    if (cell.format == COLUMN_FORMAT_BOOLEAN)
+        return math_real_is_zero(cell.number) ? CTEXT(ICON_MD_CHECK_BOX_OUTLINE_BLANK) : CTEXT(ICON_MD_CHECK);
+
     if (cell_format_is_numeric(cell))
         return cell_number_value_to_string(cell, column.format, column.flags);
 
@@ -286,7 +289,7 @@ FOUNDATION_STATIC int table_qsort_cells(void* pcontext, void const* va, void con
     const cell_t& ca = sorting_column->fetch_value(a, sorting_column);
     const cell_t& cb = sorting_column->fetch_value(b, sorting_column);
 
-    if (format_is_numeric(format) || (format_is_numeric(ca.format) && format_is_numeric(cb.format)))
+    if (format == COLUMN_FORMAT_BOOLEAN || format_is_numeric(format) || (format_is_numeric(ca.format) && format_is_numeric(cb.format)))
     {
         double sa = ca.number;
         double sb = cb.number;
@@ -620,6 +623,7 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
                 case COLUMN_FORMAT_CURRENCY:
                 case COLUMN_FORMAT_PERCENTAGE:
                 case COLUMN_FORMAT_NUMBER:
+                case COLUMN_FORMAT_BOOLEAN:
                     if (!math_real_is_nan(cell.number))
                     {
                         sc.number += cell.number;
@@ -1158,6 +1162,11 @@ bool table_export_csv(table_t* table, const char* path, size_t length)
                 string_t nstr = string_from_real(STRING_BUFFER(number_buffer), value, 0, 0, 0);
                 nstr = string_replace(STRING_ARGS(nstr), sizeof(number_buffer), STRING_CONST("."), STRING_CONST(","), true);
                 string_builder_append(sb, STRING_ARGS(nstr));
+            }
+            else if (cell_value.format == COLUMN_FORMAT_BOOLEAN)
+            {
+                string_const_t str = cell_value.number ? CTEXT("1") : CTEXT("0");
+                table_export_string_value(sb, STRING_ARGS(str));
             }
             else if (cell_value.format == COLUMN_FORMAT_SYMBOL)
             {

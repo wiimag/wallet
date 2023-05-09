@@ -402,15 +402,13 @@ FOUNDATION_STATIC void eod_update_window_title()
     char title[128] = PRODUCT_NAME;
     if (license_name.length)
     {
-        string_format(STRING_BUFFER(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s - %s"),
-            app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string),
-            eod_api_url_buffer());
+        string_format(STRING_BUFFER(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
+            app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
     }
     else
     {
-        string_format(STRING_BUFFER(title), STRING_CONST("%s [%.*s] v.%.*s - %s"),
-            app_title(), STRING_FORMAT(branch_name), STRING_FORMAT(version_string),
-            eod_api_url_buffer());
+        string_format(STRING_BUFFER(title), STRING_CONST("%s [%.*s] v.%.*s"),
+            app_title(), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
     }
 
     glfwSetWindowTitle(window, title);

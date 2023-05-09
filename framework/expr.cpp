@@ -2115,6 +2115,20 @@ expr_result_t eval(string_const_t expression)
         array_deallocate(_expr_lists[i]);
     array_clear(_expr_lists);
 
+    // Check if the expression is @FILE_PATH
+    if (expression.length > 0 && expression.str[0] == '@')
+    {
+        string_const_t path = {expression.str+1, expression.length-1};
+        if (fs_is_file(STRING_ARGS(path)))
+        {
+            string_t file_expr_text = fs_read_text(STRING_ARGS(path));
+            log_infof(HASH_EXPR, STRING_CONST("Evaluating expression from file: %.*s"), STRING_FORMAT(path));
+            expr_result_t result = eval(STRING_ARGS(file_expr_text));
+            string_deallocate(file_expr_text.str);
+            return result;
+        }
+    }
+
     expr_t* e = expr_create(STRING_ARGS(expression), &_global_vars, _expr_user_funcs);
     if (e == NULL)
     {

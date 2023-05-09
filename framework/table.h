@@ -148,7 +148,10 @@ typedef enum : unsigned int {
     COLUMN_FORMAT_PERCENTAGE,
 
     /*! Column cells contain dates */
-    COLUMN_FORMAT_DATE
+    COLUMN_FORMAT_DATE,
+
+    /*! Column render boolean value using a check mark */
+    COLUMN_FORMAT_BOOLEAN,
 } column_format_t;
 
 /*! Column style types used to set some style value when #style_formatter is called. */
@@ -256,6 +259,13 @@ struct cell_t
         : format(COLUMN_FORMAT_DATE)
         , time(time)
         , length(sizeof(time))
+    {
+    }
+
+    FOUNDATION_FORCEINLINE cell_t(bool b)
+        : format(COLUMN_FORMAT_BOOLEAN)
+        , number(b ? 1.0 : 0.0)
+        , length(1)
     {
     }
 };

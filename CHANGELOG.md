@@ -1,7 +1,9 @@
 # Changelog
 
 ## [0.23.1] - 2023-05-09
+- Add expression file example `report_slope_down.expr` to report titles that are going down but for which you have a gain.
 - Add history value trend to the Wallet view.
+- Add support to evaluation expression files from the console using `@` followed by a valid file path, i.e. `@C:\work\wallet\docs\expressions\report_slope_down.expr`.
 - Improve and simply the report summary panel.
 
 ## [0.22.14] - 2023-05-08

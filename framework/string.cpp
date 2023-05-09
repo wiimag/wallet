@@ -85,6 +85,13 @@ string_t string_utf8_unescape(const char* s, size_t length)
                 utf8.str[utf8.length++] = utf_chars_buffer[j];
             c += 5;
         }
+        else if (size_t(c + 4 - s) < length && c[1] == 'x' &&
+            is_char_alpha_num_hex(c[2]) &&
+            is_char_alpha_num_hex(c[3]))
+        {
+            utf8.str[utf8.length++] = hex_value(c[2]) << 4 | hex_value(c[3]);
+            c += 3;
+        }
         else if (size_t(c + 1 - s) < length && (c[1] == '/' || c[1] == '"'))
         {
             utf8.str[utf8.length++] = *(++c);

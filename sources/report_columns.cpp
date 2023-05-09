@@ -66,7 +66,11 @@ FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t e
         {
             if (ec->format == COLUMN_FORMAT_DATE)
                 return cvalue.date;
-            if (ec->format == COLUMN_FORMAT_CURRENCY || ec->format == COLUMN_FORMAT_NUMBER || ec->format == COLUMN_FORMAT_PERCENTAGE)
+            if (ec->format == COLUMN_FORMAT_BOOLEAN)
+                return math_real_is_zero(cvalue.number) ? false : true;
+            if (ec->format == COLUMN_FORMAT_CURRENCY || 
+                ec->format == COLUMN_FORMAT_NUMBER || 
+                ec->format == COLUMN_FORMAT_PERCENTAGE)
                 return cvalue.number;
             return SYMBOL_CONST(cvalue.symbol);
         }
@@ -93,6 +97,13 @@ FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t e
     if (ec->format == COLUMN_FORMAT_CURRENCY || ec->format == COLUMN_FORMAT_NUMBER || ec->format == COLUMN_FORMAT_PERCENTAGE)
     { 
         cvalue.number = result.as_number();
+        if (ec->store_counter++ > 0)
+            _report_expression_cache->put(cvalue);
+        return cvalue.number;
+    }
+    if (ec->format == COLUMN_FORMAT_BOOLEAN)
+    {
+        cvalue.number = result.as_boolean() ? 1.0 : 0.0;
         if (ec->store_counter++ > 0)
             _report_expression_cache->put(cvalue);
         return cvalue.number;
@@ -124,6 +135,8 @@ FOUNDATION_STATIC const char* report_expression_column_format_name(column_format
         return "Percent";
     case COLUMN_FORMAT_NUMBER:
         return "Number";
+    case COLUMN_FORMAT_BOOLEAN:
+        return "Boolean";
     default:
         return "String";
     }
@@ -214,6 +227,12 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
                     c->format = COLUMN_FORMAT_DATE;
                     update_table = true;
                 }
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_BOOLEAN), c->format == COLUMN_FORMAT_BOOLEAN, ImGuiSelectableFlags_None))
+                {
+                    c->format = COLUMN_FORMAT_BOOLEAN;
+                    update_table = true;
+                }
                 ImGui::EndCombo();
             }
         }
@@ -275,6 +294,9 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
 
                 if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_DATE), false, ImGuiSelectableFlags_None))
                     format = COLUMN_FORMAT_DATE;
+
+                if (ImGui::Selectable(report_expression_column_format_name(COLUMN_FORMAT_BOOLEAN), false, ImGuiSelectableFlags_None))
+                    format = COLUMN_FORMAT_BOOLEAN;
                 ImGui::EndCombo();
             }
         }
@@ -309,11 +331,6 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
 
     ImGui::EndTable();
     return true;
-}
-
-FOUNDATION_STATIC void report_open_expression_columns_dialog(report_t* report)
-{
-    
 }
 
 //
@@ -386,7 +403,10 @@ void report_add_expression_columns(report_handle_t report_handle, table_t* table
 
         column_flags_t flags = COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_NO_LOCALIZATION;
         if (c->format == COLUMN_FORMAT_TEXT)
-            flags = COLUMN_SEARCHABLE;
+            flags |= COLUMN_SEARCHABLE;
+
+        if (c->format == COLUMN_FORMAT_BOOLEAN)
+            flags |= COLUMN_ROUND_NUMBER | COLUMN_CENTER_ALIGN;
 
         table_add_column(table, STRING_ARGS(column_name), 
             LC2(report_column_evaluate_expression(_1, _2, report_handle, c)), c->format, flags);

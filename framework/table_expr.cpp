@@ -131,10 +131,10 @@ FOUNDATION_STATIC cell_t table_expr_cell_value(const table_expr_record_value_t* 
         return cell_t(nullptr);
                 
     if (v->type == DYNAMIC_TABLE_VALUE_TRUE)
-        return cell_t(STRING_CONST("true"));
+        return cell_t(true);
 
     if (v->type == DYNAMIC_TABLE_VALUE_FALSE)
-        return cell_t(STRING_CONST("false"));
+        return cell_t(false);
 
     if (v->type == DYNAMIC_TABLE_VALUE_TEXT)
         return cell_t(string_to_const(v->text));
@@ -238,6 +238,8 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
                         col.format = COLUMN_FORMAT_DATE;
                     else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("number")))
                         col.format = COLUMN_FORMAT_NUMBER;
+                    else if (string_equal_nocase(format_string.str, min(format_string.length, SIZE_C(4)), STRING_CONST("bool")))
+                        col.format = COLUMN_FORMAT_BOOLEAN;
                     else
                     {
                         // Check if we have a registered drawer for the format string
@@ -257,7 +259,7 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
             col.ee = col.ee->args.get(1);
             string_const_t col_expression = col.ee->token;
 
-            col.name = string_clone(STRING_ARGS(col_name));
+            col.name = string_utf8_unescape(STRING_ARGS(col_name));
             col.expression = string_clone(STRING_ARGS(col_expression));
             
             col.value_index = col_index;

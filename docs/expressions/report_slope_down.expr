@@ -1,0 +1,19 @@
+# Report in a table title for which we have a gain, 
+# but the price slope is going down.
+
+# Set report to work with
+$REPORT=IF($REPORT, $REPORT, 'FLEX')
+
+# Define how many days we consider a title to be ready to be sold if we have a gain.
+$min_days_held=30
+
+# Grab active titles (i.e. exclude indexes and sold titles)
+$titles=FILTER(R($REPORT, [active, gain, S($TITLE, slope), days_held]), $2)
+#                            $2     $3           $4            $5
+
+# Report in a table
+TABLE('Potential Sells (' + $REPORT + ')', $titles,
+	['Symbol', $1, "symbol"],
+	['Slope', $4, "number"],
+	['Gain', $3, "currency"],
+	['\xee\xa3\xa3||Price is about to go down!', $3 > 0 && $5 > $min_days_held && $4 < 0, "boolean"])
