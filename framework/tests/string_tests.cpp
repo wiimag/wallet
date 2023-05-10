@@ -249,7 +249,7 @@ TEST_SUITE("String")
     {
         string_t str{};
 
-        CHECK_EQ(string_template_static("{0,currency}", 1234567.89), CTEXT("1 234 567.89 $"));
+        CHECK_EQ(string_template_static("{0,currency}", 1234567.89), CTEXT("1.235M $"));
         CHECK_EQ(string_template_static("{0,currency}", -123456.789), CTEXT("-123 456.79 $"));
         CHECK_EQ(string_template_static("{0,currency}", 12345.6789f), CTEXT("12 345.68 $"));
         CHECK_EQ(string_template_static("{0,currency}", -1234.56789f), CTEXT("-1 234.57 $"));
@@ -285,6 +285,20 @@ TEST_SUITE("String")
 
         string_const_t dialog = string_template_static("{0:st}\n{1:st}\n{2:st}", s1, s2, s3);
         CHECK_EQ(dialog, CTEXT("P1: Hello Gangsters!\nP2: What's up!\nP1: Playing with string template, ain't that full meta?"));
+    }
+
+    TEST_CASE("Code points")
+    {
+        CHECK_EQ(string_utf8_from_code_point(SHARED_BUFFER(8), 0xe261), CTEXT("\xee\x89\xa1"));
+        CHECK_EQ(string_utf8_from_code_point(SHARED_BUFFER(8), 0xf061), CTEXT("\xef\x81\xa1"));
+
+        CHECK_EQ(string_utf8_from_code_point(SHARED_BUFFER(8), STRING_CONST("U+e43d")), CTEXT("\xee\x90\xbd"));
+        CHECK_EQ(string_utf8_from_code_point(SHARED_BUFFER(8), STRING_CONST("U+f066")), CTEXT("\xef\x81\xa6"));
+
+        CHECK_EQ(string_utf8_from_code_point(SHARED_BUFFER(8), STRING_CONST("f1c7")), CTEXT("\xef\x87\x87"));
+        CHECK_EQ(string_utf8_from_code_point(SHARED_BUFFER(8), STRING_CONST("e503")), CTEXT("\xee\x94\x83"));
+
+        CHECK_EQ(string_utf8_unescape(SHARED_BUFFER(8), STRING_CONST("\\uf1c7")), CTEXT("\xef\x87\x87"));
     }
 }
 

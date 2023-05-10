@@ -948,7 +948,11 @@ struct expr_result_t
     expr_result_t operator!() const
     {
         if (type == EXPR_RESULT_NUMBER)
+        {
+            if (math_real_is_nan(value))
+                return expr_result_t(true);
             return expr_result_t((double)!math_trunc(value));
+        }
 
         if (type == EXPR_RESULT_TRUE)
             return expr_result_t(false);

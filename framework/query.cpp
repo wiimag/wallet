@@ -140,6 +140,9 @@ FOUNDATION_STATIC void* query_curl_calloc_cb(size_t nmemb, size_t size)
 
 FOUNDATION_STATIC void query_start_job_to_cleanup_cache()
 {
+    if (!main_is_interactive_mode())
+        return;
+
     TIME_TRACKER("query_start_job_to_cleanup_cache");
 
     dispatch_fire([]()

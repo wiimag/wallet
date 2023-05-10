@@ -683,6 +683,9 @@ FOUNDATION_STATIC void alerts_initialize()
         config_deallocate(evaluators_data);
     }
 
+    if (!main_is_interactive_mode())
+        return;
+
     module_register_update(HASH_ALERTS, alerts_run_evaluators);
     module_register_window(HASH_ALERTS, alerts_render_evaluators);
 

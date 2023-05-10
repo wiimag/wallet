@@ -400,7 +400,7 @@ dispatcher_thread_handle_t dispatch_thread(
         
         void* result_ptr = dt->thread_fn.invoke(dt->payload);
         
-        if (objectmap_release(_dispatcher_threads, dispatcher_thread_handle, dispatch_execute_thread_completed))
+        if (_dispatcher_threads && objectmap_release(_dispatcher_threads, dispatcher_thread_handle, dispatch_execute_thread_completed))
         {
             dispatcher_wakeup_main_thread();
 

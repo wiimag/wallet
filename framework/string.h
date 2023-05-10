@@ -143,6 +143,18 @@ bool string_equal_ignore_whitespace(const char* lhs, size_t lhs_length, const ch
  */
 string_t string_utf8_unescape(const char* s, size_t length);
 
+/*! Converts UTF-8 character to their respective code. This function is not
+ * 100% compliant with the UTF-8 standard, but it is good enough for our
+ * purposes.
+ *
+ * @param buffer The buffer to write the string to.
+ * @param capacity The capacity of the buffer.
+ * @param str The string to convert.
+ * @param len The length of the string.
+ * @return The number of bytes read from the string.
+ */
+string_t string_utf8_unescape(char* buffer, size_t capacity, const char* s, size_t length);
+
 /*! Converts a time structure a string. The string is allocated 
  *  in a temporary static buffer and most be used as soon as possible. 
  * 
@@ -676,3 +688,14 @@ version_t string_to_version_short(const char* str, size_t length);
  * @return The UTF-8 string.
  */
 string_t string_utf8_from_code_point(char* buffer, size_t capacity, uint32_t code_point);
+
+/*! Convert Unicode code point to UTF-8 string.
+ *  The #code_point string is expected to be in the format U+XXXX. U+ is optional.
+ *
+ * @param buffer The buffer to write the UTF-8 string to.
+ * @param capacity The capacity of the buffer.
+ * @param code_point The code point to convert.
+ * @param length The length of the code point string.
+ * @return The UTF-8 string.
+ */
+string_t string_utf8_from_code_point(char* buffer, size_t capacity, const char* code_point, size_t length);

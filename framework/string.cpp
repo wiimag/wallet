@@ -59,19 +59,29 @@ void string_lines_finalize(lines_t& lines)
 
 string_t string_utf8_unescape(const char* s, size_t length)
 {
+    const size_t capacity = length * 4;
+    string_t utf8 = string_allocate(0, capacity);
+    return string_utf8_unescape(utf8.str, capacity, s, length);
+}
+
+string_t string_utf8_unescape(char* buffer, size_t capacity, const char* s, size_t length)
+{
     if (s == nullptr || length == 0)
         return string_t{ nullptr, 0 };
 
-    string_t utf8 = string_allocate(0, length * 4);
+    string_t utf8 = {buffer, 0};
     for (const char* c = s; *c && size_t(c - s) < length; ++c)
     {
+        if (utf8.length + 4 >= capacity)
+            break;
+
         if (*c != '\\')
         {
             utf8.str[utf8.length++] = *c;
             continue;
         }
 
-        if (size_t(c + 6 - s) < length && c[1] == 'u' &&
+        if (size_t(c + 5 - s) < length && c[1] == 'u' &&
             is_char_alpha_num_hex(c[2]) &&
             is_char_alpha_num_hex(c[3]) &&
             is_char_alpha_num_hex(c[4]) &&
@@ -2871,6 +2881,20 @@ version_t string_to_version_short(const char* str, size_t length)
     }
 
     return v;
+}
+
+string_t string_utf8_from_code_point(char* buffer, size_t capacity, const char* str, size_t length)
+{
+    // Skip U+ if any
+    if (length > 2 && str[0] == 'U' && str[1] == '+')
+    {
+        str += 2;
+        length -= 2;
+    }
+
+    // Parse hex value
+    uint32_t code_point = string_to_uint(str, length, true);
+    return string_utf8_from_code_point(buffer, capacity, code_point);
 }
 
 string_t string_utf8_from_code_point(char* buffer, size_t capacity, uint32_t code_point)
