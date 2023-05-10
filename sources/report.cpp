@@ -1775,7 +1775,7 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
 
     // Create table
     report_load_expression_columns(report);
-    report->table = report_create_table(report);
+    report->table = nullptr;
     
     return report->id;
 }
@@ -2350,6 +2350,8 @@ void report_render(report_t* report)
     {
         if (report->active_titles > 0)
         {
+            if (report->table == nullptr)
+                report->table = report_create_table(report);
             report->table->search_filter = string_to_const(SETTINGS.search_filter);
             table_render(report->table, report->titles, (int)report->active_titles, sizeof(title_t*), 0.0f, 0.0f);
         }

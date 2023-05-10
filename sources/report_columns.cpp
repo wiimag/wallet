@@ -398,8 +398,16 @@ void report_add_expression_columns(report_handle_t report_handle, table_t* table
     report_t* report = report_get(report_handle);
     foreach(c, report->expression_columns)
     {
-        string_const_t column_name = string_format_static(STRING_CONST("%s||" ICON_MD_VIEW_COLUMN " %s (%.*s)"),
-            c->name, c->name, min(96, (int)string_length(c->expression)), c->expression);
+        const size_t csize = string_length(c->name);
+        string_t column_name = string_utf8_unescape(c->name, csize);
+
+        bool column_has_custom_md_icon = csize > 3 && c->name[0] == '\\' && c->name[1] == 'x';
+
+        string_const_t column_formatted_name = string_format_static(STRING_CONST("%.*s||%s%.*s (%.*s)"),
+            STRING_FORMAT(column_name), 
+            column_has_custom_md_icon ? "" : ICON_MD_VIEW_COLUMN " ",
+            STRING_FORMAT(column_name), 
+            min(96, (int)string_length(c->expression)), c->expression);
 
         column_flags_t flags = COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_NO_LOCALIZATION;
         if (c->format == COLUMN_FORMAT_TEXT)
@@ -408,7 +416,9 @@ void report_add_expression_columns(report_handle_t report_handle, table_t* table
         if (c->format == COLUMN_FORMAT_BOOLEAN)
             flags |= COLUMN_ROUND_NUMBER | COLUMN_CENTER_ALIGN;
 
-        table_add_column(table, STRING_ARGS(column_name), 
+        table_add_column(table, STRING_ARGS(column_formatted_name), 
             LC2(report_column_evaluate_expression(_1, _2, report_handle, c)), c->format, flags);
+
+        string_deallocate(column_name.str);
     }
 }

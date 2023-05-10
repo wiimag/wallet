@@ -1,15 +1,15 @@
-# Plot number of dividends by year (SplitsDividends.NumberDividendsByYear)
+// Plot number of dividends by year (SplitsDividends.NumberDividendsByYear)
 
-$report='300K'
-$titles=FILTER(R($report, active), $2)
+$REPORT = IF($REPORT, $REPORT, '300K')
+$titles = FILTER(R($REPORT, active), $2)
 
-# Map NumberDividendsByYear by titles
+// Map NumberDividendsByYear by titles
 $titles = MAP($titles, [$1, F($1, "SplitsDividends.NumberDividendsByYear")])
 
-# Remove titles with no dividends data
+// Remove titles with no dividends data
 $titles = FILTER($titles, IF($2, true, false))
 
-# Extract only needed data
+// Extract only needed data
 $titles = MAP($titles, [$1, MAP($2, MAP($2, $2))])
 
 MAP($titles, PLOT('Number Dividends By Year#' + $1, MAP($2, $1), MAP($2, $2)))

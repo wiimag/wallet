@@ -2021,11 +2021,6 @@
 			fr = "URL du service EOD API"
 		}
 		{
-			hash = "292f5e6df687a8fb"
-			en = "Connected through %s"
-			fr = "Connect\xc3\xa9 via %s"
-		}
-		{
 			hash = "48deb88dc1038b3a"
 			en = "%s\n\nConnected through %s"
 			fr = "%s\n\nConnect\xc3\xa9 via %s"
@@ -3599,6 +3594,11 @@
 			hash = "99b65146470d90"
 			en = "Adjusted target based on the report overall performance and timelapse."
 			fr = "Cible ajust\xc3\xa9e en fonction des performances globales et de la dur\xc3\xa9e du rapport."
+		}
+		{
+			hash = "d9c4e7c89183dc54"
+			en = "%s\n\nConnected through %.*s"
+			fr = "%s\n\nConnect\xc3\xa9 via %.*s"
 		}
 	]
 }

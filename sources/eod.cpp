@@ -4,6 +4,7 @@
  */
 
 #include "eod.h"
+#include "backend.h"
 
 #include <framework/app.h>
 #include <framework/glfw.h>
@@ -547,7 +548,8 @@ FOUNDATION_STATIC void eod_main_menu_status()
         }
         else
         {
-            ImGui::SetTooltip(tr("%s\n\nConnected through %s"), EOD->STATUS, EOD->API_URL);
+            string_const_t backend_url = ::backend_url();
+            ImGui::SetTooltip(tr("%s\n\nConnected through %.*s"), EOD->STATUS, STRING_FORMAT(backend_url));
         }
     }
 
