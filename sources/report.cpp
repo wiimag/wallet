@@ -1516,8 +1516,13 @@ FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_
 
 FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title, string_const_t apply_label, string_const_t initial_value, string_const_t hint, bool* show_ui)
 {
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(6), IM_SCALEF(10)));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(IM_SCALEF(6), IM_SCALEF(10)));
     if (!report_render_dialog_begin(title, show_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar))
+    {
+        ImGui::PopStyleVar(2);
         return string_null();
+    }
 
     bool applied = false;
     bool can_apply = false;
@@ -1531,12 +1536,13 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
 
     const float available_space = ImGui::GetContentRegionAvail().x;
 
-    ImGui::MoveCursor(2, 10);
     if (ImGui::BeginChild("##Content", ImVec2(IM_SCALEF(350.0f), IM_SCALEF(90.0f)), false))
     {
         if (ImGui::IsWindowAppearing())
             ImGui::SetKeyboardFocusHere();
-        if (ImGui::InputTextEx("##InputField", hint.str, STRING_BUFFER(input), ImVec2(-1, 0),
+
+        ImGui::ExpandNextItem();
+        if (ImGui::InputTextEx("##InputField", hint.str, STRING_BUFFER(input), ImVec2(0, 0),
             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
         {
             applied = true;
@@ -1546,8 +1552,8 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
         if (input_length > 0)
             can_apply = true;
 
-        static float apply_button_width = 90;
-        static float cancel_button_width = 90;
+        static float apply_button_width = IM_SCALEF(90);
+        static float cancel_button_width = IM_SCALEF(90);
         const float button_between_space = IM_SCALEF(4);
 
         ImGui::MoveCursor(available_space - cancel_button_width - apply_button_width - button_between_space, IM_SCALEF(8));
@@ -1569,6 +1575,7 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
             *show_ui = false;
     } ImGui::EndChild();
 
+    ImGui::PopStyleVar(2);
     report_render_dialog_end();
     if (can_apply && applied)
         return string_const(input, input_length);
@@ -2228,7 +2235,7 @@ bool report_render_dialog_begin(string_const_t name, bool* show_ui, unsigned int
 
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-    if (!ImGui::Begin(name.str, show_ui, ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoCollapse | flags))
+    if (!ImGui::Begin(name.str, show_ui, ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysUseWindowPadding | flags))
     {
         ImGui::End();
         return false;
