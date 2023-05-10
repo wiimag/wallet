@@ -2872,3 +2872,76 @@ version_t string_to_version_short(const char* str, size_t length)
 
     return v;
 }
+
+string_t string_utf8_from_code_point(char* buffer, size_t capacity, uint32_t code_point)
+{
+    // Transform code point, i.e. `f1cc` to utf-8 string, e.g "\xef\x87\x8c"
+
+    // 1 byte
+    if (code_point < 0x80)
+    {
+        if (capacity >= 1)
+        {
+            buffer[0] = (char)code_point;
+        }
+
+        if (capacity > 1)
+            buffer[1] = '\0';
+
+        return { buffer, 1 };
+    }
+
+    // 2 bytes
+    if (code_point < 0x800)
+    {
+        if (capacity >= 2)
+        {
+            buffer[0] = (char)(0xc0 | (code_point >> 6));
+            buffer[1] = (char)(0x80 | (code_point & 0x3f));
+        }
+
+        if (capacity > 2)
+            buffer[2] = '\0';
+
+        return { buffer, 2 };
+    }
+
+    // 3 bytes
+    if (code_point < 0x10000)
+    {
+        if (capacity >= 3)
+        {
+            buffer[0] = (char)(0xe0 | (code_point >> 12));
+            buffer[1] = (char)(0x80 | ((code_point >> 6) & 0x3f));
+            buffer[2] = (char)(0x80 | (code_point & 0x3f));
+        }
+
+        if (capacity > 3)
+            buffer[3] = '\0';
+
+        return { buffer, 3 };
+    }
+
+    // 4 bytes
+    if (code_point < 0x110000)
+    {
+        if (capacity >= 4)
+        {
+            buffer[0] = (char)(0xf0 | (code_point >> 18));
+            buffer[1] = (char)(0x80 | ((code_point >> 12) & 0x3f));
+            buffer[2] = (char)(0x80 | ((code_point >> 6) & 0x3f));
+            buffer[3] = (char)(0x80 | (code_point & 0x3f));
+        }
+
+        if (capacity > 4)
+            buffer[4] = '\0';
+
+        return { buffer, 4 };
+    }
+
+    // Invalid code point
+    if (capacity > 0)
+        buffer[0] = '\0';
+
+    return { buffer, 0 };
+}

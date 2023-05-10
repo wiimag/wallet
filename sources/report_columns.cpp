@@ -401,13 +401,18 @@ void report_add_expression_columns(report_handle_t report_handle, table_t* table
         const size_t csize = string_length(c->name);
         string_t column_name = string_utf8_unescape(c->name, csize);
 
-        bool column_has_custom_md_icon = csize > 3 && c->name[0] == '\\' && c->name[1] == 'x';
+        bool column_has_custom_tooltip = string_find_string(STRING_ARGS(column_name), STRING_CONST("||"), 0) != STRING_NPOS;
 
-        string_const_t column_formatted_name = string_format_static(STRING_CONST("%.*s||%s%.*s (%.*s)"),
-            STRING_FORMAT(column_name), 
-            column_has_custom_md_icon ? "" : ICON_MD_VIEW_COLUMN " ",
-            STRING_FORMAT(column_name), 
-            min(96, (int)string_length(c->expression)), c->expression);
+        string_const_t column_formatted_name = string_to_const(column_name);
+        if (!column_has_custom_tooltip)
+        {
+            bool column_has_custom_md_icon = csize > 3 && c->name[0] == '\\' && c->name[1] == 'x';
+            column_formatted_name = string_format_static(STRING_CONST("%.*s||%s%.*s (%.*s)"),
+                STRING_FORMAT(column_name),
+                column_has_custom_md_icon ? "" : ICON_MD_VIEW_COLUMN " ",
+                STRING_FORMAT(column_name),
+                min(96, (int)string_length(c->expression)), c->expression);
+        }
 
         column_flags_t flags = COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_NO_LOCALIZATION;
         if (c->format == COLUMN_FORMAT_TEXT)

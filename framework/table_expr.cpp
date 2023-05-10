@@ -125,7 +125,7 @@ FOUNDATION_STATIC void table_expr_deallocate(table_expr_t* report)
     memory_deallocate(report);
 }
 
-FOUNDATION_STATIC cell_t table_expr_cell_value(const table_expr_record_value_t* v)
+FOUNDATION_STATIC cell_t table_expr_cell_value(const table_expr_record_value_t* v, column_format_t format)
 {
     if (v->type == DYNAMIC_TABLE_VALUE_NULL)
         return cell_t(nullptr);
@@ -140,7 +140,11 @@ FOUNDATION_STATIC cell_t table_expr_cell_value(const table_expr_record_value_t* 
         return cell_t(string_to_const(v->text));
 
     if (v->type == DYNAMIC_TABLE_VALUE_NUMBER)
+    {
+        if (format == COLUMN_FORMAT_DATE)
+            return cell_t((time_t)v->number);
         return cell_t(v->number);
+    }
 
     return cell_t();
 }
@@ -162,7 +166,7 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
                 table_expr_record_t* record = (table_expr_record_t*)element;
                 const table_expr_record_value_t* v = &record->resolved[c->value_index];
 
-                const cell_t cell = table_expr_cell_value(v);
+                const cell_t cell = table_expr_cell_value(v, column->format);
 
                 if ((column->flags & COLUMN_RENDER_ELEMENT) && c->drawer)
                     c->drawer->handler.invoke(cell);

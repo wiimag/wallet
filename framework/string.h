@@ -667,3 +667,12 @@ string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_
  * @return The parsed version.
  */
 version_t string_to_version_short(const char* str, size_t length);
+
+/*! Convert Unicode code point to UTF-8 string.
+ *
+ * @param buffer The buffer to write the UTF-8 string to.
+ * @param capacity The capacity of the buffer.
+ * @param code_point The code point to convert.
+ * @return The UTF-8 string.
+ */
+string_t string_utf8_from_code_point(char* buffer, size_t capacity, uint32_t code_point);

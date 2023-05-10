@@ -1,10 +1,11 @@
 # Changelog
 
-## [0.23.2] - 2023-05-10
+## [0.23.3] - 2023-05-10
 - Add expression file example `report_slope_down.expr` to report titles that are going down but for which you have a gain.
 - Add history value trend to the Wallet view.
 - Add support to evaluation expression files from the console using `@` followed by a valid file path, i.e. `@C:\work\wallet\docs\expressions\report_slope_down.expr`.
 - Add support to use Google Material Design icons for report custom column expressions, i.e. `\\xee\\xa3\\xa3 ...`.
+- Fix `TABLE()` date column sorting.
 - Improve and simply the report summary panel.
 
 ## [0.22.14] - 2023-05-08

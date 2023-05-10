@@ -38,6 +38,7 @@ typedef enum ExprErrorCode : int {
     EXPR_ERROR_EVALUATION_NOT_IMPLEMENTED,
     EXPR_ERROR_BAD_VARIABLE_NAME,
     EXPR_ERROR_EMPTY_SET,
+    EXPR_ERROR_EVAL_FUNCTION,
 
     // Parsing errors
     EXPR_ERROR_ALLOCATION_FAILED = -1,
@@ -155,27 +156,13 @@ typedef enum ExprOperatorType {
 typedef struct ExprError
 {
     expr_error_code_t code;
+    expr_error_code_t outer;
     char message[1024];
     size_t message_length{ 0 };
 
-    ExprError(expr_error_code_t code, const char* msg = nullptr, ...)
-    {
-        this->code = code;
-
-        if (msg)
-        {
-            va_list list;
-            va_start(list, msg);
-            message_length = string_vformat(STRING_BUFFER(message), msg, string_length(msg), list).length;
-            va_end(list);
-        }
-        else
-        {
-            const char* expr_error_msg = expr_error_cstr(code);
-            size_t expr_error_msg_length = string_length(expr_error_msg);
-            message_length = string_copy(STRING_BUFFER(message), expr_error_msg, expr_error_msg_length).length;
-        }
-    }
+    ExprError(expr_error_code_t code, const char* msg = nullptr, ...);
+    ExprError(expr_error_code_t code, expr_error_code_t outer, const char* msg = nullptr, ...);
+    ExprError(expr_error_code_t code, const expr_func_t* f, vec_expr_t* args, unsigned arg_index, const char* msg, ...);
 } expr_error_t;
 
 /*! Flags used to represent an expression result storing a pointer value. */
@@ -1025,8 +1012,17 @@ struct expr_result_t
     /*! Returns the | result of two value. */
     expr_result_t operator|(const expr_result_t& rhs) const
     {
+        if (type == EXPR_RESULT_NULL && rhs.is_null())
+            return NIL;
+
         if (type == EXPR_RESULT_NUMBER && rhs.type == EXPR_RESULT_NUMBER)
             return (double)(math_trunc(value) | math_trunc(rhs.value));
+
+        if (!is_null())
+            return *this;
+
+        if (type == EXPR_RESULT_NULL && !rhs.is_null())
+            return rhs;
 
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;

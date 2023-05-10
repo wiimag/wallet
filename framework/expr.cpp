@@ -1482,10 +1482,22 @@ expr_result_t expr_eval(expr_t* e)
 
     case OP_FUNC:
     {
-        expr_result_t fn_result = e->param.func.f->handler(e->param.func.f, &e->args, e->param.func.context);
-        expr_var_t* v = expr_get_or_create_global_var(STRING_CONST("$0"));
-        v->value = fn_result;
-        return fn_result;
+        try
+        {
+            expr_result_t fn_result = e->param.func.f->handler(e->param.func.f, &e->args, e->param.func.context);
+            expr_var_t* v = expr_get_or_create_global_var(STRING_CONST("$0"));
+            v->value = fn_result;
+            return fn_result;
+        }
+        catch (ExprError err)
+        {
+            if (err.outer == EXPR_ERROR_EVAL_FUNCTION)
+                throw err;
+
+            throw ExprError(err.code, EXPR_ERROR_EVAL_FUNCTION, "Failed to evaluate function %.*s: %.*s", 
+                STRING_FORMAT(e->token), (int)err.message_length, err.message);
+        }
+        
     }
 
     case OP_SET:
@@ -1692,6 +1704,7 @@ FOUNDATION_STATIC inline void expr_copy(expr_t* dst, expr_t* src)
     if (src->type == OP_FUNC) {
         dst->param.func.f = src->param.func.f;
         dst->param.func.context = nullptr;
+        dst->token = src->token;
         vec_foreach(&src->args, arg, i) {
             expr_t tmp = expr_init(OP_UNKNOWN);
             expr_copy(&tmp, &arg);
@@ -1915,6 +1928,7 @@ expr_t* expr_create(const char* s, size_t len, expr_var_list_t* vars, expr_func_
                             char varname[4];
                             string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), (j + 1));
                             expr_var_t* vv = expr_var(vars, varname, string_length(varname));
+                            vv->value = NIL;
                             expr_t ev = expr_varref(vv);
                             expr_t assign = expr_binary(OP_ASSIGN, ev, vec_nth(&arg.args, j));
                             *p = expr_binary(OP_COMMA, assign, expr_const(EXPR_ZERO));
@@ -2314,6 +2328,61 @@ void expr_log_evaluation_result(string_const_t expression_string, const expr_res
         else
             log_infof(HASH_EXPR, STRING_CONST("\t%.*s"), STRING_FORMAT(result_string));
     }
+}
+
+ExprError::ExprError(expr_error_code_t code, expr_error_code_t outer, const char* msg, ...)
+{
+    this->code = code;
+    this->outer = outer;
+
+    if (msg)
+    {
+        va_list list;
+        va_start(list, msg);
+        message_length = string_vformat(STRING_BUFFER(message), msg, string_length(msg), list).length;
+        va_end(list);
+    }
+    else
+    {
+        const char* expr_error_msg = expr_error_cstr(code);
+        size_t expr_error_msg_length = string_length(expr_error_msg);
+        message_length = string_copy(STRING_BUFFER(message), expr_error_msg, expr_error_msg_length).length;
+    }
+}
+
+ExprError::ExprError(expr_error_code_t code, const char* msg /*= nullptr*/, ...)
+{
+    this->code = code;
+    this->outer = EXPR_ERROR_NONE;
+
+    if (msg)
+    {
+        va_list list;
+        va_start(list, msg);
+        message_length = string_vformat(STRING_BUFFER(message), msg, string_length(msg), list).length;
+        va_end(list);
+    }
+    else
+    {
+        const char* expr_error_msg = expr_error_cstr(code);
+        size_t expr_error_msg_length = string_length(expr_error_msg);
+        message_length = string_copy(STRING_BUFFER(message), expr_error_msg, expr_error_msg_length).length;
+    }
+}
+
+ExprError::ExprError(expr_error_code_t code, const expr_func_t* f, vec_expr_t* args, unsigned arg_index, const char* msg, ...)
+{
+    this->code = code;
+
+    va_list list;
+    va_start(list, msg);
+
+    char err_msg_buffer[sizeof(message)];
+    string_t err_msg = string_vformat(STRING_BUFFER(err_msg_buffer), msg, string_length(msg), list);
+    va_end(list);
+
+    message_length = string_format(STRING_BUFFER(message), STRING_CONST("%.*s error with %.*s: %.*s"),
+        STRING_FORMAT(f->name), STRING_FORMAT(args->buf[arg_index].token), STRING_FORMAT(err_msg)).length;
 }
 
 FOUNDATION_STATIC void expr_initialize()

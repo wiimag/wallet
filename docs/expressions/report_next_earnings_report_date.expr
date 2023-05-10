@@ -1,0 +1,33 @@
+# Report in a table next earnings report dates with prevision.
+
+# Set report to work with
+$REPORT=IF($REPORT, $REPORT, 'FLEX')
+
+# Define function to get next report data for a given title
+$(next_report, 
+	// Define how many days we consider a title to be ready to be sold if we have a gain.
+	$today=IF($2, $2, NOW()) - (60 * 60 * 12)
+
+	// Get earnings history
+	$history = F($1, "Earnings.History") | [nil, nil]
+	
+	// Extract report date with EPS values
+	$history = MAP($history, [INDEX($2, 'reportDate'), DATE(INDEX($2, 'reportDate')), INDEX($2, 'epsEstimate')])
+	
+	// Filter passed report dates
+	$history = FILTER($history, $2 >= $today)
+	
+	// Return the last element
+	INDEX($history, -1)
+)
+
+# Grab active titles (i.e. exclude indexes and sold titles)
+$titles=FILTER(R($REPORT, [active, change_3m, next_report($TITLE, NOW())]), $2 && COUNT($4) > 0)
+
+# Report in a table
+TABLE('Earnings Report Dates (' + $REPORT + ')', $titles,
+	['Symbol', $1, "symbol"],
+	['Report', $5, "date"],
+	['EPS||Estimate', $6, "currency"],
+	['3M', $3, "percentage"]
+)
