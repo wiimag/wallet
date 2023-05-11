@@ -1630,7 +1630,7 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
     if (s == nullptr && string_is_null(symbol))
         return;
 
-    if (pattern_menu_item(STRING_ARGS(symbol)))
+    if (pattern_contextual_menu(STRING_ARGS(symbol)))
     {
         entry->viewed = true;
         window_close(entry->window->handle);
@@ -2180,7 +2180,7 @@ FOUNDATION_STATIC void search_table_expr_symbol_drawer(const cell_t& value)
         ImGui::PopID();
         if (ImGui::BeginPopupContextItem(code.str))
         {
-            pattern_menu_item(code.str, code.length);
+            pattern_contextual_menu(code.str, code.length);
             ImGui::EndPopup();
         }
         

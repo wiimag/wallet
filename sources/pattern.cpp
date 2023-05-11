@@ -14,6 +14,7 @@
 #include "openai.h"
 #include "financials.h"
 #include "logo.h"
+#include "watches.h"
 
 #include <framework/app.h>
 #include <framework/jobs.h>
@@ -2210,7 +2211,7 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
         activity_hash = chash;
         array_clear(_activities);
 
-        eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", string_table_decode(pattern->code), "limit", "1000", [](const json_object_t& json)
+        eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", string_table_decode(pattern->code), "limit", "250", [](const json_object_t& json)
         {
             for (size_t i = 0; i < json.root->value_length; ++i)
             {
@@ -2414,6 +2415,12 @@ FOUNDATION_STATIC bool pattern_handle_shortcuts(pattern_t* pattern)
     {
         pattern->opened = false;
         return true;
+    }
+
+    if (ImGui::Shortcut(ImGuiMod_Alt | ImGuiKey_E, 0, ImGuiInputFlags_RouteFocused))
+    {
+        string_const_t code = string_table_decode_const(pattern->code);
+        pattern_open_watch_window(code.str, code.length);
     }
 
     if (shortcut_executed('N'))
@@ -2660,6 +2667,14 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
 
     pattern_handle_shortcuts(pattern);
     pattern_render_dialogs(pattern);
+
+    if (ImGui::IsWindowAppearing())
+    {
+        dispatch([pattern]()
+        {
+            pattern_refresh(pattern);
+        }, 250);
+    }
 }
 
 FOUNDATION_STATIC bool pattern_render_summarized_news_dialog(void* context)
@@ -2672,62 +2687,66 @@ FOUNDATION_STATIC bool pattern_render_summarized_news_dialog(void* context)
     return true;
 }
 
-FOUNDATION_STATIC void pattern_menu_items(pattern_handle_t handle)
+FOUNDATION_STATIC void pattern_main_menu(pattern_handle_t handle)
 {
     if (!ImGui::TrBeginMenu("Pattern"))
         return;
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
     string_const_t code = string_table_decode_const(pattern->code);
 
-    if (ImGui::TrMenuItem("Read News"))
+    if (ImGui::TrMenuItem(ICON_MD_NEWSPAPER " Read News"))
         news_open_window(STRING_ARGS(code));
 
-    if (ImGui::TrMenuItem("Show Financials"))
+    if (ImGui::TrMenuItem(ICON_MD_ANALYTICS " Show Financials"))
         financials_open_window(STRING_ARGS(code));
 
-    if (ImGui::TrMenuItem("Show Fundamentals"))
+    if (ImGui::TrMenuItem(ICON_MD_FACT_CHECK " Show Fundamentals"))
         pattern->fundamentals_dialog_opened = true;
 
-    if (ImGui::TrMenuItem("Show Notes"))
+    if (ImGui::TrMenuItem(ICON_MD_NOTES " Show Notes"))
         pattern->notes_opened = true;
 
-    if (ImGui::TrBeginMenu("Plot options"))
+    if (ImGui::TrBeginMenu(ICON_MD_SCATTER_PLOT " Plot options"))
     {
         ImGui::TrMenuItem("Show Trend Equations", nullptr, &pattern->show_trend_equation);
         ImGui::EndMenu();
     }
 
+    ImGui::Separator();
+
+    pattern_contextual_menu(STRING_ARGS(code), false);
+
     #if BUILD_DEVELOPMENT
 
     ImGui::Separator();
 
-    if (ImGui::TrMenuItem("EOD", nullptr, nullptr, true))
+    if (ImGui::TrMenuItem(ICON_MD_LOGO_DEV " EOD", nullptr, nullptr, true))
         system_execute_command(eod_build_url("eod", code.str, FORMAT_JSON, "order", "d").str);
 
-    if (ImGui::TrMenuItem("Trends", nullptr, nullptr, true))
+    if (ImGui::TrMenuItem(ICON_MD_LOGO_DEV " Trends", nullptr, nullptr, true))
         system_execute_command(eod_build_url("calendar", "trends", FORMAT_JSON, "symbols", code.str).str);
 
-    if (ImGui::TrMenuItem("Earnings", nullptr, nullptr, true))
+    if (ImGui::TrMenuItem(ICON_MD_LOGO_DEV " Earnings", nullptr, nullptr, true))
     {
         time_t since_last_year = time_add_days(time_now(), -465);
         string_const_t date_str = string_from_date(since_last_year);
         system_execute_command(eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", code.str, "from", date_str.str).str);
     }
 
-    if (ImGui::TrMenuItem("Technical", nullptr, nullptr, true))
+    if (ImGui::TrMenuItem(ICON_MD_LOGO_DEV " Technical", nullptr, nullptr, true))
         system_execute_command(eod_build_url("technical", code.str, FORMAT_JSON, "order", "d", "function", "splitadjusted").str);
 
-    if (ImGui::TrMenuItem("Fundamentals", nullptr, nullptr, true))
+    if (ImGui::TrMenuItem(ICON_MD_LOGO_DEV " Fundamentals", nullptr, nullptr, true))
         system_execute_command(eod_build_url("fundamentals", code.str, FORMAT_JSON).str);
 
-    if (ImGui::TrMenuItem("Real-time", nullptr, nullptr, true))
+    if (ImGui::TrMenuItem(ICON_MD_LOGO_DEV " Real-time", nullptr, nullptr, true))
         system_execute_command(eod_build_url("real-time", code.str, FORMAT_JSON).str);
 
     if (openai_available())
     {
         ImGui::Separator();
 
-        const char* title_summarize_news = tr("Summarize news URL for me...");
+        const char* title_summarize_news = tr(ICON_MD_NEWSPAPER " Summarize news URL for me...");
         if (ImGui::MenuItem(title_summarize_news))
         {
             struct pattern_news_dialog_t
@@ -2782,7 +2801,7 @@ FOUNDATION_STATIC void pattern_menu_items(pattern_handle_t handle)
             });
         }
 
-        if (BUILD_DEBUG && ImGui::TrMenuItem("Generate OpenAI Summary Prompt"))
+        if (BUILD_DEBUG && ImGui::TrMenuItem(ICON_MD_LOGO_DEV " Generate OpenAI Summary Prompt"))
         {
             string_const_t prompt = openai_generate_summary_prompt(STRING_ARGS(code));
             ImGui::SetClipboardText(prompt.str);
@@ -2803,7 +2822,7 @@ FOUNDATION_STATIC void pattern_render_floating_window_main_menu(pattern_handle_t
         ImGui::EndMenu();
     }
 
-    pattern_menu_items(handle);
+    pattern_main_menu(handle);
 
     if (ImGui::TrBeginMenu("Report"))
     {
@@ -2849,25 +2868,30 @@ FOUNDATION_STATIC bool pattern_open_floating_window(pattern_handle_t handle)
     return pattern_window_handle;
 }
 
-FOUNDATION_STATIC void pattern_menu(pattern_handle_t handle)
+FOUNDATION_STATIC string_const_t pattern_code(pattern_handle_t handle)
+{
+    pattern_t* pattern = pattern_get(handle);
+    if (pattern)
+        return string_table_decode_const(pattern->code);
+    return string_null();
+}
+
+FOUNDATION_STATIC void pattern_tab_menu(pattern_handle_t handle)
 {
     if (ImGui::BeginPopupContextItem())
     {
-        if (ImGui::TrBeginMenu("Add"))
-        {
-            pattern_add_to_report_menu(handle);
-            ImGui::EndMenu();
-        }
-
-        if (ImGui::TrMenuItem("Float Window"))
+        if (ImGui::TrMenuItem(ICON_MD_BRANDING_WATERMARK " Float Window"))
             pattern_open_floating_window(handle);
+
+        string_const_t code = pattern_code(handle);
+        pattern_contextual_menu(STRING_ARGS(code), false);
 
         ImGui::EndPopup();
     }
 
     if (ImGui::BeginMenuBar())
     {
-        pattern_menu_items(handle);
+        pattern_main_menu(handle);
         ImGui::EndMenuBar();
     }
 }
@@ -2976,6 +3000,15 @@ FOUNDATION_STATIC void pattern_load(const config_handle_t& pattern_data, pattern
         *pattern.analysis_summary = string_clone(STRING_ARGS(saved_analysis));
     }
 
+    pattern.watch_context = nullptr;
+    config_handle_t cv_pattern_watches = pattern_data["watches"];
+    if (cv_pattern_watches)
+    {
+        string_const_t code = string_table_decode_const(pattern.code);
+        string_const_t watch_context_name = string_format_static(STRING_CONST("Pattern %.*s"), STRING_FORMAT(code));
+        pattern.watch_context = watch_create(watch_context_name.str, watch_context_name.length, cv_pattern_watches);
+    }
+
     // Make sure this pattern gets saved again.
     pattern.save = true;
 }
@@ -3014,6 +3047,12 @@ FOUNDATION_STATIC void pattern_save(config_handle_t pattern_data, const pattern_
         auto cv_check = config_array_push(checks_data, CONFIG_VALUE_OBJECT);
         config_set(cv_check, STRING_CONST("checked"), pattern.checks[i].checked);
     }
+
+    if (pattern.watch_context && array_size(pattern.watch_context->points))
+    {
+        config_handle_t cv_pattern_watches = config_set_array(pattern_data, STRING_CONST("watches"));
+        watch_save(pattern.watch_context, cv_pattern_watches);
+    }
 }
 
 FOUNDATION_STATIC void pattern_render_tabs()
@@ -3030,9 +3069,29 @@ FOUNDATION_STATIC void pattern_render_tabs()
         {
             string_const_t code = string_table_decode_const(pattern->code);
             string_const_t tab_id = string_format_static(STRING_CONST(ICON_MD_INSIGHTS " %.*s"), STRING_FORMAT(code));
-            tab_draw(tab_id.str, &pattern->opened, L0(pattern_render(handle)), L0(pattern_menu(handle)));
+            tab_draw(tab_id.str, &pattern->opened, L0(pattern_render(handle)), L0(pattern_tab_menu(handle)));
         }
     }
+}
+
+FOUNDATION_STATIC watch_context_t* pattern_watch_context(pattern_handle_t handle)
+{
+    pattern_t* pattern = pattern_get(handle);
+    if (!pattern)
+        return nullptr;
+
+    string_const_t code = string_table_decode_const(pattern->code);
+    if (pattern->watch_context == nullptr)
+    {
+        string_const_t watch_context_name = string_format_static(STRING_CONST("Pattern %.*s"), STRING_FORMAT(code));
+        pattern->watch_context = watch_create(watch_context_name.str, watch_context_name.length);
+    }
+
+    watch_set_variable(pattern->watch_context, STRING_CONST("$DATE"), pattern->date);
+    watch_set_variable(pattern->watch_context, STRING_CONST("$RANGE"), (double)pattern->range);
+    watch_set_variable(pattern->watch_context, STRING_CONST("$TITLE"), STRING_ARGS(code));
+
+    return pattern->watch_context;
 }
 
 // 
@@ -3091,33 +3150,44 @@ pattern_handle_t pattern_open_window(const char* code, size_t code_length)
     return handle;
 }
 
-bool pattern_menu_item(const char* symbol, size_t symbol_length)
+void pattern_open_watch_window(const char* symbol, size_t symbol_length)
+{
+    pattern_handle_t pattern = pattern_load(symbol, symbol_length);
+    watch_context_t* context = pattern_watch_context(pattern);
+    if (context)
+        watch_open_dialog(context);
+}
+
+bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show_all /*= true*/)
 {
     ImGui::BeginGroup();
 
     bool item_executed = false;
-    ImGui::AlignTextToFramePadding();
-    if (ImGui::Selectable(tr("Load Pattern"), false, ImGuiSelectableFlags_AllowItemOverlap))
+    if (show_all)
     {
-        item_executed = true;
-    }
-
-    ImGui::SameLine();
-    if (ImGui::SmallButton(ICON_MD_OPEN_IN_NEW))
-    {
-        if (pattern_open_window(symbol, symbol_length))
+        ImGui::AlignTextToFramePadding();
+        if (ImGui::Selectable(tr("Load Pattern"), false, ImGuiSelectableFlags_AllowItemOverlap))
         {
             item_executed = true;
-            ImGui::CloseCurrentPopup();
         }
-    }
-    else if (item_executed)
-    {
-        pattern_open(symbol, symbol_length);
+
+        ImGui::SameLine();
+        if (ImGui::SmallButton(ICON_MD_OPEN_IN_NEW))
+        {
+            if (pattern_open_window(symbol, symbol_length))
+            {
+                item_executed = true;
+                ImGui::CloseCurrentPopup();
+            }
+        }
+        else if (item_executed)
+        {
+            pattern_open(symbol, symbol_length);
+        }
     }
 
     ImGui::AlignTextToFramePadding();
-    if (ImGui::Selectable(tr("Open Web Site " ICON_MD_OPEN_IN_NEW), false, ImGuiSelectableFlags_AllowItemOverlap))
+    if (ImGui::Selectable(tr(ICON_MD_PUBLIC " Open Web Site " ICON_MD_OPEN_IN_NEW), false, ImGuiSelectableFlags_AllowItemOverlap))
     {
         stock_handle_t stock_handle = stock_request(symbol, symbol_length, FetchLevel::FUNDAMENTALS);
         if (stock_handle)
@@ -3140,9 +3210,13 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
         }
     }
 
+    ImGui::AlignTextToFramePadding();
+    if (ImGui::Selectable(tr(ICON_MD_WATCH " Open Watch Context"), false, ImGuiSelectableFlags_AllowItemOverlap))
+        pattern_open_watch_window(symbol, symbol_length);
+    
     ImGui::Separator();
 
-    if (ImGui::TrBeginMenu("Update Logo"))
+    if (ImGui::TrBeginMenu(ICON_MD_ADD_PHOTO_ALTERNATE " Update Logo"))
     {
         if (ImGui::TrMenuItem(" Icon (32x32)"))
             logo_select_icon(symbol, symbol_length);
@@ -3152,7 +3226,7 @@ bool pattern_menu_item(const char* symbol, size_t symbol_length)
         ImGui::EndMenu();
     }
 
-    if (ImGui::TrBeginMenu("Add to report"))
+    if (ImGui::TrBeginMenu(ICON_MD_ADD_TO_PHOTOS " Add to report"))
     {
         pattern_add_to_report_menu(symbol, symbol_length);
         ImGui::EndMenu();
@@ -3205,6 +3279,7 @@ FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
 
     array_deallocate(pattern->intradays);
     config_deallocate(pattern->fundamentals);
+    watch_destroy(pattern->watch_context);
 }
 
 FOUNDATION_STATIC void pattern_shutdown()

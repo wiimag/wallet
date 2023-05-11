@@ -1,6 +1,14 @@
 /*
  * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://wallet.wiimag.com/LICENSE
+ *
+ * Stock pattern module.
+ *
+ * A stock pattern loads and aggregate data from different sources to provide
+ * a complete view of a stock. It is used to analyze a stock and make decisions
+ * about it.
+ *
+ * Currently a pattern is not contextual to a report.
  */
  
 #pragma once
@@ -11,14 +19,18 @@
 #include <framework/config.h>
 
 struct bulk_t;
+struct watch_context_t;
 
+/*! Pattern handle. */
 typedef int pattern_handle_t;
 
+/*! Pattern check mark state. */
 struct pattern_check_t
 {
     bool checked{ false };
 };
 
+/*! Pattern mark. */
 struct pattern_mark_t
 {
     time_t date;
@@ -26,12 +38,7 @@ struct pattern_mark_t
     double change_p { NAN };
 };
 
-#define PATTERN_FLEX_NONE 0
-#define PATTERN_FLEX_BUY 'B'
-#define PATTERN_FLEX_SKIP 'S'
-#define PATTERN_FLEX_EXECUTE 'E'
-#define PATTERN_FLEX_HOLD 'H'
-
+/*! Pattern flex entry state. */
 struct pattern_flex_t
 {
     int days;
@@ -43,6 +50,7 @@ struct pattern_flex_t
     double acc;
 };
 
+/*! Pattern flex median/average. */
 struct pattern_flex_medavg_t
 {
     double median;
@@ -108,18 +116,80 @@ struct pattern_t
 
     // Intraday view data
     day_result_t* intradays{ nullptr };
+
+    // Watch points
+    watch_context_t* watch_context{ nullptr };
 };
 
+/*! Finds and return a pattern handle. 
+ *
+ *  @param symbol        The symbol to find.
+ *  @param symbol_length The length of the symbol.
+ *
+ *  @return The pattern handle.
+ */
 pattern_handle_t pattern_find(const char* symbol, size_t symbol_length);
 
+/*! Loads a pattern. 
+ *
+ *  @param symbol        The symbol to load.
+ *  @param symbol_length The length of the symbol.
+ *
+ *  @return The pattern handle.
+ */
 pattern_handle_t pattern_load(const char* symbol, size_t symbol_length);
 
+/*! Loads and open a stock pattern into a tab of the main window. 
+ *
+ *  @param symbol        The symbol to load.
+ *  @param symbol_length The length of the symbol.
+ *
+ *  @return The pattern handle.
+ */
 pattern_handle_t pattern_open(const char* symbol, size_t symbol_length);
 
+/*! Loads and opens a stock pattern floating window. 
+ *
+ *  @param symbol        The symbol to load.
+ *  @param symbol_length The length of the symbol.
+ *
+ *  @return The pattern handle.
+ */
 pattern_handle_t pattern_open_window(const char* symbol, size_t symbol_length);
 
-bool pattern_menu_item(const char* symbol, size_t symbol_length);
+/*! Loads and opens the stock pattern watch window. 
+ *
+ *  @param symbol        The symbol to load.
+ *  @param symbol_length The length of the symbol.
+ *
+ *  @return The pattern handle.
+ */
+void pattern_open_watch_window(const char* symbol, size_t symbol_length);
 
+/*! Renders pattern contextual menu items. 
+ *
+ *  @remark It loads a new pattern if the symbol is not found.
+ *
+ *  @param symbol        The symbol to render.
+ *  @param symbol_length The length of the symbol.
+ *  @param show_all      Whether to show all items.
+ *
+ *  @return True if the menu was rendered.
+ */
+bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show_all = true);
+
+/*! Computes a stock pattern FLEX lowest bid price. 
+ *
+ *  @param pattern_handle The pattern handle.
+ *
+ *  @return The lowest bid price.
+ */
 double pattern_get_bid_price_low(pattern_handle_t pattern_handle);
 
+/*! Computes a stock pattern FLEX highest bid price. 
+ *
+ *  @param pattern_handle The pattern handle.
+ *
+ *  @return The highest bid price.
+ */
 double pattern_get_bid_price_high(pattern_handle_t pattern_handle);

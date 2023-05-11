@@ -556,7 +556,7 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
 
         ImGui::Separator();
 
-        pattern_menu_item(title->code, title->code_length);
+        pattern_contextual_menu(title->code, title->code_length);
 
         report_column_price_alert_menu(title);
 
@@ -722,13 +722,14 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             }
 
             const float code_width = text_size.x + (style.ItemSpacing.x * 2.0f);
+            ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted(formatted_code);
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
                 pattern_open(title->code, title->code_length);
 
             float logo_size = button_width;
             float space_left = ImGui::GetContentRegionAvail().x - code_width;
-            ImGui::MoveCursor(space_left - button_width - logo_size + IM_SCALEF(7), IM_SCALEF(0.25), true);
+            ImGui::MoveCursor(space_left - button_width - logo_size + IM_SCALEF(7), IM_SCALEF(2), true);
             ImVec2 logo_size_v = ImVec2(logo_size, logo_size);
             if (ImGui::GetCursorPos().x < code_width || !logo_render_icon(title->code, title->code_length, logo_size_v, true, true))
                 ImGui::Dummy(ImVec2(logo_size, logo_size));

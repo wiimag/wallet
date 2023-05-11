@@ -444,7 +444,7 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
             if (ImGui::MenuItem(tr("Select symbol")))
                 selector(code);
         }
-        else if (pattern_menu_item(STRING_ARGS(code)))
+        else if (pattern_contextual_menu(STRING_ARGS(code)))
         {
             ((symbol_t*)symbol)->viewed = true;
         }

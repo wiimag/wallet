@@ -316,7 +316,7 @@ FOUNDATION_STATIC void bulk_table_context_menu(table_element_ptr_const_t element
     bulk_t* b = (bulk_t*)element;
 
     string_const_t code = bulk_get_symbol_code(b);
-    if (pattern_menu_item(STRING_ARGS(code)))
+    if (pattern_contextual_menu(STRING_ARGS(code)))
     {
 
     }

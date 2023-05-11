@@ -824,9 +824,11 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
         else
         {
             #if ENABLE_ROW_HEIGHT_MIDDLE
-            if ((column.flags & COLUMN_VALIGN_TOP) == 0)
-                ImGui::SetCursorPosY(middle_row_cursor_position);
+            //if ((column.flags & COLUMN_VALIGN_TOP) == 0)
+                //ImGui::SetCursorPosY(middle_row_cursor_position);
             #endif
+
+            ImGui::AlignTextToFramePadding();
 
             if (alignment_flags & COLUMN_RIGHT_ALIGN)
                 table_cell_right_aligned_label(STRING_ARGS(str_value));

@@ -3600,5 +3600,185 @@
 			en = "%s\n\nConnected through %.*s"
 			fr = "%s\n\nConnect\xc3\xa9 via %.*s"
 		}
+		{
+			hash = "be5f3d070b192d63"
+			en = "\xee\x8c\xb4 Open Watch Context"
+			fr = "\xee\x8c\xb4 Ouvrir le contexte de surveillance"
+		}
+		{
+			hash = "6e0082ef9f2df074"
+			en = "\xee\xa0\x8b Open Web Site \xee\xa2\x9e"
+			fr = "\xee\xa0\x8b Acc\xc3\xa9der au site Web \xee\xa2\x9e"
+		}
+		{
+			hash = "1df661e10cc6d5e9"
+			en = "\xee\x81\xab Float Window"
+			fr = "\xee\x81\xab Fen\xc3\xaatre flottante"
+		}
+		{
+			hash = "6fac483506ba3752"
+			en = "\xee\x90\xbe Update Logo"
+			fr = "\xee\x90\xbe Mettre \xc3\xa0 jour le logo"
+		}
+		{
+			hash = "7c826bdcbd277662"
+			en = "\xee\x8e\x9d Add to report"
+			fr = "\xee\x8e\x9d Ajouter au rapport"
+		}
+		{
+			hash = "b2a5a2c4faca231e"
+			en = "\xee\xae\x81 Read News"
+			fr = "\xee\xae\x81 Lire les nouvelles"
+		}
+		{
+			hash = "e502c8718ef21985"
+			en = "\xee\xbc\xbe Show Financials"
+			fr = "\xee\xbc\xbe Afficher les donn\xc3\xa9es financi\xc3\xa8res"
+		}
+		{
+			hash = "a08534db44295143"
+			en = "\xef\x83\x85 Show Fundamentals"
+			fr = "\xef\x83\x85 Afficher les donn\xc3\xa9es fondamentales"
+		}
+		{
+			hash = "6ce04ba5f1fcd2d3"
+			en = "\xee\x89\xac Show Notes"
+			fr = "\xee\x89\xac Afficher les notes"
+		}
+		{
+			hash = "a6e9147788f56f86"
+			en = "\xee\x89\xa8 Plot options"
+			fr = "\xee\x89\xa8 Options des graphiques"
+		}
+		{
+			hash = "a6688ced383e9dfe"
+			en = "\xee\xab\x96 EOD"
+			fr = "\xee\xab\x96 EOD"
+		}
+		{
+			hash = "51d65d5acfc8cbf5"
+			en = "\xee\xab\x96 Trends"
+			fr = "\xee\xab\x96 Tendances"
+		}
+		{
+			hash = "78ae7ab490a6abcb"
+			en = "\xee\xab\x96 Earnings"
+			fr = "\xee\xab\x96 B\xc3\xa9n\xc3\xa9fices"
+		}
+		{
+			hash = "535f77aa013f58db"
+			en = "\xee\xab\x96 Technical"
+			fr = "\xee\xab\x96 Technique"
+		}
+		{
+			hash = "ee5b87ed567b4e67"
+			en = "\xee\xab\x96 Fundamentals"
+			fr = "\xee\xab\x96 Fondamentaux"
+		}
+		{
+			hash = "3eacf8b24b3b7b21"
+			en = "\xee\xab\x96 Real-time"
+			fr = "\xee\xab\x96 Temps r\xc3\xa9el"
+		}
+		{
+			hash = "b5baa4044b3a4c61"
+			en = "\xee\xae\x81 Summarize news URL for me..."
+			fr = "\xee\xae\x81 R\xc3\xa9sumer l'URL des nouvelles pour moi..."
+		}
+		{
+			hash = "47052dfdfcc6850c"
+			en = "\xee\xab\x96 Generate OpenAI Summary Prompt"
+			fr = "\xee\xab\x96 G\xc3\xa9n\xc3\xa9rer un r\xc3\xa9sum\xc3\xa9 OpenAI Prompt"
+		}
+		{
+			hash = "b343db711a24be65"
+			en = "Enter watch name..."
+			fr = "Entrer le nom..."
+		}
+		{
+			hash = "1057abafe548324d"
+			en = "\xee\x89\x8a||Edit Expression"
+			fr = "\xee\x89\x8a||Modifier l'expression"
+		}
+		{
+			hash = "8212fa06dee25e13"
+			en = "Edit expression"
+			fr = "Modifier l'expression"
+		}
+		{
+			hash = "a5f19a748c6351cf"
+			en = "Edit {0} Expression - {1}"
+			fr = "Modifier l'expression {0} - {1}"
+		}
+		{
+			hash = "8ca4d06080b74097"
+			en = "Evaluate"
+			fr = "Evaluer"
+		}
+		{
+			hash = "2affbb7cec30eb0"
+			en = "Edit expression : \n%.*s"
+			fr = "Modifier l'expression : \n%.*s"
+		}
+		{
+			hash = "8201a66950d28951"
+			en = "Variables"
+			fr = "Variables"
+		}
+		{
+			hash = "c20b01a0d782583"
+			en = "Watches"
+			fr = "Espions"
+		}
+		{
+			hash = "e486f5d6ef1f5683"
+			en = "Add Shared Watch"
+			fr = "Ajouter un espion partag\xc3\xa9"
+		}
+		{
+			hash = "b3488515be73609a"
+			en = "Edit"
+			fr = "Modifier"
+		}
+		{
+			hash = "24a6dd5a95d3633c"
+			en = "\xee\x8f\x89 Edit"
+			fr = "\xee\x8f\x89 Modifier"
+		}
+		{
+			hash = "211c193fe2026f8d"
+			en = "\xee\xa1\xb2 Delete"
+			fr = "\xee\xa1\xb2 Supprimer"
+		}
+		{
+			hash = "df0c8b17bf64311b"
+			en = "Integer"
+			fr = "Entier"
+		}
+		{
+			hash = "82cc2ae7d6415b8d"
+			en = "Plot"
+			fr = "Graphique"
+		}
+		{
+			hash = "599829d8ee82c5c8"
+			en = "Table"
+			fr = "Tableau"
+		}
+		{
+			hash = "716f0cfd6513ead1"
+			en = "Execute"
+			fr = "Ex\xc3\xa9cuter"
+		}
+		{
+			hash = "359eea6b8cd17a32"
+			en = "Undefined"
+			fr = "Non d\xc3\xa9fini"
+		}
+		{
+			hash = "397b999924b8d03e"
+			en = "\xef\x81\x85 Format"
+			fr = "\xef\x81\x85 Format"
+		}
 	]
 }

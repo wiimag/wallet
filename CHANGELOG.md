@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.24.0] - 2023-05-11
+- Add support to build watch table for stock patterns. See `Pattern/Open Watch Context`.
+
 ## [0.23.4] - 2023-05-10
 - Add expression file example `report_slope_down.expr` to report titles that are going down but for which you have a gain.
 - Add history value trend to the Wallet view.
