@@ -1,4 +1,11 @@
-TABLE('Retained Earnings', R('300K', 
+#
+# Layout in a table report titles retained earnings value.
+#
+#---
+$REPORT='300K'
+#---
+
+TABLE('Retained Earnings', R($REPORT, 
   [name, INDEX(F($TITLE, "Financials.Balance_Sheet.quarterly"), 0, 1, "retainedEarnings")]), 
   ['#', $1, symbol],
   ['Name', $2], 

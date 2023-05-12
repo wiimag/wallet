@@ -189,6 +189,14 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
         {
             SHARED_READ_LOCK(_db_lock);
             stock_t* entry = &_db_stocks[index];
+
+            // Still try to grab the previous close price and set it as current price
+            double previous_close = json_read_number(json, STRING_CONST("previousClose"));
+            entry->current.open = entry->current.price = entry->current.adjusted_close = previous_close;
+
+            if (entry->history_count > 0)
+                entry->current.date = entry->history[0].date;
+
             entry->fetch_errors++;
             entry->mark_resolved(FetchLevel::REALTIME, true);
         }
@@ -496,11 +504,13 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
     MEMORY_TRACKER(HASH_STOCK);
 
     string_t code{};
+    bool is_index = false;
     char code_buffer[16];
     {
         SHARED_READ_LOCK(_db_lock);
         stock_t& entry = _db_stocks[index];
         code = string_table_decode(STRING_BUFFER(code_buffer), entry.code);
+        is_index = string_ends_with(code.str, code.length, STRING_CONST("INDX"));
     }
 
     if (!json.resolved())
@@ -525,7 +535,7 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
         json_object_t jday(json, e);
         string_const_t date_str = jday["date"].as_string();
         const double volume = jday["volume"].as_number();
-        if (volume >= 1.0 || i < 7)
+        if (is_index || volume >= 1.0 || i < 7)
         {
             day_result_t d{};
 
@@ -1230,6 +1240,32 @@ day_result_t stock_realtime_record(const char* symbol, size_t length)
     }, 5 * 60 * 60ULL);
     
     return result;
+}
+
+bool stock_is_index(const char* symbol, size_t length)
+{
+    string_const_t code = string_const(symbol, length);
+    if (string_ends_with(STRING_ARGS(code), STRING_CONST("INDX"))) 
+        return true;
+    if (string_ends_with(STRING_ARGS(code), STRING_CONST("FOREX"))) 
+        return true;
+
+    return false;
+}
+
+bool stock_is_index(stock_handle_t handle)
+{
+    const stock_t* stock = handle.resolve();
+    return stock_is_index(stock);
+}
+
+bool stock_is_index(const stock_t* stock)
+{
+    if (stock == nullptr)
+        return false;
+
+    string_const_t code = string_table_decode_const(stock->code);
+    return stock_is_index(STRING_ARGS(code));
 }
 
 stock_eod_record_t stock_eod_record(const char* symbol, size_t length, time_t at, uint64_t invalid_cache_query_after_seconds)

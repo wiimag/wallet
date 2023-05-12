@@ -1,6 +1,10 @@
-// Plot number of dividends by year (SplitsDividends.NumberDividendsByYear)
-
+#
+# Plot number of dividends by year for all active titles in a report.
+#---
 $REPORT = IF($REPORT, $REPORT, '300K')
+#---
+
+// Get report active titles
 $titles = FILTER(R($REPORT, active), $2)
 
 // Map NumberDividendsByYear by titles

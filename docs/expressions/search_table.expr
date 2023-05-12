@@ -1,5 +1,9 @@
-# Build query
+#
+# Execute a search query and layout results in a TABLE.
+#
+#---
 $query = "medical country:canada"
+#---
 
 # Run search query
 $results = SEARCH($query)

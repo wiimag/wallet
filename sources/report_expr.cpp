@@ -18,7 +18,7 @@
 #define IS_NOT_A_NUMBER SC1(math_real_is_nan(_1.as_number()))
 #define EVAL_STOCK_FIELD(field_name) FOUNDATION_PREPROCESSOR_TOSTRING(field_name), SC2(_2->field_name), IS_NOT_A_NUMBER, FetchLevel::FUNDAMENTALS
 
-constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 36;
+constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 39;
 
 FOUNDATION_FORCEINLINE expr_result_t stock_change_p_range(const stock_t* s, int rel_days)
 {
@@ -37,33 +37,33 @@ static struct {
     
     // Title & Stocks
     
-    { "sold",    SC2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0)},                       /*0*/
+    { "sold",    SC2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0)},                       
     { "active", SC2(_1->average_quantity ? true : false), SL1(_1.as_number() == 0) },
     { "qty",    SC2(_1->average_quantity), SL1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
     { "buy",    SC2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
     { "day",    SC2(title_get_day_change(_1, _2)), IS_NOT_A_NUMBER },
 
-    { "buy_total_adjusted_qty",     SC2(_1->buy_total_adjusted_qty), IS_NOT_A_NUMBER },                    /*5*/
+    { "buy_total_adjusted_qty",     SC2(_1->buy_total_adjusted_qty), IS_NOT_A_NUMBER },                   
     { "buy_total_adjusted_price",   SC2(_1->buy_total_adjusted_price), IS_NOT_A_NUMBER },
     { "sell_total_adjusted_qty",    SC2(_1->sell_total_adjusted_qty), IS_NOT_A_NUMBER },
     { "sell_total_adjusted_price",  SC2(_1->sell_total_adjusted_price), IS_NOT_A_NUMBER },
 
-    { "buy_total_price",    SC2(_1->buy_total_price), IS_NOT_A_NUMBER },                                    /*9*/
+    { "buy_total_price",    SC2(_1->buy_total_price), IS_NOT_A_NUMBER },
     { "buy_total_quantity", SC2(_1->buy_total_quantity), IS_NOT_A_NUMBER },
 
-    { "sell_total_price",       SC2(_1->sell_total_price), IS_NOT_A_NUMBER },                               /*11*/
+    { "sell_total_price",       SC2(_1->sell_total_price), IS_NOT_A_NUMBER },
     { "sell_total_quantity",    SC2(_1->sell_total_quantity), IS_NOT_A_NUMBER },
 
-    { "buy_total_price_rated_adjusted",     SC2(_1->buy_total_price_rated_adjusted), IS_NOT_A_NUMBER },     /*13*/
+    { "buy_total_price_rated_adjusted",     SC2(_1->buy_total_price_rated_adjusted), IS_NOT_A_NUMBER },
     { "sell_total_price_rated_adjusted",    SC2(_1->sell_total_price_rated_adjusted), IS_NOT_A_NUMBER },
 
-    { "buy_total_price_rated",  SC2(_1->buy_total_price_rated), IS_NOT_A_NUMBER },                          /*15*/
+    { "buy_total_price_rated",  SC2(_1->buy_total_price_rated), IS_NOT_A_NUMBER },
     { "sell_total_price_rated", SC2(_1->sell_total_price_rated), IS_NOT_A_NUMBER },
 
-    { "buy_adjusted_price",     SC2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },                             /*17*/
+    { "buy_adjusted_price",     SC2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
     { "sell_adjusted_price",    SC2(_1->sell_adjusted_price), IS_NOT_A_NUMBER },
 
-    { "average_price",              SC2(_1->average_price), IS_NOT_A_NUMBER },                              /*19*/
+    { "average_price",              SC2(_1->average_price), IS_NOT_A_NUMBER },
     { "average_quantity",           SC2(_1->average_quantity), IS_NOT_A_NUMBER },
     { "average_buy_price",          SC2(_1->average_buy_price), IS_NOT_A_NUMBER },
     { "average_buy_price_rated",    SC2(_1->average_buy_price_rated), IS_NOT_A_NUMBER },
@@ -72,21 +72,24 @@ static struct {
     { "average_ask_price",          SC2(_1->average_ask_price), IS_NOT_A_NUMBER },
     { "average_exchange_rate",      SC2(_1->average_exchange_rate), IS_NOT_A_NUMBER },
 
-    { "date_min",       SC2((double)_1->date_min), IS_NOT_A_NUMBER },                                       /*28*/
+    { "date_min",       SC2((double)_1->date_min), IS_NOT_A_NUMBER },
     { "date_max",       SC2((double)_1->date_max), IS_NOT_A_NUMBER },
     { "date_average",   SC2((double)_1->date_average), IS_NOT_A_NUMBER},
     { "days_held",      SC2((double)title_average_days_held(_1)), IS_NOT_A_NUMBER},
 
-    { "title",                  SC2(_1->code), SL1(_1.index == 0) },                                        /*32*/
-    { "ps",                     SC2(_1->ps.fetch()), IS_NOT_A_NUMBER },                                 
+    { "title",                  SC2(_1->code), SL1(_1.index == 0) },
+    { "ps",                     SC2(_1->ps.fetch()), IS_NOT_A_NUMBER },
     { "ask",                    SC2(_1->ask_price.fetch()), nullptr },
     { "today_exchange_rate",    SC2(_1->today_exchange_rate.fetch()), nullptr },
 
-    { "gain",    SC2(title_get_total_gain(_1)), nullptr},
+    { "gain",             SC2(title_get_total_gain(_1)), nullptr},
+    { "gain_p",           SC2(title_get_total_gain_p(_1)), nullptr},
+    { "total_value",      SC2(title_get_total_value(_1)), nullptr},
+    { "total_investment", SC2(title_get_total_investment(_1)), nullptr},
 
-    //Stock only (Start at index 36 <== !!!UPDATE INDEX #STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
+    //Stock only !!!UPDATE INDEX #STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
 
-    { "price",      SC2(_2->current.price), IS_NOT_A_NUMBER, FetchLevel::REALTIME },                       /*35*/
+    { "price",      SC2(_2->current.price), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
     { "date",       SC2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
     { "gmt",        SC2((double)_2->current.gmtoffset), nullptr, FetchLevel::REALTIME },
     { "open",       SC2(_2->current.open), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
@@ -510,6 +513,35 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     if (!report_handle_is_valid(report_handle))
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Cannot find report %.*s", STRING_FORMAT(report_name));
 
+    report_t* report = report_get(report_handle);
+    if (!report)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Cannot find report %.*s", STRING_FORMAT(report_name));
+
+    // If we only have the report name as argument, return the report title symbols
+    if (args->len == 1)
+    {
+        expr_result_t* titles = nullptr;
+        for (unsigned i = 0, end = array_size(report->titles); i < end; ++i)
+        {
+            const title_t* title = report->titles[i];
+            
+            // Skip indexes
+            if (title_is_index(title))
+                continue;
+
+            expr_result_t* kvp = nullptr;
+            const bool active = title_active(title);
+            const double price = title_current_price(title);
+            
+            array_push(kvp, expr_result_t(string_const(title->code, title->code_length)));
+            array_push(kvp, expr_result_t(price));
+            array_push(kvp, expr_result_t(active));
+            array_push(titles, expr_eval_list(kvp));
+        }
+
+        return expr_eval_list(titles);
+    }
+
     int field_name_index = 1;
     string_const_t title_filter{};
     if (args->len >= 3)
@@ -517,10 +549,6 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
         title_filter = expr_eval_get_string_arg(args, 1, "Invalid title name");
         field_name_index = 2;
     }
-
-    report_t* report = report_get(report_handle);
-    if (!report)
-        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Cannot find report %.*s", STRING_FORMAT(report_name));
 
     tick_t s = time_current();
     while (title_filter.length == 0 && !report_sync_titles(report))

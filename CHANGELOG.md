@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.24.1] - 2023-05-12
+## [0.24.2] - 2023-05-12
 - Add bulk extractor tooling to extract bulk data from EOD and save it to a JSON file.
 - Add support to build watch table for stock patterns. See `Pattern/Open Watch Context`.
+- Improve INDX display in the pattern and report views.
 
 ## [0.23.4] - 2023-05-10
 - Add expression file example `report_slope_down.expr` to report titles that are going down but for which you have a gain.

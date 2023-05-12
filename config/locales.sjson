@@ -3783,7 +3783,7 @@
 		{
 			hash = "c0aa848e6fa77ad4"
 			en = "Bulk Extractor"
-			fr = "Extracteur de marchés"
+			fr = "Extracteur de march\xc3\xa9s"
 		}
 		{
 			hash = "15366bccc4e7e1c8"
@@ -3813,7 +3813,12 @@
 		{
 			hash = "474db40c6a16e7c3"
 			en = "Bulk Extractor to JSON..."
-			fr = "Extracteur de marchés vers JSON..."
+			fr = "Extracteur de march\xc3\xa9s vers JSON..."
+		}
+		{
+			hash = "e53154de1e42a0a7"
+			en = "No real-time data available"
+			fr = "Aucune donn\xc3\xa9e en temps r\xc3\xa9el disponible"
 		}
 	]
 }

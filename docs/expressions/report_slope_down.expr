@@ -1,8 +1,10 @@
+#
 # Report in a table title for which we have a gain, 
 # but the price slope is going down.
-
-# Set report to work with
+#
+#---
 $REPORT=IF($REPORT, $REPORT, 'FLEX')
+#---
 
 # Define how many days we consider a title to be ready to be sold if we have a gain.
 $min_days_held=30

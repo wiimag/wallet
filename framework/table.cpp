@@ -641,7 +641,7 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
     }
 
     //ImGui::TableNextRow();
-    //ImGui::TableNextRow();
+    ImGui::TableNextRow();
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
     ImGui::TrTextUnformatted("Summary");

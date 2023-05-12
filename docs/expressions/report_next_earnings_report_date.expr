@@ -1,7 +1,9 @@
+#
 # Report in a table next earnings report dates with prevision.
-
-# Set report to work with
+#
+#---
 $REPORT=IF($REPORT, $REPORT, 'FLEX')
+#---
 
 # Define function to get next report data for a given title
 $(next_report, 

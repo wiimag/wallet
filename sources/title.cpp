@@ -533,6 +533,12 @@ bool title_refresh(title_t* title)
     return true;
 }
 
+bool title_active(const title_t* t)
+{
+    FOUNDATION_ASSERT(t);
+    return t->average_quantity > 0;
+}
+
 bool title_is_resolved(const title_t* t)
 {
     const stock_t* s = t->stock;
@@ -569,9 +575,14 @@ bool title_is_index(const title_t* t)
 
     const stock_t* s = t->stock;
     if (s == nullptr || s->exchange == 0)
-        return string_ends_with(t->code, t->code_length, STRING_CONST(".INDX"));
+    {
+        return string_ends_with(t->code, t->code_length, STRING_CONST(".INDX")) ||
+               string_ends_with(t->code, t->code_length, STRING_CONST(".FOREX"));
+    }
+
     string_const_t exchange = string_table_decode_const(t->stock->exchange);
-    return string_equal(STRING_ARGS(exchange), STRING_CONST("INDX"));
+    return string_equal(STRING_ARGS(exchange), STRING_CONST("INDX")) ||
+           string_equal(STRING_ARGS(exchange), STRING_CONST("FOREX"));
 }
 
 bool title_has_increased(const title_t* t, double* out_delta /*= nullptr*/, double since_seconds /*= 15.0 * 60.0*/, double* elapsed_seconds /*= nullptr*/)

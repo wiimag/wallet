@@ -240,6 +240,14 @@ fetch_level_t title_minimum_fetch_level(const title_t* t);
  */
 bool title_is_resolved(const title_t* t);
 
+/*! Checks if the title is active. An active title has a non-zero quantity and is not an index.
+ *
+ *  @param t The title to check if it is active.
+ *
+ *  @return True if the title is active, false otherwise.
+ */
+bool title_active(const title_t* t);
+
 /*! Checks if the title is up-to-date, if not, then we fetch the stock data and re-initialize the title.
  *
  *  @param t The title to check if it is a stock.

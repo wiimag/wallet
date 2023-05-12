@@ -1,7 +1,15 @@
+#
 # For each titles in a report, compare shorts and the % change since 180 days
+#
+#---
 $SINCE=180
 $REPORT='300K'
+#---
+
+# Define `price_since` macro function
 $(price_since, S($1, close, NOW() - (60 * 60 * 24 * $2)))
+
+# Layout share information in a table.
 TABLE('Shares ' + $REPORT, R($REPORT, name),
    ['Name', $2],
    ['Shorts', F($1, "Technicals.SharesShort")/F($1, "SharesStats.SharesFloat")*100, percentage],

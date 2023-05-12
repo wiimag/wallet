@@ -913,7 +913,7 @@ FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t
         ImGui::Text(" Updated %.0lf %s(s) ago (%.*s) \n %.*s [%.*s] -> %.2lf $ (%.3lg %%) ",
             elapsed_time_updated, time_elapsed_unit, STRING_FORMAT(last_update),
             STRING_FORMAT(name), (int)title->code_length, title->code, 
-            s->current.close, s->current.change_p);
+            s->current.close, math_ifnan(s->current.change_p, 0));
         ImGui::Spacing();
     }
    
@@ -941,28 +941,37 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
         const double old_price = s->current.adjusted_close;
         stock_index_t stock_index = ::stock_index(title->code, title->code_length);
         stock_read_real_time_results(stock_index, json, d);
-        
-        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), tr(" %s (%s) \n %.*s \n"
-            "\tPrice %.2lf $\n"
-            "\tOpen: %.2lf $\n"
-            "\tChange: %.2lf $ (%.3g %%)\n"
-            "\tYesterday: %.2lf $ (%.3g %%)\n"
-            "\tLow %.2lf $\n"
-            "\tHigh %.2lf $ (%.3g %%)\n"
-            "\tDMA (50d) %.2lf $ (%.3g %%)\n"
-            "\tDMA (200d) %.2lf $ (%.3g %%)\n"
-            "\tVolume %.6g (%.*s)"), title->code, string_table_decode(s->name), STRING_FORMAT(time_str),
-            d.close,
-            d.open,
-            d.close - d.open, (d.close - d.open) / d.open * 100.0,
-            d.previous_close, (d.close - d.previous_close) / d.previous_close * 100.0,
-            d.low,
-            d.high, (d.high - d.low) / d.close * 100.0,
-            s->dma_50, s->dma_50 / d.close * 100.0,
-            s->dma_200, s->dma_200 / s->high_52 * 100.0,
-            d.volume, STRING_FORMAT(string_from_currency(d.volume * d.change, "9 999 999 999 $")));
-        if (d.close != old_price)
-            title_refresh(title);
+
+        if (math_real_is_nan(d.price))
+        {
+            ImGui::TrTextUnformatted("No real-time data available");
+        }
+        else
+        {
+
+            ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR), tr(" %s (%s) \n %.*s \n"
+                "\tPrice %.2lf $\n"
+                "\tOpen: %.2lf $\n"
+                "\tChange: %.2lf $ (%.3g %%)\n"
+                "\tYesterday: %.2lf $ (%.3g %%)\n"
+                "\tLow %.2lf $\n"
+                "\tHigh %.2lf $ (%.3g %%)\n"
+                "\tDMA (50d) %.2lf $ (%.3g %%)\n"
+                "\tDMA (200d) %.2lf $ (%.3g %%)\n"
+                "\tVolume %.6g (%.*s)"), title->code, string_table_decode(s->name), STRING_FORMAT(time_str),
+                d.close,
+                d.open,
+                d.close - d.open, (d.close - d.open) / d.open * 100.0,
+                d.previous_close, (d.close - d.previous_close) / d.previous_close * 100.0,
+                d.low,
+                d.high, (d.high - d.low) / d.close * 100.0,
+                math_ifnan(s->dma_50, 0), math_ifnan(s->dma_50 / d.close * 100.0, 0),
+                math_ifnan(s->dma_200, 0), math_ifnan(s->dma_200 / s->high_52 * 100.0, 0),
+                d.volume, STRING_FORMAT(string_from_currency(d.volume * d.change, "9 999 999 999 $")));
+
+            if (d.close != old_price)
+                title_refresh(title);
+        }
     }, 60ULL);
 
     time_t since = title_last_transaction_date(title);

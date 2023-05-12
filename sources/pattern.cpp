@@ -749,12 +749,12 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
     //ImGui::TableHeadersRow();
 
     const stock_t* s = pattern->stock;
-    if (s)
+    if (!stock_is_index(s))
     {
         const double current_volume = s->current.volume;
         const double average_volume = pattern_average_volume_3months(pattern);
         const double volume_p = current_volume / average_volume * 100.0;
-        pattern_render_stats_line(nullptr, CTEXT("Volume"), 
+        pattern_render_stats_line(nullptr, CTEXT("Volume"),
             string_template_static("{0,abbreviate}/{1,abbreviate}", current_volume, average_volume),
             pattern_format_number(STRING_CONST("%.2lf %%"), volume_p), true);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && average_volume > 0)
@@ -763,28 +763,28 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
 
             string_const_t volumestr = string_template_static("{0,abbreviate}", current_volume);
             string_const_t averagestr = string_template_static("{0,abbreviate}", average_volume);
-            ImGui::TrText("Today's volume is %.2lf %% of the average volume over the last 3 months (%.*s/%.*s)", volume_p, 
+            ImGui::TrText("Today's volume is %.2lf %% of the average volume over the last 3 months (%.*s/%.*s)", volume_p,
                 STRING_FORMAT(volumestr), STRING_FORMAT(averagestr));
             ImGui::EndTooltip();
         }
-        
+
         pattern_render_stats_line(nullptr, CTEXT("Market Cap|| Units / Value $"),
             string_template_static("{0,abbreviate}", s->shares_count),
             string_template_static("{0,currency}", s->market_cap), true);
 
-        pattern_render_stats_line(s, CTEXT("High 52"), 
+        pattern_render_stats_line(s, CTEXT("High 52"),
             pattern_format_currency(s->high_52),
             pattern_format_percentage(s->current.adjusted_close / s->high_52 * 100.0), true);
-        pattern_render_stats_line(s, CTEXT("Low 52"), 
+        pattern_render_stats_line(s, CTEXT("Low 52"),
             pattern_format_currency(s->low_52),
             pattern_format_percentage(s->low_52 / s->current.adjusted_close * 100.0), true);
-        
+
         const double yielding = s->dividends_yield.get_or_default() * 100.0;
         const double performance_ratio = pattern->yy_ratio.get_or_default(pattern->performance_ratio.get_or_default(0.0));
         const double performance_ratio_combined = max(pattern->yy_ratio.get_or_default(pattern->performance_ratio.fetch()), yielding);
 
         string_const_t fmttr = RTEXT("Yield %s||Dividends / Yield Year after Year");
-        string_const_t yield_label = string_format_static(STRING_ARGS(fmttr), 
+        string_const_t yield_label = string_format_static(STRING_ARGS(fmttr),
             pattern->yy_ratio.fetch() >= performance_ratio ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
         ImGui::PushStyleColor(ImGuiCol_Text, performance_ratio <= 0 || performance_ratio_combined < SETTINGS.good_dividends_ratio * 100.0 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
         pattern_render_stats_line(nullptr, yield_label,
@@ -793,11 +793,11 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
         {
-            ImGui::SetTooltip(tr(" Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) \n Adjusted Yield based on last year data: %.3g %% (" ICON_MD_CHANGE_HISTORY " %.3g%%) "), 
+            ImGui::SetTooltip(tr(" Year after Year yielding (Overall ratio %.3g %%) (%.0lf last years) \n Adjusted Yield based on last year data: %.3g %% (" ICON_MD_CHANGE_HISTORY " %.3g%%) "),
                 pattern->yy_ratio.fetch(), pattern->years.fetch(), pattern->performance_ratio.fetch(), pattern->performance_ratio.fetch() - pattern->yy_ratio.fetch());
         }
 
-        pattern_render_stats_line(nullptr, CTEXT("Beta"), 
+        pattern_render_stats_line(nullptr, CTEXT("Beta"),
             pattern_format_percentage(s->beta * 100.0),
             pattern_format_percentage(s->dma_200 / s->dma_50 * 100.0), true);
 
@@ -812,10 +812,10 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip(tr(" Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n"
-                                  "           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "), 
-                s->diluted_eps_ttm, s->earning_trend_actual.fetch(), s->earning_trend_estimate.fetch(), s->earning_trend_difference.fetch(), eps_percent, 
+                "           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "),
+                s->diluted_eps_ttm, s->earning_trend_actual.fetch(), s->earning_trend_estimate.fetch(), s->earning_trend_difference.fetch(), eps_percent,
                 s->diluted_eps_ttm / s->current.close * 100.0);
-        
+
         if (math_real_is_finite(s->pe) || math_real_is_finite(s->peg))
         {
             pattern_render_stats_line(nullptr, CTEXT("Price Earnings||Price Earnings / To Growth\n\n"
@@ -825,7 +825,7 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
                 "takes into account a company's expected earnings growth rate in addition to its P/E ratio. "
                 "The PEG ratio is calculated by dividing the P/E ratio by the expected earnings growth rate for the company. "
                 "The PEG ratio is a more comprehensive measure of a company's valuation compared to the P/E ratio, "
-                "because it considers both the company's current earnings and its expected future growth potential."), 
+                "because it considers both the company's current earnings and its expected future growth potential."),
                 pattern_format_percentage(s->pe),
                 pattern_format_percentage(s->peg), true);
         }
@@ -2651,9 +2651,13 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
             ImGui::SetCursorPos(ImVec2(15, y_pos + 10.0f));
             y_pos = pattern_render_stats(pattern);
 
-            ImGui::SetWindowFontScale(0.8f);
-            ImGui::SetCursorPos(ImVec2(0.0f, y_pos + 10.0f));
-            y_pos = pattern_render_decisions(pattern);
+            if (!stock_is_index(pattern->stock))
+            {
+                ImGui::SetWindowFontScale(0.8f);
+                ImGui::SetCursorPos(ImVec2(0.0f, y_pos + 10.0f));
+                y_pos = pattern_render_decisions(pattern);
+            }
+
             ImGui::SetWindowFontScale(1.0f);
         } ImGui::EndChild();
     }

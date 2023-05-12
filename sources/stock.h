@@ -572,3 +572,28 @@ day_result_t stock_realtime_record(const char* symbol, size_t length);
  *  @return The stock EOD data at the given date.
  */
 stock_eod_record_t stock_eod_record(const char* symbol, size_t length, time_t at, uint64_t invalid_cache_query_after_seconds = 7 * 24 * 60 * 60ULL);
+
+/*! Checks if the stock represents an index.
+ * 
+ *  @param symbol  The stock symbol code
+ *  @param length  The length of the stock symbol code
+ * 
+ *  @return True if the stock represents an index.
+ */
+bool stock_is_index(const char* symbol, size_t length);
+
+/*! Checks if the stock represents an index.
+ * 
+ *  @param handle The stock handle.
+ * 
+ *  @return True if the stock represents an index.
+ */
+bool stock_is_index(stock_handle_t stock);
+
+/*! Checks if the stock represents an index.
+ * 
+ *  @param stock The stock.
+ * 
+ *  @return True if the stock represents an index.
+ */
+bool stock_is_index(const stock_t* stock);

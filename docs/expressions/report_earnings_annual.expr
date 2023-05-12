@@ -1,7 +1,10 @@
+#
 # Annual Earnings for all active titles in a report
-
+#
+#---
 # Set report to work with
 $report='300K'
+#---
 
 # Grab active titles (i.e. exclude indexes and sold titles)
 $titles=FILTER(R($report, active), $2)
