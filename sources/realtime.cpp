@@ -334,7 +334,7 @@ FOUNDATION_STATIC void realtime_stream_stock_entries()
             array_push_memcpy(stock.records, &r);
 
             array_insert_memcpy(_realtime_module->stocks, ~fidx, &stock);
-            log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime stock %s (%" PRIhash ")"), stock.code, stock.key);
+            //log_debugf(HASH_REALTIME, STRING_CONST("Streaming new realtime stock %s (%" PRIhash ")"), stock.code, stock.key);
         }
         else
         {

@@ -467,6 +467,39 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const json_ob
     return NIL;
 }
 
+FOUNDATION_STATIC expr_result_t report_expr_eval_api_fetch(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    string_const_t api = expr_eval_get_string_arg(args, 0, "Invalid API name");
+    string_const_t code = expr_eval_get_string_arg(args, 1, "Invalid symbol code");
+    
+    string_const_t p1{}, v1{}, p2{}, v2{};
+    if (args->len > 2)
+    {
+        p1 = expr_eval_get_string_arg(args, 2, "Invalid parameter name");
+        v1 = expr_eval_get_string_arg(args, 3, "Invalid parameter value");
+    }
+
+    if (args->len > 4)
+    {
+        p2 = expr_eval_get_string_arg(args, 4, "Invalid parameter name");
+        v2 = expr_eval_get_string_arg(args, 5, "Invalid parameter value");
+    }
+
+    expr_result_t result;
+    bool query_success = eod_fetch(api.str, code.str, FORMAT_JSON_WITH_ERROR, p1.str, v1.str, p2.str, v2.str, [&result](const json_object_t& res)
+    {
+        if (!res.resolved())
+        {
+            log_warnf(0, WARNING_SUSPICIOUS, STRING_CONST("Failed to resolve API response: %.*s"), STRING_FORMAT(res.query));
+            return;
+        }
+
+        result = report_expr_eval_stock_fundamental(res);
+    }, 5 * 60ULL);
+
+    return result;
+}
+
 FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Examples: F(PFE.NEO, "General.ISIN")
@@ -757,6 +790,7 @@ FOUNDATION_STATIC void report_expr_initialize()
 {
     expr_register_function("S", report_expr_eval_stock);
     expr_register_function("F", report_expr_eval_stock_fundamental);
+    expr_register_function("FETCH", report_expr_eval_api_fetch);
     expr_register_function("R", report_eval_report_field);
     expr_register_function("FIELDS", report_eval_list_fields);
 }

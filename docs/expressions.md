@@ -239,3 +239,10 @@ F(TSLA.US, "General.Industry") #=> Auto Manufacturers
 ### Column Expressions
 
 **Beta:** `ROUND(F($TITLE, "Technicals.Beta") * 100)`
+
+## Fun expressions to play with
+
+```bash
+# Count the number of symbols listed on the TSX
+COUNT(MAP(FETCH("exchange-symbol-list", "TO"), INDEX($1, 1)))
+```

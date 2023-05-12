@@ -639,6 +639,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
                         }
                         catch (...)
                         {
+                            fs_remove_file(cache_file_path);
                             log_errorf(HASH_QUERY, ERROR_EXCEPTION, STRING_CONST("Failed to execute JSON callback for %s [%.*s...]"), query, 64, json.buffer);
                             return false;
                         }

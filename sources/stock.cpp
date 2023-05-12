@@ -347,7 +347,7 @@ FOUNDATION_STATIC void stock_read_technical_results(const json_object_t& json, s
     
     day_result_t* history = s->history;
     int h = 0, h_end = array_size(history);
-    bool applied_to_current = false;
+    //bool applied_to_current = false;
     for (size_t i = 0; i < json.root->value_length; ++i)
     {
         const auto& e = json[i];
@@ -363,10 +363,14 @@ FOUNDATION_STATIC void stock_read_technical_results(const json_object_t& json, s
                     const double v = e[desc.field_names[i]].as_number();
                     *(double*)(((uint8_t*)ed) + desc.field_offsets[i]) = v;
 
-                    if (!applied_to_current)
-                        *(double*)(((uint8_t*)&s->current) + desc.field_offsets[i]) = v;
+                    double& current_d = *(double*)(((uint8_t*)&s->current) + desc.field_offsets[i]);
+                    if (math_real_is_nan(current_d))
+                        current_d = v;
+
+                    //if (!applied_to_current)
+                      //  *(double*)(((uint8_t*)&s->current) + desc.field_offsets[i]) = v;
                 }
-                applied_to_current = true;
+                //applied_to_current = true;
                 break;
             }
             else if (ed->date < date)

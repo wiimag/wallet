@@ -56,9 +56,9 @@ static struct BULK_MODULE
 
 FOUNDATION_STATIC bool bulk_add_symbols(const bulk_t* batch)
 {
-    SHARED_WRITE_LOCK(_bulk_module->lock);
-
     size_t bz = array_size(batch);
+
+    SHARED_WRITE_LOCK(_bulk_module->lock);
     size_t cz = array_size(_bulk_module->symbols);
     array_resize(_bulk_module->symbols, cz + bz);
     memcpy(_bulk_module->symbols + cz, batch, sizeof(bulk_t) * bz);
@@ -113,7 +113,7 @@ FOUNDATION_STATIC void bulk_fetch_exchange_symbols(const json_object_t& json)
 
         s.selected = pattern_find(STRING_ARGS(code)) >= 0;
 
-        batch = array_push(batch, s);
+        array_push(batch, s);
         if (array_size(batch) > 999)
         {
             if (bulk_add_symbols(batch))

@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.24.2] - 2023-05-12
+## [0.24.3] - 2023-05-13
+- Add `FETCH(...)` expression to fetch arbitrary data from the backend. (i.e. `COUNT(MAP(FETCH("exchange-symbol-list", "TO"), INDEX($1, 1)))`)
 - Add bulk extractor tooling to extract bulk data from EOD and save it to a JSON file.
 - Add support to build watch table for stock patterns. See `Pattern/Open Watch Context`.
 - Improve INDX display in the pattern and report views.
