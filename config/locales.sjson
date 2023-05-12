@@ -3780,5 +3780,40 @@
 			en = "\xef\x81\x85 Format"
 			fr = "\xef\x81\x85 Format"
 		}
+		{
+			hash = "c0aa848e6fa77ad4"
+			en = "Bulk Extractor"
+			fr = "Extracteur de marchés"
+		}
+		{
+			hash = "15366bccc4e7e1c8"
+			en = "Start"
+			fr = "D\xc3\xa9but"
+		}
+		{
+			hash = "df030426df996e27"
+			en = "End"
+			fr = "Fin"
+		}
+		{
+			hash = "dc8168d53313e424"
+			en = "Extract..."
+			fr = "Extraire..."
+		}
+		{
+			hash = "c5f3d828406bbf8a"
+			en = "Markets"
+			fr = "March\xc3\xa9s"
+		}
+		{
+			hash = "950c1dcc2b592bba"
+			en = "JSON (*.json)|*.json"
+			fr = "JSON (*.json)|*.json"
+		}
+		{
+			hash = "474db40c6a16e7c3"
+			en = "Bulk Extractor to JSON..."
+			fr = "Extracteur de marchés vers JSON..."
+		}
 	]
 }

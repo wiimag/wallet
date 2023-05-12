@@ -1199,11 +1199,11 @@ static size_t config_sjson_write_object_fields(config_handle_t obj_handle, confi
     if (wants_same_line)
     {
         // All elements need to be a primitive and at most 8 elements
-        size_t primitive_count = 0;
+        //size_t primitive_count = 0;
         for (auto e : obj_handle)
         {
             config_value_t* item = e;
-            if (++primitive_count > 8 || !config_sjson_is_primitive_type(item))
+            if (/*++primitive_count > 8 || */!config_sjson_is_primitive_type(item))
             {
                 wants_same_line = false;
                 break;

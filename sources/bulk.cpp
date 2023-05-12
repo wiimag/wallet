@@ -17,6 +17,11 @@
 #include <framework/module.h>
 #include <framework/config.h>
 #include <framework/window.h>
+#include <framework/system.h>
+#include <framework/dispatcher.h>
+#include <framework/shared_mutex.h>
+#include <framework/jobs.h>
+#include <framework/string_builder.h>
 
 #define HASH_BULK static_hash_string("bulk", 4, 0x9a6818bbbd28c09eULL)
 
@@ -25,7 +30,10 @@ static struct BULK_MODULE
     time_t fetch_date = time_work_day(time_now(), -0.7);
     tm fetch_date_tm = *localtime(&fetch_date);
 
-    mutex_t* lock{ nullptr };
+    time_t start_extract_date = time_work_day(time_now(), -7);
+    tm start_extract_date_tm = *localtime(&start_extract_date);
+
+    shared_mutex_t lock;
     bulk_t* symbols{ nullptr };
     table_t* table{ nullptr };
     string_t* exchanges{ nullptr };
@@ -36,6 +44,10 @@ static struct BULK_MODULE
 
     char search_filter[64]{ 0 };
 
+    string_t extractor_path{};
+    job_t** extractor_jobs{ nullptr };
+    config_handle_t extractor_cv{ nullptr };
+
 } *_bulk_module;
 
 //
@@ -44,15 +56,13 @@ static struct BULK_MODULE
 
 FOUNDATION_STATIC bool bulk_add_symbols(const bulk_t* batch)
 {
-    if (auto lock = scoped_mutex_t(_bulk_module->lock))
-    {
-        size_t bz = array_size(batch);
-        size_t cz = array_size(_bulk_module->symbols);
-        array_resize(_bulk_module->symbols, cz + bz);
-        memcpy(_bulk_module->symbols + cz, batch, sizeof(bulk_t) * bz);
-        return true;
-    }
-    return false;
+    SHARED_WRITE_LOCK(_bulk_module->lock);
+
+    size_t bz = array_size(batch);
+    size_t cz = array_size(_bulk_module->symbols);
+    array_resize(_bulk_module->symbols, cz + bz);
+    memcpy(_bulk_module->symbols + cz, batch, sizeof(bulk_t) * bz);
+    return true;
 }
 
 FOUNDATION_STATIC void bulk_fetch_exchange_symbols(const json_object_t& json)
@@ -117,8 +127,10 @@ FOUNDATION_STATIC void bulk_fetch_exchange_symbols(const json_object_t& json)
 
 FOUNDATION_STATIC void bulk_load_symbols()
 {
-    if (auto lock = scoped_mutex_t(_bulk_module->lock))
+    {
+        SHARED_WRITE_LOCK(_bulk_module->lock);
         array_clear(_bulk_module->symbols);
+    }
 
     for (int i = 0, end = array_size(_bulk_module->exchanges); i != end; ++i)
     {
@@ -127,7 +139,7 @@ FOUNDATION_STATIC void bulk_load_symbols()
             "date", string_from_date(_bulk_module->fetch_date).str,
             "filter", "extended", bulk_fetch_exchange_symbols, 4 * 60 * 60ULL))
         {
-            log_errorf(0, ERROR_ACCESS_DENIED, STRING_CONST("Failed to fetch %s bulk data"), code);
+            log_errorf(0, ERROR_EXCEPTION, STRING_CONST("Failed to fetch %s bulk data"), code);
         }
     }
 }
@@ -496,15 +508,37 @@ FOUNDATION_STATIC void bulk_render()
         if (ImGui::InputTextWithHint("##Search", tr("Filter symbols..."), STRING_BUFFER(_bulk_module->search_filter)) || exchanges_updated)
             table_set_search_filter(_bulk_module->table, STRING_LENGTH(_bulk_module->search_filter));
 
-        int symbol_count = array_size(_bulk_module->symbols);
-        ImGui::MoveCursor(0, -2, true);
-        ImGui::TrText("%5d symbols", symbol_count);
+        {
+            SHARED_READ_LOCK(_bulk_module->lock);
+            int symbol_count = array_size(_bulk_module->symbols);
+            ImGui::MoveCursor(0, -2, true);
+            ImGui::TrText("%5d symbols", symbol_count);
+        }
+
         ImGui::EndGroup();
 
-        if (auto lock = scoped_mutex_t(_bulk_module->lock))
+        ImGui::MoveCursor(0, -2, true);
+        if (ImGui::Button(tr("Export...")))
         {
-            table_render(_bulk_module->table, _bulk_module->symbols, symbol_count, sizeof(bulk_t), 0.0f, 0.0f);
+            dispatch([]()
+            {
+                system_save_file_dialog(
+                    tr("Export table to CSV..."), 
+                    tr("Comma-Separated-Value (*.csv)|*.csv"), 
+                    nullptr, [](string_const_t save_path)
+                {
+                    string_t path = string_clone(STRING_ARGS(save_path));
+                    SHARED_READ_LOCK(_bulk_module->lock);
+                    table_export_csv(_bulk_module->table, STRING_ARGS(path));
+                    string_deallocate(path.str);
+                    return true;
+                });
+            });
         }
+
+        SHARED_READ_LOCK(_bulk_module->lock);
+        int symbol_count = array_size(_bulk_module->symbols);
+        table_render(_bulk_module->table, _bulk_module->symbols, symbol_count, sizeof(bulk_t), 0.0f, 0.0f);
     }
 }
 
@@ -524,6 +558,205 @@ FOUNDATION_STATIC void bulk_open_window()
     });
 }
 
+FOUNDATION_STATIC void bulk_extract(string_const_t path, time_t start, time_t end)
+{
+    FOUNDATION_ASSERT(_bulk_module->exchanges);
+    FOUNDATION_ASSERT(_bulk_module->extractor_cv == nullptr);
+    FOUNDATION_ASSERT(string_is_null(_bulk_module->extractor_path));
+    _bulk_module->extractor_cv = config_allocate();
+
+    string_deallocate(_bulk_module->extractor_path);
+    _bulk_module->extractor_path = string_clone(path.str, path.length);
+
+    // Loop each day between start and end, skip weekends
+    time_t current = start;
+    while (current <= end)
+    {
+        struct tm* current_tm = localtime(&current);
+        if (current_tm->tm_wday == 0 || current_tm->tm_wday == 6)
+        {
+            current += 86400;
+            continue;
+        }
+
+        // Fetch data for current day
+        job_t* j = job_execute([](void* payload)
+        {
+            time_t ts = (time_t)(intptr_t)(payload);
+
+            config_handle_t date_cv = nullptr;
+            string_const_t datestr = string_from_date(ts);
+            {
+                SHARED_WRITE_LOCK(_bulk_module->lock);
+                date_cv = config_set_object(_bulk_module->extractor_cv, STRING_ARGS(datestr));
+            }
+
+            for (unsigned i = 0, end = array_size(_bulk_module->exchanges); i < end; ++i)
+            {
+                const string_t& exchange = _bulk_module->exchanges[i];
+
+                eod_fetch("eod-bulk-last-day", exchange.str, FORMAT_JSON_CACHE,
+                    "date", datestr.str,
+                    "filter", "extended", [date_cv](const json_object_t& json)
+                {
+                    if (!json.resolved())
+                        return;
+
+                    for (auto e : json)
+                    {
+                        string_const_t code = e["code"].as_string();
+                        string_const_t exchange = e["exchange_short_name"].as_string();
+
+                        char symbol_buffer[16];
+                        string_t symbol = string_format(STRING_BUFFER(symbol_buffer), 
+                            STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+
+                        double MarketCapitalization = e["MarketCapitalization"].as_number();
+                        double Beta = e["Beta"].as_number();
+                        double open = e["open"].as_number();
+                        double high = e["high"].as_number();
+                        double low = e["low"].as_number();
+                        double close = e["close"].as_number();
+                        double adjusted_close = e["adjusted_close"].as_number();
+                        double volume = e["volume"].as_number();
+                        double ema_50d = e["ema_50d"].as_number();
+                        double ema_200d = e["ema_200d"].as_number();
+                        double hi_250d = e["hi_250d"].as_number();
+                        double lo_250d = e["lo_250d"].as_number();
+                        double avgvol_14d = e["avgvol_14d"].as_number();
+                        double avgvol_50d = e["avgvol_50d"].as_number();
+                        double avgvol_200d = e["avgvol_200d"].as_number();
+
+                        {
+                            SHARED_WRITE_LOCK(_bulk_module->lock);
+                            config_handle_t symbol_cv = config_set_object(date_cv, STRING_ARGS(symbol));
+
+                            config_set(symbol_cv, "open", open);
+                            config_set(symbol_cv, "close", close);
+                            config_set(symbol_cv, "price", adjusted_close);
+                            config_set(symbol_cv, "volume", volume);
+
+                            if (!math_real_is_zero(MarketCapitalization) && !math_real_is_nan(MarketCapitalization)) config_set(symbol_cv, "cap", MarketCapitalization);
+                            if (!math_real_is_zero(Beta) && !math_real_is_nan(Beta)) config_set(symbol_cv, "beta", Beta);
+                            if (!math_real_is_zero(high) && !math_real_is_nan(high)) config_set(symbol_cv, "high", high);
+                            if (!math_real_is_zero(low) && !math_real_is_nan(low)) config_set(symbol_cv, "low", low);
+                            if (!math_real_is_zero(ema_50d) && !math_real_is_nan(ema_50d)) config_set(symbol_cv, "ema_50d", ema_50d);
+                            if (!math_real_is_zero(ema_200d) && !math_real_is_nan(ema_200d)) config_set(symbol_cv, "ema_200d", ema_200d);
+                            if (!math_real_is_zero(hi_250d) && !math_real_is_nan(hi_250d)) config_set(symbol_cv, "hi_250d", hi_250d);
+                            if (!math_real_is_zero(lo_250d) && !math_real_is_nan(lo_250d)) config_set(symbol_cv, "lo_250d", lo_250d);
+                            if (!math_real_is_zero(avgvol_14d) && !math_real_is_nan(avgvol_14d)) config_set(symbol_cv, "avgvol_14d", avgvol_14d);
+                            if (!math_real_is_zero(avgvol_50d) && !math_real_is_nan(avgvol_50d)) config_set(symbol_cv, "avgvol_50d", avgvol_50d);
+                            if (!math_real_is_zero(avgvol_200d) && !math_real_is_nan(avgvol_200d)) config_set(symbol_cv, "avgvol_200d", avgvol_200d);
+                        }
+                    }
+                }, 30 * 24 * 60 * 60ULL);
+            }
+            return 0;
+        }, to_ptr(current));
+        array_push(_bulk_module->extractor_jobs, j);
+
+        // Advance to next day
+        current += 86400;
+    }
+}
+
+FOUNDATION_STATIC void bulk_extractor_clean_up()
+{
+    for (unsigned i = 0, job_count = array_size(_bulk_module->extractor_jobs); i < job_count; ++i)
+        job_deallocate(_bulk_module->extractor_jobs[i]);
+    array_deallocate(_bulk_module->extractor_jobs);
+
+    config_deallocate(_bulk_module->extractor_cv);
+}
+
+FOUNDATION_STATIC void bulk_extractor_render()
+{
+    unsigned job_count = array_size(_bulk_module->extractor_jobs);
+
+    ImGui::BeginDisabled(job_count > 0);
+    ImGui::TrTextUnformatted("Markets");
+    bulk_render_exchange_selector();
+
+    ImGui::Spacing();
+    ImGui::Spacing();
+    ImGui::Spacing();
+
+    ImGui::TrTextUnformatted("Start");
+    ImGui::SameLine(IM_SCALEF(60));
+    ImGui::SetNextItemWidth(IM_SCALEF(130));
+    if (ImGui::DateChooser("##StartDate", _bulk_module->start_extract_date_tm, "%Y-%m-%d", true))
+    {
+        _bulk_module->start_extract_date = mktime(&_bulk_module->start_extract_date_tm);
+    }
+
+    ImGui::SameLine();
+    ImGui::TrTextUnformatted("End");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(IM_SCALEF(130));
+    if (ImGui::DateChooser("##EndDate", _bulk_module->fetch_date_tm, "%Y-%m-%d", true))
+    {
+        _bulk_module->fetch_date = mktime(&_bulk_module->fetch_date_tm);
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Extract...")))
+    {
+        dispatch([]()
+        {
+            system_save_file_dialog(
+                tr("Bulk Extractor to JSON..."), 
+                tr("JSON (*.json)|*.json"), 
+                nullptr, [](string_const_t save_path)
+            {
+                bulk_extract(save_path, _bulk_module->start_extract_date, _bulk_module->fetch_date);
+                return true;
+            });
+        });
+    }
+
+    ImGui::EndDisabled();
+
+
+    ImGui::Spacing();
+
+    unsigned job_completed_count = 0;
+    for (unsigned i = 0; i < job_count; ++i)
+    {
+        if (job_completed(_bulk_module->extractor_jobs[i]))
+            job_completed_count++;
+    }
+
+    if (job_count > 0)
+    {
+        ImGui::ProgressBar((float)job_completed_count  / (float)job_count);
+
+        if (job_count == job_completed_count)
+        {
+            if (_bulk_module->extractor_cv && !string_is_null(_bulk_module->extractor_path))
+            {
+                config_write_file(
+                    string_to_const(_bulk_module->extractor_path), _bulk_module->extractor_cv, 
+                    CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS | CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES);
+            }
+
+            bulk_extractor_clean_up();
+        }
+    }
+    else if (!string_is_null(_bulk_module->extractor_path))
+    {
+        if (ImGui::TextURL(STRING_RANGE(_bulk_module->extractor_path), nullptr, 0))
+        {
+            system_browse_to_file(STRING_ARGS(_bulk_module->extractor_path));
+        }
+    }
+}
+
+FOUNDATION_STATIC void bulk_open_extractor_window()
+{
+    window_open("bulk_extractor", STRING_CONST("Bulk Extractor"),
+        L1(bulk_extractor_render()), nullptr, nullptr, WindowFlags::Singleton | WindowFlags::Dialog);
+}
+
 FOUNDATION_STATIC void bulk_menu()
 {
     if (!ImGui::BeginMenuBar())
@@ -533,6 +766,9 @@ FOUNDATION_STATIC void bulk_menu()
     {
         if (ImGui::MenuItem(tr("Last Day")))
             bulk_open_window();
+
+        if (ImGui::MenuItem(tr("Bulk Extractor")))
+            bulk_open_extractor_window();
 
         ImGui::EndMenu();
     }
@@ -546,8 +782,6 @@ FOUNDATION_STATIC void bulk_menu()
 FOUNDATION_STATIC void bulk_initialize()
 {
     _bulk_module = MEM_NEW(HASH_BULK, BULK_MODULE);
-
-    _bulk_module->lock = mutex_allocate(STRING_CONST("BulkLock"));
 
     module_register_menu(HASH_BULK, bulk_menu);
 }
@@ -569,10 +803,11 @@ FOUNDATION_STATIC void bulk_shutdown()
         }, CONFIG_VALUE_ARRAY);
     }
 
+    bulk_extractor_clean_up();
+    string_deallocate(_bulk_module->extractor_path);
     table_deallocate(_bulk_module->table);
     string_array_deallocate(_bulk_module->exchanges);
     array_deallocate(_bulk_module->symbols);
-    mutex_deallocate(_bulk_module->lock);
 
     MEM_DELETE(_bulk_module);
 }

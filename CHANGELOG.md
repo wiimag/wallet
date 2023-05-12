@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.24.0] - 2023-05-11
+## [0.24.1] - 2023-05-12
+- Add bulk extractor tooling to extract bulk data from EOD and save it to a JSON file.
 - Add support to build watch table for stock patterns. See `Pattern/Open Watch Context`.
 
 ## [0.23.4] - 2023-05-10
