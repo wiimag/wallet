@@ -85,14 +85,14 @@ struct config_handle_t
     config_index_t index{ 0 };
     
     /*! Creates a null config value */
-    config_handle_t(std::nullptr_t = nullptr) noexcept
+    FOUNDATION_FORCEINLINE config_handle_t(std::nullptr_t = nullptr) noexcept
         : config(nullptr)
         , index((config_index_t)-1)
     {
     }
 
     /*! Internal usage: Create a config value from internal structs */
-    config_handle_t(config_t* config, config_index_t index) noexcept
+    FOUNDATION_FORCEINLINE config_handle_t(config_t* config, config_index_t index) noexcept
         : config(config)
         , index(index)
     {
@@ -114,21 +114,21 @@ struct config_handle_t
         config_t* config;
         config_index_t index;
 
-        bool operator!=(const iterator& other) const
+        FOUNDATION_FORCEINLINE bool operator!=(const iterator& other) const
         {
             if (!config || index == (config_index_t)(-1))
                 return false;
             return config != other.config || index != other.index;
         }
 
-        bool operator==(const iterator& other) const
+        FOUNDATION_FORCEINLINE bool operator==(const iterator& other) const
         {
             return !operator!=(other);
         }
 
         iterator& operator++();
 
-        config_handle_t operator*() const
+        FOUNDATION_FORCEINLINE config_handle_t operator*() const
         {
             return config_handle_t{ config, index };
         }
@@ -146,6 +146,9 @@ struct config_handle_t
     /*! Returns the object id if any. */
     string_const_t name() const;
 
+    /*! Returns the config value type. */
+    config_value_type_t type() const;
+
     /*! Converts the config value to a boolean value. */
     bool as_boolean(bool default_value = false) const;
 
@@ -156,7 +159,10 @@ struct config_handle_t
     string_const_t as_string(const char* default_string = nullptr, size_t default_string_length = 0, const char* fmt = nullptr) const;
 
     /*! Converts the config value to a integer value if possible. */
-    template<typename T = int> T as_integer(int default_value = 0) const { return (T)math_trunc(as_number((double)default_value)); }
+    template<typename T = int> FOUNDATION_FORCEINLINE T as_integer(int default_value = 0) const 
+    { 
+        return (T)math_trunc(as_number((double)default_value)); 
+    }
 
     /*! Converts the config value number to a timestamp. */
     time_t as_time(time_t default_value = 0) const;
@@ -294,21 +300,14 @@ string_const_t config_value_as_string(config_handle_t string_value, const char* 
  */
 config_value_type_t config_value_type(config_handle_t v);
 
-/*! Add a new child element to the config value. 
+/*! Add a new child element to the config value.
  *
- *  @deprecated For internal use only.
+ *  If the config value is not an object, it will be converted to an object.
+ *  The added child element will be undefined initially. You can use #config_set
+ *  if you want to add and set a child element in one call.
  *
- *  @param v      Config value handle.
- *  @param symbol Child field key tag (obtained with #config_get_tag).
- *
- *  @return Child config value handle.
- */
-config_handle_t config_add(config_handle_t v, string_table_symbol_t symbol);
-
-/*! Add a new child element to the config value. 
- *
- *  @param v      Config value handle.
- *  @param key    Child field name
+ *  @param v          Config value handle.
+ *  @param key        Child field name
  *  @param key_length Child field name length
  *
  *  @return Child config value handle.
@@ -655,6 +654,14 @@ config_handle_t config_set_array(config_handle_t v, const char* key, size_t key_
  *  @return Modified config value handle.
  */
 config_handle_t config_set_null(config_handle_t v, const char* key, size_t key_length);
+
+/*! Nullify the config value. 
+ *
+ *  This function provide the main way to nullify a config value.
+ *
+ *  @param v Config value handle.
+ */
+void config_set_null(config_handle_t v);
 
 /*! Returns the value name/id if any. 
  *

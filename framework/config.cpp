@@ -144,6 +144,11 @@ string_const_t config_handle_t::name() const
     return config_name(*this);
 }
 
+config_value_type_t config_handle_t::type() const
+{
+    return config_value_type(*this);
+}
+
 double config_handle_t::as_number(double default_value /*= NAN*/) const
 {
     return config_value_as_number(*this, default_value);
@@ -443,13 +448,7 @@ config_value_type_t config_value_type(config_handle_t h)
     return v.type;
 }
 
-config_handle_t config_add(config_handle_t obj_handle, const char* key, size_t key_length)
-{
-    string_table_symbol_t name_symbol = config_add_symbol(obj_handle.config, key, key_length);
-    return config_add(obj_handle, name_symbol);
-}
-
-config_handle_t config_add(config_handle_t obj_handle, string_table_symbol_t symbol)
+FOUNDATION_STATIC config_handle_t config_add(config_handle_t obj_handle, string_table_symbol_t symbol)
 {
     config_value_t* obj = obj_handle;
     if (!obj)
@@ -492,6 +491,12 @@ config_handle_t config_add(config_handle_t obj_handle, string_table_symbol_t sym
     }
     
     return config_handle_t{ obj_handle.config, new_field_index };
+}
+
+config_handle_t config_add(config_handle_t obj_handle, const char* key, size_t key_length)
+{
+    string_table_symbol_t name_symbol = config_add_symbol(obj_handle.config, key, key_length);
+    return config_add(obj_handle, name_symbol);
 }
 
 bool config_remove(config_handle_t h, config_handle_t to_remove_handle)
@@ -719,18 +724,31 @@ config_handle_t config_set_array(config_handle_t h, const char* key, size_t key_
     return h;
 }
 
+FOUNDATION_STATIC void config_set_null(config_value_t* cv)
+{
+    FOUNDATION_ASSERT(cv);
+
+    cv->type = CONFIG_VALUE_NIL;
+    cv->str = 0;
+    cv->child = 0;
+}
+
+void config_set_null(config_handle_t handle)
+{
+    config_value_t* value = handle;
+    if (!value)
+        return;
+
+    config_set_null(value);
+}
+
 config_handle_t config_set_null(config_handle_t h, const char* key, size_t key_length)
 {
     config_value_t* cv = key != nullptr ? config_get_or_create(h, key, key_length) : h;
-    if (cv)
-    {
-        cv->type = CONFIG_VALUE_NIL;
-        cv->str = 0;
-        cv->child = 0;
-        return config_handle_t{ h.config, cv->index };
-    }
-
-    return h;
+    if (!cv)
+        return h;
+    config_set_null(cv);
+    return config_handle_t{ h.config, cv->index };
 }
 
 config_handle_t config_array_clear(config_handle_t v)
