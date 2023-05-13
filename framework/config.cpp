@@ -449,7 +449,7 @@ config_handle_t config_add(config_handle_t obj_handle, const char* key, size_t k
     return config_add(obj_handle, name_symbol);
 }
 
-config_handle_t config_add(config_handle_t obj_handle, int symbol)
+config_handle_t config_add(config_handle_t obj_handle, string_table_symbol_t symbol)
 {
     config_value_t* obj = obj_handle;
     if (!obj)
@@ -902,7 +902,7 @@ bool config_array_pop(config_handle_t array_handle)
     return false;
 }
 
-void config_array_sort(config_handle_t array_handle, function<bool(const config_handle_t& a, const config_handle_t& b)> sort_fn)
+void config_array_sort(config_handle_t array_handle, const function<bool(const config_handle_t& a, const config_handle_t& b)>& sort_fn)
 {
     config_value_t* arr = array_handle;
     if (arr == nullptr || arr->child == 0 || !sort_fn)
