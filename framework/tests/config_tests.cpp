@@ -196,6 +196,942 @@ TEST_SUITE("Configuration")
         config_sjson_deallocate(sjson);
         config_deallocate(cv);
     }
+
+    TEST_CASE("Indexing")
+    {
+        // Create config
+        config_handle_t cv = config_allocate(CONFIG_VALUE_ARRAY);
+        for (unsigned i = 0; i < 10; ++i)
+            config_array_push(cv, (double)i);
+
+        auto e = cv[7U];
+        CHECK_EQ(e.as_integer(), 7);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Invalid indexing")
+    {
+        config_handle_t cv = config_allocate();
+        cv.index = 999;
+
+        void* vv = (void*)cv;
+        CHECK_EQ(vv, nullptr);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Accessors")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_OBJECT);
+        CHECK(config_is_valid(cv));
+        CHECK_EQ(config_get_options(cv), CONFIG_OPTION_NONE);
+
+        CHECK_EQ(config_set_options(cv, CONFIG_OPTION_PRESERVE_INSERTION_ORDER), CONFIG_OPTION_NONE);
+        CHECK_EQ(config_get_options(cv), CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        config_set(cv, "float", 42.728f);
+        CHECK_EQ(cv["float"].type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ((float)config_value_as_number(cv["float"]), 42.728f);
+        CHECK_EQ((float)cv["float"].as_number(), 42.728f);
+        CHECK_EQ(cv["float"].as_integer(), INT32_C(42));
+
+        auto arr = config_set_array(cv, "arr");
+        config_array_push(arr, 77.9);
+        config_array_push(arr, 78.9);
+
+        config_set(cv, "pi", DBL_PI);
+        CHECK_EQ(cv["pi"].type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(cv["pi"].as_number(), DBL_PI);
+
+        CHECK(config_array_pop(arr));
+        CHECK(config_array_pop(arr));
+        CHECK_FALSE(config_array_pop(arr));
+
+        config_set(cv, "integer", INT32_C(42));
+        CHECK_EQ(cv["integer"].type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ((int32_t)config_value_as_number(cv["integer"]), INT32_C(42));
+        CHECK_EQ((int32_t)cv["integer"].as_number(), INT32_C(42));
+        CHECK_EQ(cv[string_to_const("integer")].as_integer(), INT32_C(42));
+
+        config_set(cv, "string", string_to_const("Hello World!"));
+        CHECK_EQ(cv["string"].type(), CONFIG_VALUE_STRING);
+        CHECK_EQ(cv["string"].as_string(), CTEXT("Hello World!"));
+
+        config_set(cv, "boolean", true);
+        CHECK_EQ(cv["boolean"].type(), CONFIG_VALUE_TRUE);
+        CHECK_EQ(cv["boolean"].as_boolean(), true);
+        CHECK_EQ(cv["boolean"].name(), CTEXT("boolean"));
+
+        config_set_null(cv, STRING_CONST("null"));
+        CHECK_EQ(cv["null"].type(), CONFIG_VALUE_NIL);
+        CHECK(config_is_null(cv, STRING_CONST("null")));
+
+        config_set_array(cv, STRING_CONST("array"));
+        CHECK_EQ(cv["array"].type(), CONFIG_VALUE_ARRAY);
+        CHECK_EQ(config_value_as_pointer_unsafe(cv["array"]), nullptr);
+
+        config_set_object(cv, STRING_CONST("object"));
+        CHECK_EQ(cv["object"].type(), CONFIG_VALUE_OBJECT);
+
+        // The null fixed value is always undefined.
+        CHECK(config_is_null(config_null()));
+        CHECK(config_is_undefined(config_null()));
+        CHECK_EQ(config_get_options(config_null()), CONFIG_OPTION_NONE);
+        CHECK_EQ(config_null().type(), CONFIG_VALUE_UNDEFINED);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Undefined value")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_OBJECT);
+
+        auto e = config_add(cv, "value");
+        CHECK_EQ(e.type(), CONFIG_VALUE_UNDEFINED);
+        CHECK(config_is_undefined(e));
+
+        CHECK(config_is_undefined(cv, STRING_CONST("value")));
+        CHECK(config_is_undefined(cv, STRING_CONST("value1")));
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Boolean value")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_OBJECT);
+        CHECK(config_is_valid(cv));
+
+        config_set(cv, "true", true);
+        config_set(cv, "false", false);
+        config_set(cv, "string", string_to_const("true"));
+        config_set(cv, "string2", string_to_const("false"));
+        config_set(cv, "string3", string_to_const("patate"));
+        config_set(cv, "number", 45.7);
+        config_set(cv, "zero", 0.0);
+
+        CHECK_EQ(config_value_as_boolean(cv["true"], false), true);
+        CHECK_EQ(config_value_as_boolean(cv["false"], true), false);
+        CHECK_EQ(config_value_as_boolean(cv["string"], false), true);
+        CHECK_EQ(config_value_as_boolean(cv["string2"], true), false);
+        CHECK_EQ(config_value_as_boolean(cv["string3"], true), true);
+        CHECK_EQ(config_value_as_boolean(cv["string3"], false), false);
+        CHECK_EQ(config_value_as_boolean(cv["number"], false), true);
+        CHECK_EQ(config_value_as_boolean(cv["zero"], true), false);
+
+        config_set_array(cv, "array");
+        CHECK_EQ(config_value_as_boolean(cv["array"], true), false);
+
+        config_array_insert(cv["array"], 0, 66.0);
+        CHECK_EQ(config_value_as_boolean(cv["array"], false), true);
+
+        config_set_object(cv, "object");
+        CHECK_EQ(config_value_as_boolean(cv["object"], true), false);
+
+        config_set(cv["object"], "child", 0);
+        CHECK_EQ(config_value_as_boolean(cv["object"], false), true);
+
+        const double v = 0;
+        config_set(cv, "p", (const void*)&v);
+        CHECK_EQ(config_value_as_boolean(cv["p"], false), true);
+
+        config_set(cv, "p", (const void*)nullptr);
+        CHECK_EQ(config_value_as_boolean(cv["p"], true), false);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Number value")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_NUMBER);
+        CHECK(config_is_valid(cv));
+
+        config_set(cv, 42.728f);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ((float)config_value_as_number(cv, 66.9), 42.728f);
+
+        config_set(cv, DBL_PI);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(config_value_as_number(cv, 66.9), DBL_PI);
+
+        config_set(cv, true);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_TRUE);
+        CHECK_EQ(config_value_as_number(cv, 66.9), 1.0);
+
+        config_set(cv, false);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_FALSE);
+        CHECK_EQ(config_value_as_number(cv, 66.9), 0.0);
+
+        config_set(cv, "Hello World!");
+        CHECK_EQ(cv.type(), CONFIG_VALUE_STRING);
+        CHECK_EQ(config_value_as_number(cv, 66.9), 0.0);
+
+        config_set(cv, "77.8");
+        CHECK_EQ(cv.type(), CONFIG_VALUE_STRING);
+        CHECK_EQ(config_value_as_number(cv, 66.9), 77.8);
+
+        config_set(cv, "21e5");
+        CHECK_EQ(cv.type(), CONFIG_VALUE_STRING);
+        CHECK_EQ(config_value_as_number(cv, 66.9), 21e5);
+
+        config_set(cv, "0x21");
+        CHECK_EQ(cv.type(), CONFIG_VALUE_STRING);
+        CHECK_EQ(config_value_as_number(cv, 66.9), 33.0);
+
+        config_set(cv, (const void*)nullptr);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_NIL);
+        CHECK_EQ(config_value_as_number(cv, 66.9), 0.0);
+
+        config_set(cv, (const void*)0xdeadbeefULL);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_RAW_DATA);
+        CHECK_EQ(config_value_as_number(cv, 66.9), 0xdeadbeef);
+
+        auto arr = config_allocate(CONFIG_VALUE_ARRAY);
+        CHECK_EQ(arr.type(), CONFIG_VALUE_ARRAY);
+        CHECK_EQ(config_value_as_number(arr, 66.9), 0.0f);
+
+        config_array_push(arr, 77.9);
+        CHECK_EQ(config_value_as_number(arr, 66.9), 1.0);
+
+        config_array_push(arr, 78.9);
+        CHECK_EQ(config_value_as_number(arr, 66.9), 2.0);
+
+        CHECK(config_array_pop(arr));
+        CHECK_EQ(config_value_as_number(arr, 66.9), 1.0);
+
+        CHECK(config_array_pop(arr));
+        CHECK_EQ(config_value_as_number(arr, 66.9), 0.0);
+
+        CHECK_FALSE(config_array_pop(arr));
+        CHECK_EQ(config_value_as_number(arr, 66.9), 0.0);
+
+        config_deallocate(arr);
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("String value")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_STRING, CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS);
+
+        config_set(cv, "Hello World!");
+        CHECK_EQ(cv.type(), CONFIG_VALUE_STRING);
+        CHECK_EQ(config_value_as_string(cv), CTEXT("Hello World!"));
+
+        config_set(cv, 42.728f);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(config_value_as_string(cv, "%.2lf"), CTEXT("42.73"));
+
+        config_set(cv, DBL_PI);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(config_value_as_string(cv, nullptr), CTEXT("3.14"));
+
+        config_set(cv, 0.005);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(config_value_as_string(cv, nullptr), CTEXT("0.0050"));
+
+        config_set(cv, 0.105);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(config_value_as_string(cv, nullptr), CTEXT("0.105"));
+
+        config_set(cv, DNAN);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(config_value_as_string(cv, nullptr), CTEXT("null"));
+
+        config_set(cv, true);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_TRUE);
+        CHECK_EQ(config_value_as_string(cv), CTEXT("true"));
+
+        config_set(cv, false);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_FALSE);
+        CHECK_EQ(config_value_as_string(cv), CTEXT("false"));
+
+        config_set(cv, (const void*)nullptr);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_NIL);
+        CHECK_EQ(config_value_as_string(cv), CTEXT(""));
+
+        config_set(cv, (const void*)0xdeadbeefULL);
+        CHECK_EQ(cv.type(), CONFIG_VALUE_RAW_DATA);
+        CHECK_EQ(config_value_as_string(cv), CTEXT("0x00000000deadbeef"));
+
+        config_set(cv, "Hello World!");
+        CHECK_EQ(cv.type(), CONFIG_VALUE_STRING);
+        CHECK_EQ(config_value_as_string(cv), CTEXT("Hello World!"));
+
+        config_set(cv, "77.8");
+        CHECK_EQ(cv.type(), CONFIG_VALUE_STRING);
+        CHECK_EQ(config_value_as_string(cv), CTEXT("77.8"));
+
+        CHECK_EQ(config_value_as_string(cv["them"]), string_null());
+
+        auto obj = config_add(cv, "element");
+        CHECK_EQ(cv.type(), CONFIG_VALUE_OBJECT);
+        CHECK_EQ(obj.type(), CONFIG_VALUE_UNDEFINED);
+        CHECK_EQ(config_value_as_string(cv), CTEXT(""));
+        CHECK_EQ(config_value_as_string(obj), CTEXT(""));
+
+        string_const_t datestr = string_from_date(time_now());
+        config_set(obj, STRING_CONST("id"), datestr);
+        CHECK_EQ(obj.type(), CONFIG_VALUE_OBJECT);
+        CHECK_EQ(config_value_as_string(obj["id"]), datestr);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Time value")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_OBJECT, CONFIG_OPTION_ALLOCATE_TEMPORARY);
+        CHECK(config_is_valid(cv));
+        CHECK_EQ(config_get_options(cv), CONFIG_OPTION_ALLOCATE_TEMPORARY);
+
+        const time_t now = time_now();
+        config_set(cv, "time", now);
+        CHECK_EQ(cv["time"].type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(cv["time"].as_time(), now);
+
+        string_t timestr = string_from_date(SHARED_BUFFER(16), now);
+        config_set(cv, "time", timestr.str, timestr.length);
+        CHECK_EQ(cv["time"].type(), CONFIG_VALUE_STRING);
+        CHECK(time_same_day(cv["time"].as_time(), now));
+
+        CHECK_EQ(config_set(cv, "b", true).as_time(42), 42);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Find")
+    {
+        CHECK(config_is_null(config_find(config_null(), STRING_CONST("test"))));
+    }
+
+    TEST_CASE("Tags")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_OBJECT);
+        CHECK(config_is_valid(cv));
+
+        // Object cannot be cleared with this method.
+        CHECK_EQ(config_array_clear(cv).type(), CONFIG_VALUE_UNDEFINED);
+
+        config_set(cv, "n", 42.24);
+        CHECK_EQ(cv["n"].type(), CONFIG_VALUE_NUMBER);
+
+        config_tag_t tag = config_tag(cv, STRING_CONST("n"));
+
+        auto e = config_find(cv, tag);
+        CHECK_EQ(e.type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(e.as_number(), 42.24);
+
+        config_set(cv, tag, nullptr);
+        CHECK_EQ(cv[tag].type(), CONFIG_VALUE_NIL);
+
+        config_set(cv, tag, 42.24);
+        CHECK_EQ(cv[tag].type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(cv[tag].as_number(), 42.24);
+
+        config_set(cv, tag, STRING_CONST("Hello World!"));
+        CHECK_EQ(cv[tag].type(), CONFIG_VALUE_STRING);
+        CHECK_EQ(cv[tag].as_string(), CTEXT("Hello World!"));
+
+        config_set(cv, tag, true);
+        CHECK_EQ(cv[tag].type(), CONFIG_VALUE_TRUE);
+        CHECK_EQ(cv[tag].as_boolean(), true);
+
+        config_set(cv, tag, false);
+        CHECK_EQ(cv[tag].type(), CONFIG_VALUE_FALSE);
+        CHECK_EQ(cv[tag].as_boolean(), false);
+
+        config_set(cv, tag, (const void*)0xdeadbeefULL);
+        CHECK_EQ(cv[tag].type(), CONFIG_VALUE_RAW_DATA);
+        CHECK_EQ(cv[tag].as_number(), 0xdeadbeefULL);
+
+        config_tag_t newtag = config_tag(cv, STRING_CONST("sub"));
+        auto sub = config_get_or_create(cv, newtag);
+        CHECK_EQ(sub.type(), CONFIG_VALUE_UNDEFINED);
+
+        config_set(sub, tag, 42.24);
+        CHECK_EQ(sub[tag].type(), CONFIG_VALUE_NUMBER);
+        CHECK_EQ(sub[tag].as_number(), 42.24);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Invalid object")
+    {
+        config_handle_t cv{};
+        config_set_null(cv);
+        config_set_null(cv, STRING_CONST("null"));
+
+        CHECK_FALSE(config_is_valid(cv));
+        CHECK_EQ(config_set_options(cv, CONFIG_OPTION_PRESERVE_INSERTION_ORDER), CONFIG_OPTION_NONE);
+        CHECK_EQ(config_get_options(cv), CONFIG_OPTION_NONE);
+        CHECK_EQ(config_add(cv, "invalid").type(), CONFIG_VALUE_UNDEFINED);
+        CHECK_FALSE(config_remove(cv, "child"));
+        CHECK_FALSE(config_remove(cv, cv["child"]));
+
+        CHECK_EQ(config_array_clear(cv).type(), CONFIG_VALUE_UNDEFINED);
+        CHECK_EQ(config_array_push(cv, 42.24).type(), CONFIG_VALUE_UNDEFINED);
+        CHECK_EQ(config_array_insert(cv, 0, 42.24).type(), CONFIG_VALUE_UNDEFINED);
+        CHECK_FALSE(config_array_pop(cv));
+        CHECK_FALSE(config_exists(cv, nullptr, 0)); // self
+
+        CHECK_NOTHROW(config_array_sort(cv, LC2(true)));
+        CHECK_NOTHROW(config_array_sort(cv, LC2(false)));
+        CHECK_NOTHROW(config_pack(cv));
+        CHECK_NOTHROW(config_clear(cv));
+
+        CHECK_EQ(config_name(cv), CTEXT(""));
+        CHECK_EQ(config_size(cv), 0);
+        CHECK_EQ(config_type(cv), CONFIG_VALUE_UNDEFINED);
+        CHECK(config_is_undefined(cv));
+
+        CHECK_EQ(config_sjson(cv), nullptr);
+
+        unsigned itr_count = 0;
+        for (auto e : cv)
+        {
+            (void)e;
+            ++itr_count;
+        }
+
+        CHECK_EQ(itr_count, 0U);
+        CHECK_EQ(config_element_at(cv, 4).as_number(55.0), 55.0);
+    }
+
+    TEST_CASE("Iterators")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_NIL, CONFIG_OPTION_PACK_STRING_TABLE);
+
+        auto a = config_add(cv, "a");
+        config_array_insert(a, 0, 42.24);
+        CHECK_EQ(config_size(a), 1);
+        CHECK_EQ(config_element_at(a, 0).as_number(), 42.24);
+
+        config_array_pop(a);
+        CHECK_EQ(config_size(a), 0);
+
+        CHECK(config_is_valid(cv));
+        CHECK(config_is_valid(cv, nullptr));
+        CHECK(config_is_valid(cv, STRING_CONST("a")));
+        CHECK_FALSE(config_is_null(cv, STRING_CONST("a")));
+        CHECK_FALSE(config_is_valid(cv, STRING_CONST("b")));
+        CHECK(config_remove(cv, "a"));
+        config_set_null(cv);
+
+        for (unsigned i = 0; i < 10; ++i)
+            config_array_push(cv, (double)i);
+
+        CHECK_EQ(config_element_at(cv, 4).as_number(), 4.0);
+
+        config_array_insert(cv, 4, 42.24);
+        CHECK_EQ(config_size(cv), 11);
+        CHECK_EQ(config_element_at(cv, 4).as_number(), 42.24);
+
+        CHECK_FALSE(config_is_null(cv));
+        config_array_clear(cv);
+        CHECK_EQ(config_size(cv), 0);
+
+        for (unsigned i = 0; i < 2; ++i)
+            config_array_push(cv, (bool)i);
+
+        CHECK_EQ(config_element_at(cv, 0).as_boolean(), false);
+        CHECK_EQ(config_element_at(cv, 1).as_boolean(), true);
+
+        config_array_insert(cv, 0, true);
+        CHECK_EQ(config_element_at(cv, 0).as_boolean(), true);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Remove")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_OBJECT, CONFIG_OPTION_SORT_OBJECT_FIELDS);
+
+        config_set(cv, "a", 1);
+        config_set(cv, "b", true);
+        config_set(cv, "c", STRING_CONST("Hello World!"));
+        config_set(cv, "d", 3.14);
+
+        CHECK_EQ(cv["a"].as_integer(), 1);
+        CHECK_EQ(cv["b"].as_boolean(), true);
+        CHECK_EQ(cv["c"].as_string(), CTEXT("Hello World!"));
+        CHECK_EQ(cv["d"].as_number(), 3.14);
+
+        CHECK(config_exists(cv, STRING_CONST("a")));
+        CHECK_FALSE(config_exists(cv, STRING_CONST("e")));
+        CHECK_EQ(config_size(cv), 4);
+
+        CHECK(config_remove(cv, "b"));
+        CHECK_EQ(config_size(cv), 3);
+
+        CHECK_FALSE(config_remove(cv, "abcdef"));
+        CHECK_EQ(config_size(cv), 3);
+
+        CHECK(config_remove(cv, STRING_CONST("a")));
+        CHECK_EQ(config_size(cv), 2);
+
+        CHECK(config_remove(cv, cv["c"]));
+        CHECK_EQ(config_size(cv), 1);
+
+        CHECK(config_remove(cv, STRING_CONST("d")));
+        CHECK_EQ(config_size(cv), 0);
+
+        CHECK_FALSE(config_remove(cv, STRING_CONST("d")));
+        CHECK_EQ(config_size(cv), 0);
+
+        CHECK(config_exists(cv, nullptr, 0)); // self
+        CHECK_FALSE(config_exists(cv, "a", 0));
+        CHECK_FALSE(config_is_valid(cv, STRING_CONST("e")));
+        CHECK_EQ(config_size(cv), 1);
+
+        CHECK_NOTHROW(config_pack(cv));
+        CHECK_NOTHROW(config_clear(cv));
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Array")
+    {
+        // Create config array with random values
+        auto arr = config_allocate(CONFIG_VALUE_ARRAY);
+
+        for (unsigned i = 0; i < 100; ++i)
+            config_array_push(arr, (double)rand());
+
+        config_array_sort(arr, [](const auto& a, const auto& b)
+        {
+            return a.as_number() < b.as_number();
+        });
+
+        // Check that array is sorted
+        for (unsigned i = 1; i < to_uint(config_size(arr)); ++i)
+            CHECK_LE(arr[i - 1].as_number(), arr[i].as_number());
+
+        config_deallocate(arr);
+    }
+
+    TEST_CASE("Parse / Write / NOT CONFIG_OPTION_PRESERVE_INSERTION_ORDER")
+    {
+        string_const_t sjson = CTEXT(R"({
+             n1 = 0
+             n2 = 1
+        })");
+
+        config_handle_t cv = config_parse(sjson.str, sjson.length, 0);
+
+        CHECK_EQ(config_size(cv), 2);
+        CHECK_EQ(config_element_at(cv, 0).as_integer(), 1);
+        CHECK_EQ(config_element_at(cv, 1).as_integer(), 0);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Parse / Write / CONFIG_OPTION_PRESERVE_INSERTION_ORDER")
+    {
+        string_const_t sjson = CTEXT(R"({
+             n1 = 0
+             n2 = 1
+        })");
+
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        CHECK_EQ(config_size(cv), 2);
+        CHECK_EQ(config_element_at(cv, 0).as_integer(), 0);
+        CHECK_EQ(config_element_at(cv, 1).as_integer(), 1);
+
+
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Parse / Write / Undefined Not Saved")
+    {
+        string_const_t sjson = CTEXT(R"({
+             v = 1
+        })");
+
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        CHECK_EQ(config_size(cv), 1);
+        CHECK(config_is_undefined(config_add(cv, "undef")));
+        //CHECK(config_is_undefined(config_element_at(cv, 0)));
+
+        string_t temp_file_path = path_make_temporary(SHARED_BUFFER(BUILD_MAX_PATHLEN));
+        string_const_t temp_file_dir_path = path_directory_name(STRING_ARGS(temp_file_path));
+        CHECK(fs_make_directory(STRING_ARGS(temp_file_dir_path)));
+        const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv, CONFIG_OPTION_NONE);
+        CHECK(write_success);
+
+        auto file_content = fs_read_text(STRING_ARGS(temp_file_path));
+        INFO("File content: " << file_content.str);
+        CHECK_EQ(sjson, file_content);
+
+        string_deallocate(file_content.str);
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Parse / Write / (Skip) Null")
+    {
+        string_const_t sjson = CTEXT(R"({
+             a = 1
+             b = null
+        })");
+
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        string_t temp_file_path = path_make_temporary(SHARED_BUFFER(BUILD_MAX_PATHLEN));
+        string_const_t temp_file_dir_path = path_directory_name(STRING_ARGS(temp_file_path));
+        CHECK(fs_make_directory(STRING_ARGS(temp_file_dir_path)));
+        
+        {
+            const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv, CONFIG_OPTION_WRITE_SKIP_NULL);
+            CHECK(write_success);
+
+            auto file_content = fs_read_text(STRING_ARGS(temp_file_path));
+            INFO("File content: " << file_content.str);
+            CHECK_EQ(CTEXT(R"({
+                     a = 1
+                })"), file_content);
+
+            string_deallocate(file_content.str);
+        }
+
+
+        {
+            const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv, CONFIG_OPTION_NONE);
+            CHECK(write_success);
+
+            auto file_content = fs_read_text(STRING_ARGS(temp_file_path));
+            INFO("File content: " << file_content.str);
+            CHECK_EQ(CTEXT(R"({
+                     a = 1
+                     b = null
+                })"), file_content);
+
+            string_deallocate(file_content.str);
+        }
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Write / String")
+    {
+        string_const_t sjson = CTEXT(R"({
+            hash = "c0aa848e6fa77ad4"
+            en = "Bulk Extractor"
+            e8_F9 = test
+            "not simple": "true"
+            fr = "Extracteur de marchés"
+            notes = "\" \tnew line \r\n \b\f"
+        })");
+
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        string_t temp_file_path = path_make_temporary(SHARED_BUFFER(BUILD_MAX_PATHLEN));
+        string_const_t temp_file_dir_path = path_directory_name(STRING_ARGS(temp_file_path));
+        CHECK(fs_make_directory(STRING_ARGS(temp_file_dir_path)));
+        
+        const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv, CONFIG_OPTION_WRITE_ESCAPE_UTF8);
+        CHECK(write_success);
+
+        auto file_content = fs_read_text(STRING_ARGS(temp_file_path));
+        INFO("File content: " << file_content.str);
+        CHECK_EQ(CTEXT("{ "
+            "hash = \"c0aa848e6fa77ad4\" "
+            "en = \"Bulk Extractor\" "
+            "e8_F9 = \"test\" "
+            "\"not simple\" = \"true\" "
+            "fr = \"Extracteur de march\\xc3\\xa9s\" "
+            "notes = \"\\\" \\tnew line \\r\\n \\b\\f\" "
+        "}"), file_content);
+
+        string_deallocate(file_content.str);
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Write / Same Line")
+    {
+        string_const_t sjson = CTEXT(R"({
+            obj = {
+                hash = "c0aa848e6fa77ad4"
+                e8_F9 = test
+            }
+        })");
+
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        string_t temp_file_path = path_make_temporary(SHARED_BUFFER(BUILD_MAX_PATHLEN));
+        string_const_t temp_file_dir_path = path_directory_name(STRING_ARGS(temp_file_path));
+        CHECK(fs_make_directory(STRING_ARGS(temp_file_dir_path)));
+        
+        const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv, 
+            CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES);
+        CHECK(write_success);
+
+        auto file_content = fs_read_text(STRING_ARGS(temp_file_path));
+        INFO("File content: " << file_content.str);
+        CHECK_EQ(CTEXT("obj = { hash = \"c0aa848e6fa77ad4\" e8_F9 = \"test\" }"), file_content);
+
+        string_deallocate(file_content.str);
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Write / Same Line Not Possible")
+    {
+        string_const_t sjson = CTEXT(R"({
+            hash = "c0aa848e6fa77ad4"
+            "not simple" = test
+        })");
+
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        string_t temp_file_path = path_make_temporary(SHARED_BUFFER(BUILD_MAX_PATHLEN));
+        string_const_t temp_file_dir_path = path_directory_name(STRING_ARGS(temp_file_path));
+        CHECK(fs_make_directory(STRING_ARGS(temp_file_dir_path)));
+        
+        const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv, 
+            CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES);
+        CHECK(write_success);
+
+        auto file_content = fs_read_text(STRING_ARGS(temp_file_path));
+        INFO("File content: " << file_content.str);
+        CHECK_EQ(CTEXT("{ hash = \"c0aa848e6fa77ad4\" \"not simple\" = \"test\" }"), file_content);
+
+        string_deallocate(file_content.str);
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Write / Pure JSON")
+    {
+        string_const_t sjson = CTEXT(R"({
+            hash = "c0aa848e6fa77ad4"
+            "::filter": false,
+            "not simple" = test
+        })");
+
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        string_t temp_file_path = path_make_temporary(SHARED_BUFFER(BUILD_MAX_PATHLEN));
+        string_const_t temp_file_dir_path = path_directory_name(STRING_ARGS(temp_file_path));
+        CHECK(fs_make_directory(STRING_ARGS(temp_file_dir_path)));
+        
+        const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv, CONFIG_OPTION_WRITE_JSON | CONFIG_OPTION_WRITE_SKIP_DOUBLE_COMMA_FIELDS);
+        CHECK(write_success);
+
+        auto file_content = fs_read_text(STRING_ARGS(temp_file_path));
+        INFO("File content: " << file_content.str);
+        CHECK_EQ(CTEXT("{ \"hash\": \"c0aa848e6fa77ad4\", \"not simple\": \"test\" }"), file_content);
+
+        string_deallocate(file_content.str);
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Write / Array")
+    {
+        string_const_t sjson = CTEXT(R"({
+            c = {
+                a = [1 2 3 4 5, true, { n = 42 }, false, "a string" 33 [1 null]]
+            }
+        })");
+
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        string_t temp_file_path = path_make_temporary(SHARED_BUFFER(BUILD_MAX_PATHLEN));
+        string_const_t temp_file_dir_path = path_directory_name(STRING_ARGS(temp_file_path));
+        CHECK(fs_make_directory(STRING_ARGS(temp_file_dir_path)));
+        
+        {
+            const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv);
+            CHECK(write_success);
+
+            auto file_content = fs_read_text(STRING_ARGS(temp_file_path));
+            INFO("File content: " << file_content.str);
+            CHECK_EQ(CTEXT("c = { a = [1 2 3 4 5 true { n = 42 } false \"a string\" 33 [1]] }"), file_content);
+
+            string_deallocate(file_content.str);
+        }
+
+        {
+            const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv, CONFIG_OPTION_WRITE_JSON);
+            CHECK(write_success);
+
+            auto file_content = fs_read_text(STRING_ARGS(temp_file_path));
+            INFO("File content: " << file_content.str);
+            CHECK_EQ(CTEXT("{ \"c\": { \"a\": [1,  2,  3,  4,  5,  true, { \"n\": 42 },  false,  \"a string\",  33, [1, null]] } }"), file_content);
+
+            string_deallocate(file_content.str);
+        }
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Write / Undefined")
+    {
+        config_handle_t cv = config_allocate(CONFIG_VALUE_UNDEFINED);
+
+        string_t temp_file_path = path_make_temporary(SHARED_BUFFER(BUILD_MAX_PATHLEN));
+        string_const_t temp_file_dir_path = path_directory_name(STRING_ARGS(temp_file_path));
+        CHECK(fs_make_directory(STRING_ARGS(temp_file_dir_path)));
+        
+        const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv);
+        CHECK_FALSE(write_success);
+        CHECK_FALSE(fs_is_file(STRING_ARGS(temp_file_path)));
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Parse / BOM")
+    {
+        // Create BOM string and add "c = 42"
+        char bom[] = { (char)0xEF, (char)0xBB, (char)0xBF, 'c', ' ', '=', ' ', '4', '2', 0 };
+        string_const_t sjson = { bom, sizeof(bom) - 1 };
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+        CHECK_EQ(cv["c"].as_number(), 42);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Parse simple")
+    {
+        string_const_t sjson = CTEXT(R"({
+            b = false
+            n = 42
+            s = "a string"
+            a = [1 2 3 4 5]
+            o = { a = 1 b = 2 }
+            u = null
+        })");
+        config_handle_t cv = config_parse(sjson.str, sjson.length);
+
+        CHECK_EQ(cv["n"].as_number(), 42.0);
+        CHECK_EQ(cv["s"].as_string(), CTEXT("a string"));
+        CHECK_EQ(cv["b"].as_boolean(), false);
+        CHECK_EQ(cv["u"].type(), CONFIG_VALUE_NIL);
+        CHECK_EQ(cv["a"].type(), CONFIG_VALUE_ARRAY);
+        CHECK_EQ(cv["o"].type(), CONFIG_VALUE_OBJECT);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Parse JSON")
+    {
+        string_const_t sjson = CTEXT(R"({
+            "b": false,
+            "n": 42,
+            "s": "a string",
+            "a": [1, 2, 3, 4, 5],
+            "o": { "a": 1, "b": 2 }
+        })");
+        config_handle_t cv = config_parse(sjson.str, sjson.length);
+
+        CHECK_EQ(cv["n"].as_number(), 42.0);
+        CHECK_EQ(cv["s"].as_string(), CTEXT("a string"));
+        CHECK_EQ(cv["b"].as_boolean(), false);
+        CHECK_EQ(cv["a"].type(), CONFIG_VALUE_ARRAY);
+        CHECK_EQ(cv["o"].type(), CONFIG_VALUE_OBJECT);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Parse Many Levels")
+    {
+        string_const_t sjson = CTEXT(R"({
+            "b": true,
+            // Add one more level
+            c = {
+                "n": 42,
+                "s": "a string",
+                /* Add one more level, 
+                   again 
+                 */
+                "a": [1, 2, 3, { "a": 10, "b": 2 }, 5],
+            }
+
+            unicode = "\ue958 this is an icon"
+
+            // multiline string
+            shader = """
+                int main()
+                {
+                    // Return red color
+                    gl_Color.xyz = vec3(1.0, 0.0, 0.0);
+                }
+            """
+
+            size = 4e44fa4
+        })");
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PACK_STRING_TABLE);
+
+        CHECK_EQ(cv["b"].as_boolean(), true);
+        CHECK_EQ(cv["c"]["n"].as_number(), 42.0);
+        CHECK_EQ(cv["c"]["s"].as_string(), CTEXT("a string"));
+        CHECK_EQ(cv["c"]["a"][3]["a"].as_number(), 10.0);
+        CHECK_EQ(cv["size"].as_number(), (double)0x4e44fa4);
+
+        string_const_t s1 = cv["shader"].as_string();
+        string_const_t s2 = CTEXT("int main()\n{\n    // Return red color\n    gl_Color.xyz = vec3(1.0, 0.0, 0.0);\n}\n");
+        CHECK_EQ(s1, s2);
+
+        CHECK_EQ(cv["unicode"].as_string(), CTEXT_UTF8("\\ue958 this is an icon"));
+
+        string_t temp_file_path = path_make_temporary(SHARED_BUFFER(BUILD_MAX_PATHLEN));
+        string_const_t temp_file_dir_path = path_directory_name(STRING_ARGS(temp_file_path));
+        CHECK(fs_make_directory(STRING_ARGS(temp_file_dir_path)));
+        const bool write_success = config_write_file(STRING_ARGS(temp_file_path), cv, CONFIG_OPTION_WRITE_ESCAPE_UTF8);
+        CHECK(write_success);
+
+        config_deallocate(cv);
+
+        cv = config_parse_file(STRING_ARGS(temp_file_path), CONFIG_OPTION_PARSE_UNICODE_UTF8);
+        CHECK_EQ(cv["b"].as_boolean(), true);
+        CHECK_EQ(cv["c"]["n"].as_number(), 42.0);
+        CHECK_EQ(cv["c"]["s"].as_string(), CTEXT("a string"));
+        CHECK_EQ(cv["c"]["a"][3]["a"].as_number(), 10.0);
+        CHECK_EQ(cv["size"].as_number(), (double)0x4e44fa4);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Parse Unicode/UTF-8 characters")
+    {
+        string_const_t sjson = CTEXT(R"({
+
+            utf8 = "\xef\xa3\xbd"
+            more = "\x1f\xA7 \xc4\x77\xA8\x9F "
+            unicode = "\ue958 this is an icon\x00"
+
+        })");
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PARSE_UNICODE_UTF8);
+
+        string_const_t s1 = cv["unicode"].as_string();
+        string_const_t s2 = CTEXT("\xee\xa5\x98 this is an icon");
+        CHECK_EQ(s1, s2);
+
+        s1 = cv["utf8"].as_string();
+        s2 = CTEXT("\xef\xa3\xbd");
+        CHECK_EQ(s1, s2);
+
+        config_deallocate(cv);
+    }
+
+    TEST_CASE("Parse Array")
+    {
+        string_const_t sjson = CTEXT(R"([
+            {
+                a: 0
+            }
+            {
+                a: 1
+            }
+            {
+                a: 2
+            }
+        ])");
+        config_handle_t cv = config_parse(sjson.str, sjson.length, CONFIG_OPTION_PACK_STRING_TABLE);
+
+        CHECK_EQ(cv[0U]["a"].as_integer(), 0);
+        CHECK_EQ(cv[1U]["a"].as_integer(), 1);
+        CHECK_EQ(cv[2U]["a"].as_integer(), 2);
+        
+        config_deallocate(cv);
+    }
 }
 
 #endif // BUILD_TESTS

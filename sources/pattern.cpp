@@ -3251,6 +3251,9 @@ FOUNDATION_STATIC void pattern_initialize()
     if (_patterns == nullptr)
         array_reserve(_patterns, 8);
 
+    if (!main_is_interactive_mode())
+        return;
+
     string_const_t patterns_file_path = pattern_get_user_file_path();
     config_handle_t patterns_data = config_parse_file(STRING_ARGS(patterns_file_path), CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
     if (patterns_data)
@@ -3290,30 +3293,33 @@ FOUNDATION_STATIC void pattern_shutdown()
 {
     array_deallocate(_activities);
 
-    config_write_file(pattern_get_user_file_path(), [](config_handle_t patterns)
+    if (main_is_interactive_mode())
     {
-        const size_t pattern_count = ::pattern_count();
-        for (int i = 0; i < pattern_count; ++i)
+        config_write_file(pattern_get_user_file_path(), [](config_handle_t patterns)
         {
-            pattern_t& pattern = _patterns[i];
-
-            if (pattern.save)
+            const size_t pattern_count = ::pattern_count();
+            for (int i = 0; i < pattern_count; ++i)
             {
-                string_const_t code = string_table_decode_const(pattern.code);
-                config_handle_t pattern_data = config_set_object(patterns, STRING_ARGS(code));
+                pattern_t& pattern = _patterns[i];
 
-                pattern_save(pattern_data, pattern);
+                if (pattern.save)
+                {
+                    string_const_t code = string_table_decode_const(pattern.code);
+                    config_handle_t pattern_data = config_set_object(patterns, STRING_ARGS(code));
+
+                    pattern_save(pattern_data, pattern);
+                }
+
+                pattern_deallocate(&pattern);
             }
 
-            pattern_deallocate(&pattern);
-        }
-
-        return true;
-    }, CONFIG_VALUE_ARRAY, 
-        CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | 
-        CONFIG_OPTION_PRESERVE_INSERTION_ORDER | 
-        CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES | 
-        CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
+            return true;
+        }, CONFIG_VALUE_ARRAY,
+        CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS |
+            CONFIG_OPTION_PRESERVE_INSERTION_ORDER |
+            CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES |
+            CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
+    }
 
     array_deallocate(_patterns);
     _patterns = nullptr;

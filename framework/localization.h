@@ -61,7 +61,7 @@ const char* tr_cstr(const char* str, size_t length = SIZE_MAX);
 
 #define RTEXT(str) CTEXT(str)
 
-FOUNDATION_FORCEINLINE const char* tr(const char* str, size_t length, bool literal = false) 
+FOUNDATION_FORCEINLINE string_const_t tr(const char* str, size_t length, bool literal = false) 
 { 
     return string_const(str, length); 
 }
@@ -150,7 +150,6 @@ FOUNDATION_FORCEINLINE const char* tr_format(const char* fmt, Args&&... args)
  */
 string_const_t localization_current_language();
 
-
 /*! Returns the current language name. (i.e. "English", "Fran\xC3\xA7ais", etc.)
  * 
  *  @return Current language name.
@@ -206,7 +205,12 @@ string_t localization_string_from_time(char* buffer, size_t capacity, tick_t tim
 #define localization_language_code(index) string_const(STRING_CONST("en"))
 #define localization_language_name(index) string_const(STRING_CONST("English"))
 #define localization_set_current_language(lang, lang_length) false
-#define localization_string_from_time(buffer, capacity, time, since) string_from_time(buffer, capacity, time, true)
+
+FOUNDATION_FORCEINLINE string_t localization_string_from_time(char* buffer, size_t capacity, tick_t time, bool since = false)
+{
+    FOUNDATION_UNUSED(since);
+    return string_from_time(buffer, capacity, time, true);
+}
 
 #endif
 

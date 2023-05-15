@@ -45,8 +45,12 @@ FOUNDATION_STATIC void session_load_config()
     if (_session_config)
         return;
     
-    string_const_t session_file_path = session_get_file_path();
-    _session_config = config_parse_file(STRING_ARGS(session_file_path), CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+    if (main_is_interactive_mode())
+    {
+        string_const_t session_file_path = session_get_file_path();
+        _session_config = config_parse_file(STRING_ARGS(session_file_path), CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+    }
+
     if (!_session_config)
         _session_config = config_allocate();
 }

@@ -26,7 +26,6 @@ struct config_t
     config_option_flags_t options;
     config_value_t* values;
     string_table_t* st;
-    //mutex_t* guard;
 };
 
 struct config_value_t
@@ -65,49 +64,6 @@ config_handle_t::operator config_value_t* () const
 config_handle_t config_handle_t::operator[] (config_index_t at) const
 {
     return config_element_at(*this, at);
-}
-
-config_handle_t config_handle_t::operator[] (const char* key) const
-{
-    return config_find(*this, key, string_length(key));
-}
-
-config_handle_t config_handle_t::operator[] (const config_tag_t& tag) const
-{
-    return config_find(*this, tag.symbol);
-}
-
-config_handle_t config_handle_t::operator[] (const string_const_t& tag) const
-{
-    return config_find(*this, STRING_ARGS(tag));
-}
-
-config_handle_t config_handle_t::operator= (bool b) const
-{
-    FOUNDATION_ASSERT_MSG(this->config, "Key must be non null");
-    return config_set(*this, b);
-}
-
-config_handle_t config_handle_t::operator= (string_const_t value) const
-{
-    if (string_is_null(value))
-        return config_set_null(*this, nullptr, 0);
-    FOUNDATION_ASSERT_MSG(this->config, "Key must be non null");
-    return config_set(*this, value.str, value.length);
-}
-
-config_handle_t config_handle_t::operator= (const char* value) const
-{
-    if (value == nullptr)
-        return config_set_null(*this, nullptr, 0);
-    FOUNDATION_ASSERT_MSG(this->config, "Key must be non null");
-    return config_set(*this, value, string_length(value));
-}
-
-config_handle_t config_handle_t::operator= (double number) const
-{
-    FOUNDATION_ASSERT_MSG(this->config, "Key must be non null");
-    return config_set(*this, number);
 }
 
 config_handle_t::iterator config_handle_t::begin(size_t at /*= 0*/) const
@@ -170,17 +126,15 @@ time_t config_handle_t::as_time(time_t default_value /*= 0*/) const
         string_const_t string_data = config_value_as_string(*this);
         return string_to_date(STRING_ARGS(string_data));
     }
-
     else if (type == CONFIG_VALUE_NUMBER)
         return (time_t)config_value_as_number(*this);
-    
+
     return default_value;
 }
 
-static string_table_symbol_t config_add_symbol(config_t* root, const char* s, size_t length)
+FOUNDATION_STATIC string_table_symbol_t config_add_symbol(config_t* root, const char* s, size_t length)
 {
-    //auto lock = scoped_mutex_t(root->guard);
-    if (s == nullptr || length == 0)
+    if (root == nullptr || s == nullptr || length == 0)
         return STRING_TABLE_NULL_SYMBOL;
     string_table_symbol_t symbol = STRING_TABLE_NULL_SYMBOL;
     while ((symbol = string_table_to_symbol(root->st, s, length)) == STRING_TABLE_FULL)
@@ -188,7 +142,7 @@ static string_table_symbol_t config_add_symbol(config_t* root, const char* s, si
     return symbol;
 }
 
-static void config_value_initialize(config_t* config, config_value_t& value, config_value_type_t type, unsigned int index, string_table_symbol_t name_symbol)
+FOUNDATION_STATIC void config_value_initialize(config_t* config, config_value_t& value, config_value_type_t type, unsigned int index, string_table_symbol_t name_symbol)
 {
     value.name = name_symbol;
     value.index = index;
@@ -233,12 +187,12 @@ void config_deallocate(config_handle_t& root)
     root.index = 0;
 }
 
-config_tag_t config_get_tag(config_handle_t h, const char* tag, size_t tag_length)
+config_tag_t config_tag(const config_handle_t& h, const char* tag, size_t tag_length)
 {
     return config_tag_t { config_add_symbol(h.config, tag, tag_length) };
 }
 
-config_option_flags_t config_get_options(config_handle_t root)
+config_option_flags_t config_get_options(const config_handle_t& root)
 {
     if (!root || !root.config)
         return CONFIG_OPTION_NONE;
@@ -246,7 +200,7 @@ config_option_flags_t config_get_options(config_handle_t root)
     return root.config->options;
 }
 
-config_option_flags_t config_set_options(config_handle_t root, config_option_flags_t options)
+config_option_flags_t config_set_options(const config_handle_t& root, config_option_flags_t options)
 {
     if (!root || !root.config)
         return CONFIG_OPTION_NONE;
@@ -256,7 +210,7 @@ config_option_flags_t config_set_options(config_handle_t root, config_option_fla
     return old_options;
 }
 
-config_handle_t config_element_at(config_handle_t h, size_t index)
+config_handle_t config_element_at(const config_handle_t& h, size_t index)
 {
     if (h.config == nullptr)
         return NIL;
@@ -276,7 +230,7 @@ config_handle_t config_element_at(config_handle_t h, size_t index)
     return config_handle_t { h.config, p->index };
 }
 
-config_handle_t config_find(config_handle_t obj, string_table_symbol_t symbol)
+FOUNDATION_STATIC config_handle_t config_find(const config_handle_t& obj, string_table_symbol_t symbol)
 {
     const config_value_t* v = obj;
     if (v == nullptr || symbol <= 0)
@@ -294,12 +248,12 @@ config_handle_t config_find(config_handle_t obj, string_table_symbol_t symbol)
     return config_handle_t{ obj.config, p->index };
 }
 
-config_handle_t config_find(config_handle_t obj, const config_tag_t& tag)
+config_handle_t config_find(const config_handle_t& obj, const config_tag_t& tag)
 {
     return config_find(obj, tag.symbol);
 }
 
-config_handle_t config_find(config_handle_t h, const char* key, size_t key_length)
+config_handle_t config_find(const config_handle_t& h, const char* key, size_t key_length)
 {
     if (h.config == nullptr || key == nullptr || key_length == 0)
         return NIL;
@@ -318,7 +272,22 @@ config_handle_t config_find(config_handle_t h, const char* key, size_t key_lengt
     return NIL;
 }
 
-const void* config_value_as_pointer_unsafe(config_handle_t value)
+config_handle_t config_handle_t::operator[] (const char* key) const
+{
+    return config_find(*this, key, string_length(key));
+}
+
+config_handle_t config_handle_t::operator[] (const config_tag_t& tag) const
+{
+    return config_find(*this, tag.symbol);
+}
+
+config_handle_t config_handle_t::operator[] (const string_const_t& tag) const
+{
+    return config_find(*this, STRING_ARGS(tag));
+}
+
+const void* config_value_as_pointer_unsafe(const config_handle_t& value)
 {
     const config_value_t* cv = value;
     FOUNDATION_ASSERT_MSG(cv, "Config value is undefined and it is unsafe to fetch its raw value.");
@@ -327,11 +296,14 @@ const void* config_value_as_pointer_unsafe(config_handle_t value)
     return nullptr;
 }
 
-bool config_value_as_boolean(config_handle_t h, bool default_value /*= false*/)
+bool config_value_as_boolean(const config_handle_t& h, bool default_value /*= false*/)
 {
     const config_value_t* cv = h;
     if (cv == nullptr)
         return default_value;
+
+    if (cv->type == CONFIG_VALUE_NIL)
+        return false;
 
     if (cv->type == CONFIG_VALUE_TRUE)
         return true;
@@ -340,7 +312,7 @@ bool config_value_as_boolean(config_handle_t h, bool default_value /*= false*/)
         return false;
 
     if (cv->type == CONFIG_VALUE_NUMBER)
-        return cv->number != 0;
+        return !math_real_is_zero(cv->number);
 
     if (cv->type == CONFIG_VALUE_RAW_DATA)
         return cv->data;
@@ -353,13 +325,14 @@ bool config_value_as_boolean(config_handle_t h, bool default_value /*= false*/)
         string_const_t str = string_table_to_string_const(h.config->st, cv->str);
         if (string_equal_nocase(STRING_ARGS(str), STRING_CONST("true")))
             return true;
-        return false;
+        if (string_equal_nocase(STRING_ARGS(str), STRING_CONST("false")))
+            return false;
     }
 
     return default_value;
 }
 
-double config_value_as_number(config_handle_t h, double default_value /*= NAN*/)
+double config_value_as_number(const config_handle_t& h, double default_value /*= NAN*/)
 {
     const config_value_t* cv = h;
 
@@ -372,7 +345,7 @@ double config_value_as_number(config_handle_t h, double default_value /*= NAN*/)
     if (cv->type == CONFIG_VALUE_TRUE)
         return 1.0;
 
-    if (cv->type == CONFIG_VALUE_FALSE)
+    if (cv->type == CONFIG_VALUE_NIL || cv->type == CONFIG_VALUE_FALSE)
         return 0;
 
     if (cv->type == CONFIG_VALUE_RAW_DATA)
@@ -390,7 +363,7 @@ double config_value_as_number(config_handle_t h, double default_value /*= NAN*/)
     return default_value;
 }
 
-string_const_t config_value_as_string(config_handle_t h, const char* fmt)
+string_const_t config_value_as_string(const config_handle_t& h, const char* fmt)
 {
     if (config_is_null(h))
         return string_null();
@@ -404,19 +377,20 @@ string_const_t config_value_as_string(config_handle_t h, const char* fmt)
         if (math_real_is_nan(v.number))
             return CTEXT("null");
 
-        static thread_local char number_string_buffer[64];
         if (fmt != nullptr)
-            return string_to_const(string_format(STRING_BUFFER(number_string_buffer), fmt, string_length(fmt), v.number));
+            return string_to_const(string_format(SHARED_BUFFER(64), fmt, string_length(fmt), v.number));
             
         if (h.config->options & CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS)
         {
             if (v.number < 0.1)
-                return string_to_const(string_format(STRING_BUFFER(number_string_buffer), STRING_CONST("%.4lf"), v.number));
+                return string_to_const(string_format(SHARED_BUFFER(64), STRING_CONST("%.4lf"), v.number));
 
             if (v.number < 1.0)
-                return string_to_const(string_format(STRING_BUFFER(number_string_buffer), STRING_CONST("%.3lf"), v.number));
-            return string_to_const(string_format(STRING_BUFFER(number_string_buffer), STRING_CONST("%.2lf"), v.number));
+                return string_to_const(string_format(SHARED_BUFFER(64), STRING_CONST("%.3lf"), v.number));
+            
+            return string_to_const(string_format(SHARED_BUFFER(64), STRING_CONST("%.2lf"), v.number));
         }
+        
         return string_from_real_static(v.number, 0, 0, 0);
     }
 
@@ -426,21 +400,17 @@ string_const_t config_value_as_string(config_handle_t h, const char* fmt)
     if (v.type == CONFIG_VALUE_FALSE)
         return string_const(STRING_CONST("false"));
 
-    if (v.type == CONFIG_VALUE_NIL)
-        return string_const(STRING_CONST("null"));
-
     if (v.type == CONFIG_VALUE_RAW_DATA)
     {
-        string_t raw_data_pointer_string_buffer = string_static_buffer(32);
         double n = v.type == CONFIG_VALUE_NUMBER ? v.number : (double)(uint64_t)v.data;
-        string_t data_string = string_format(STRING_ARGS(raw_data_pointer_string_buffer), STRING_CONST("%p"), v.data);
+        string_t data_string = string_format(SHARED_BUFFER(32), STRING_CONST("0x%016x"), v.data);
         return string_const(STRING_ARGS(data_string));
     }
 
     return string_null();
 }
 
-config_value_type_t config_value_type(config_handle_t h)
+config_value_type_t config_value_type(const config_handle_t& h)
 {
     if (h.config == nullptr)
         return CONFIG_VALUE_UNDEFINED;
@@ -448,10 +418,10 @@ config_value_type_t config_value_type(config_handle_t h)
     return v.type;
 }
 
-FOUNDATION_STATIC config_handle_t config_add(config_handle_t obj_handle, string_table_symbol_t symbol)
+FOUNDATION_STATIC config_handle_t config_add(const config_handle_t& obj_handle, string_table_symbol_t symbol)
 {
     config_value_t* obj = obj_handle;
-    if (!obj)
+    if (!obj || symbol == STRING_TABLE_NULL_SYMBOL)
         return NIL;
 
     if (obj->type != CONFIG_VALUE_OBJECT)
@@ -493,13 +463,13 @@ FOUNDATION_STATIC config_handle_t config_add(config_handle_t obj_handle, string_
     return config_handle_t{ obj_handle.config, new_field_index };
 }
 
-config_handle_t config_add(config_handle_t obj_handle, const char* key, size_t key_length)
+config_handle_t config_add(const config_handle_t& obj_handle, const char* key, size_t key_length)
 {
     string_table_symbol_t name_symbol = config_add_symbol(obj_handle.config, key, key_length);
     return config_add(obj_handle, name_symbol);
 }
 
-bool config_remove(config_handle_t h, config_handle_t to_remove_handle)
+bool config_remove(const config_handle_t& h, const config_handle_t& to_remove_handle)
 {
     config_value_t* cv = h;
     if (!cv || cv->child == 0)
@@ -534,7 +504,7 @@ bool config_remove(config_handle_t h, config_handle_t to_remove_handle)
     return false;
 }
 
-bool config_remove(config_handle_t h, const char* key, size_t key_length)
+bool config_remove(const config_handle_t& h, const char* key, size_t key_length)
 {
     config_value_t* cv = h;
     if (!cv || cv->child == 0)
@@ -544,7 +514,7 @@ bool config_remove(config_handle_t h, const char* key, size_t key_length)
     return config_remove(h, to_remove_handle);
 }
 
-static config_handle_t config_set(config_handle_t h, config_value_t* cv, bool value)
+FOUNDATION_STATIC config_handle_t config_set(const config_handle_t& h, config_value_t* cv, bool value)
 {
     if (cv)
     {
@@ -557,7 +527,7 @@ static config_handle_t config_set(config_handle_t h, config_value_t* cv, bool va
     return h;
 }
 
-static config_handle_t config_set(config_handle_t h, config_value_t* cv, double number)
+FOUNDATION_STATIC config_handle_t config_set(const config_handle_t& h, config_value_t* cv, double number)
 {
     if (cv)
     {
@@ -570,11 +540,11 @@ static config_handle_t config_set(config_handle_t h, config_value_t* cv, double 
     return h;
 }
 
-static config_handle_t config_set(config_handle_t h, config_value_t* cv, const void* data)
+FOUNDATION_STATIC config_handle_t config_set(const config_handle_t& h, config_value_t* cv, const void* data)
 {
     if (cv)
     {
-        cv->type = CONFIG_VALUE_RAW_DATA;
+        cv->type = data == nullptr ? CONFIG_VALUE_NIL : CONFIG_VALUE_RAW_DATA;
         cv->data = data;
         cv->child = 0;
         return config_handle_t{ h.config, cv->index };
@@ -583,7 +553,7 @@ static config_handle_t config_set(config_handle_t h, config_value_t* cv, const v
     return h;
 }
 
-config_handle_t config_set(config_handle_t obj_handle, config_value_t* cv, const char* value, size_t value_length)
+FOUNDATION_STATIC config_handle_t config_set(const config_handle_t& obj_handle, config_value_t* cv, const char* value, size_t value_length)
 {
     if (cv)
     {
@@ -596,31 +566,7 @@ config_handle_t config_set(config_handle_t obj_handle, config_value_t* cv, const
     return obj_handle;
 }
 
-config_handle_t config_set(config_handle_t h, const config_tag_t& tag, bool value)
-{
-    config_value_t* cv = config_get_or_create(h, tag.symbol);
-    return config_set(h, cv, value);
-}
-
-config_handle_t config_set(config_handle_t h, const config_tag_t& tag, double number)
-{
-    config_value_t* cv = config_get_or_create(h, tag.symbol);
-    return config_set(h, cv, number);
-}
-
-config_handle_t config_set(config_handle_t h, const config_tag_t& tag, const void* data)
-{
-    config_value_t* cv = config_get_or_create(h, tag.symbol);
-    return config_set(h, cv, data);
-}
-
-config_handle_t config_set(config_handle_t h, const config_tag_t& tag, const char* string_value, size_t string_length)
-{
-    config_value_t* cv = config_get_or_create(h, tag.symbol);
-    return config_set(h, cv, string_value, string_length);
-}
-
-config_handle_t config_get_or_create(config_handle_t h, string_table_symbol_t symbol)
+FOUNDATION_STATIC config_handle_t config_get_or_create(const config_handle_t& h, string_table_symbol_t symbol)
 {
     config_handle_t cv = config_find(h, symbol);
     if (!cv)
@@ -628,12 +574,36 @@ config_handle_t config_get_or_create(config_handle_t h, string_table_symbol_t sy
     return cv;
 }
 
-config_handle_t config_get_or_create(config_handle_t h, const config_tag_t& tag)
+config_handle_t config_set(const config_handle_t& h, const config_tag_t& tag, bool value)
+{
+    config_value_t* cv = config_get_or_create(h, tag.symbol);
+    return config_set(h, cv, value);
+}
+
+config_handle_t config_set(const config_handle_t& h, const config_tag_t& tag, double number)
+{
+    config_value_t* cv = config_get_or_create(h, tag.symbol);
+    return config_set(h, cv, number);
+}
+
+config_handle_t config_set(const config_handle_t& h, const config_tag_t& tag, const void* data)
+{
+    config_value_t* cv = config_get_or_create(h, tag.symbol);
+    return config_set(h, cv, data);
+}
+
+config_handle_t config_set(const config_handle_t& h, const config_tag_t& tag, const char* string_value, size_t string_length)
+{
+    config_value_t* cv = config_get_or_create(h, tag.symbol);
+    return config_set(h, cv, string_value, string_length);
+}
+
+config_handle_t config_get_or_create(const config_handle_t& h, const config_tag_t& tag)
 {
     return config_get_or_create(h, tag.symbol);
 }
 
-config_handle_t config_get_or_create(config_handle_t h, const char* key, size_t key_length)
+config_handle_t config_get_or_create(const config_handle_t& h, const char* key, size_t key_length)
 {
     config_handle_t cv = config_find(h, key, key_length);
     if (!cv)
@@ -641,73 +611,87 @@ config_handle_t config_get_or_create(config_handle_t h, const char* key, size_t 
     return cv;
 }
 
-config_handle_t config_set(config_handle_t h, const char* key, size_t key_length, bool value)
+config_handle_t config_set(const config_handle_t& h, const char* key, size_t key_length, bool value)
 {
     config_value_t* cv = key != nullptr ? config_get_or_create(h, key, key_length) : &h.config->values[h.index];
     return config_set(h, cv, value);
 }
 
-config_handle_t config_set(config_handle_t v, bool value)
+config_handle_t config_set(const config_handle_t& v, bool value)
 {
     return config_set(v, nullptr, 0, value);
 }
 
-config_handle_t config_set(config_handle_t h, const char* key, size_t key_length, double number)
+config_handle_t config_set(const config_handle_t& h, const char* key, size_t key_length, double number)
 {
     config_value_t* cv = key != nullptr ? config_get_or_create(h, key, key_length) : h;
     return config_set(h, cv, number);
 }
 
-config_handle_t config_set(config_handle_t v, double number)
+config_handle_t config_set(const config_handle_t& v, double number)
 {
     return config_set(v, nullptr, 0, number);
 }
 
-config_handle_t config_set(config_handle_t h, const char* key, size_t key_length, const void* data)
+FOUNDATION_STATIC void config_set_null(config_value_t* cv)
+{
+    FOUNDATION_ASSERT(cv);
+
+    cv->type = CONFIG_VALUE_NIL;
+    cv->str = 0;
+    cv->child = 0;
+}
+
+config_handle_t config_set(const config_handle_t& h, const char* key, size_t key_length, const void* data)
 {
     config_value_t* cv = key != nullptr ? config_get_or_create(h, key, key_length) : h;
+    if (data == nullptr)
+    {
+        config_set_null(cv);
+        return config_handle_t{ h.config, cv->index };
+    }
+
     return config_set(h, cv, data);
 }
 
-config_handle_t config_set(config_handle_t v, const void* data)
+config_handle_t config_set(const config_handle_t& v, const void* data)
 {
     return config_set(v, nullptr, 0, data);
 }
 
-config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, string_const_t string_value)
+config_handle_t config_set(const config_handle_t& v, const char* key, size_t key_length, string_const_t string_value)
 {
     return config_set(v, key, key_length, STRING_ARGS(string_value));
 }
 
-config_handle_t config_set(config_handle_t obj_handle, const char* key, size_t key_length, const char* string_value, size_t string_length)
+config_handle_t config_set(const config_handle_t& obj_handle, const char* key, size_t key_length, const char* string_value, size_t string_length)
 {
     config_value_t* cv = key != nullptr ? config_get_or_create(obj_handle, key, key_length) : obj_handle;
     return config_set(obj_handle, cv, string_value, string_length);
 }
 
-config_handle_t config_set(config_handle_t obj_handle, const char* value, size_t value_length)
+config_handle_t config_set(const config_handle_t& obj_handle, const char* value, size_t value_length)
 {
     return config_set(obj_handle, nullptr, 0, value, value_length);
 }
 
-config_handle_t config_set_object(config_handle_t h, const char* key, size_t key_length)
+config_handle_t config_set_object(const config_handle_t& h, const char* key, size_t key_length)
 {
     config_value_t* cv = key != nullptr ? config_get_or_create(h, key, key_length) : h;
-    if (cv)
+    if (!cv)
+        return h;
+
+    if (cv->type != CONFIG_VALUE_OBJECT)
     {
-        if (cv->type != CONFIG_VALUE_OBJECT)
-        {
-            cv->type = CONFIG_VALUE_OBJECT;
-            cv->child_count = 0;
-            cv->child = 0;
-        }
-        return config_handle_t{ h.config, cv->index };
+        cv->type = CONFIG_VALUE_OBJECT;
+        cv->child_count = 0;
+        cv->child = 0;
     }
 
-    return h;
+    return config_handle_t{ h.config, cv->index };
 }
 
-config_handle_t config_set_array(config_handle_t h, const char* key, size_t key_length)
+config_handle_t config_set_array(const config_handle_t& h, const char* key, size_t key_length)
 {
     config_value_t* cv = key != nullptr ? config_get_or_create(h, key, key_length) : h;
     if (cv)
@@ -724,16 +708,7 @@ config_handle_t config_set_array(config_handle_t h, const char* key, size_t key_
     return h;
 }
 
-FOUNDATION_STATIC void config_set_null(config_value_t* cv)
-{
-    FOUNDATION_ASSERT(cv);
-
-    cv->type = CONFIG_VALUE_NIL;
-    cv->str = 0;
-    cv->child = 0;
-}
-
-void config_set_null(config_handle_t handle)
+void config_set_null(const config_handle_t& handle)
 {
     config_value_t* value = handle;
     if (!value)
@@ -742,7 +717,7 @@ void config_set_null(config_handle_t handle)
     config_set_null(value);
 }
 
-config_handle_t config_set_null(config_handle_t h, const char* key, size_t key_length)
+config_handle_t config_set_null(const config_handle_t& h, const char* key, size_t key_length)
 {
     config_value_t* cv = key != nullptr ? config_get_or_create(h, key, key_length) : h;
     if (!cv)
@@ -751,7 +726,7 @@ config_handle_t config_set_null(config_handle_t h, const char* key, size_t key_l
     return config_handle_t{ h.config, cv->index };
 }
 
-config_handle_t config_array_clear(config_handle_t v)
+config_handle_t config_array_clear(const config_handle_t& v)
 {
     config_value_t* obj = v;
     if (!obj)
@@ -767,22 +742,23 @@ config_handle_t config_array_clear(config_handle_t v)
     return v;
 }
 
-config_handle_t config_array_insert(config_handle_t array_handle, size_t index, config_value_type_t type /*= CONFIG_VALUE_NIL*/, const char* name /*= nullptr*/, size_t name_length /*= 0*/)
+config_handle_t config_array_insert(const config_handle_t& array_handle, size_t index, config_value_type_t type /*= CONFIG_VALUE_NIL*/, const char* name /*= nullptr*/, size_t name_length /*= 0*/)
 {
     config_value_t* obj = array_handle;
     if (!obj)
         return NIL;
         
-    if (obj->type == CONFIG_VALUE_UNDEFINED)
+    if (obj->type == CONFIG_VALUE_UNDEFINED || obj->type == CONFIG_VALUE_NIL)
     {
         obj->type = CONFIG_VALUE_ARRAY;
         obj->child = 0;
         obj->child_count = 0;
     }
-    else if (obj->type != CONFIG_VALUE_ARRAY)
+
+    FOUNDATION_ASSERT(obj->type == CONFIG_VALUE_ARRAY);
+    if (obj->type != CONFIG_VALUE_ARRAY)
         return NIL;
 
-    //auto lock = scoped_mutex_t(array_handle.config->guard);
     config_value_t* values = array_handle.config->values;
     values = array_handle.config->values = array_push(values, config_value_t{});
     const unsigned int new_element_index = array_size(values) - 1;
@@ -823,42 +799,42 @@ config_handle_t config_array_insert(config_handle_t array_handle, size_t index, 
     return config_handle_t{ array_handle.config, new_element_index };
 }
 
-config_handle_t config_array_push(config_handle_t v, config_value_type_t type /*= CONFIG_VALUE_NIL*/, const char* name /*= nullptr*/, size_t name_length /*= 0*/)
+config_handle_t config_array_push(const config_handle_t& v, config_value_type_t type /*= CONFIG_VALUE_NIL*/, const char* name /*= nullptr*/, size_t name_length /*= 0*/)
 {
     return config_array_insert(v, UINT_MAX, type, name, name_length);
 }
 
-config_handle_t config_array_push(config_handle_t v, bool value)
+config_handle_t config_array_push(const config_handle_t& v, bool value)
 {
     return config_set(config_array_push(v), value);
 }
 
-config_handle_t config_array_push(config_handle_t v, double number)
+config_handle_t config_array_push(const config_handle_t& v, double number)
 {
     return config_set(config_array_push(v), number);
 }
 
-config_handle_t config_array_push(config_handle_t v, const char* value, size_t value_length)
+config_handle_t config_array_push(const config_handle_t& v, const char* value, size_t value_length)
 {
     return config_set(config_array_push(v), value, value_length);
 }
 
-config_handle_t config_array_insert(config_handle_t v, size_t index, bool value)
+config_handle_t config_array_insert(const config_handle_t& v, size_t index, bool value)
 {
     return config_set(config_array_insert(v, index), value);
 }
 
-config_handle_t config_array_insert(config_handle_t v, size_t index, double number)
+config_handle_t config_array_insert(const config_handle_t& v, size_t index, double number)
 {
     return config_set(config_array_insert(v, index), number);
 }
 
-config_handle_t config_array_insert(config_handle_t v, size_t index, const char* value, size_t value_length)
+config_handle_t config_array_insert(const config_handle_t& v, size_t index, const char* value, size_t value_length)
 {
     return config_set(config_array_insert(v, index), value, value_length);
 }
 
-string_const_t config_name(config_handle_t obj)
+string_const_t config_name(const config_handle_t& obj)
 {
     config_value_t* cv = obj;
     if (!cv)
@@ -867,7 +843,7 @@ string_const_t config_name(config_handle_t obj)
     return string_table_to_string_const(obj.config->st, cv->name);
 }
 
-size_t config_size(config_handle_t obj)
+size_t config_size(const config_handle_t& obj)
 {
     config_value_t* cv = obj;
     if (cv)
@@ -875,7 +851,7 @@ size_t config_size(config_handle_t obj)
     return 0;
 }
 
-bool config_array_pop(config_handle_t array_handle)
+bool config_array_pop(const config_handle_t& array_handle)
 {
     config_value_t* arr = array_handle;
     if (!arr)
@@ -920,7 +896,7 @@ bool config_array_pop(config_handle_t array_handle)
     return false;
 }
 
-void config_array_sort(config_handle_t array_handle, const function<bool(const config_handle_t& a, const config_handle_t& b)>& sort_fn)
+void config_array_sort(const config_handle_t& array_handle, const function<bool(const config_handle_t& a, const config_handle_t& b)>& sort_fn)
 {
     config_value_t* arr = array_handle;
     if (arr == nullptr || arr->child == 0 || !sort_fn)
@@ -962,7 +938,7 @@ void config_array_sort(config_handle_t array_handle, const function<bool(const c
     array_deallocate(indexes);
 }
 
-void config_pack(config_handle_t value)
+void config_pack(const config_handle_t& value)
 {
     if (value.config == nullptr)
         return;
@@ -970,7 +946,7 @@ void config_pack(config_handle_t value)
     string_table_pack(value.config->st);
 }
 
-void config_clear(config_handle_t value)
+void config_clear(const config_handle_t& value)
 {
     config_value_t* cv = value;
     if (!cv)
@@ -981,7 +957,7 @@ void config_clear(config_handle_t value)
     cv->data = nullptr;
 }
 
-bool config_is_valid(config_handle_t h, const char* key /*= nullptr*/, size_t key_length /*= 0*/)
+bool config_is_valid(const config_handle_t& h, const char* key /*= nullptr*/, size_t key_length /*= 0*/)
 {
     if (!h)
         return false;
@@ -996,14 +972,14 @@ bool config_is_valid(config_handle_t h, const char* key /*= nullptr*/, size_t ke
     return false;
 }
 
-bool config_exists(config_handle_t v, const char* key, size_t key_length)
+bool config_exists(const config_handle_t& v, const char* key, size_t key_length)
 {
     if (key == nullptr)
         return config_is_valid(v);
     return config_find(v, key, key_length);
 }
 
-bool config_is_null(config_handle_t h, const char* key /*= nullptr*/, size_t key_length /*= 0*/)
+bool config_is_null(const config_handle_t& h, const char* key /*= nullptr*/, size_t key_length /*= 0*/)
 {
     if (h.config == nullptr)
         return true;
@@ -1018,7 +994,7 @@ bool config_is_null(config_handle_t h, const char* key /*= nullptr*/, size_t key
     return true;
 }
 
-bool config_is_undefined(config_handle_t h, const char* key /*= nullptr*/, size_t key_length /*= 0*/)
+bool config_is_undefined(const config_handle_t& h, const char* key /*= nullptr*/, size_t key_length /*= 0*/)
 {
     const config_value_t* cv = h;
 
@@ -1034,29 +1010,28 @@ bool config_is_undefined(config_handle_t h, const char* key /*= nullptr*/, size_
     return cv->type == CONFIG_VALUE_UNDEFINED;
 }
 
-static FOUNDATION_FORCEINLINE void config_sjson_add_string(config_sjson_t& sjson, const char* str, size_t length)
+FOUNDATION_STATIC FOUNDATION_FORCEINLINE void config_sjson_add_string(config_sjson_t& sjson, const char* str, size_t length)
 {
     const char* s = str;
     for (int i = 0; i < length && *s; ++i, ++s)
         sjson = array_push(sjson, *s);
 }
 
-static FOUNDATION_FORCEINLINE void config_sjson_add_char(config_sjson_t& sjson, char c)
+FOUNDATION_STATIC FOUNDATION_FORCEINLINE void config_sjson_add_char(config_sjson_t& sjson, char c)
 {
     sjson = array_push(sjson, c);
 }
 
-static void config_sjson_write_new_line(config_sjson_t& sjson, int indentation)
+FOUNDATION_STATIC void config_sjson_write_new_line(config_sjson_t& sjson, int indentation)
 {
     sjson = array_push(sjson, '\n');
     for (int i = 0; i < indentation; ++i)
         sjson = array_push(sjson, '\t');
 }
 
-static FOUNDATION_FORCEINLINE bool config_sjson_is_primitive_type(const config_value_t* o)
+FOUNDATION_STATIC FOUNDATION_FORCEINLINE bool config_sjson_is_primitive_type(const config_value_t* o)
 {
-    if (!o)
-        return false;
+    FOUNDATION_ASSERT(o);
 
     if (o->type == CONFIG_VALUE_NIL ||
         o->type == CONFIG_VALUE_FALSE ||
@@ -1071,10 +1046,10 @@ static FOUNDATION_FORCEINLINE bool config_sjson_is_primitive_type(const config_v
     return false;
 }
 
-static void config_sjson_write_array(config_handle_t array_handle, config_sjson_t& sjson, int indentation);
-static void config_sjson_write_object(config_handle_t array_handle, config_sjson_t& sjson, int indentation);
+FOUNDATION_STATIC void config_sjson_write_array(const config_handle_t& array_handle, config_sjson_t& sjson, int indentation);
+FOUNDATION_STATIC void config_sjson_write_object(const config_handle_t& array_handle, config_sjson_t& sjson, int indentation);
 
-static void config_sjson_write_string(config_sjson_t& sjson, string_const_t value, config_option_flags_t options)
+FOUNDATION_STATIC void config_sjson_write_string(config_sjson_t& sjson, string_const_t value, config_option_flags_t options)
 {
     constexpr char hexchar[] = "0123456789abcdef";
 
@@ -1138,10 +1113,10 @@ static void config_sjson_write_string(config_sjson_t& sjson, string_const_t valu
 }
 
 
-static void config_sjson_write(config_handle_t value_handle, config_sjson_t& sjson, int indentation /*= 4*/)
+FOUNDATION_STATIC void config_sjson_write(const config_handle_t& value_handle, config_sjson_t& sjson, int indentation /*= 4*/)
 {
     const config_value_t* value = value_handle;
-    if (value == nullptr || value->type == CONFIG_VALUE_UNDEFINED)
+    if (value == nullptr || value->type == CONFIG_VALUE_NIL)
     {
         config_sjson_add_string(sjson, STRING_CONST("null"));
     }
@@ -1167,7 +1142,7 @@ static void config_sjson_write(config_handle_t value_handle, config_sjson_t& sjs
     }
 }
 
-static bool config_sjson_is_simple_identifier(string_const_t value)
+FOUNDATION_STATIC bool config_sjson_is_simple_identifier(string_const_t value)
 {
     const char* s = value.str;
     for (int i = 0; i < value.length && *s; ++i, ++s)
@@ -1188,7 +1163,7 @@ static bool config_sjson_is_simple_identifier(string_const_t value)
     return true;
 }
 
-static FOUNDATION_FORCEINLINE bool config_sjson_skip_element(const config_handle_t& h, const config_value_t* item)
+FOUNDATION_STATIC FOUNDATION_FORCEINLINE bool config_sjson_skip_element(const config_handle_t& h, const config_value_t* item)
 {
     const auto options = h.config->options;
     const bool skip_nulls = options & CONFIG_OPTION_WRITE_SKIP_NULL;
@@ -1202,7 +1177,7 @@ static FOUNDATION_FORCEINLINE bool config_sjson_skip_element(const config_handle
     return !(item->type != CONFIG_VALUE_UNDEFINED && !(skip_nulls && item->type == CONFIG_VALUE_NIL) && item->type != CONFIG_VALUE_RAW_DATA);
 }
 
-static size_t config_sjson_write_object_fields(config_handle_t obj_handle, config_sjson_t& sjson, int indentation, bool skipFirstWhiteline, bool* out_wants_same_line = nullptr)
+FOUNDATION_STATIC size_t config_sjson_write_object_fields(const config_handle_t& obj_handle, config_sjson_t& sjson, int indentation, bool skipFirstWhiteline, bool* out_wants_same_line = nullptr)
 {
     config_value_t* obj = obj_handle;
 
@@ -1217,15 +1192,14 @@ static size_t config_sjson_write_object_fields(config_handle_t obj_handle, confi
     if (wants_same_line)
     {
         // All elements need to be a primitive and at most 8 elements
-        //size_t primitive_count = 0;
         for (auto e : obj_handle)
         {
             config_value_t* item = e;
-            if (/*++primitive_count > 8 || */!config_sjson_is_primitive_type(item))
+            if (!config_sjson_is_primitive_type(item))
             {
                 wants_same_line = false;
                 break;
-            }			
+            }
         }
     }
 
@@ -1234,7 +1208,7 @@ static size_t config_sjson_write_object_fields(config_handle_t obj_handle, confi
     for (auto e : obj_handle)
     {
         config_value_t* item = e;
-        if (config_sjson_skip_element(e, item))
+        if (config_sjson_skip_element(e, item) || item->type == CONFIG_VALUE_UNDEFINED)
         {
             element_index++;
             continue;
@@ -1281,7 +1255,7 @@ static size_t config_sjson_write_object_fields(config_handle_t obj_handle, confi
     return fields_written;
 }
 
-static void config_sjson_write_object(config_handle_t obj_handle, config_sjson_t& sjson, int indentation)
+FOUNDATION_STATIC void config_sjson_write_object(const config_handle_t& obj_handle, config_sjson_t& sjson, int indentation)
 {
     const bool skip_first_brackets = (obj_handle.index == 0 && (obj_handle.config->options & CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS) != 0) 
                                         && (obj_handle.config->options & CONFIG_OPTION_WRITE_JSON) == 0;
@@ -1301,7 +1275,7 @@ static void config_sjson_write_object(config_handle_t obj_handle, config_sjson_t
         config_sjson_add_char(sjson, '}');
 }
 
-static void config_sjson_write_array(config_handle_t array_handle, config_sjson_t& sjson, int indentation)
+FOUNDATION_STATIC void config_sjson_write_array(const config_handle_t& array_handle, config_sjson_t& sjson, int indentation)
 {
     config_sjson_add_char(sjson, '[');
 
@@ -1347,7 +1321,7 @@ static void config_sjson_write_array(config_handle_t array_handle, config_sjson_
     config_sjson_add_char(sjson, ']');
 }
 
-config_sjson_const_t config_sjson(config_handle_t value_handle, config_option_flags_t options /*= CONFIG_OPTION_NONE*/)
+config_sjson_const_t config_sjson(const config_handle_t& value_handle, config_option_flags_t options /*= CONFIG_OPTION_NONE*/)
 {
     const config_value_t* value = value_handle;
     if (value == nullptr)
@@ -1426,18 +1400,11 @@ std::runtime_error config_parse_exception(string_const_t json, int index, const 
     return std::runtime_error(error);
 }
 
-static char config_parse_next(string_const_t json, int index)
+FOUNDATION_STATIC char config_parse_next(string_const_t json, int index)
 {
     if (config_parse_at_end(json, index))
         throw config_parse_exception(json, index, "Unexpected end of data");
     return json.str[index];
-}
-
-char config_parse_next_consume(string_const_t json, int& index)
-{
-    if (config_parse_at_end(json, index))
-        throw config_parse_exception(json, index, "Unexpected end of data");
-    return json.str[index++];
 }
 
 void config_parse_skip_comment(string_const_t json, int& index)
@@ -1472,7 +1439,7 @@ void config_parse_skip_whitespace(string_const_t json, int& index)
     }
 }
 
-static bool config_parse_consume(string_const_t json, int& index, const char* consume, size_t consume_length, bool error = true)
+FOUNDATION_STATIC bool config_parse_consume(string_const_t json, int& index, const char* consume, size_t consume_length, bool error = true)
 {
     int end = index;
     config_parse_skip_whitespace(json, end);
@@ -1566,7 +1533,6 @@ string_t config_parse_string(string_const_t json, int& index, config_option_flag
                     if (b1 == '0' && b2 == '0')
                     {
                         s = array_push(s, '\0');
-                        index += 2;
                     }
                     else
                     {
@@ -1615,7 +1581,7 @@ string_t config_parse_string(string_const_t json, int& index, config_option_flag
     return res;
 }
 
-static config_handle_t config_parse_string(string_const_t json, int& index, config_handle_t str_handle)
+FOUNDATION_STATIC config_handle_t config_parse_string(string_const_t json, int& index, config_handle_t str_handle)
 {
     string_t s = config_parse_string(json, index, str_handle.config->options);
     config_set(str_handle, STRING_ARGS(s));
@@ -1623,7 +1589,7 @@ static config_handle_t config_parse_string(string_const_t json, int& index, conf
     return str_handle;
 }
 
-static string_t config_parse_identifier(string_const_t json, int& index)
+FOUNDATION_STATIC string_t config_parse_identifier(string_const_t json, int& index)
 {
     config_parse_skip_whitespace(json, index);
 
@@ -1830,6 +1796,12 @@ bool config_write_file(string_const_t _file_path, config_handle_t data, config_o
     config_sjson_const_t sjson = config_sjson(data, write_json_flags);
     size_t sjson_length = array_size(sjson);
 
+    if (sjson_length == 0)
+    {
+        log_warnf(0, WARNING_INVALID_VALUE, STRING_CONST("No data to write to config file %.*s"), STRING_FORMAT(file_path));
+        return false;
+    }
+
     const bool no_write_on_data_equal = write_json_flags & CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL;
     string_t current_text_buffer = no_write_on_data_equal ? fs_read_text(STRING_ARGS(file_path)) : string_t{nullptr, 0};
     if (!no_write_on_data_equal || !string_equal(STRING_ARGS(current_text_buffer), sjson, sjson_length - 1))
@@ -1855,7 +1827,7 @@ bool config_write_file(string_const_t _file_path, config_handle_t data, config_o
 
 bool config_write_file(
     string_const_t output_file_path,
-    function<bool(config_handle_t data)> write_callback,
+    function<bool(const config_handle_t& data)> write_callback,
     config_value_type_t value_type /*= CONFIG_VALUE_OBJECT*/,
     config_option_flags_t write_json_flags /*= CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_WRITE_SKIP_NULL*/)
 {

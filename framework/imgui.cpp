@@ -1060,11 +1060,13 @@ void imgui_initiaize(GLFWwindow* window)
         ImGui::StyleColorsDark();
     #endif
 
+    #if BUILD_ENABLE_LOCALIZATION
     dispatcher_register_event_listener(EVENT_LOCALIZATION_LANGUAGE_CHANGED, [](const dispatcher_event_args_t& args)
     {
         imgui_update_localization();
         return true;
     });
+    #endif
 }
 
 void* imgui_allocate(size_t sz, void* user_data)

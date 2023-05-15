@@ -292,13 +292,13 @@ config_handle_t title_get_fundamental_config_value(title_t* title, const char* f
 
 void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
 {
-    const config_tag_t TITLE_DATE = config_get_tag(data, STRING_CONST("date"));
-    const config_tag_t TITLE_BUY = config_get_tag(data, STRING_CONST("buy"));
-    const config_tag_t TITLE_QTY = config_get_tag(data, STRING_CONST("qty"));
-    const config_tag_t TITLE_PRICE = config_get_tag(data, STRING_CONST("price"));
-    const config_tag_t TITLE_ASK_PRICE = config_get_tag(data, STRING_CONST("ask"));
-    const config_tag_t TITLE_EXCHANGE_RATE = config_get_tag(data, STRING_CONST("xcg"));
-    const config_tag_t TITLE_SPLIT_FACTOR = config_get_tag(data, STRING_CONST("split"));
+    const config_tag_t TITLE_DATE = config_tag(data, STRING_CONST("date"));
+    const config_tag_t TITLE_BUY = config_tag(data, STRING_CONST("buy"));
+    const config_tag_t TITLE_QTY = config_tag(data, STRING_CONST("qty"));
+    const config_tag_t TITLE_PRICE = config_tag(data, STRING_CONST("price"));
+    const config_tag_t TITLE_ASK_PRICE = config_tag(data, STRING_CONST("ask"));
+    const config_tag_t TITLE_EXCHANGE_RATE = config_tag(data, STRING_CONST("xcg"));
+    const config_tag_t TITLE_SPLIT_FACTOR = config_tag(data, STRING_CONST("split"));
 
     t->data = data;
     t->wallet = wallet;

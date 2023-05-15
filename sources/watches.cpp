@@ -706,6 +706,9 @@ string_const_t watches_shared_file_path()
 
 void watches_init()
 {
+    if (!main_is_interactive_mode())
+        return;
+
     if (_shared_context == nullptr)
     {
         string_const_t watches_shared_path = watches_shared_file_path();

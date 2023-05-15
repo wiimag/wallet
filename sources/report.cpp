@@ -2597,29 +2597,32 @@ FOUNDATION_STATIC void report_initialize()
             STRING_FORMAT(report_dir_path));
     }
 
-    log_infof(HASH_REPORT, STRING_CONST("Loading reports from %.*s"), STRING_FORMAT(report_dir_path));
-
-    string_t* paths = fs_matching_files(STRING_ARGS(report_dir_path), STRING_CONST("^.*\\.json$"), false);
-    foreach (e, paths)
+    if (main_is_interactive_mode())
     {
-        char report_path_buffer[1024];
-        string_t report_path = path_concat(STRING_BUFFER(report_path_buffer), STRING_ARGS(report_dir_path), STRING_ARGS(*e));
-        if (!fs_is_file(STRING_ARGS(report_path)))
+        log_infof(HASH_REPORT, STRING_CONST("Loading reports from %.*s"), STRING_FORMAT(report_dir_path));
+
+        string_t* paths = fs_matching_files(STRING_ARGS(report_dir_path), STRING_CONST("^.*\\.json$"), false);
+        foreach(e, paths)
         {
-            log_warnf(HASH_REPORT, WARNING_SUSPICIOUS,
-                STRING_CONST("Report file '%.*s' is not a file, skipping"),
-                STRING_FORMAT(report_path));
-            continue;
+            char report_path_buffer[1024];
+            string_t report_path = path_concat(STRING_BUFFER(report_path_buffer), STRING_ARGS(report_dir_path), STRING_ARGS(*e));
+            if (!fs_is_file(STRING_ARGS(report_path)))
+            {
+                log_warnf(HASH_REPORT, WARNING_SUSPICIOUS,
+                    STRING_CONST("Report file '%.*s' is not a file, skipping"),
+                    STRING_FORMAT(report_path));
+                continue;
+            }
+            report_load(string_to_const(report_path));
         }
-        report_load(string_to_const(report_path));
+        string_array_deallocate(paths);
+
+        report_sort_order();
+
+        module_register_tabs(HASH_REPORT, report_render_tabs);
+        module_register_menu(HASH_REPORT, report_render_menus);
+        module_register_window(HASH_REPORT, report_render_windows);
     }
-    string_array_deallocate(paths);
-
-    report_sort_order();
-
-    module_register_tabs(HASH_REPORT, report_render_tabs);
-    module_register_menu(HASH_REPORT, report_render_menus);
-    module_register_window(HASH_REPORT, report_render_windows);
 
     report_expression_columns_initialize();
 }

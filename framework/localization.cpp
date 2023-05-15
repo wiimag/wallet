@@ -370,8 +370,6 @@ string_const_t tr(const char* str, size_t length, bool literal /*= false*/)
     return localization_get_locale(dict, str, length, literal);
 }
 
-#endif
-
 string_const_t localization_current_language()
 {
     return string_const(_localization_module->locales->lang, string_length(_localization_module->locales->lang));
@@ -488,8 +486,6 @@ string_t localization_string_from_time(char* buffer, size_t capacity, tick_t tim
 // 
 // MODULE
 //
-
-#if BUILD_ENABLE_LOCALIZATION
 
 FOUNDATION_STATIC void localization_initialize()
 {

@@ -28,9 +28,6 @@ typedef char* config_sjson_t;
 typedef const char* config_sjson_const_t;
 typedef unsigned int config_index_t;
 
-/*! String table symbol forward declaration. */
-typedef int string_table_symbol_t;
-
 /*! Config value primitive types. */
 typedef enum : uint8_t {
     CONFIG_VALUE_UNDEFINED = (uint8_t)-1,
@@ -98,16 +95,41 @@ struct config_handle_t
     {
     }
 
+    FOUNDATION_FORCEINLINE config_handle_t(config_handle_t&& other) noexcept
+        : config(other.config)
+        , index(other.index)
+    {
+        other.config = nullptr;
+        other.index = (config_index_t)-1;
+    }
+
+    FOUNDATION_FORCEINLINE config_handle_t(const config_handle_t& other) noexcept
+        : config(other.config)
+        , index(other.index)
+    {
+    }
+
+    FOUNDATION_FORCEINLINE config_handle_t& operator=(config_handle_t&& other) noexcept
+    {
+        config = other.config;
+        index = other.index;
+        other.config = nullptr;
+        other.index = (config_index_t)-1;
+        return *this;
+    }
+
+    FOUNDATION_FORCEINLINE config_handle_t& operator=(const config_handle_t& other) noexcept
+    {
+        config = other.config;
+        index = other.index;
+        return *this;
+    }
+
     operator config_value_t* () const;
-    config_handle_t operator[] (config_index_t index) const;
     config_handle_t operator[] (const char* key) const;
+    config_handle_t operator[] (config_index_t index) const;
     config_handle_t operator[] (const config_tag_t& tag) const;
     config_handle_t operator[] (const string_const_t& tag) const;
-
-    config_handle_t operator= (bool b) const;
-    config_handle_t operator= (const char* value) const;
-    config_handle_t operator= (string_const_t value) const;
-    config_handle_t operator= (double number) const;
 
     struct iterator
     {
@@ -199,7 +221,7 @@ void config_deallocate(config_handle_t& root);
  *
  *  @return Field tag handle.
  */
-config_tag_t config_get_tag(config_handle_t h, const char* tag, size_t tag_length);
+config_tag_t config_tag(const config_handle_t& h, const char* tag, size_t tag_length);
 
 /*! Get initialization options of the config value. 
  *
@@ -207,7 +229,7 @@ config_tag_t config_get_tag(config_handle_t h, const char* tag, size_t tag_lengt
  *
  *  @return Config value options.
  */
-config_option_flags_t config_get_options(config_handle_t root);
+config_option_flags_t config_get_options(const config_handle_t& root);
 
 /*! Set initialization options of the config value. 
  *
@@ -216,7 +238,7 @@ config_option_flags_t config_get_options(config_handle_t root);
  *
  *  @return Config value options.
  */
-config_option_flags_t config_set_options(config_handle_t root, config_option_flags_t options);
+config_option_flags_t config_set_options(const config_handle_t& root, config_option_flags_t options);
 
 /*! Returns the child element value at the given index. 
  *
@@ -225,16 +247,16 @@ config_option_flags_t config_set_options(config_handle_t root, config_option_fla
  *
  *  @return Child config value handle. NIL if not found or invalid.
  */
-config_handle_t config_element_at(config_handle_t array_or_obj, size_t index);
+config_handle_t config_element_at(const config_handle_t& array_or_obj, size_t index);
 
 /*! Returns the child element value with the given key. 
  *
  *  @param obj Config value handle.
- *  @param key Child field key tag (obtained with #config_get_tag).
+ *  @param key Child field key tag (obtained with #config_tag).
  *
  *  @return Child config value handle. NIL if not found or invalid.
  */
-config_handle_t config_find(config_handle_t obj, const config_tag_t& tag);
+config_handle_t config_find(const config_handle_t& obj, const config_tag_t& tag);
 
 /*! Returns the child element value with the given key. 
  *
@@ -244,16 +266,7 @@ config_handle_t config_find(config_handle_t obj, const config_tag_t& tag);
  *
  *  @return Child config value handle. NIL if not found or invalid.
  */
-config_handle_t config_find(config_handle_t obj, const char* key, size_t key_length);
-
-/*! Returns the child element value with the given key. 
- *
- *  @param obj Config value handle.
- *  @param key Child field key.
- *
- *  @return Child config value handle. NIL if not found or invalid.
- */
-config_handle_t config_find(config_handle_t obj, string_table_symbol_t symbol_key);
+config_handle_t config_find(const config_handle_t& obj, const char* key, size_t key_length);
 
 /*! Returns the config value raw pointer value. 
  *
@@ -263,7 +276,7 @@ config_handle_t config_find(config_handle_t obj, string_table_symbol_t symbol_ke
  *
  *  @return Config value raw pointer value.
  */
-const void* config_value_as_pointer_unsafe(config_handle_t value);
+const void* config_value_as_pointer_unsafe(const config_handle_t& value);
 
 /*! Returns the config value boolean value. 
  *
@@ -272,7 +285,7 @@ const void* config_value_as_pointer_unsafe(config_handle_t value);
  *
  *  @return Config value boolean value.
  */
-bool config_value_as_boolean(config_handle_t boolean_value, bool default_value = false);
+bool config_value_as_boolean(const config_handle_t& boolean_value, bool default_value = false);
 
 /*! Returns the config value number value. 
  *
@@ -281,16 +294,18 @@ bool config_value_as_boolean(config_handle_t boolean_value, bool default_value =
  *
  *  @return Config value number value.
  */
-double config_value_as_number(config_handle_t number_value, double default_value = NAN);
+double config_value_as_number(const config_handle_t& number_value, double default_value = NAN);
 
 /*! Returns the config value string value. 
  *
  *  @param string_value Config value handle.
- *  @param fmt          Optional format string to format the string value.
+ *  @param fmt          Optional format string to format the string value if 
+ *                      the config value is not a string or the default value 
+ *                      if the config value is a string.
  *
  *  @return Config value string value.
  */
-string_const_t config_value_as_string(config_handle_t string_value, const char* fmt = nullptr);
+string_const_t config_value_as_string(const config_handle_t& string_value, const char* fmt = nullptr);
 
 /*! Returns the config value holding type (object, array, string, number, boolean, null). 
  *
@@ -298,7 +313,18 @@ string_const_t config_value_as_string(config_handle_t string_value, const char* 
  *
  *  @return Config value type.
  */
-config_value_type_t config_value_type(config_handle_t v);
+config_value_type_t config_value_type(const config_handle_t& v);
+
+/*! Returns the config value holding type (object, array, string, number, boolean, null). 
+ *
+ *  @param v Config value handle.
+ *
+ *  @return Config value type.
+ */
+FOUNDATION_FORCEINLINE config_value_type_t config_type(const config_handle_t& v)
+{
+    return config_value_type(v);
+}
 
 /*! Add a new child element to the config value.
  *
@@ -312,7 +338,20 @@ config_value_type_t config_value_type(config_handle_t v);
  *
  *  @return Child config value handle.
  */
-config_handle_t config_add(config_handle_t v, const char* key, size_t key_length);
+config_handle_t config_add(const config_handle_t& v, const char* key, size_t key_length);
+
+/*! Add a new child element to the config value.
+ *
+ *  @param v   Config value handle.
+ *  @param key Child field name
+ *
+ *  @return Child config value handle.
+ */
+template<size_t N>
+FOUNDATION_FORCEINLINE config_handle_t config_add(const config_handle_t& v, const char(&key)[N]) 
+{
+    return config_add(v, key, N - 1);
+}
 
 /*! Remove a child element from the config value. 
  *
@@ -321,7 +360,7 @@ config_handle_t config_add(config_handle_t v, const char* key, size_t key_length
  *
  *  @return True if the child config value was removed.
  */
-bool config_remove(config_handle_t obj_or_array, config_handle_t v);
+bool config_remove(const config_handle_t& obj_or_array, const config_handle_t& v);
 
 /*! Remove a child element from the config value. 
  *
@@ -331,27 +370,29 @@ bool config_remove(config_handle_t obj_or_array, config_handle_t v);
  *
  *  @return True if the child config value was removed.
  */
-bool config_remove(config_handle_t v, const char* key, size_t key_length);
+bool config_remove(const config_handle_t& v, const char* key, size_t key_length);
 
-/*! Get a child element or creates it if it does not exist. 
+/*! Remove a child element. 
  *
- *  @deprecated For internal use only.
+ *  @param obj_or_array Config value handle.
+ *  @param key          Child field key name.
  *
- *  @param v      Config value handle.
- *  @param symbol Child field key symbol.
- *
- *  @return Child config value handle.
+ *  @return True if the child config value was removed.
  */
-config_handle_t config_get_or_create(config_handle_t v, string_table_symbol_t symbol);
+template<size_t N>
+FOUNDATION_FORCEINLINE bool config_remove(const config_handle_t& v, const char(&key)[N])
+{
+    return config_remove(v, key, N - 1);
+}
 
 /*! Get a child element or creates it if it does not exist. 
  *
  *  @param v          Config value handle.
- *  @param tag        Child field key tag (obtained with #config_get_tag).
+ *  @param tag        Child field key tag (obtained with #config_tag).
  *
  *  @return Child config value handle.
  */
-config_handle_t config_get_or_create(config_handle_t v, const config_tag_t& tag);
+config_handle_t config_get_or_create(const config_handle_t& v, const config_tag_t& tag);
 
 /*! Get a child element or creates it if it does not exist. 
  *
@@ -361,7 +402,7 @@ config_handle_t config_get_or_create(config_handle_t v, const config_tag_t& tag)
  *
  *  @return Child config value handle.
  */
-config_handle_t config_get_or_create(config_handle_t v, const char* key, size_t key_length);
+config_handle_t config_get_or_create(const config_handle_t& v, const char* key, size_t key_length);
 
 /*! Sets or change the config value to a boolean value. 
  *
@@ -370,7 +411,7 @@ config_handle_t config_get_or_create(config_handle_t v, const char* key, size_t 
  *
  *  @return Config value handle.
  */
-config_handle_t config_set(config_handle_t v, bool value);
+config_handle_t config_set(const config_handle_t& v, bool value);
 
 /*! Sets or change the config value to a number value. 
  *
@@ -379,7 +420,7 @@ config_handle_t config_set(config_handle_t v, bool value);
  *
  *  @return Config value handle.
  */
-config_handle_t config_set(config_handle_t v, double number);
+config_handle_t config_set(const config_handle_t& v, double number);
 
 /*! Sets or change the config value to a raw pointer value.
  *
@@ -390,7 +431,7 @@ config_handle_t config_set(config_handle_t v, double number);
  *
  *  @return Config value handle.
  */
-config_handle_t config_set(config_handle_t v, const void* data);
+config_handle_t config_set(const config_handle_t& v, const void* data);
 
 /*! Sets or change the config value to a string value. 
  *
@@ -399,7 +440,20 @@ config_handle_t config_set(config_handle_t v, const void* data);
  *
  *  @return Config value handle.
  */
-config_handle_t config_set(config_handle_t v, const char* string_value, size_t string_length);
+config_handle_t config_set(const config_handle_t& v, const char* string_value, size_t string_length);
+
+/*! Sets or change the config value to a string value. 
+ *
+ *  @param v            Config value handle.
+ *  @param string_value String value.
+ *
+ *  @return Config value handle.
+ */
+template<size_t N>
+FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&string_value)[N]) 
+{
+    return config_set(v, string_value, N - 1);
+}
 
 /*! Sets or change the child config value to a boolean value.
  *
@@ -410,7 +464,7 @@ config_handle_t config_set(config_handle_t v, const char* string_value, size_t s
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, bool value);
+config_handle_t config_set(const config_handle_t& v, const char* key, size_t key_length, bool value);
 
 /*! Sets or change the child config value to a number value.
  *
@@ -421,7 +475,7 @@ config_handle_t config_set(config_handle_t v, const char* key, size_t key_length
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, double number);
+config_handle_t config_set(const config_handle_t& v, const char* key, size_t key_length, double number);
 
 /*! Sets or change the child config value to a raw pointer value.
  *
@@ -434,7 +488,7 @@ config_handle_t config_set(config_handle_t v, const char* key, size_t key_length
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, const void* data);
+config_handle_t config_set(const config_handle_t& v, const char* key, size_t key_length, const void* data);
 
 /*! Sets or change the child config value to a string value.
  *
@@ -445,7 +499,7 @@ config_handle_t config_set(config_handle_t v, const char* key, size_t key_length
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, string_const_t str);
+config_handle_t config_set(const config_handle_t& v, const char* key, size_t key_length, string_const_t str);
 
 /*! Sets or change the child config value to a string value.
  *
@@ -457,7 +511,7 @@ config_handle_t config_set(config_handle_t v, const char* key, size_t key_length
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set(config_handle_t v, const char* key, size_t key_length, const char* str, size_t length);
+config_handle_t config_set(const config_handle_t& v, const char* key, size_t key_length, const char* str, size_t length);
 
 /*! Sets or change the child config value to a string value.
  *
@@ -469,7 +523,7 @@ config_handle_t config_set(config_handle_t v, const char* key, size_t key_length
  *
  *  @return Modified config value handle.
  */
-FOUNDATION_FORCEINLINE config_handle_t config_set_string(config_handle_t obj, const char* key, size_t key_length, const char* string_value, size_t string_length)
+FOUNDATION_FORCEINLINE config_handle_t config_set_string(const config_handle_t& obj, const char* key, size_t key_length, const char* string_value, size_t string_length)
 {
     return config_set(obj, key, key_length, string_value, string_length);
 }
@@ -482,7 +536,7 @@ FOUNDATION_FORCEINLINE config_handle_t config_set_string(config_handle_t obj, co
  *
  *  @return Modified config value handle.
  */
-template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], bool value) 
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&key)[N], bool value) 
 { 
     return config_set(v, key, N - 1, value); 
 }
@@ -497,7 +551,22 @@ template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_han
  *
  *  @return Modified config value handle.
  */
-template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], int number) 
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&key)[N], int32_t number) 
+{ 
+    return config_set(v, key, N -1, (double)number); 
+}
+
+/*! Sets or change the child config value to an integer value. 
+ *
+ *  @remark The integer value is converted to a double.
+ *
+ *  @param v     Config value handle.
+ *  @param key   Child field key name.
+ *  @param value Number value.
+ *
+ *  @return Modified config value handle.
+ */
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&key)[N], int64_t number) 
 { 
     return config_set(v, key, N -1, (double)number); 
 }
@@ -510,7 +579,7 @@ template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_han
  *
  *  @return Modified config value handle.
  */
-template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], double number) 
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&key)[N], double number) 
 { 
     return config_set(v, key, N - 1, number); 
 }
@@ -523,7 +592,7 @@ template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_han
  *
  *  @return Modified config value handle.
  */
-template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], float number) 
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&key)[N], float number) 
 { 
     return config_set(v, key, N - 1, (double)number); 
 }
@@ -538,7 +607,7 @@ template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_han
  *
  *  @return Modified config value handle.
  */
-template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], const void* data) 
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&key)[N], const void* data) 
 { 
     return config_set(v, key, N - 1, data); 
 }
@@ -555,7 +624,7 @@ template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_han
  *  @return Modified config value handle.
  */
 template <size_t N, class String> 
-FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], const String& str)
+FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&key)[N], const String& str)
 { 
     return config_set(v, key, N - 1, STRING_ARGS(str)); 
 }
@@ -569,7 +638,7 @@ FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(
  *
  *  @return Modified config value handle.
  */
-template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_handle_t v, const char(&key)[N], const char* str, size_t length) 
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&key)[N], const char* str, size_t length) 
 {
     return config_set(v, key, N - 1, str, length); 
 }
@@ -582,7 +651,7 @@ template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(config_han
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set(config_handle_t v, const config_tag_t& tag, bool value);
+config_handle_t config_set(const config_handle_t& v, const config_tag_t& tag, bool value);
 
 /*! Sets or change the child config value to an integer value using a preloaded tag handle.
  *
@@ -594,7 +663,7 @@ config_handle_t config_set(config_handle_t v, const config_tag_t& tag, bool valu
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set(config_handle_t v, const config_tag_t& tag, double number);
+config_handle_t config_set(const config_handle_t& v, const config_tag_t& tag, double number);
 
 /*! Sets or change the child config value to a raw pointer value using a preloaded tag handle.
  *
@@ -606,7 +675,7 @@ config_handle_t config_set(config_handle_t v, const config_tag_t& tag, double nu
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set(config_handle_t v, const config_tag_t& tag, const void* data);
+config_handle_t config_set(const config_handle_t& v, const config_tag_t& tag, const void* data);
 
 /*! Sets or change the child config value to a string value using a preloaded tag handle.
  *
@@ -617,7 +686,7 @@ config_handle_t config_set(config_handle_t v, const config_tag_t& tag, const voi
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set(config_handle_t v, const config_tag_t& tag, const char* str, size_t length);
+config_handle_t config_set(const config_handle_t& v, const config_tag_t& tag, const char* str, size_t length);
 
 /*! Creates or change the child element to an object value. 
  *
@@ -629,7 +698,20 @@ config_handle_t config_set(config_handle_t v, const config_tag_t& tag, const cha
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set_object(config_handle_t v, const char* key, size_t key_length);
+config_handle_t config_set_object(const config_handle_t& v, const char* key, size_t key_length);
+
+/*! Creates or change the child element to an object value.
+ *
+ *  @param v   Config value handle.
+ *  @param key Child field key name.
+ *
+ *  @return Modified config value handle.
+ */
+template<size_t N>
+FOUNDATION_FORCEINLINE config_handle_t config_set_object(const config_handle_t& v, const char(&key)[N])
+{
+        return config_set_object(v, key, N - 1);
+}
 
 /*! Creates or change the child element to an array value. 
  *
@@ -641,7 +723,20 @@ config_handle_t config_set_object(config_handle_t v, const char* key, size_t key
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set_array(config_handle_t v, const char* key, size_t key_length);
+config_handle_t config_set_array(const config_handle_t& v, const char* key, size_t key_length);
+
+/*! Creates or change the child element to an array value.
+ *
+ *  @param v   Config value handle.
+ *  @param key Child field key name.
+ *
+ *  @return Modified config value handle.
+ */
+template<size_t N>
+FOUNDATION_FORCEINLINE config_handle_t config_set_array(const config_handle_t& v, const char(&key)[N])
+{
+    return config_set_array(v, key, N - 1);
+}
 
 /*! Nullify a child element. 
  *
@@ -653,7 +748,7 @@ config_handle_t config_set_array(config_handle_t v, const char* key, size_t key_
  *
  *  @return Modified config value handle.
  */
-config_handle_t config_set_null(config_handle_t v, const char* key, size_t key_length);
+config_handle_t config_set_null(const config_handle_t& v, const char* key, size_t key_length);
 
 /*! Nullify the config value. 
  *
@@ -661,7 +756,7 @@ config_handle_t config_set_null(config_handle_t v, const char* key, size_t key_l
  *
  *  @param v Config value handle.
  */
-void config_set_null(config_handle_t v);
+void config_set_null(const config_handle_t& v);
 
 /*! Returns the value name/id if any. 
  *
@@ -671,7 +766,7 @@ void config_set_null(config_handle_t v);
  *
  *  @return Value name/id.
  */
-string_const_t config_name(config_handle_t obj);
+string_const_t config_name(const config_handle_t& obj);
 
 /*! Returns the element count of an array or object. 
  *
@@ -681,7 +776,7 @@ string_const_t config_name(config_handle_t obj);
  *
  *  @return Element count, 0 if the value is not an array or object.
  */
-size_t config_size(config_handle_t obj);
+size_t config_size(const config_handle_t& obj);
 
 /*! Remove all child elements of an array
  *
@@ -691,7 +786,7 @@ size_t config_size(config_handle_t obj);
  *
  *  @return The cleared array value handle or null if the value is not an array.
  */
-config_handle_t config_array_clear(config_handle_t v);
+config_handle_t config_array_clear(const config_handle_t& v);
 
 /*! Push a new element to an array with and initial type and a default value.
  *
@@ -704,7 +799,7 @@ config_handle_t config_array_clear(config_handle_t v);
  *
  *  @return Newly added element handle.
  */
-config_handle_t config_array_push(config_handle_t v, config_value_type_t type = CONFIG_VALUE_NIL, const char* name = nullptr, size_t name_length = 0);
+config_handle_t config_array_push(const config_handle_t& v, config_value_type_t type = CONFIG_VALUE_NIL, const char* name = nullptr, size_t name_length = 0);
 
 /*! Push a new element to an array with a boolean value.
  *
@@ -713,7 +808,7 @@ config_handle_t config_array_push(config_handle_t v, config_value_type_t type = 
  *
  *  @return Newly added boolean array element handle.
  */
-config_handle_t config_array_push(config_handle_t v, bool value);
+config_handle_t config_array_push(const config_handle_t& v, bool value);
 
 /*! Push a new element to an array with a number value.
  *
@@ -722,7 +817,7 @@ config_handle_t config_array_push(config_handle_t v, bool value);
  *
  *  @return Newly added number array element handle.
  */
-config_handle_t config_array_push(config_handle_t v, double number);
+config_handle_t config_array_push(const config_handle_t& v, double number);
 
 /*! Push a new element to an array with a string value.
  *
@@ -732,7 +827,7 @@ config_handle_t config_array_push(config_handle_t v, double number);
  *
  *  @return Newly added string array element handle.
  */
-config_handle_t config_array_push(config_handle_t v, const char* value, size_t value_length);
+config_handle_t config_array_push(const config_handle_t& v, const char* value, size_t value_length);
 
 /*! Insert a new element to an array with and initial type and a default value.
  *
@@ -746,7 +841,7 @@ config_handle_t config_array_push(config_handle_t v, const char* value, size_t v
  *
  *  @return Newly added element handle.
  */
-config_handle_t config_array_insert(config_handle_t v, size_t index, config_value_type_t type = CONFIG_VALUE_NIL, const char* name = nullptr, size_t name_length = 0);
+config_handle_t config_array_insert(const config_handle_t& v, size_t index, config_value_type_t type = CONFIG_VALUE_NIL, const char* name = nullptr, size_t name_length = 0);
 
 /*! Insert a new element to an array with a boolean value.
  *
@@ -756,7 +851,7 @@ config_handle_t config_array_insert(config_handle_t v, size_t index, config_valu
  *
  *  @return Newly added boolean array element handle.
  */
-config_handle_t config_array_insert(config_handle_t v, size_t index, bool value);
+config_handle_t config_array_insert(const config_handle_t& v, size_t index, bool value);
 
 /*! Insert a new element to an array with a number value.
  *
@@ -766,7 +861,7 @@ config_handle_t config_array_insert(config_handle_t v, size_t index, bool value)
  *
  *  @return Newly added number array element handle.
  */
-config_handle_t config_array_insert(config_handle_t v, size_t index, double number);
+config_handle_t config_array_insert(const config_handle_t& v, size_t index, double number);
 
 /*! Insert a new element to an array with a string value.
  *
@@ -777,7 +872,7 @@ config_handle_t config_array_insert(config_handle_t v, size_t index, double numb
  *
  *  @return Newly added string array element handle.
  */
-config_handle_t config_array_insert(config_handle_t v, size_t index, const char* value, size_t value_length);
+config_handle_t config_array_insert(const config_handle_t& v, size_t index, const char* value, size_t value_length);
 
 /*! Pop the last element of an array.
  *
@@ -785,26 +880,26 @@ config_handle_t config_array_insert(config_handle_t v, size_t index, const char*
  *
  *  @return True if the array was not empty.
  */
-bool config_array_pop(config_handle_t v);
+bool config_array_pop(const config_handle_t& v);
 
 /*! Sorts the elements of an array using a custom sorting function.
  *
  *  @param array_handle Config value handle.
  *  @param sort_fn      Sorting function.
  */
-void config_array_sort(config_handle_t array_handle, const function<bool(const config_handle_t& a, const config_handle_t& b)>& sort_fn);
+void config_array_sort(const config_handle_t& array_handle, const function<bool(const config_handle_t& a, const config_handle_t& b)>& sort_fn);
 
 /*! Compacts the config string table to save memory.
  *
  *  @param v Config value handle.
  */
-void config_pack(config_handle_t value);
+void config_pack(const config_handle_t& value);
 
 /*! Clears and empty a config value.
  *
  *  @param v Config value handle.
  */
-void config_clear(config_handle_t value);
+void config_clear(const config_handle_t& value);
 
 /*! Checks if the config value is valid, meaning that is it actually storing a value and not just a placeholder.
  *
@@ -812,7 +907,7 @@ void config_clear(config_handle_t value);
  *
  *  @return True if the config value is valid.
  */
-bool config_is_valid(config_handle_t v, const char* key = nullptr, size_t key_length = 0);
+bool config_is_valid(const config_handle_t& v, const char* key = nullptr, size_t key_length = 0);
 
 /*! Checks if the child element with the field name exists.
  *
@@ -822,7 +917,7 @@ bool config_is_valid(config_handle_t v, const char* key = nullptr, size_t key_le
  *
  *  @return True if the child element exists.
  */
-bool config_exists(config_handle_t v, const char* key, size_t key_length);
+bool config_exists(const config_handle_t& v, const char* key, size_t key_length);
 
 /*! Checks if the config value is null.
  *
@@ -830,7 +925,7 @@ bool config_exists(config_handle_t v, const char* key, size_t key_length);
  *
  *  @return True if the config value is null.
  */
-bool config_is_null(config_handle_t v, const char* key = nullptr, size_t key_length = 0);
+bool config_is_null(const config_handle_t& v, const char* key = nullptr, size_t key_length = 0);
 
 /*! Checks if the value was never defined. Setting a value to null will not make it undefined.
  *
@@ -838,7 +933,7 @@ bool config_is_null(config_handle_t v, const char* key = nullptr, size_t key_len
  *
  *  @return True if the value was never defined.
  */
-bool config_is_undefined(config_handle_t v, const char* key = nullptr, size_t key_length = 0);
+bool config_is_undefined(const config_handle_t& v, const char* key = nullptr, size_t key_length = 0);
 
 /*! Writes the config content to a file. The file will be overwritten if it already exists.
  *
@@ -880,7 +975,7 @@ FOUNDATION_FORCEINLINE bool config_write_file(
  */
 bool config_write_file(
     string_const_t file_path,
-    function<bool(config_handle_t data)> write_callback,
+    function<bool(const config_handle_t& data)> write_callback,
     config_value_type_t value_type = CONFIG_VALUE_OBJECT,
     config_option_flags_t write_json_flags = CONFIG_OPTION_WRITE_SKIP_FIRST_BRACKETS | CONFIG_OPTION_WRITE_SKIP_NULL);
 
@@ -917,7 +1012,7 @@ config_handle_t config_parse(const char* json, size_t json_length, config_option
  *
  *  @return String content.
  */
-config_sjson_const_t config_sjson(config_handle_t value, config_option_flags_t options = CONFIG_OPTION_NONE);
+config_sjson_const_t config_sjson(const config_handle_t& value, config_option_flags_t options = CONFIG_OPTION_NONE);
 
 /*! Maps the JSON string content obtained by #config_sjson to a string object.
  *

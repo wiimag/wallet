@@ -135,13 +135,13 @@ bool string_equal_ignore_whitespace(const char* lhs, size_t lhs_length, const ch
         while (is_whitespace(*l))
         {
             if (--lhs_length == 0 || *(++l) == 0)
-                return false;
+                goto string_equal_ignore_whitespace_check;
         }
 
         while (is_whitespace(*r))
         {
             if (--rhs_length == 0 || *(++r) == 0)
-                return false;
+                goto string_equal_ignore_whitespace_check;
         }
 
         if (*l != *r)
@@ -149,6 +149,21 @@ bool string_equal_ignore_whitespace(const char* lhs, size_t lhs_length, const ch
 
         ++l, ++r;
         --lhs_length, --rhs_length;
+    }
+
+string_equal_ignore_whitespace_check:
+
+    // Trim any remaining whitespaces
+    while (l && lhs_length > 0 && is_whitespace(*l))
+    {
+        ++l;
+        --lhs_length;
+    }
+
+    while (r && rhs_length > 0 && is_whitespace(*r))
+    {
+        ++r;
+        --rhs_length;
     }
 
     return lhs_length == rhs_length;

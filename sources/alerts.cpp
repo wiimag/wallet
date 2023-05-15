@@ -675,6 +675,9 @@ FOUNDATION_STATIC void alerts_initialize()
     _alerts_module->last_evaluation = time_current();
     _alerts_module->evaluation_disabled = environment_argument("disable-alerts");
 
+    if (!main_is_interactive_mode())
+        return;
+
     string_const_t evaluators_file_path = alerts_config_file_path();
     config_handle_t evaluators_data = config_parse_file(STRING_ARGS(evaluators_file_path), json_flags);
     if (evaluators_data)
@@ -682,9 +685,6 @@ FOUNDATION_STATIC void alerts_initialize()
         _alerts_module->evaluators = alerts_load_evaluators(evaluators_data);
         config_deallocate(evaluators_data);
     }
-
-    if (!main_is_interactive_mode())
-        return;
 
     module_register_update(HASH_ALERTS, alerts_run_evaluators);
     module_register_window(HASH_ALERTS, alerts_render_evaluators);
@@ -695,9 +695,11 @@ FOUNDATION_STATIC void alerts_initialize()
 
 FOUNDATION_STATIC void alerts_shutdown()
 {
-    alerts_save_evaluators(_alerts_module->evaluators);
-
-    session_set_bool(SHOW_ALERTS_KEY, _alerts_module->show_window);
+    if (main_is_interactive_mode())
+    {
+        alerts_save_evaluators(_alerts_module->evaluators);
+        session_set_bool(SHOW_ALERTS_KEY, _alerts_module->show_window);
+    }
 
     array_deallocate(_alerts_module->evaluators);
     MEM_DELETE(_alerts_module);
