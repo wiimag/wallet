@@ -736,7 +736,9 @@ FOUNDATION_STATIC void bulk_extractor_render()
             {
                 config_write_file(
                     string_to_const(_bulk_module->extractor_path), _bulk_module->extractor_cv, 
-                    CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS | CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES);
+                    CONFIG_OPTION_WRITE_TRUNCATE_NUMBERS |
+                    CONFIG_OPTION_WRITE_OBJECT_SAME_LINE_PRIMITIVES | 
+                    CONFIG_OPTION_WRITE_JSON);
             }
 
             bulk_extractor_clean_up();
