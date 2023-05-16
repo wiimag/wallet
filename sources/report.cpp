@@ -1608,6 +1608,8 @@ FOUNDATION_STATIC void report_render_add_title_dialog(report_t* report)
 
     string_const_t fmttr = RTEXT("Add Title (%.*s)##5");
     string_const_t popup_id = string_format_static(STRING_ARGS(fmttr), STRING_FORMAT(string_table_decode_const(report->name)));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(6), IM_SCALEF(2)));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(IM_SCALEF(6), IM_SCALEF(4)));
     if (report_render_dialog_begin(popup_id, &report->show_add_title_ui, ImGuiWindowFlags_None))
     {
         if (ImGui::IsWindowAppearing())
@@ -1616,6 +1618,7 @@ FOUNDATION_STATIC void report_render_add_title_dialog(report_t* report)
 
         report_render_dialog_end();
     }
+    ImGui::PopStyleVar(2);
 }
 
 FOUNDATION_STATIC void report_render_dialogs(report_t* report)

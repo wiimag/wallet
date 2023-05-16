@@ -1599,6 +1599,10 @@ FOUNDATION_STATIC void search_table_column_description_tooltip(table_element_ptr
                 string_const_t code = search_entry_resolve_symbol(entry);
                 entry->description = backend_translate_text(code.str, code.length, STRING_ARGS(tooltip), STRING_ARGS(lang));
             }
+            else
+            {
+                entry->description = string_clone(STRING_ARGS(tooltip));
+            }
 
             ImGui::Text("%.*s", STRING_FORMAT(entry->description));
         }

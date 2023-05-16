@@ -893,7 +893,6 @@ bool logo_has_banner(const char* symbol, size_t symbol_length, int& banner_width
 bool logo_render_banner(const char* symbol, size_t symbol_length, const ImRect& rect, ImU32* suggested_text_color /*= nullptr*/)
 {
     bool selected = false;
-    ImGui::PushStyleCompact();
     string_const_t code = string_const(symbol, symbol_length);
 
     bool can_show_banner = SETTINGS.show_logo_banners && !ImGui::IsKeyDown(ImGuiKey_B);
@@ -941,11 +940,20 @@ bool logo_render_banner(const char* symbol, size_t symbol_length, const ImRect& 
         }
 
         const float height_scale = logo_banner_channels == 4 ? 1.0f : rect.GetHeight() / logo_banner_height;
-        if (logo_banner_channels == 3)
-            ImGui::MoveCursor(-style.FramePadding.x, -style.FramePadding.y - 1.0f, false);
         ImVec2 logo_size = ImVec2(logo_banner_width * height_scale, logo_banner_height * height_scale);
+        if (logo_banner_channels == 3)
+        {
+            ImGui::MoveCursor(-style.FramePadding.x, -style.FramePadding.y - 1.0f, false);
+        }
+        else
+        {
+            const float height_offset = (rect.GetHeight() - logo_size.y - IM_SCALEF(5)) / 2.0f;
+            ImGui::MoveCursor(IM_SCALEF(2.0f), height_offset, false);
+        }
+
         if (!logo_render_banner(STRING_ARGS(code), logo_size, false, false))
         {
+            ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted(STRING_RANGE(code));
         }
         else
@@ -980,6 +988,7 @@ bool logo_render_banner(const char* symbol, size_t symbol_length, const ImRect& 
         }
 
         const float code_width = text_size.x + (style.ItemSpacing.x * 2.0f);
+        ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(STRING_RANGE(code));
         if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             selected = true;
@@ -990,16 +999,15 @@ bool logo_render_banner(const char* symbol, size_t symbol_length, const ImRect& 
         logo_size.x *= as;
         logo_size.y *= as;
 
-        float space_left = rect.GetWidth() - code_width;
-        ImGui::MoveCursor(space_left - logo_size.x + IM_SCALEF(2.0f), 0, true);
+        const float space_left = rect.GetWidth() - code_width;
+        const float height_offset = (rect.GetHeight() - logo_size.y - IM_SCALEF(4)) / 2.0f;
+        ImGui::MoveCursor(space_left - logo_size.x - IM_SCALEF(2.0f), height_offset, true);
         logo_render_icon(STRING_ARGS(code), logo_size, true, true);
         ImGui::Dummy(logo_size);
 
         if (logo_banner_width > 0)
             ImGui::PopStyleColor();
     }
-
-    ImGui::PopStyleCompact();
 
     return selected;
 }
