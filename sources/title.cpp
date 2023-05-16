@@ -444,13 +444,13 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     for (auto dividends : data["dividends"])
     {
         double xgrate = dividends["xcg"].as_number();
-        if (math_real_is_nan(xgrate))
+        if (stock_currency.length && math_real_is_nan(xgrate))
         {
             time_t date = dividends["date"].as_time();
             xgrate = stock_exchange_rate(STRING_ARGS(stock_currency), STRING_ARGS(preferred_currency), date);
             config_set(dividends, "xcg", xgrate);
         }
-        t->total_dividends += dividends["amount"].as_number(0) * xgrate;
+        t->total_dividends += dividends["amount"].as_number(0) * math_ifnan(xgrate, 1.0);
     }
 
     FOUNDATION_ASSERT(t->average_quantity >= 0);
