@@ -108,7 +108,8 @@ FOUNDATION_STATIC bool title_fetch_ps(const title_t* t, double& value)
     if (title_sold(t))
     {
         // Return the prediction in case the stock was kept (when sold)
-        value = ((t->sell_adjusted_price - s->current.adjusted_close) / s->current.adjusted_close) * 100.0;
+        const double average_sell_price = t->sell_total_price_rated / t->sell_total_quantity;
+        value = ((average_sell_price - s->current.adjusted_close) / s->current.adjusted_close) * 100.0;
     }
     else
         value = title_compute_ps(t, s);
@@ -181,7 +182,7 @@ FOUNDATION_STATIC bool title_fetch_ask_price(const title_t* t, double& value)
 double title_get_total_value(const title_t* t)
 {
     if (title_sold(t))
-        return t->sell_total_price_rated_adjusted;
+        return t->sell_total_price_rated;
 
     const stock_t* s = t->stock;
     if (s && s->has_resolve(FetchLevel::REALTIME))
@@ -190,7 +191,7 @@ double title_get_total_value(const title_t* t)
         return total_value;
     }
 
-    return t->average_quantity * t->average_price * t->average_exchange_rate;
+    return t->average_quantity * t->average_price_rated;
 }
 
 double title_total_bought_price(const title_t* t)
@@ -204,8 +205,8 @@ double title_total_bought_price(const title_t* t)
 double title_get_total_investment(const title_t* t)
 {
     if (title_sold(t))
-        return t->buy_total_price_rated_adjusted;
-    return t->average_quantity * t->average_buy_price_rated;
+        return t->buy_total_price_rated;
+    return t->average_quantity * t->average_price_rated;
 }
 
 double title_get_total_gain(const title_t* t)
@@ -294,6 +295,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
 {
     const config_tag_t TITLE_DATE = config_tag(data, STRING_CONST("date"));
     const config_tag_t TITLE_BUY = config_tag(data, STRING_CONST("buy"));
+    const config_tag_t TITLE_SELL = config_tag(data, STRING_CONST("sell"));
     const config_tag_t TITLE_QTY = config_tag(data, STRING_CONST("qty"));
     const config_tag_t TITLE_PRICE = config_tag(data, STRING_CONST("price"));
     const config_tag_t TITLE_ASK_PRICE = config_tag(data, STRING_CONST("ask"));
@@ -320,21 +322,9 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     t->buy_total_price_rated = 0;
     t->sell_total_price_rated = 0;
 
-    t->buy_total_price_rated_adjusted = 0;
-    t->sell_total_price_rated_adjusted = 0;
-
-    t->buy_total_adjusted_qty = 0;
-    t->buy_total_adjusted_price = 0;
-    t->sell_total_adjusted_qty = 0;
-    t->sell_total_adjusted_price = 0;
-
-    t->buy_adjusted_price = 0;
-    t->sell_adjusted_price = 0;
-
     t->average_price = 0;
     t->average_quantity = 0;
-    t->average_buy_price = 0;
-    t->average_buy_price_rated = 0;
+    t->average_price_rated = 0;
 
     t->total_dividends = 0;
     t->average_ask_price = 0;
@@ -369,22 +359,18 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
 
     for (auto order : data["orders"])
     {
+        string_const_t date = order[TITLE_DATE].as_string();
         const bool buy = order[TITLE_BUY].as_boolean();
+        const bool sell = order[TITLE_SELL].as_boolean();
         const double qty = order[TITLE_QTY].as_number();
         const double price = order[TITLE_PRICE].as_number();
         const double ask_price = order[TITLE_ASK_PRICE].as_number();
-        string_const_t date = order[TITLE_DATE].as_string();
         const time_t order_date = string_to_date(STRING_ARGS(date));
 
-        double adjusted_factor = 1.0;
         double order_split_factor = order[TITLE_SPLIT_FACTOR].as_number();
         double order_exchange_rate = order[TITLE_EXCHANGE_RATE].as_number();
         if (s)
         {
-            const day_result_t* order_day_results = stock_get_EOD(s, order_date, true);
-            if (order_day_results && math_real_is_finite(order_day_results->price_factor))
-                adjusted_factor = order_day_results->price_factor;
-
             if (math_real_is_nan(order_split_factor))
             {
                 order_split_factor = stock_get_split_factor(STRING_ARGS(title_code), order_date);
@@ -431,76 +417,48 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
         }
 
         const double split_quantity = qty / order_split_factor;
-        const double split_adjusted_factor = order_split_factor / adjusted_factor;
 
         if (buy)
         {
-            t->buy_total_count++;            
-            t->buy_total_quantity += qty;
+            t->buy_total_count++;
+            t->buy_total_quantity += split_quantity;
             t->buy_total_price += qty * price;
             t->buy_total_price_rated += qty * price * order_exchange_rate;
-
-            // FIXME: Change how dividends are computed over time
-            const double order_dividend_yielded = (qty * price) * time_elapsed_days(order_date, time_now()) / 365.0 * dividends_yield * order_exchange_rate;
-            t->total_dividends += order_dividend_yielded;
-            
-            const double adjusted_buy_cost = (qty * price / split_adjusted_factor);
-            t->buy_total_adjusted_qty += split_quantity;
-            t->buy_total_adjusted_price += adjusted_buy_cost;
-            t->buy_total_price_rated_adjusted += adjusted_buy_cost * order_exchange_rate;
-
-            total_current_quantity += split_quantity;
-            total_current_adjusted_value += adjusted_buy_cost;
-            total_current_adjusted_rated_value += adjusted_buy_cost * order_exchange_rate;
+            t->average_quantity += split_quantity;
+        }
+        else if (sell)
+        {
+            t->sell_total_count++;
+            t->sell_total_quantity += split_quantity;
+            t->sell_total_price += qty * price;
+            t->sell_total_price_rated += qty * price * order_exchange_rate;
+            t->average_quantity -= split_quantity;
         }
         else
         {
-            t->sell_total_count++;
-            t->sell_total_quantity += qty;
-            t->sell_total_price += qty * price;
-            t->sell_total_price_rated += qty * price * order_exchange_rate;
-
-            t->total_dividends -= (qty * price) * time_elapsed_days(order_date, time_now()) / 365.0 * dividends_yield * order_exchange_rate;
-            if (t->total_dividends < 0)
-                t->total_dividends = 0;
-                
-            const double adjusted_sell_cost = qty * price;
-            t->sell_total_adjusted_qty += split_quantity;
-            t->sell_total_adjusted_price += adjusted_sell_cost;
-            t->sell_total_price_rated_adjusted += adjusted_sell_cost * order_exchange_rate;
-
-            total_current_adjusted_value -= t->average_buy_price * split_quantity;
-            total_current_adjusted_rated_value -= t->average_buy_price_rated * split_quantity;
-            total_current_quantity -= split_quantity;
+            FOUNDATION_ASSERT_FAIL("Invalid order type");
         }
-
-        t->average_buy_price = math_ifnan(total_current_adjusted_value / total_current_quantity, 0);
-        t->average_buy_price_rated = math_ifnan(total_current_adjusted_rated_value / total_current_quantity, 0);
     }
 
-    t->remaining_shares = t->buy_total_quantity - t->sell_total_quantity; // not adjusted
-    
-    t->average_exchange_rate = total_exchange_rate_count > 0 ? total_exchange_rate / total_exchange_rate_count : 0;
-    
-    t->buy_adjusted_price = t->buy_total_adjusted_qty > 0 ? t->buy_total_adjusted_price / t->buy_total_adjusted_qty : 0;
-    t->sell_adjusted_price = t->sell_total_adjusted_qty > 0 ? t->sell_total_adjusted_price / t->sell_total_adjusted_qty : 0;
-
-    // Fix the average quantity
-    if (!math_real_is_zero(t->buy_total_count - t->sell_total_count))
+    t->total_dividends = 0;
+    for (auto dividends : data["dividends"])
     {
-        t->average_quantity = (double)math_round(math_ifzero(t->buy_total_adjusted_qty - t->sell_total_adjusted_qty, t->remaining_shares));
-        FOUNDATION_ASSERT(t->average_quantity >= 0);
-    }
-    else
-    {
-        // Fix to 0 here since split cost might not be all accounted for yet.
-        t->average_quantity = 0;
+        double xgrate = dividends["xcg"].as_number();
+        if (math_real_is_nan(xgrate))
+        {
+            time_t date = dividends["date"].as_time();
+            xgrate = stock_exchange_rate(STRING_ARGS(stock_currency), STRING_ARGS(preferred_currency), date);
+            config_set(dividends, "xcg", xgrate);
+        }
+        t->total_dividends += dividends["amount"].as_number(0) * xgrate;
     }
 
+    FOUNDATION_ASSERT(t->average_quantity >= 0);
+    
     // Update the average price
-    t->average_price = 0;
-    if (!math_real_is_zero(t->average_quantity))
-        t->average_price = t->average_buy_price;
+    t->average_exchange_rate = total_exchange_rate_count > 0 ? total_exchange_rate / total_exchange_rate_count : 0;
+    t->average_price = math_ifnan((t->buy_total_price / t->buy_total_quantity), 0.0);
+    t->average_price_rated = (t->buy_total_price_rated / t->buy_total_quantity);
     
     if (valid_dates > 0)
     {
@@ -515,12 +473,11 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
         t->average_ask_price = total_ask_price / total_ask_count;
     }
 
+    // Reset any deferred computed values
+    t->average_days_held.reset();
     t->ps.reset([t](double& value){ return title_fetch_ps(t, value); });
     t->ask_price.reset([t](double& value){ return title_fetch_ask_price(t, value); });
     t->today_exchange_rate.reset([t](double& value){ return title_fetch_today_exchange_rate(t, value); });
-    t->average_days_held.reset();
-
-    FOUNDATION_ASSERT(math_real_is_finite(t->sell_total_adjusted_qty));
 }
 
 bool title_refresh(title_t* title)
@@ -663,14 +620,19 @@ double title_get_bought_price(const title_t* t)
 
 double title_get_sell_gain_rated(const title_t* t)
 {
-    const double non_sold_total = t->buy_total_price_rated - (t->average_buy_price_rated * t->average_quantity);
-    return t->sell_total_price_rated - non_sold_total;
+    if (t->sell_total_quantity <= 0)
+        return 0.0;
+
+    const double buy_average_price = t->buy_total_price_rated / t->buy_total_quantity;
+    const double sell_average_price = t->sell_total_price_rated / t->sell_total_quantity;
+    const double gain = (sell_average_price - buy_average_price) * t->sell_total_quantity;
+    return gain;
 }
 
 double title_get_ask_price(const title_t* title)
 {
     if (title_sold(title))
-        return title->sell_adjusted_price;
+        return title->sell_total_price / title->sell_total_quantity;
     
     return title->ask_price.fetch();
 }

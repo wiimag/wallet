@@ -57,24 +57,10 @@ FOUNDATION_ALIGNED_STRUCT(title_t, 8)
     double buy_total_price_rated{ NAN };
     double sell_total_price_rated{ NAN };
 
-    double buy_total_price_rated_adjusted{ NAN };
-    double sell_total_price_rated_adjusted{ NAN };
-
-    // Price and quantity adjusted with split
-    double buy_total_adjusted_qty{ NAN };
-    double buy_total_adjusted_price{ NAN };
-    double sell_total_adjusted_qty{ NAN };
-    double sell_total_adjusted_price{ NAN };
-
-    double buy_adjusted_price{ NAN };
-    double sell_adjusted_price{ NAN };
-
     // Average price (adjusted but not exchange rated)
     double average_price{ NAN };
     double average_quantity{ NAN };
-    double average_buy_price{ NAN };
-    double average_buy_price_rated{ NAN };
-    double remaining_shares{ NAN };
+    double average_price_rated{ NAN };
     
     double total_dividends{ NAN };
     double average_ask_price{ NAN };
@@ -85,9 +71,9 @@ FOUNDATION_ALIGNED_STRUCT(title_t, 8)
     time_t date_average{ 0 };
     double elapsed_days{ NAN };
     
-    double_option_t today_exchange_rate{ 1.0 };
     double_option_t ps{ DNAN };
     double_option_t ask_price{ DNAN };
+    double_option_t today_exchange_rate{ 1.0 };
     mutable double_option_t average_days_held{ DNAN };
 
     bool show_buy_ui{ false };

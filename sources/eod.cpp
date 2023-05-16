@@ -234,10 +234,8 @@ const char* eod_build_image_url(const char* image_url, size_t image_url_length)
 {
     static thread_local char IMAGE_URL_BUFFER[2048];
 
-    string_const_t HOST_API = string_const(EOD_URL);
-    string_t url = string_copy(STRING_BUFFER(IMAGE_URL_BUFFER), STRING_ARGS(HOST_API));
-    
-    return string_append(STRING_ARGS_BUFFER(url, IMAGE_URL_BUFFER), image_url, image_url_length).str;
+    return string_format(STRING_BUFFER(IMAGE_URL_BUFFER), 
+        STRING_CONST("https://eodhistoricaldata.com/%.*s"), (int)image_url_length, image_url).str;
 }
 
 const char* eod_build_url(const char* api, query_format_t format, const char* uri_format, ...)

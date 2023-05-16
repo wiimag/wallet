@@ -18,7 +18,7 @@
 #define IS_NOT_A_NUMBER SC1(math_real_is_nan(_1.as_number()))
 #define EVAL_STOCK_FIELD(field_name) FOUNDATION_PREPROCESSOR_TOSTRING(field_name), SC2(_2->field_name), IS_NOT_A_NUMBER, FetchLevel::FUNDAMENTALS
 
-constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 39;
+constexpr uint32_t STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX = 28;
 
 FOUNDATION_FORCEINLINE expr_result_t stock_change_p_range(const stock_t* s, int rel_days)
 {
@@ -40,13 +40,8 @@ static struct {
     { "sold",    SC2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0)},                       
     { "active", SC2(_1->average_quantity ? true : false), SL1(_1.as_number() == 0) },
     { "qty",    SC2(_1->average_quantity), SL1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
-    { "buy",    SC2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
+    { "buy",    SC2(_1->average_price_rated), IS_NOT_A_NUMBER },
     { "day",    SC2(title_get_day_change(_1, _2)), IS_NOT_A_NUMBER },
-
-    { "buy_total_adjusted_qty",     SC2(_1->buy_total_adjusted_qty), IS_NOT_A_NUMBER },                   
-    { "buy_total_adjusted_price",   SC2(_1->buy_total_adjusted_price), IS_NOT_A_NUMBER },
-    { "sell_total_adjusted_qty",    SC2(_1->sell_total_adjusted_qty), IS_NOT_A_NUMBER },
-    { "sell_total_adjusted_price",  SC2(_1->sell_total_adjusted_price), IS_NOT_A_NUMBER },
 
     { "buy_total_price",    SC2(_1->buy_total_price), IS_NOT_A_NUMBER },
     { "buy_total_quantity", SC2(_1->buy_total_quantity), IS_NOT_A_NUMBER },
@@ -54,20 +49,12 @@ static struct {
     { "sell_total_price",       SC2(_1->sell_total_price), IS_NOT_A_NUMBER },
     { "sell_total_quantity",    SC2(_1->sell_total_quantity), IS_NOT_A_NUMBER },
 
-    { "buy_total_price_rated_adjusted",     SC2(_1->buy_total_price_rated_adjusted), IS_NOT_A_NUMBER },
-    { "sell_total_price_rated_adjusted",    SC2(_1->sell_total_price_rated_adjusted), IS_NOT_A_NUMBER },
-
     { "buy_total_price_rated",  SC2(_1->buy_total_price_rated), IS_NOT_A_NUMBER },
     { "sell_total_price_rated", SC2(_1->sell_total_price_rated), IS_NOT_A_NUMBER },
 
-    { "buy_adjusted_price",     SC2(_1->buy_adjusted_price), IS_NOT_A_NUMBER },
-    { "sell_adjusted_price",    SC2(_1->sell_adjusted_price), IS_NOT_A_NUMBER },
-
     { "average_price",              SC2(_1->average_price), IS_NOT_A_NUMBER },
     { "average_quantity",           SC2(_1->average_quantity), IS_NOT_A_NUMBER },
-    { "average_buy_price",          SC2(_1->average_buy_price), IS_NOT_A_NUMBER },
-    { "average_buy_price_rated",    SC2(_1->average_buy_price_rated), IS_NOT_A_NUMBER },
-    { "remaining_shares",           SC2(_1->remaining_shares), IS_NOT_A_NUMBER },
+    
     { "total_dividends",            SC2(_1->total_dividends), IS_NOT_A_NUMBER },
     { "average_ask_price",          SC2(_1->average_ask_price), IS_NOT_A_NUMBER },
     { "average_exchange_rate",      SC2(_1->average_exchange_rate), IS_NOT_A_NUMBER },

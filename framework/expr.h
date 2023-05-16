@@ -1006,6 +1006,15 @@ struct expr_result_t
     /*! Returns the & result of two value. */
     expr_result_t operator&(const expr_result_t& rhs) const
     {
+        if (type == EXPR_RESULT_FALSE || rhs.type == EXPR_RESULT_FALSE)
+            return false;
+
+        if (type == EXPR_RESULT_TRUE)
+            return rhs;
+
+        if (rhs.type == EXPR_RESULT_TRUE)
+            return *this;
+
         if (type == EXPR_RESULT_NUMBER && rhs.type == EXPR_RESULT_NUMBER)
             return (double)(math_trunc(value) & math_trunc(rhs.value));
 

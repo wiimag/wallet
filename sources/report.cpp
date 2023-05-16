@@ -198,6 +198,7 @@ FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_
     if (title_is_index(t))
     {
         return (row->background_color = BACKGROUND_INDX_COLOR);
+        return (row->background_color = BACKGROUND_INDX_COLOR);
     }
     else if (title_sold(t))
     {
@@ -266,23 +267,14 @@ FOUNDATION_STATIC cell_t report_column_get_buy_price(table_element_ptr_t element
 
     const bool show_alternate_buy_price = report_column_show_alternate_data();
 
-    if (!show_alternate_buy_price && title_sold(t))
-        return cell_t(t->buy_adjusted_price);
-
-    const double adjusted_price = t->average_price;
-
-    cell_t buy_price_cell(t->average_buy_price);
-    if (t->average_buy_price > adjusted_price)
+    cell_t cell(!show_alternate_buy_price ? t->average_price : t->average_price_rated);
+    if (t->average_price < t->stock->current.price)
     {
-        buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
-        buy_price_cell.style.text_color = TEXT_WARN_COLOR;
+        cell.style.types |= COLUMN_COLOR_TEXT;
+        cell.style.text_color = TEXT_GOOD_COLOR;
     }
-    else if (t->average_buy_price < 0)
-    {
-        buy_price_cell.style.types |= COLUMN_COLOR_TEXT;
-        buy_price_cell.style.text_color = TEXT_GOOD_COLOR;
-    }
-    return buy_price_cell;
+    
+    return cell;
 }
 
 FOUNDATION_STATIC cell_t report_column_day_gain(table_element_ptr_t element, const column_t* column)
@@ -322,7 +314,7 @@ FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element
 
     // If all titles are sold, return the sold average price.
     if (title_sold(t))
-        return t->sell_adjusted_price;
+        return t->sell_total_price / t->sell_total_quantity;
 
     if (t->average_quantity == 0)
         return nullptr;
@@ -356,48 +348,6 @@ FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element
     }
 
     return ask_price;
-}
-
-FOUNDATION_STATIC void report_title_ask_price_gain_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
-{
-    title_t* t = *(title_t**)element;
-    if (t == nullptr || title_is_index(t) || !t->stock || math_real_is_nan(cell->number))
-    {
-        ImGui::CloseCurrentPopup();
-        return;
-    }
-
-    const double avg = math_ifzero(t->average_price, t->stock->current.adjusted_close);
-    if (!math_real_is_nan(avg))
-    {
-        if (t->average_quantity == 0 && math_ifnan(t->sell_total_adjusted_qty, 0) > 0)
-        {
-            const double sell_gain_diff = (t->sell_adjusted_price - t->stock->current.adjusted_close) * t->sell_total_adjusted_qty;
-            ImGui::TextColored(ImColor(sell_gain_diff < 0 ? TEXT_BAD_COLOR : TOOLTIP_TEXT_COLOR), 
-                tr(" Sold at an average price of %.2lf $ "), t->sell_adjusted_price);
-            ImGui::TextColored(ImColor(sell_gain_diff < 0 ? TEXT_BAD_COLOR : TOOLTIP_TEXT_COLOR), " %s %.*s ",
-                sell_gain_diff > 0 ? tr("Saved") : tr("Lost"), STRING_FORMAT(string_from_currency(math_abs(sell_gain_diff), "999 999 999 $")));
-        }
-        else
-        {
-            const double c_avg = t->stock->current.adjusted_close;
-            const double average_fg = (t->average_price + t->stock->current.adjusted_close) / 2.0;
-            const double days_held = title_average_days_held(t);
-            const double if_gain_price = average_fg * (1.0 + t->wallet->profit_ask - (days_held - t->wallet->average_days) / 20.0 / 100.0);
-
-            ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-                tr(" Bought Price Gain: %.3g %% \n"
-                    " Current Price Gain: %.3g %% (" ICON_MD_EXPOSURE " %.2lf $) \n"
-                    " Ask Safe Price Gain: %.2lf $ (" ICON_MD_EXPOSURE " %.3g %%) \n"),
-                (cell->number - avg) / avg * 100.0,
-                (cell->number - c_avg) / c_avg * 100.0, (cell->number - c_avg),
-                if_gain_price, (cell->number - if_gain_price) / if_gain_price * -100.0);
-        }
-    }
-    else
-    {
-        ImGui::TrTextUnformatted("Data not available");
-    }
 }
 
 FOUNDATION_STATIC cell_t report_column_earning_actual(table_element_ptr_t element, const column_t* column)
@@ -1119,32 +1069,6 @@ FOUNDATION_STATIC void report_title_days_held_tooltip(table_element_ptr_const_t 
     ImGui::TrTextUnformatted("\n The days held field reflects the average number of days held \n for each transaction weighted by the quantity of each transaction. ");
 }
 
-FOUNDATION_STATIC void report_title_adjusted_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
-{
-    const title_t* t = *(const title_t**)element;
-    if (t == nullptr)
-        return;
-
-    const double bought_price = title_get_bought_price(t);
-    if (!math_real_is_nan(bought_price))
-    {
-        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-            tr(" (%s $) Bought Price: %.2lf $ "),
-            string_table_decode(t->stock->currency), bought_price);
-    }
-
-    ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-        tr(" (%.*s $) Average Cost: %.3lf $ "),
-        STRING_FORMAT(t->wallet->preferred_currency), math_ifzero(t->average_buy_price_rated, 0));
-
-    if (t->buy_adjusted_price != bought_price)
-    {
-        ImGui::TextColored(ImColor(TOOLTIP_TEXT_COLOR),
-            tr(" (Split) Adjusted Price: %.2lf $ "),
-            math_ifzero(t->buy_adjusted_price, 0));
-    }
-}
-
 FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
 {
     title_t* title = *(title_t**)element;
@@ -1210,8 +1134,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
 
     table_add_column(table, STRING_CONST("  Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"),
         report_column_get_buy_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_SUMMARY_AVERAGE | COLUMN_ZERO_USE_DASH)
-        .set_selected_callback(report_title_open_buy_view)
-        .set_tooltip_callback(report_title_adjusted_price_tooltip);
+        .set_selected_callback(report_title_open_buy_view);
 
     table_add_column(table, STRING_CONST("Price " ICON_MD_MONETIZATION_ON "||" ICON_MD_MONETIZATION_ON " Market Price"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_PRICE), COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE | COLUMN_ZERO_USE_DASH)
@@ -1221,8 +1144,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
 
     table_add_column(table, STRING_CONST("  Ask " ICON_MD_PRICE_CHECK "||" ICON_MD_PRICE_CHECK " Ask Price"),
         report_column_get_ask_price, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_DYNAMIC_VALUE | COLUMN_SUMMARY_AVERAGE | COLUMN_ZERO_USE_DASH)
-        .set_selected_callback(report_title_open_sell_view)
-        .set_tooltip_callback(report_title_ask_price_gain_tooltip);
+        .set_selected_callback(report_title_open_sell_view);
 
     table_add_column(table, "   Day " ICON_MD_ATTACH_MONEY "||" ICON_MD_ATTACH_MONEY " Day Gain. ",
         report_column_day_gain, COLUMN_FORMAT_CURRENCY, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE)
@@ -1463,8 +1385,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     ImGui::PopStyleColor(1);
 
     const double total_funds = wallet_total_funds(report->wallet);
-    const double capital = max(0.0, total_funds - report->total_investment);
-    const double total_gain_with_sells = report->total_gain + report->wallet->sell_total_gain;
+    const double cash_balance = total_funds + report->wallet->sell_total_gain - report->total_investment + report->wallet->total_dividends;
     if (report->wallet->total_title_sell_count > 0)
     {
         ImGui::Separator();
@@ -1477,8 +1398,9 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
             ImGui::SetTooltip(tr("Minimal amount (%.2lf) to sell titles if you want to increase your gain considerably."), report->wallet->enhanced_earnings);
 
-        ImGui::PushStyleColor(ImGuiCol_Text, report->wallet->total_sell_gain_if_kept_p <= 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
-        report_render_summary_line(report, tr("Sell Greediness"), total_gain_with_sells - report->wallet->total_sell_gain_if_kept, currency_fmt, true);
+        const double sell_greediness = report->wallet->total_sell_gain_if_kept;
+        ImGui::PushStyleColor(ImGuiCol_Text, sell_greediness <= 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
+        report_render_summary_line(report, tr("Sell Greediness"), sell_greediness, currency_fmt, true);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
             ImGui::SetTooltip(tr(" Loses or (Gains) if titles were kept longer before being sold"));
         ImGui::PopStyleColor(1);
@@ -1487,26 +1409,32 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     ImGui::Separator();
 
     if (total_funds > 0)
-        report_render_summary_line(report, tr("Capital"), max(0.0, total_funds - report->total_investment + report->wallet->sell_total_gain), currency_fmt);
+        report_render_summary_line(report, tr("Cash Balance"), cash_balance, currency_fmt, true);
 
-    report_render_summary_line(report, tr("Dividends"), report->wallet->total_dividends, currency_fmt);
+    if (report->wallet->total_dividends > 0)
+        report_render_summary_line(report, tr("Dividends"), report->wallet->total_dividends, currency_fmt);
     report_render_summary_line(report, tr("Investments"), report->total_investment, currency_fmt);
     report_render_summary_line(report, tr("Total Value"), report->total_value, currency_fmt);
 
-    ImGui::PushStyleColor(ImGuiCol_Text, report->total_gain > 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
-    report_render_summary_line(report, tr("Total Gain"), report->total_gain, currency_fmt, true);
-    ImGui::PopStyleColor(1);
+    const double total_gain_with_sales_and_dividends = report->total_gain + report->wallet->sell_total_gain + report->wallet->total_dividends;
+    ImGui::PushStyleColor(ImGuiCol_Text, total_gain_with_sales_and_dividends > 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
+    report_render_summary_line(report, tr("Total Gain"), total_gain_with_sales_and_dividends, currency_fmt, true);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+        ImGui::TrTooltip(" Total Gain (Includes current value gain, sells and dividends)");
 
-    ImGui::PushStyleColor(ImGuiCol_Text, total_gain_with_sells > 0 ? TEXT_GOOD_COLOR : TEXT_BAD_COLOR);
-    if (report->wallet->sell_total_gain != 0)
+    if (total_funds > 0)
     {
-        report_render_summary_line(report, "", total_gain_with_sells, currency_fmt, true);
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(tr("Gain including previous sells (%.2lf $)"), report->wallet->sell_total_gain);
+        const double gain_p = total_gain_with_sales_and_dividends / total_funds * 100.0;
+        report_render_summary_line(report, "", math_ifnan(gain_p, report->total_gain_p * 100.0), pourcentage_fmt, true);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+            ImGui::TrTooltip(" Total Gain %% (based on the initial funds)");
+    }
+    else
+    {
+        const double gain_p = (report->total_value - report->total_investment) / report->total_investment * 100.0;
+        report_render_summary_line(report, "", gain_p, pourcentage_fmt, true);
     }
 
-    const double gain_p = total_gain_with_sells / report->total_investment * 100.0;
-    report_render_summary_line(report, "", math_ifnan(gain_p, report->total_gain_p * 100.0), pourcentage_fmt, true);
     ImGui::PopStyleColor(1);
 
     if (report_is_loading(report))
@@ -2056,8 +1984,9 @@ void report_summary_update(report_t* report)
 
         if (stock_valid && t->sell_total_quantity > 0)
         {
-            const double sell_gain_if_kept = (s->current.adjusted_close - t->sell_adjusted_price) * t->sell_total_adjusted_qty;
-            const double sell_p = (s->current.adjusted_close - t->sell_adjusted_price) / t->sell_adjusted_price;
+            const double sell_adjusted_price = t->sell_total_price_rated / t->sell_total_quantity;
+            const double sell_gain_if_kept = (s->current.adjusted_close - sell_adjusted_price) * t->sell_total_quantity;
+            const double sell_p = (s->current.price - sell_adjusted_price) / sell_adjusted_price;
             if (!math_real_is_nan(sell_p))
             {
                 total_sell_gain_if_kept_p += sell_p;

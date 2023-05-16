@@ -378,44 +378,6 @@ FOUNDATION_STATIC cell_t report_order_column_ask_price(table_element_ptr_t eleme
     return price;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_total_gain(table_element_ptr_t element, const column_t* column)
-{
-    report_title_order_t* order = (report_title_order_t*)element;
-
-    const bool buy_order = order->data["buy"].as_boolean();
-    const double price_factor = report_order_price_factor(order);
-    const double current = order->title->stock->current.adjusted_close;
-    const double price = order->data["price"].as_number() / price_factor;
-    const double quantity = order->data["qty"].as_number() * price_factor;
-    const double total_value = (price * quantity);
-    const double actual_value = quantity * current;
-
-    double gain = (actual_value - total_value) * (buy_order ? 1.0 : -1.0);
-
-    if (column->flags & COLUMN_RENDER_ELEMENT)
-    {
-        if (math_real_is_nan(gain))
-        {
-            table_cell_right_aligned_label(STRING_CONST("-"));
-        }
-        else
-        {
-            double gain_p = ((actual_value - total_value) / total_value * 100.0) * (buy_order ? 1.0 : -1.0);
-            if (math_real_is_nan(gain_p))
-            {
-                table_cell_right_aligned_label(STRING_CONST("-"));
-            }
-            else
-            {
-                string_const_t label = string_format_static(STRING_CONST("%.2lf $ (%.2g %%)"), gain, gain_p);
-                table_cell_right_aligned_label(STRING_ARGS(label));
-            }
-        }
-    }
-
-    return gain;
-}
-
 FOUNDATION_STATIC cell_t report_order_column_total_value(table_element_ptr_t element, const column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
@@ -492,9 +454,6 @@ FOUNDATION_STATIC table_t* report_create_title_details_table(const bool title_is
         report_order_column_total_value, COLUMN_FORMAT_CURRENCY, COLUMN_ZERO_USE_DASH | COLUMN_SORTABLE)
         .set_tooltip_callback(report_order_total_value_adjusted_tooltip)
         .set_width(IM_SCALEF(100.0f));
-
-    table_add_column(table, STRING_CONST("           Gain " ICON_MD_PRICE_CHANGE "||" ICON_MD_PRICE_CHANGE " Total Gain"),
-        report_order_column_total_gain, COLUMN_FORMAT_CURRENCY, (!title_is_sold ? COLUMN_HIDE_DEFAULT : COLUMN_OPTIONS_NONE) | COLUMN_RIGHT_ALIGN | COLUMN_CUSTOM_DRAWING | COLUMN_SORTABLE);
 
     table_add_column(table, STRING_CONST(THIN_SPACE THIN_SPACE ICON_MD_SMART_BUTTON "||" ICON_MD_SMART_BUTTON " Actions"), report_order_column_actions,
         COLUMN_FORMAT_TEXT, COLUMN_CUSTOM_DRAWING | COLUMN_STRETCH | COLUMN_LEFT_ALIGN);

@@ -1291,18 +1291,25 @@ stock_eod_record_t stock_eod_record(const char* symbol, size_t length, time_t at
     }
 
     string_t datestr = string_from_date(SHARED_BUFFER(16), at);
-    eod_fetch("eod", ticker.str, FORMAT_JSON_CACHE, "from", datestr.str, "to", datestr.str,
-        [&result](const json_object_t& res) 
+    eod_fetch("eod", ticker.str, FORMAT_JSON_CACHE, "order", "d", [ticker, datestr, &result](const json_object_t& res) 
     {
-        auto eod = res[(size_t)0];
-        string_const_t date = eod["date"].as_string();
-        result.timestamp = string_to_date(STRING_ARGS(date));
-        result.open = eod["open"].as_number();
-        result.high = eod["high"].as_number();
-        result.low = eod["low"].as_number();
-        result.close = eod["close"].as_number();
-        result.adjusted_close = eod["adjusted_close"].as_number();
-        result.volume = eod["volume"].as_number();
+        for (auto eod : res)
+        {
+            string_const_t date = eod["date"].as_string();
+            if (string_equal(STRING_ARGS(date), STRING_ARGS(datestr)))
+            {
+                result.timestamp = string_to_date(STRING_ARGS(date));
+                result.open = eod["open"].as_number();
+                result.high = eod["high"].as_number();
+                result.low = eod["low"].as_number();
+                result.close = eod["close"].as_number();
+                result.adjusted_close = eod["adjusted_close"].as_number();
+                result.volume = eod["volume"].as_number();
+                return;
+            }
+        }
+
+        log_warnf(HASH_STOCK, WARNING_SUSPICIOUS, STRING_CONST("Failed to find record on %.*s for %.*s"), STRING_FORMAT(datestr), STRING_FORMAT(ticker));
     }, 7 * 24 * 60 * 60ULL);
     
     return result;

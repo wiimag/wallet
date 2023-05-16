@@ -179,8 +179,8 @@ FOUNDATION_STATIC void logo_process_banner_image(logo_image_t* image)
     image->most_common_color = rgb_to_abgr(max_color);
 
     const float max_color_coverage = max_count / (image->width * image->height * 1.0f) * 100.0f;
-    const bool discard_bg_color = true;//max_color_coverage > 85.0f;
-    // Find the image size by excluding transparent pixels        
+    const bool discard_bg_color = true;
+    // Find the image size by excluding transparent pixels
     {
         uint32_t min_x = 0;
         uint32_t min_y = 0;

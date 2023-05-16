@@ -3820,5 +3820,55 @@
 			en = "No real-time data available"
 			fr = "Aucune donn\xc3\xa9e en temps r\xc3\xa9el disponible"
 		}
+		{
+			hash = "e9c67de6c34af12b"
+			en = "You've taken about %.0lf $ out of your wallet to make those investments and re-invested gain for about %.0lf $."
+			fr = "Vous avez utilis\xc3\xa9 environ %.0lf $ de votre portefeuille pour effectuer ces investissements et r\xc3\xa9investi les gains pour environ %.0lf $."
+		}
+		{
+			hash = "105b6811ac5ae313"
+			en = "You've made about %.0lf $ in dividend's return."
+			fr = "Vous avez gagn\xc3\xa9 environ %.0lf $ en dividendes."
+		}
+		{
+			hash = "81164377b6190417"
+			en = "You've made about %.0lf $ by selling stock so far"
+			fr = "Vous avez gagn\xc3\xa9 environ %.0lf $ en vendant des actions jusqu'\xc3\xa0 pr\xc3\xa9sent."
+		}
+		{
+			hash = "65decc57eae298e9"
+			en = "You should have about %.0lf $ fund remaining as of %.*s"
+			fr = "Vous devriez avoir environ %.0lf $ de fonds restants en date du %.*s"
+		}
+		{
+			hash = "edd2eb368988f575"
+			en = " Split Adjusted Factor: %.3lg (%.3lg)"
+			fr = " Facteur ajust\xc3\xa9: %.3lg (%.3lg)"
+		}
+		{
+			hash = "4b0369e34cb3d850"
+			en = " Split Adjusted Price: %.3lf $"
+			fr = " Prix ajust\xc3\xa9: %.3lf $"
+		}
+		{
+			hash = "4aae7101c43bb531"
+			en = " Adjusted Value (%d x %.2lf $): %.2lf $ "
+			fr = " Valeur ajust\xc3\xa9e (%d x %.2lf $): %.2lf $ "
+		}
+		{
+			hash = "27ee5e42174bc479"
+			en = "Cash Balance"
+			fr = "Solde de tr\xc3\xa9sorerie"
+		}
+		{
+			hash = "8f7efe5ea43f124"
+			en = " Total Gain (Includes current value gain, sells and dividends)"
+			fr = " Gain total (inclut la plus-value actuelle, les ventes et les dividendes)"
+		}
+		{
+			hash = "f310b49fee1b0c7"
+			en = " Total Gain %% (based on the initial funds)"
+			fr = " Gain total %% (bas\xc3\xa9 sur les fonds initiaux)"
+		}
 	]
 }

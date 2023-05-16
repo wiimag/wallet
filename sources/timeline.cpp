@@ -170,7 +170,7 @@ FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(c
             
             timeline_transaction_t transaction{};
             FOUNDATION_ASSERT(t->code_length < 16);
-            string_copy(transaction.code, 16, t->code, t->code_length);
+            string_copy(STRING_BUFFER(transaction.code), t->code, t->code_length);
             transaction.code_key = string_hash(t->code, t->code_length);
             transaction.date = date;
             transaction.qty = qty;
@@ -181,10 +181,16 @@ FOUNDATION_STATIC timeline_transaction_t* timeline_report_compute_transactions(c
             transaction.close = ed.close;
             transaction.adjusted_close = ed.adjusted_close;
             
-            string_const_t title_currency = SYMBOL_CONST(t->stock->currency);
-            transaction.exchange_rate = stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(preferred_currency), date);
+            transaction.exchange_rate = order["xcg"].as_number();
+            if (math_real_is_nan(transaction.exchange_rate))
+            {
+                string_const_t title_currency = SYMBOL_CONST(t->stock->currency);
+                transaction.exchange_rate = stock_exchange_rate(STRING_ARGS(title_currency), STRING_ARGS(preferred_currency), date);
+            }
 
-            transaction.split_factor = stock_get_split_factor(STRING_ARGS(code), date);
+            transaction.split_factor = order["split"].as_number();
+            if (math_real_is_nan(transaction.split_factor))
+                transaction.split_factor = stock_get_split_factor(STRING_ARGS(code), date);
             transaction.split_close = ed.close * transaction.split_factor;
             transaction.adjusted_factor = transaction.adjusted_close / transaction.split_close;
 
@@ -338,7 +344,7 @@ FOUNDATION_STATIC void timeline_update_day(timeline_t& day, const timeline_trans
 
         day.total_gain += gain;
         day.total_fund += sell_total;
-        day.total_investment += gain;
+        //day.total_investment += gain;
 
         day.total_dividends -= cost_total * (1.0 - t->adjusted_factor);
     }
