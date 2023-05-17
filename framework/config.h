@@ -175,7 +175,7 @@ struct config_handle_t
     bool as_boolean(bool default_value = false) const;
 
     /*! Converts the config value to a number. */
-    double as_number(double default_value = NAN) const;
+    double as_number(double default_value = __builtin_nan("0")) const;
 
     /*! Converts the config value to a string, or the JSON string value if anything else than a primitive. */
     string_const_t as_string(const char* default_string = nullptr, size_t default_string_length = 0, const char* fmt = nullptr) const;
@@ -294,7 +294,7 @@ bool config_value_as_boolean(const config_handle_t& boolean_value, bool default_
  *
  *  @return Config value number value.
  */
-double config_value_as_number(const config_handle_t& number_value, double default_value = NAN);
+double config_value_as_number(const config_handle_t& number_value, double default_value = __builtin_nan("0"));
 
 /*! Returns the config value string value. 
  *

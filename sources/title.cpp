@@ -60,7 +60,7 @@ FOUNDATION_STATIC bool title_recently_changed(const title_t* t, double* out_delt
 FOUNDATION_STATIC double title_compute_ps(const title_t* t, const stock_t* s)
 {
     if (t->average_price == 0)
-        return NAN;
+        return DNAN;
 
     const double profit_ask = t->wallet->profit_ask;
     const double average_days = t->wallet->average_days;
@@ -212,7 +212,7 @@ double title_get_total_investment(const title_t* t)
 double title_get_total_gain(const title_t* t)
 {
     if (t->average_quantity == 0 && t->sell_total_quantity == 0)
-        return NAN;
+        return DNAN;
     if (t->average_quantity == 0)
         return (t->sell_total_price_rated - t->buy_total_price_rated) + t->total_dividends;
 
@@ -222,7 +222,7 @@ double title_get_total_gain(const title_t* t)
 double title_get_total_gain_p(const title_t* t)
 {
     if (t->average_quantity == 0 && t->sell_total_quantity == 0)
-        return NAN;
+        return DNAN;
 
     if (title_sold(t))
     {
@@ -256,7 +256,7 @@ double title_get_range_change_p(const title_t* t, const stock_t* s, int rel_days
 double title_get_day_change(const title_t* t, const stock_t* s)
 {
     if (t->average_quantity == 0)
-        return NAN;
+        return DNAN;
     return s->current.change * t->average_quantity * t->today_exchange_rate.fetch();
 }
 
@@ -547,7 +547,7 @@ bool title_is_index(const title_t* t)
 
 bool title_has_increased(const title_t* t, double* out_delta /*= nullptr*/, double since_seconds /*= 15.0 * 60.0*/, double* elapsed_seconds /*= nullptr*/)
 {
-    double delta = NAN;
+    double delta = DNAN;
     if (!title_recently_changed(t, &delta, since_seconds, elapsed_seconds))
         return false;
     return delta > 0;
@@ -555,7 +555,7 @@ bool title_has_increased(const title_t* t, double* out_delta /*= nullptr*/, doub
 
 bool title_has_decreased(const title_t* t, double* out_delta /*= nullptr*/, double since_seconds /*= 15.0 * 60.0*/, double* elapsed_seconds /*= nullptr*/)
 {
-    double delta = NAN;
+    double delta = DNAN;
     if (!title_recently_changed(t, &delta, since_seconds, elapsed_seconds))
         return false;
     return delta < 0;
@@ -643,11 +643,11 @@ double title_get_ask_price(const title_t* title)
 double title_current_price(const title_t* title)
 {
     if (title == nullptr)
-        return NAN;
+        return DNAN;
 
     const stock_t* stock = title->stock;
     if (stock == nullptr)
-        return NAN;
+        return DNAN;
 
     return stock->current.price;
 }

@@ -24,14 +24,14 @@ struct report_title_order_t
     config_handle_t data;
     bool deleted{ false };
 
-    double exchange_rate{ NAN };
-    double close_price{ NAN };
-    double split_price{ NAN };
-    double adjusted_price{ NAN };
+    double exchange_rate{ DNAN };
+    double close_price{ DNAN };
+    double split_price{ DNAN };
+    double adjusted_price{ DNAN };
 
-    double price_factor{ NAN };
-    double split_factor{ NAN };
-    double adjusted_split_factor{ NAN };
+    double price_factor{ DNAN };
+    double split_factor{ DNAN };
+    double adjusted_split_factor{ DNAN };
 };
 
 FOUNDATION_STATIC void report_trigger_update(report_t* report)

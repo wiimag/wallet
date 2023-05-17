@@ -225,14 +225,6 @@ string_const_t expr_result_t::as_string(const char* fmt /*= nullptr*/) const
     return string_null();
 }
 
-expr_result_t expr_eval_symbol(string_table_symbol_t symbol)
-{
-    // FIXME: Here we assume that expression symbols are stored in the global string table
-    expr_result_t r(EXPR_RESULT_SYMBOL);
-    r.value = (double)symbol;
-    return r;
-}
-
 const expr_result_t* expr_eval_list(const expr_result_t* list)
 {
     if (list)

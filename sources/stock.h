@@ -88,36 +88,36 @@ FOUNDATION_ALIGNED_STRUCT(day_result_t, 8)
     };
     uint8_t gmtoffset{ 0 };
 
-    double open{ NAN };
+    double open{ DNAN };
 
     union {
-        double close{ NAN };
+        double close{ DNAN };
         double price;
     };
-    double adjusted_close{ NAN };
-    double previous_close{ NAN };
-    double price_factor{ NAN };
+    double adjusted_close{ DNAN };
+    double previous_close{ DNAN };
+    double price_factor{ DNAN };
 
-    double low{ NAN };
-    double high{ NAN };
+    double low{ DNAN };
+    double high{ DNAN };
         
-    double change{ NAN };
-    double change_p{ NAN };
-    double change_p_high{ NAN };
+    double change{ DNAN };
+    double change_p{ DNAN };
+    double change_p_high{ DNAN };
         
-    double volume{ NAN };
+    double volume{ DNAN };
 
-    double wma{ NAN };
-    double ema{ NAN };
-    double sma{ NAN };
+    double wma{ DNAN };
+    double ema{ DNAN };
+    double sma{ DNAN };
 
-    double uband{ NAN };
-    double mband{ NAN };
-    double lband{ NAN };
+    double uband{ DNAN };
+    double mband{ DNAN };
+    double lband{ DNAN };
 
-    double sar{ NAN };
-    double slope{ NAN };
-    double cci{ NAN };
+    double sar{ DNAN };
+    double slope{ DNAN };
+    double cci{ DNAN };
 };
 
 /*! Represents a stock. */

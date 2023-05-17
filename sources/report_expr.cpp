@@ -37,7 +37,7 @@ static struct {
     
     // Title & Stocks
     
-    { "sold",    SC2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0)},                       
+    { "sold",   SC2(_1->average_quantity ? false : true), SL1(_1.as_number() == 0)},
     { "active", SC2(_1->average_quantity ? true : false), SL1(_1.as_number() == 0) },
     { "qty",    SC2(_1->average_quantity), SL1(_1.as_number() == 0 || math_real_is_nan(_1.as_number())) },
     { "buy",    SC2(_1->average_price_rated), IS_NOT_A_NUMBER },
@@ -76,17 +76,19 @@ static struct {
 
     //Stock only !!!UPDATE INDEX #STOCK_ONLY_PROPERTY_EVALUATOR_START_INDEX IF YOU ADD NEW EVALUATOR ABOVE!!!)
 
-    { "price",      SC2(_2->current.price), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
-    { "date",       SC2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
-    { "gmt",        SC2((double)_2->current.gmtoffset), nullptr, FetchLevel::REALTIME },
-    { "open",       SC2(_2->current.open), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
-    { "close",      SC2(_2->current.adjusted_close), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
-    { "yesterday",  SC2(_2->current.previous_close), nullptr, FetchLevel::REALTIME },
-    { "low",        SC2(_2->current.low), nullptr, FetchLevel::REALTIME },
-    { "high",       SC2(_2->current.high), nullptr, FetchLevel::REALTIME },
-    { "change",     SC2(_2->current.change), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
-    { "change_p",   SC2(_2->current.change_p), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
-    { "volume",     SC2(_2->current.volume), nullptr, FetchLevel::REALTIME },
+    { "price",          SC2(_2->current.price), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "date",           SC2((double)_2->current.date), nullptr, FetchLevel::REALTIME },
+    { "gmt",            SC2((double)_2->current.gmtoffset), nullptr, FetchLevel::REALTIME },
+    { "open",           SC2(_2->current.open), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "close",          SC2(_2->current.adjusted_close), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "yesterday",      SC2(_2->current.previous_close), nullptr, FetchLevel::REALTIME },
+    { "low",            SC2(_2->current.low), nullptr, FetchLevel::REALTIME },
+    { "high",           SC2(_2->current.high), nullptr, FetchLevel::REALTIME },
+    { "change",         SC2(_2->current.change), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "change_p",       SC2(_2->current.change_p), IS_NOT_A_NUMBER, FetchLevel::REALTIME },
+    { "volume",         SC2(_2->current.volume), nullptr, FetchLevel::REALTIME },
+    { "change_p_high",  SC2(_2->current.change_p_high), nullptr, FetchLevel::REALTIME },
+    { "price_factor",   SC2(_2->current.price_factor), nullptr, FetchLevel::REALTIME | FetchLevel::EOD },
 
     { "change_3d",     SC2(stock_change_p_range(_2, 3)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
     { "change_5d",     SC2(stock_change_p_range(_2, 5)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
@@ -101,11 +103,8 @@ static struct {
     { "change_2y",     SC2(stock_change_p_range(_2, 365 * 2)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
     { "change_3y",     SC2(stock_change_p_range(_2, 365 * 3)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
     { "change_6y",     SC2(stock_change_p_range(_2, 365 * 6)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
-    { "change_10y",     SC2(stock_change_p_range(_2, 365 * 10)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
-    { "change_max",     SC2(stock_change_p_range(_2, 365 * 100)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
-
-    { "price_factor",   SC2(_2->current.price_factor), nullptr, FetchLevel::EOD },
-    { "change_p_high",  SC2(_2->current.change_p_high), nullptr, FetchLevel::EOD },
+    { "change_10y",    SC2(stock_change_p_range(_2, 365 * 10)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
+    { "change_max",    SC2(stock_change_p_range(_2, 365 * 100)), IS_NOT_A_NUMBER, FetchLevel::REALTIME | FetchLevel::EOD},
 
     { "wma",    SC2(_2->current.wma), nullptr, FetchLevel::TECHNICAL_WMA },
     { "ema",    SC2(_2->current.ema), nullptr, FetchLevel::TECHNICAL_EMA },
@@ -184,7 +183,7 @@ static struct {
 // # PRIVATE
 //
 
-FOUNDATION_STATIC bool report_eval_report_field_resolve_level(stock_handle_t& stock_handle, FetchLevel request_level, const double timeout_expired = 2.0)
+FOUNDATION_STATIC bool report_eval_report_field_resolve_level(stock_handle_t& stock_handle, FetchLevel request_level, const double timeout_expired = 30.0)
 {
     const stock_t* s = stock_handle;
     if (s == nullptr)
@@ -196,10 +195,13 @@ FOUNDATION_STATIC bool report_eval_report_field_resolve_level(stock_handle_t& st
         {
             const tick_t timeout = time_current();
             while (!s->has_resolve(request_level) && time_elapsed(timeout) < timeout_expired)
-                dispatcher_wait_for_wakeup_main_thread(timeout_expired * 100);
+                dispatcher_wait_for_wakeup_main_thread();
 
             if (time_elapsed(timeout) >= timeout_expired)
-                log_warnf(0, WARNING_PERFORMANCE, STRING_CONST("Failed to resolve %d for %s in time"), request_level, SYMBOL_CSTR(s->code));
+            {
+                log_warnf(HASH_REPORT_EXPRESSION, WARNING_PERFORMANCE,
+                    STRING_CONST("Failed to resolve %d for %s in time"), request_level, SYMBOL_CSTR(s->code));
+            }
         }
     }
 
@@ -217,17 +219,27 @@ FOUNDATION_STATIC bool report_eval_report_field_test(
     const function<bool(const expr_result_t& v)>& property_filter_out,
     expr_result_t** results, FetchLevel required_level)
 {
-    if (!string_equal_nocase(property_name, string_length(property_name), STRING_ARGS(field_name)))
+    if (!string_equal_nocase(STRING_LENGTH(property_name), STRING_ARGS(field_name)))
         return false;
-                    
+
+    const stock_t* s = stock_handle;
+    if (s == nullptr)
+    {
+        log_warnf(HASH_REPORT_EXPRESSION, WARNING_SUSPICIOUS, 
+            STRING_CONST("Failed to resolve stock to evaluate %.*s"), STRING_FORMAT(field_name));
+        return false;
+    }
+
+    if (s->code == STRING_TABLE_NULL_SYMBOL)
+        required_level |= FetchLevel::FUNDAMENTALS;
+
     if (required_level != FetchLevel::NONE)
         report_eval_report_field_resolve_level(stock_handle, required_level);
 
-    const stock_t* s = stock_handle;
-    expr_result_t value = property_evalutor(nullptr, s);
+    expr_result_t value = property_evalutor(nullptr, stock_handle);
     if (!property_filter_out || !property_filter_out(value))
     {
-        const expr_result_t& kvp = expr_eval_pair(expr_eval_symbol(s->code), value);
+        const expr_result_t& kvp = expr_eval_pair(SYMBOL_CONST(s->code), value);
         array_push(*results, kvp);
     }
 
@@ -241,15 +253,12 @@ FOUNDATION_STATIC bool report_eval_report_field_test(
     const function<bool(const expr_result_t& v)>& property_filter_out,
     expr_result_t** results, FetchLevel required_level)
 {
-    if (!string_equal_nocase(property_name, string_length(property_name), STRING_ARGS(field_name)))
+    if (!string_equal_nocase(STRING_LENGTH(property_name), STRING_ARGS(field_name)))
         return false;
         
     foreach (pt, report->titles)
     {
         title_t* t = *pt;
-        const stock_t* s = t->stock;
-        if (!s || !s->has_resolve(FetchLevel::REALTIME))
-            continue;
 
         if (title_filter.length && !string_equal_nocase(STRING_ARGS(title_filter), t->code, t->code_length))
             continue;
@@ -257,10 +266,11 @@ FOUNDATION_STATIC bool report_eval_report_field_test(
         if (required_level != FetchLevel::NONE)
             report_eval_report_field_resolve_level(t, required_level);
 
-        expr_result_t value = property_evalutor(t, s);
+        expr_result_t value = property_evalutor(t, t->stock);
+        expr_result_t symbol_code(string_const(t->code, t->code_length));
         if (title_filter.length || !property_filter_out || !property_filter_out(value))
         {
-            const expr_result_t& kvp = expr_eval_pair(expr_eval_symbol(s->code), value);
+            const expr_result_t& kvp = expr_eval_pair(symbol_code, value);
             array_push(*results, kvp);
         }
 
@@ -495,9 +505,7 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
 
     string_const_t code = expr_eval_get_string_arg(args, 0, "Invalid symbol code");
     string_const_t field_arg = expr_eval_get_string_arg(args, 1, "Invalid field name");
-
     string_t field_name = string_copy(SHARED_BUFFER(256), field_arg.str, field_arg.length);
-    //field_name = string_replace(field_name.str, field_name.length, 256, STRING_CONST("."), STRING_CONST("::"), true);
 
     expr_result_t value = NIL;
     eod_fetch("fundamentals", code.str, FORMAT_JSON_CACHE, [&value, field_name](const json_object_t& json)

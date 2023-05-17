@@ -141,7 +141,7 @@ struct double_option_t
     {
     }
 
-    double_option_t(O&& o)
+    double_option_t(O&& o) noexcept
         : value(o.value)
         , initialized(o.initialized)
     {
@@ -179,7 +179,7 @@ struct double_option_t
         return *this;
     }
 
-    O& operator=(O&& o)
+    O& operator=(O&& o) noexcept
     {
         if (this == &o)
             return *this;

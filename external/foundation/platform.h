@@ -94,7 +94,7 @@ thread local storage to ensure maximum portability across supported platforms */
 #define FOUNDATION_COMPILER_INTEL 0
 
 // =======================================
-#if BUILD_DEBUG
+#if BUILD_DEBUG && !defined(_PREFAST_)
 #define FOUNDATION_STATIC
 #else
 #define FOUNDATION_STATIC static

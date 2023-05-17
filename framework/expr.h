@@ -1324,14 +1324,6 @@ expr_var_t* expr_set_or_create_global_var(const char* name, size_t name_length, 
  */
 void expr_register_vec_mat_functions(expr_func_t*& funcs);
 
-/*! Create an expression result from a symbol from the global string table.
- *
- *  @param symbol Symbol to evaluate.
- *
- *  @return Expression result converted to a string.
- */
-expr_result_t expr_eval_symbol(string_table_symbol_t symbol);
-
 /*! Merge a key value pair into an expression result set, i.e. [key, value]
  *
  *  @param key   Key to pair.
