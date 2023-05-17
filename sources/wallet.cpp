@@ -195,7 +195,7 @@ FOUNDATION_STATIC report_handle_t wallet_history_select_initial_report()
     return selected_report_id;
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_date(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_date(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
 
@@ -223,31 +223,31 @@ FOUNDATION_STATIC cell_t wallet_history_column_date(table_element_ptr_t element,
     return h->date;
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_funds(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_funds(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     return h->funds;
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_broker_value(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_broker_value(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     return h->broker_value;
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_investments(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_investments(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     return h->investments;
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_total_value(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_total_value(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     return h->total_value;
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_total_gain(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_total_gain(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     const double total_gain = h->total_value - h->investments;
@@ -255,7 +255,7 @@ FOUNDATION_STATIC cell_t wallet_history_column_total_gain(table_element_ptr_t el
     return math_ifzero(adjusted_total_gain, total_gain);
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_assets(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_assets(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     return h->other_assets;
@@ -305,7 +305,7 @@ FOUNDATION_STATIC double wallet_history_total_gain_p(const wallet_history_t* h)
     return diff / cash_flow * 100.0;
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_total_gain_p(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_total_gain_p(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     return wallet_history_total_gain_p(h);
@@ -316,13 +316,13 @@ FOUNDATION_STATIC double wallet_history_wealth(const wallet_history_t* h)
     return wallet_history_total_value_gain(h) + h->other_assets;
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_wealth(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_wealth(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     return wallet_history_wealth(h);
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_change(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_change(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     const wallet_history_t* p = wallet_history_get_previous(h);
@@ -349,10 +349,10 @@ FOUNDATION_STATIC double wallet_history_change_p(const wallet_history_t* h)
     return diff / prev_value * 100.0;
 }
 
-FOUNDATION_STATIC cell_t wallet_history_column_change_p(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t wallet_history_column_change_p(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
-    cell_t cv(wallet_history_change_p(h));
+    table_cell_t cv(wallet_history_change_p(h));
     
     if (cv.number <= 0)
     {
@@ -368,7 +368,7 @@ FOUNDATION_STATIC cell_t wallet_history_column_change_p(table_element_ptr_t elem
     return cv;
 }
 
-FOUNDATION_STATIC void wallet_history_edit_value(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void wallet_history_edit_value(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     h->show_edit_ui = true;

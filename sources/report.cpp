@@ -49,7 +49,6 @@ static const ImU32 BACKGROUND_WATCH_COLOR = ImColor::HSV(120 / 360.0f, 0.30f, 0.
 
 typedef enum report_column_formula_enum_t : unsigned int {
     REPORT_FORMULA_NONE = 0,
-    REPORT_FORMULA_TITLE,
     REPORT_FORMULA_CURRENCY,
     REPORT_FORMULA_PRICE,
     REPORT_FORMULA_DAY_CHANGE,
@@ -182,7 +181,7 @@ FOUNDATION_STATIC bool report_table_search(table_element_ptr_const_t element, co
     return false;
 }
 
-FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_element_ptr_t element)
+FOUNDATION_STATIC bool report_table_row_begin(table_t* table, table_row_t* row, table_element_ptr_t element)
 {
     title_t* t = *(title_t**)element;
     if (t == nullptr)
@@ -232,7 +231,7 @@ FOUNDATION_STATIC bool report_table_row_begin(table_t* table, row_t* row, table_
     return false;
 }
 
-FOUNDATION_STATIC bool report_table_row_end(table_t* table, row_t* row, table_element_ptr_t element)
+FOUNDATION_STATIC bool report_table_row_end(table_t* table, table_row_t* row, table_element_ptr_t element)
 {
     if (element == nullptr)
         return false;
@@ -259,7 +258,7 @@ FOUNDATION_STATIC bool report_column_show_alternate_data()
     return ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows) && ImGui::IsKeyDown(ImGuiKey_LeftCtrl);
 }
 
-FOUNDATION_STATIC cell_t report_column_get_buy_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_get_buy_price(table_element_ptr_t element, const table_column_t* column)
 {
     const title_t* t = *(title_t**)element;
     if (t == nullptr || title_is_index(t))
@@ -267,7 +266,7 @@ FOUNDATION_STATIC cell_t report_column_get_buy_price(table_element_ptr_t element
 
     const bool show_alternate_buy_price = report_column_show_alternate_data();
 
-    cell_t cell(!show_alternate_buy_price ? t->average_price : t->average_price_rated);
+    table_cell_t cell(!show_alternate_buy_price ? t->average_price : t->average_price_rated);
     if (t->average_price < t->stock->current.price)
     {
         cell.style.types |= COLUMN_COLOR_TEXT;
@@ -277,7 +276,7 @@ FOUNDATION_STATIC cell_t report_column_get_buy_price(table_element_ptr_t element
     return cell;
 }
 
-FOUNDATION_STATIC cell_t report_column_day_gain(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_day_gain(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* t = *(title_t**)element;
     if (t == nullptr)
@@ -297,7 +296,7 @@ FOUNDATION_STATIC cell_t report_column_day_gain(table_element_ptr_t element, con
     return title_get_day_change(t, s);
 }
 
-FOUNDATION_STATIC cell_t report_column_average_days_held(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_average_days_held(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* t = *(title_t**)element;
     if (t == nullptr)
@@ -306,7 +305,7 @@ FOUNDATION_STATIC cell_t report_column_average_days_held(table_element_ptr_t ele
     return title_average_days_held(t);
 }
 
-FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_get_ask_price(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* t = *(title_t**)element;
     if (t == nullptr || title_is_index(t))
@@ -321,7 +320,7 @@ FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element
 
     if (t->average_ask_price > 0)
     {
-        cell_t ask_price_cell(t->average_ask_price);
+        table_cell_t ask_price_cell(t->average_ask_price);
         ask_price_cell.style.types |= COLUMN_COLOR_TEXT;
         ask_price_cell.style.text_color = TEXT_WARN_COLOR;
         return ask_price_cell;
@@ -336,7 +335,7 @@ FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element
 
     if (!math_real_is_nan(ask_price) && ask_price < t->average_price)
     {
-        cell_t ask_price_cell(ask_price);
+        table_cell_t ask_price_cell(ask_price);
         ask_price_cell.style.types |= COLUMN_COLOR_TEXT;
 
         const double p = (ask_price - if_gain_price) / if_gain_price * 100.0;
@@ -350,7 +349,7 @@ FOUNDATION_STATIC cell_t report_column_get_ask_price(table_element_ptr_t element
     return ask_price;
 }
 
-FOUNDATION_STATIC cell_t report_column_earning_actual(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_earning_actual(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* t = *(title_t**)element;
     if (t == nullptr || title_is_index(t))
@@ -358,7 +357,7 @@ FOUNDATION_STATIC cell_t report_column_earning_actual(table_element_ptr_t elemen
     return t->stock->earning_trend_actual.fetch();
 }
 
-FOUNDATION_STATIC cell_t report_column_earning_estimate(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_earning_estimate(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* t = *(title_t**)element;
     if (t == nullptr || title_is_index(t))
@@ -366,7 +365,7 @@ FOUNDATION_STATIC cell_t report_column_earning_estimate(table_element_ptr_t elem
     return t->stock->earning_trend_estimate.fetch();
 }
 
-FOUNDATION_STATIC cell_t report_column_earning_difference(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_earning_difference(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* t = *(title_t**)element;
     if (t == nullptr || title_is_index(t))
@@ -374,7 +373,7 @@ FOUNDATION_STATIC cell_t report_column_earning_difference(table_element_ptr_t el
     return t->stock->earning_trend_difference.fetch();
 }
 
-FOUNDATION_STATIC cell_t report_column_earning_percent(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_earning_percent(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* t = *(title_t**)element;
     if (t == nullptr || title_is_index(t))
@@ -382,7 +381,7 @@ FOUNDATION_STATIC cell_t report_column_earning_percent(table_element_ptr_t eleme
     return (double)math_round(t->stock->earning_trend_percent.fetch());
 }
 
-FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, const column_t* column, report_column_formula_t formula)
+FOUNDATION_STATIC table_cell_t report_column_get_value(table_element_ptr_t element, const table_column_t* column, report_column_formula_t formula)
 {
     title_t* t = *(title_t**)element;
 
@@ -394,12 +393,6 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
 
     switch (formula)
     {
-    case REPORT_FORMULA_TITLE:
-        return t->code;
-
-    case REPORT_FORMULA_BUY_QUANTITY:
-        return (double)math_round(t->average_quantity);
-
     case REPORT_FORMULA_PS:
         return t->ps.fetch();
 
@@ -419,13 +412,19 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
             if (title_is_index(t) && t->average_quantity == 0)
                 return NAN;
             return stock_data->current.adjusted_close;
-        case REPORT_FORMULA_DAY_CHANGE:	        
+        case REPORT_FORMULA_DAY_CHANGE:
             if (t->average_quantity == 0 && column->flags & COLUMN_COMPUTE_SUMMARY)
                 return 0;
             return stock_data->current.change_p;
-        case REPORT_FORMULA_TOTAL_GAIN:			return title_get_total_gain(t);
-        case REPORT_FORMULA_TOTAL_GAIN_P:		return title_get_total_gain_p(t);
-        case REPORT_FORMULA_YESTERDAY_CHANGE:	return title_get_yesterday_change(t, stock_data);
+
+        case REPORT_FORMULA_TOTAL_GAIN:
+            return title_get_total_gain(t);
+
+        case REPORT_FORMULA_TOTAL_GAIN_P:
+            return title_get_total_gain_p(t);
+
+        case REPORT_FORMULA_YESTERDAY_CHANGE:   
+            return title_get_yesterday_change(t, stock_data);
 
         default:
             FOUNDATION_ASSERT_FAILFORMAT("Cannot get %.*s value for %.*s (%u)", STRING_FORMAT(column->get_name()), (int)t->code_length, t->code, formula);
@@ -433,7 +432,7 @@ FOUNDATION_STATIC cell_t report_column_get_value(table_element_ptr_t element, co
         }
     }
 
-    return cell_t();
+    return table_cell_t();
 }
 
 FOUNDATION_STATIC void report_column_price_alert_menu(const title_t* title)
@@ -482,7 +481,7 @@ FOUNDATION_STATIC void report_column_price_alert_menu(const title_t* title)
     ImGui::EndMenu();
 }
 
-FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_handle, table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     #if BUILD_APPLICATION
     const title_t* title = *(const title_t**)element;
@@ -532,7 +531,7 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
     #endif
 }
 
-FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_handle, table_t* table, const column_t* column, int column_index)
+FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_handle, table_t* table, const table_column_t* column, int column_index)
 {
     string_const_t title = column->get_name();
     ImGui::Text("%.*s", STRING_FORMAT(title));
@@ -557,7 +556,7 @@ FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_
         ImGui::SetTooltip(tr("Add title"));
 }
 
-FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_draw_title(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* title = *(title_t**)element;
 
@@ -614,7 +613,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
                 ImGui::PushStyleColor(ImGuiCol_Text, best_text_color);
             }
 
-            const float max_width = ImGui::GetContentRegionAvail().x - button_width - imgui_get_font_ui_scale(2.0f);
+            const float max_width = ImGui::GetContentRegionAvail().x - button_width - IM_SCALEF(2.0f);
             const float max_height = cell_rect.GetHeight();
             const float max_scale = logo_banner_width > max_width ? max_width / logo_banner_width : 
                 (logo_banner_height > cell_rect.GetHeight() ? cell_rect.GetHeight() / logo_banner_height : 1.0f);
@@ -647,7 +646,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             const float space_left = ImGui::GetContentRegionAvail().x - (logo_banner_width * max_scale) - (style.FramePadding.x * 2.0f);
             if (button_width < space_left + IM_SCALEF(10))
             {
-                ImGui::MoveCursor(space_left - button_width - style.FramePadding.x / 2.0f, 1.0f, true);
+                ImGui::MoveCursor(space_left - button_width - style.FramePadding.x / 2.0f, IM_SCALEF(2.0f), true);
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
                 if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
                 {
@@ -689,7 +688,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
             space_left = ImGui::GetContentRegionAvail().x - code_width;
             if (button_width < space_left + IM_SCALEF(25))
             {
-                ImGui::MoveCursor(-IM_SCALEF(7), 1.0f, true);
+                ImGui::MoveCursor(-IM_SCALEF(7), IM_SCALEF(1.0f), true);
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
                 if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
                 {
@@ -712,7 +711,7 @@ FOUNDATION_STATIC cell_t report_column_draw_title(table_element_ptr_t element, c
     return title->code;
 }
 
-FOUNDATION_STATIC cell_t report_column_get_change_value(table_element_ptr_t element, const column_t* column, int rel_days)
+FOUNDATION_STATIC table_cell_t report_column_get_change_value(table_element_ptr_t element, const table_column_t* column, int rel_days)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -732,7 +731,7 @@ FOUNDATION_STATIC bool report_column_is_numeric(column_format_t format)
     return format == COLUMN_FORMAT_CURRENCY || format == COLUMN_FORMAT_NUMBER || format == COLUMN_FORMAT_PERCENTAGE;
 }
 
-FOUNDATION_STATIC cell_t report_column_get_dividends_yield(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_get_dividends_yield(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -745,7 +744,7 @@ FOUNDATION_STATIC cell_t report_column_get_dividends_yield(table_element_ptr_t e
     return s->dividends_yield.fetch() * 100.0f;
 }
 
-FOUNDATION_STATIC cell_t report_column_get_fundamental_value(table_element_ptr_t element, const column_t* column, const char* filter_name, size_t filter_name_length)
+FOUNDATION_STATIC table_cell_t report_column_get_fundamental_value(table_element_ptr_t element, const table_column_t* column, const char* filter_name, size_t filter_name_length)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -771,7 +770,7 @@ FOUNDATION_STATIC cell_t report_column_get_fundamental_value(table_element_ptr_t
     return config_value_as_string(filter_value);
 }
 
-FOUNDATION_STATIC cell_t report_column_get_total_investment(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_get_total_investment(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -783,7 +782,7 @@ FOUNDATION_STATIC cell_t report_column_get_total_investment(table_element_ptr_t 
     return title_get_total_investment(title);
 }
 
-FOUNDATION_STATIC cell_t report_column_get_total_value(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_get_total_value(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -792,7 +791,7 @@ FOUNDATION_STATIC cell_t report_column_get_total_value(table_element_ptr_t eleme
     return title_get_total_value(title);
 }
 
-FOUNDATION_STATIC cell_t report_column_get_name(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_get_name(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -800,7 +799,16 @@ FOUNDATION_STATIC cell_t report_column_get_name(table_element_ptr_t element, con
     return title->stock->name;
 }
 
-FOUNDATION_STATIC cell_t report_column_get_date(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_column_buy_quantity(table_element_ptr_t element, const table_column_t* column)
+{
+    const title_t* t = *(title_t**)element;
+    if (t == nullptr)
+        return nullptr;
+
+    return (double)math_round(t->average_quantity);
+}
+
+FOUNDATION_STATIC table_cell_t report_column_get_date(table_element_ptr_t element, const table_column_t* column)
 {
     const title_t* t = *(title_t**)element;
     if (t == nullptr)
@@ -808,7 +816,7 @@ FOUNDATION_STATIC cell_t report_column_get_date(table_element_ptr_t element, con
     return t->date_average;
 }
 
-FOUNDATION_STATIC void report_title_pattern_open(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_pattern_open(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -816,7 +824,7 @@ FOUNDATION_STATIC void report_title_pattern_open(table_element_ptr_const_t eleme
     pattern_open(title->code, title->code_length);
 }
 
-FOUNDATION_STATIC void report_title_open_details_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_open_details_view(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -824,7 +832,7 @@ FOUNDATION_STATIC void report_title_open_details_view(table_element_ptr_const_t 
     title->show_details_ui = true;
 }
 
-FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -870,7 +878,7 @@ FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t
     realtime_render_graph(title->code, title->code_length, time_add_hours(time_now(), -time_lapse_hours), 1300.0f, 600.0f);
 }
 
-FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -931,7 +939,7 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
     realtime_render_graph(title->code, title->code_length, since, max(ImGui::GetContentRegionAvail().x, 900.0f), 300.0f);
 }
 
-FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -972,7 +980,7 @@ FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_con
     }
 }
 
-FOUNDATION_STATIC void report_title_total_gain_alerts_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void report_title_total_gain_alerts_formatter(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     const title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -986,7 +994,7 @@ FOUNDATION_STATIC void report_title_total_gain_alerts_formatter(table_element_pt
     }
 }
 
-FOUNDATION_STATIC void report_title_total_gain_p_alerts_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void report_title_total_gain_p_alerts_formatter(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     const title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -1032,7 +1040,7 @@ FOUNDATION_STATIC void report_title_total_gain_p_alerts_formatter(table_element_
     }
 }
 
-FOUNDATION_STATIC void report_title_gain_total_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_gain_total_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     const title_t* t = *(const title_t**)element;
     if (t == nullptr)
@@ -1050,9 +1058,16 @@ FOUNDATION_STATIC void report_title_gain_total_tooltip(table_element_ptr_const_t
         const double exchange_diff = t->today_exchange_rate.fetch() - t->average_exchange_rate;
         ImGui::TrText(" Exchange Gain    %12s ", string_from_currency(exchange_diff * total_value).str);
     }
+
+    if (title_sold(t))
+    {
+        ImGui::Separator();
+        const double current_gain = title_sell_gain_if_kept(t);
+        ImGui::TrText("     If Kept Gain %12s ", string_from_currency(current_gain).str);
+    }
 }
 
-FOUNDATION_STATIC void report_title_days_held_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_days_held_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     const title_t* t = *(const title_t**)element;
     if (t == nullptr)
@@ -1069,7 +1084,7 @@ FOUNDATION_STATIC void report_title_days_held_tooltip(table_element_ptr_const_t 
     ImGui::TrTextUnformatted("\n The days held field reflects the average number of days held \n for each transaction weighted by the quantity of each transaction. ");
 }
 
-FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -1093,7 +1108,7 @@ FOUNDATION_STATIC void report_title_dividends_total_tooltip(table_element_ptr_co
     }
 }
 
-FOUNDATION_STATIC void report_title_open_buy_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_open_buy_view(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -1102,7 +1117,7 @@ FOUNDATION_STATIC void report_title_open_buy_view(table_element_ptr_const_t elem
     title->show_buy_ui = true;
 }
 
-FOUNDATION_STATIC void report_title_open_sell_view(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_title_open_sell_view(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr)
@@ -1129,7 +1144,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
         .set_selected_callback(report_title_open_details_view);
 
     table_add_column(table, STRING_CONST(" " ICON_MD_NUMBERS "||" ICON_MD_NUMBERS " Quantity"),
-        E32(report_column_get_value, _1, _2, REPORT_FORMULA_BUY_QUANTITY), COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION | COLUMN_ZERO_USE_DASH)
+        report_column_buy_quantity, COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_NUMBER_ABBREVIATION | COLUMN_ZERO_USE_DASH)
         .set_selected_callback(report_title_open_details_view);
 
     table_add_column(table, STRING_CONST("  Buy " ICON_MD_LOCAL_OFFER "||" ICON_MD_LOCAL_OFFER " Average Cost"),
@@ -1210,7 +1225,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
     report_add_expression_columns(report_handle, table);    
 }
 
-FOUNDATION_STATIC void report_table_context_menu(report_handle_t report_handle, table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_table_context_menu(report_handle_t report_handle, table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     if (element == nullptr)
     {

@@ -208,7 +208,7 @@ FOUNDATION_STATIC void symbols_search(symbol_t** symbols, string_const_t search_
     }
 }
 
-FOUNDATION_STATIC cell_t symbol_get_code(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_code(void* element, const table_column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     string_const_t code = string_table_decode_const(symbol->code);
@@ -224,53 +224,53 @@ FOUNDATION_STATIC cell_t symbol_get_code(void* element, const column_t* column)
     return code;
 }
 
-FOUNDATION_STATIC cell_t symbol_get_name(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_name(void* element, const table_column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->name)
         symbol->name = symbol->stock->name;
-    return cell_t(string_table_decode(symbol->name));
+    return table_cell_t(string_table_decode(symbol->name));
 }
 
-FOUNDATION_STATIC cell_t symbol_get_country(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_country(void* element, const table_column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->country)
         symbol->country = symbol->stock->country;
-    return cell_t(string_table_decode(symbol->country));
+    return table_cell_t(string_table_decode(symbol->country));
 }
 
-FOUNDATION_STATIC cell_t symbol_get_exchange(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_exchange(void* element, const table_column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->exchange)
         symbol->exchange = symbol->stock->exchange;
-    return cell_t(string_table_decode(symbol->exchange));
+    return table_cell_t(string_table_decode(symbol->exchange));
 }
 
-FOUNDATION_STATIC cell_t symbol_get_currency(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_currency(void* element, const table_column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->currency)
         symbol->currency = symbol->stock->currency;
-    return cell_t(string_table_decode(symbol->currency));
+    return table_cell_t(string_table_decode(symbol->currency));
 }
 
-FOUNDATION_STATIC cell_t symbol_get_isin(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_isin(void* element, const table_column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
-    return cell_t(string_table_decode(symbol->isin));
+    return table_cell_t(string_table_decode(symbol->isin));
 }
 
-FOUNDATION_STATIC cell_t symbol_get_type(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_type(void* element, const table_column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (!symbol->type)
         symbol->type = symbol->stock->type;
-    return cell_t(string_table_decode(symbol->type));
+    return table_cell_t(string_table_decode(symbol->type));
 }
 
-FOUNDATION_STATIC double symbol_get_change(void* element, const column_t* column, int rel_days, bool take_last = false)
+FOUNDATION_STATIC double symbol_get_change(void* element, const table_column_t* column, int rel_days, bool take_last = false)
 {
     symbol_t* symbol = (symbol_t*)element;
     const stock_t* stock_data = symbol->stock;
@@ -284,38 +284,38 @@ FOUNDATION_STATIC double symbol_get_change(void* element, const column_t* column
     return (stock_data->current.adjusted_close - ed->adjusted_close) / ed->adjusted_close * 100.0;
 }
 
-FOUNDATION_STATIC cell_t symbol_get_change_cell(void* element, const column_t* column, int rel_days, bool take_last = false)
+FOUNDATION_STATIC table_cell_t symbol_get_change_cell(void* element, const table_column_t* column, int rel_days, bool take_last = false)
 {
     double diff = symbol_get_change(element, column, rel_days, take_last);
-    return cell_t(diff, COLUMN_FORMAT_PERCENTAGE);
+    return table_cell_t(diff, COLUMN_FORMAT_PERCENTAGE);
 }
 
-FOUNDATION_STATIC cell_t symbol_get_day_change(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_day_change(void* element, const table_column_t* column)
 {
     return symbol_get_change_cell(element, column, 0);
 }
 
-FOUNDATION_STATIC cell_t symbol_get_week_change(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_week_change(void* element, const table_column_t* column)
 {
     return symbol_get_change_cell(element, column, -7);
 }
 
-FOUNDATION_STATIC cell_t symbol_get_month_change(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_month_change(void* element, const table_column_t* column)
 {
     return symbol_get_change_cell(element, column, -30);
 }
 
-FOUNDATION_STATIC cell_t symbol_get_year_change(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_year_change(void* element, const table_column_t* column)
 {
     return symbol_get_change_cell(element, column, -365);
 }
 
-FOUNDATION_STATIC cell_t symbol_get_max_change(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_max_change(void* element, const table_column_t* column)
 {
     return symbol_get_change_cell(element, column, -365 * 30, true);
 }
 
-FOUNDATION_STATIC cell_t symbol_get_dividends_yield(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_dividends_yield(void* element, const table_column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
 
@@ -331,13 +331,13 @@ FOUNDATION_STATIC cell_t symbol_get_dividends_yield(void* element, const column_
     return s->dividends_yield.fetch() * 100.0;
 }
 
-FOUNDATION_STATIC cell_t symbol_get_price(void* element, const column_t* column)
+FOUNDATION_STATIC table_cell_t symbol_get_price(void* element, const table_column_t* column)
 {
     symbol_t* symbol = (symbol_t*)element;
-    return cell_t(symbol->price, column->format);
+    return table_cell_t(symbol->price, column->format);
 }
 
-FOUNDATION_STATIC void symbol_description_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void symbol_description_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     symbol_t* symbol = (symbol_t*)element;
     const stock_t* stock_data = symbol->stock;
@@ -353,7 +353,7 @@ FOUNDATION_STATIC void symbol_description_tooltip(table_element_ptr_const_t elem
     ImGui::PopTextWrapPos();
 }
 
-FOUNDATION_STATIC void symbol_dividends_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void symbol_dividends_formatter(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     symbol_t* symbol = (symbol_t*)element;
     const stock_t* s = symbol->stock;
@@ -367,7 +367,7 @@ FOUNDATION_STATIC void symbol_dividends_formatter(table_element_ptr_const_t elem
     }
 }
 
-FOUNDATION_STATIC void symbol_change_p_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style, double threshold)
+FOUNDATION_STATIC void symbol_change_p_formatter(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style, double threshold)
 {
     if (cell->number > threshold)
     {
@@ -376,7 +376,7 @@ FOUNDATION_STATIC void symbol_change_p_formatter(table_element_ptr_const_t eleme
     }
 }
 
-FOUNDATION_STATIC void symbol_code_color(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void symbol_code_color(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     symbol_t* symbol = (symbol_t*)element;
     if (symbol->viewed)
@@ -386,7 +386,7 @@ FOUNDATION_STATIC void symbol_code_color(table_element_ptr_const_t element, cons
     }
 }
 
-FOUNDATION_STATIC void symbol_code_selected(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void symbol_code_selected(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     symbol_t* symbol = (symbol_t*)element;
     pattern_open(STRING_ARGS(string_table_decode_const(symbol->code)));
@@ -430,7 +430,7 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
         return false;
     };
 
-    table->context_menu = [selector](table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+    table->context_menu = [selector](table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
     {
         const symbol_t* symbol = (const symbol_t*)element;
         if (symbol == nullptr)
@@ -454,7 +454,7 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
 
     if (selector)
     {
-        table->selected = [selector](table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+        table->selected = [selector](table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
         {
             const symbol_t* symbol = (const symbol_t*)element;
             if (symbol != nullptr)
@@ -468,7 +468,7 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
     if (!selector)
         symbol_column.set_selected_callback(symbol_code_selected);
 
-    column_t& c_name = table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"), symbol_get_name, COLUMN_FORMAT_TEXT, COLUMN_DYNAMIC_VALUE | COLUMN_SORTABLE | (selector ? COLUMN_STRETCH : COLUMN_OPTIONS_NONE));
+    table_column_t& c_name = table_add_column(table, STRING_CONST(ICON_MD_BUSINESS " Name"), symbol_get_name, COLUMN_FORMAT_TEXT, COLUMN_DYNAMIC_VALUE | COLUMN_SORTABLE | (selector ? COLUMN_STRETCH : COLUMN_OPTIONS_NONE));
     c_name.set_style_formatter(symbol_code_color);
     c_name.tooltip = symbol_description_tooltip;
 

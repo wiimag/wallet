@@ -36,7 +36,7 @@
 struct table_expr_type_drawer_t
 {
     string_t type{};
-    function<void(const cell_t& cell)> handler{};
+    function<void(const table_cell_t& cell)> handler{};
 };
 
 static table_expr_type_drawer_t* _table_expr_type_drawers{ nullptr };
@@ -125,28 +125,28 @@ FOUNDATION_STATIC void table_expr_deallocate(table_expr_t* report)
     memory_deallocate(report);
 }
 
-FOUNDATION_STATIC cell_t table_expr_cell_value(const table_expr_record_value_t* v, column_format_t format)
+FOUNDATION_STATIC table_cell_t table_expr_cell_value(const table_expr_record_value_t* v, column_format_t format)
 {
     if (v->type == DYNAMIC_TABLE_VALUE_NULL)
-        return cell_t(nullptr);
+        return table_cell_t(nullptr);
                 
     if (v->type == DYNAMIC_TABLE_VALUE_TRUE)
-        return cell_t(true);
+        return table_cell_t(true);
 
     if (v->type == DYNAMIC_TABLE_VALUE_FALSE)
-        return cell_t(false);
+        return table_cell_t(false);
 
     if (v->type == DYNAMIC_TABLE_VALUE_TEXT)
-        return cell_t(string_to_const(v->text));
+        return table_cell_t(string_to_const(v->text));
 
     if (v->type == DYNAMIC_TABLE_VALUE_NUMBER)
     {
         if (format == COLUMN_FORMAT_DATE)
-            return cell_t((time_t)v->number);
-        return cell_t(v->number);
+            return table_cell_t((time_t)v->number);
+        return table_cell_t(v->number);
     }
 
-    return cell_t();
+    return table_cell_t();
 }
 
 FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
@@ -161,12 +161,12 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
                 column_flags |= COLUMN_SEARCHABLE;
             if (c->drawer)
                 column_flags |= COLUMN_CUSTOM_DRAWING;
-            table_add_column(report->table, STRING_ARGS(c->name), [c](table_element_ptr_t element, const column_t* column) 
+            table_add_column(report->table, STRING_ARGS(c->name), [c](table_element_ptr_t element, const table_column_t* column) 
             {
                 table_expr_record_t* record = (table_expr_record_t*)element;
                 const table_expr_record_value_t* v = &record->resolved[c->value_index];
 
-                const cell_t cell = table_expr_cell_value(v, column->format);
+                const table_cell_t cell = table_expr_cell_value(v, column->format);
 
                 if ((column->flags & COLUMN_RENDER_ELEMENT) && c->drawer)
                     c->drawer->handler.invoke(cell);
@@ -366,7 +366,7 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
 // # PUBLIC
 //
 
-void table_expr_add_type_drawer(const char* type, size_t length, const function<void(const cell_t& value)>& handler)
+void table_expr_add_type_drawer(const char* type, size_t length, const function<void(const table_cell_t& value)>& handler)
 {
     table_expr_type_drawer_t drawer{};
     drawer.type = string_clone(type, length);

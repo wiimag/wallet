@@ -174,37 +174,37 @@ FOUNDATION_FORCEINLINE double profiler_table_format_time(double time_ms)
     return time_ms;
 }
 
-FOUNDATION_STATIC cell_t profiler_table_name(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t profiler_table_name(table_element_ptr_t element, const table_column_t* column)
 {
     profile_tracker_t* t = (profile_tracker_t*)element;
     return t->name;
 }
 
-FOUNDATION_STATIC cell_t profiler_table_avg(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t profiler_table_avg(table_element_ptr_t element, const table_column_t* column)
 {
     profile_tracker_t* t = (profile_tracker_t*)element;
     return profiler_table_format_time(t->avg);
 }
 
-FOUNDATION_STATIC cell_t profiler_table_min(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t profiler_table_min(table_element_ptr_t element, const table_column_t* column)
 {
     profile_tracker_t* t = (profile_tracker_t*)element;
     return profiler_table_format_time(t->min);
 }
 
-FOUNDATION_STATIC cell_t profiler_table_max(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t profiler_table_max(table_element_ptr_t element, const table_column_t* column)
 {
     profile_tracker_t* t = (profile_tracker_t*)element;
     return profiler_table_format_time(t->max);
 }
 
-FOUNDATION_STATIC cell_t profiler_table_last(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t profiler_table_last(table_element_ptr_t element, const table_column_t* column)
 {
     profile_tracker_t* t = (profile_tracker_t*)element;
     return profiler_table_format_time(t->last);
 }
 
-FOUNDATION_STATIC cell_t profiler_table_sample_count(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t profiler_table_sample_count(table_element_ptr_t element, const table_column_t* column)
 {
     profile_tracker_t* t = (profile_tracker_t*)element;
     return (double)t->counter;

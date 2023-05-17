@@ -1106,6 +1106,11 @@
 			fr = "        Valeur Totale %12s "
 		}
 		{
+			hash = "b85bba7c111186c9"
+			en = "     If Kept Gain %12s "
+			fr = "     Gain si conserv\xc3\xa9 %12s "
+		}
+		{
 			hash = "19ecf4a0c9505720"
 			en = " Total Dividends  %12s "
 			fr = "     Dividendes Total %12s "

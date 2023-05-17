@@ -149,7 +149,7 @@ FOUNDATION_STATIC string_const_t bulk_get_symbol_code(const bulk_t* b)
     return string_table_decode_const(b->code);
 }
 
-FOUNDATION_STATIC cell_t bulk_column_symbol_code(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_column_symbol_code(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
 
@@ -163,31 +163,31 @@ FOUNDATION_STATIC cell_t bulk_column_symbol_code(table_element_ptr_t element, co
     return bulk_get_symbol_code(b);
 }
 
-FOUNDATION_STATIC cell_t bulk_column_symbol_name(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_column_symbol_name(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->name;
 }
 
-FOUNDATION_STATIC cell_t bulk_column_symbol_date(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_column_symbol_date(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->date;
 }
 
-FOUNDATION_STATIC cell_t bulk_column_symbol_type(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_column_symbol_type(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->type;
 }
 
-FOUNDATION_STATIC cell_t bulk_column_symbol_exchange(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_column_symbol_exchange(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->exchange;
 }
 
-FOUNDATION_STATIC void bulk_column_today_cap_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void bulk_column_today_cap_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     bulk_t* b = (bulk_t*)element;
 
@@ -212,115 +212,115 @@ FOUNDATION_STATIC void bulk_column_today_cap_tooltip(table_element_ptr_const_t e
     ImGui::TrText("Average capitalization movement since 14 days\n%.*s", STRING_FORMAT(string_from_currency(b->today_cap.fetch(), "9 999 999 999 $")));
 }
 
-FOUNDATION_STATIC cell_t bulk_column_today_cap(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_column_today_cap(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->avgvol_14d * (b->close - b->open);
 }
 
-FOUNDATION_STATIC cell_t bulk_column_symbol_cap(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_column_symbol_cap(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->market_capitalization;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_beta(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_beta(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->beta * 100.0;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_open(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_open(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->open;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_close(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_close(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->adjusted_close;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_low(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_low(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->low;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_high(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_high(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->high;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_volume(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_volume(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->volume;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_ema_50d(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_ema_50d(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->ema_50d;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_ema_p(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_ema_p(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return (b->ema_50d - b->adjusted_close) / b->close * 100.0;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_change_p(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_change_p(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return (b->close - b->open) / b->open * 100.0;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_lost_cap(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_lost_cap(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->market_capitalization * bulk_draw_symbol_change_p(element, column).number / 100.0;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_ema_200d(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_ema_200d(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->ema_200d;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_lo_250d(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_lo_250d(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->lo_250d;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_hi_250d(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_hi_250d(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->hi_250d;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_avgvol_14d(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_avgvol_14d(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->avgvol_14d;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_avgvol_50d(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_avgvol_50d(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->avgvol_50d;
 }
 
-FOUNDATION_STATIC cell_t bulk_draw_symbol_avgvol_200d(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t bulk_draw_symbol_avgvol_200d(table_element_ptr_t element, const table_column_t* column)
 {
     bulk_t* b = (bulk_t*)element;
     return b->avgvol_200d;
 }
 
-FOUNDATION_STATIC void bulk_table_context_menu(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void bulk_table_context_menu(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     if (element == nullptr)
         return ImGui::CloseCurrentPopup();
@@ -334,7 +334,7 @@ FOUNDATION_STATIC void bulk_table_context_menu(table_element_ptr_const_t element
     }
 }
 
-FOUNDATION_STATIC void bulk_column_title_selected(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void bulk_column_title_selected(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     bulk_t* b = (bulk_t*)element;
     string_const_t code = bulk_get_symbol_code(b);
@@ -342,7 +342,7 @@ FOUNDATION_STATIC void bulk_column_title_selected(table_element_ptr_const_t elem
     b->selected = true;
 }
 
-FOUNDATION_STATIC void bulk_draw_symbol_code_color(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void bulk_draw_symbol_code_color(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     bulk_t* b = (bulk_t*)element;
     if (b->selected || (b->beta > 1 && b->close > b->open))
@@ -352,7 +352,7 @@ FOUNDATION_STATIC void bulk_draw_symbol_code_color(table_element_ptr_const_t ele
     }
 }
 
-FOUNDATION_STATIC void bulk_set_beta_styling(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void bulk_set_beta_styling(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     bulk_t* b = (bulk_t*)element;
     if (b->beta > 1)

@@ -1252,7 +1252,7 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
     }
 }
 
-FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry_t* entry, const column_t* column, fetch_level_t fetch_levels)
+FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry_t* entry, const table_column_t* column, fetch_level_t fetch_levels)
 {
     if (entry->stock.initialized() && entry->stock->has_resolve(fetch_levels))
         return entry->stock.resolve();
@@ -1283,7 +1283,7 @@ FOUNDATION_STATIC const stock_t* search_result_resolve_stock(search_result_entry
     return entry->stock.resolve();
 }
 
-FOUNDATION_STATIC void search_table_column_symbol_selected(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void search_table_column_symbol_selected(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     const search_result_entry_t* entry = (const search_result_entry_t*)element;
     FOUNDATION_ASSERT(entry);
@@ -1324,7 +1324,7 @@ FOUNDATION_STATIC void search_table_draw_symbol(string_const_t symbol, bool view
     ImGui::EndGroup();
 }
 
-FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_symbol(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     FOUNDATION_ASSERT(entry);
@@ -1349,7 +1349,7 @@ FOUNDATION_STATIC cell_t search_table_column_symbol(table_element_ptr_t element,
     return symbol;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_name(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_name(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     FOUNDATION_ASSERT(entry);
@@ -1361,7 +1361,7 @@ FOUNDATION_STATIC cell_t search_table_column_name(table_element_ptr_t element, c
     return s->name;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_country(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_country(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1370,7 +1370,7 @@ FOUNDATION_STATIC cell_t search_table_column_country(table_element_ptr_t element
     return s->country;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_exchange(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_exchange(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1379,7 +1379,7 @@ FOUNDATION_STATIC cell_t search_table_column_exchange(table_element_ptr_t elemen
     return s->exchange;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_currency(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_currency(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1388,7 +1388,7 @@ FOUNDATION_STATIC cell_t search_table_column_currency(table_element_ptr_t elemen
     return s->currency;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_type(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_type(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1397,7 +1397,7 @@ FOUNDATION_STATIC cell_t search_table_column_type(table_element_ptr_t element, c
     return s->type;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_sector(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_sector(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1410,7 +1410,7 @@ FOUNDATION_STATIC cell_t search_table_column_sector(table_element_ptr_t element,
     return s->type;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_industry(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_industry(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1419,7 +1419,7 @@ FOUNDATION_STATIC cell_t search_table_column_industry(table_element_ptr_t elemen
     return s->industry;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_category(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_category(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1428,7 +1428,7 @@ FOUNDATION_STATIC cell_t search_table_column_category(table_element_ptr_t elemen
     return s->category;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_isin(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_isin(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1437,7 +1437,7 @@ FOUNDATION_STATIC cell_t search_table_column_isin(table_element_ptr_t element, c
     return s->isin;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_change_p(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_change_p(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME);
@@ -1446,7 +1446,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_p(table_element_ptr_t elemen
     return s->current.change_p;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_change_week(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_change_week(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
@@ -1459,7 +1459,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_week(table_element_ptr_t ele
     return (s->current.close - ed->adjusted_close) / ed->adjusted_close * 100.0f;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_change_month(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_change_month(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
@@ -1472,7 +1472,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_month(table_element_ptr_t el
     return (s->current.close - ed->adjusted_close) / ed->adjusted_close * 100.0f;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_change_year(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_change_year(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
@@ -1485,7 +1485,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_year(table_element_ptr_t ele
     return (s->current.close - ed->adjusted_close) / ed->adjusted_close * 100.0f;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_change_max(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_change_max(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
@@ -1498,7 +1498,7 @@ FOUNDATION_STATIC cell_t search_table_column_change_max(table_element_ptr_t elem
     return (s->current.close - ed->adjusted_close) / ed->adjusted_close * 100.0f;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_return_rate(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_return_rate(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1507,7 +1507,7 @@ FOUNDATION_STATIC cell_t search_table_column_return_rate(table_element_ptr_t ele
     return s->dividends_yield.fetch() * 100.0;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_price(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME);
@@ -1516,7 +1516,7 @@ FOUNDATION_STATIC cell_t search_table_column_price(table_element_ptr_t element, 
     return s->current.close;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_since(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_since(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::EOD);
@@ -1529,7 +1529,7 @@ FOUNDATION_STATIC cell_t search_table_column_since(table_element_ptr_t element, 
     return (time_t)0;
 }
 
-FOUNDATION_STATIC cell_t search_table_column_percentage_per_year(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t search_table_column_percentage_per_year(table_element_ptr_t element, const table_column_t* column)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::REALTIME | FetchLevel::EOD);
@@ -1547,7 +1547,7 @@ FOUNDATION_STATIC cell_t search_table_column_percentage_per_year(table_element_p
     return NAN;
 }
 
-FOUNDATION_STATIC void search_table_column_dividends_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void search_table_column_dividends_formatter(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     FOUNDATION_ASSERT(entry);
@@ -1563,7 +1563,7 @@ FOUNDATION_STATIC void search_table_column_dividends_formatter(table_element_ptr
     }
 }
 
-FOUNDATION_STATIC void search_table_column_change_p_formatter(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style, double threshold)
+FOUNDATION_STATIC void search_table_column_change_p_formatter(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style, double threshold)
 {
     if (cell->number > threshold)
     {
@@ -1572,7 +1572,7 @@ FOUNDATION_STATIC void search_table_column_change_p_formatter(table_element_ptr_
     }
 }
 
-FOUNDATION_STATIC void search_table_column_description_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void search_table_column_description_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::FUNDAMENTALS);
@@ -1614,7 +1614,7 @@ FOUNDATION_STATIC void search_table_column_description_tooltip(table_element_ptr
     ImGui::PopTextWrapPos();
 }
 
-FOUNDATION_STATIC void search_table_column_code_color(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)
+FOUNDATION_STATIC void search_table_column_code_color(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::NONE);
@@ -1625,7 +1625,7 @@ FOUNDATION_STATIC void search_table_column_code_color(table_element_ptr_const_t 
     }
 }
 
-FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     search_result_entry_t* entry = (search_result_entry_t*)element;
     const stock_t* s = search_result_resolve_stock(entry, column, FetchLevel::NONE);
@@ -2169,7 +2169,7 @@ bool search_render_settings()
     return updated;
 }
 
-FOUNDATION_STATIC void search_table_expr_symbol_drawer(const cell_t& value)
+FOUNDATION_STATIC void search_table_expr_symbol_drawer(const table_cell_t& value)
 {
     string_const_t code{};
     if (value.format == COLUMN_FORMAT_SYMBOL)

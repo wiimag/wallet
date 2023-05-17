@@ -214,9 +214,9 @@ double title_get_total_gain(const title_t* t)
     if (t->average_quantity == 0 && t->sell_total_quantity == 0)
         return NAN;
     if (t->average_quantity == 0)
-        return (t->sell_total_price_rated - t->buy_total_price_rated);
+        return (t->sell_total_price_rated - t->buy_total_price_rated) + t->total_dividends;
 
-    return title_get_total_value(t) - title_get_total_investment(t);
+    return title_get_total_value(t) - title_get_total_investment(t) + t->total_dividends;
 }
 
 double title_get_total_gain_p(const title_t* t)
@@ -347,10 +347,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     double total_buy_limit_price = 0;
     double total_exchange_rate = 0;
     double total_exchange_rate_count = 0;
-    
     double total_current_quantity = 0;
-    double total_current_adjusted_value = 0;
-    double total_current_adjusted_rated_value = 0;
     
     const stock_t* s = title_is_resolved(t) ? t->stock : nullptr;
     string_t preferred_currency = t->wallet->preferred_currency;
@@ -425,6 +422,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
             t->buy_total_price += qty * price;
             t->buy_total_price_rated += qty * price * order_exchange_rate;
             t->average_quantity += split_quantity;
+            total_current_quantity += qty;
         }
         else if (sell)
         {
@@ -433,6 +431,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
             t->sell_total_price += qty * price;
             t->sell_total_price_rated += qty * price * order_exchange_rate;
             t->average_quantity -= split_quantity;
+            total_current_quantity -= qty;
         }
         else
         {
@@ -440,6 +439,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
         }
     }
 
+    // Compute dividends
     t->total_dividends = 0;
     for (auto dividends : data["dividends"])
     {
@@ -454,6 +454,9 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     }
 
     FOUNDATION_ASSERT(t->average_quantity >= 0);
+
+    if (total_current_quantity == 0)
+        t->average_quantity = 0;
     
     // Update the average price
     t->average_exchange_rate = total_exchange_rate_count > 0 ? total_exchange_rate / total_exchange_rate_count : 0;
@@ -682,4 +685,11 @@ double title_average_days_held(const title_t* title)
 
     title->average_days_held = time_elapsed_days(average_days_held, time_now());
     return title->average_days_held.fetch();
+}
+
+double title_sell_gain_if_kept(const title_t* t)
+{
+    const double current_value = math_ifnan(t->stock->current.price, 0.0) * t->sell_total_quantity;
+    const double average_sell_price = t->sell_total_price / t->sell_total_quantity;
+    return current_value - t->sell_total_price;
 }

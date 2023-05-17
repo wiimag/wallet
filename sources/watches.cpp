@@ -31,11 +31,11 @@ FOUNDATION_STATIC watch_variable_t* watch_find_variable(watch_context_t* context
     return nullptr;
 }
 
-FOUNDATION_STATIC cell_t watch_point_column_name(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t watch_point_column_name(table_element_ptr_t element, const table_column_t* column)
 {
     watch_point_t* point = (watch_point_t*)element;
 
-    return cell_t(STRING_ARGS(point->name));
+    return table_cell_t(STRING_ARGS(point->name));
 }
 
 FOUNDATION_STATIC watch_point_t* watch_point_find(watch_context_t* context, const char* name, size_t length)
@@ -223,7 +223,7 @@ FOUNDATION_STATIC void watch_point_edit_expression(watch_context_t* context, wat
     app_open_dialog(title.str, watch_point_edit_expression_render_dialog, IM_SCALEF(400), IM_SCALEF(300), true, point, nullptr);
 }
 
-FOUNDATION_STATIC cell_t watch_point_column_edit_expression(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t watch_point_column_edit_expression(table_element_ptr_t element, const table_column_t* column)
 {
     watch_point_t* point = (watch_point_t*)element;
     if (column->flags & COLUMN_RENDER_ELEMENT)
@@ -247,7 +247,7 @@ FOUNDATION_STATIC cell_t watch_point_column_edit_expression(table_element_ptr_t 
     return (double)point->expression.length;
 }
 
-FOUNDATION_STATIC cell_t watch_point_column_value(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t watch_point_column_value(table_element_ptr_t element, const table_column_t* column)
 {
     watch_point_t* point = (watch_point_t*)element;
     FOUNDATION_ASSERT(point != nullptr);
@@ -287,16 +287,16 @@ FOUNDATION_STATIC cell_t watch_point_column_value(table_element_ptr_t element, c
         }
 
         if (point->record.type == WATCH_VALUE_NUMBER)
-            return cell_t(point->record.number);
+            return table_cell_t(point->record.number);
 
         if (point->record.type == WATCH_VALUE_TEXT)
-            return cell_t(STRING_ARGS(point->record.text));
+            return table_cell_t(STRING_ARGS(point->record.text));
 
         if (point->record.type == WATCH_VALUE_BOOLEAN)
-            return cell_t(!math_real_is_zero(point->record.number));
+            return table_cell_t(!math_real_is_zero(point->record.number));
 
         if (point->record.type == WATCH_VALUE_DATE)
-            return cell_t((time_t)point->record.number);        
+            return table_cell_t((time_t)point->record.number);        
     }
     else if (point->type == WATCH_POINT_DATE)
     {
@@ -313,7 +313,7 @@ FOUNDATION_STATIC cell_t watch_point_column_value(table_element_ptr_t element, c
             ImGui::TextUnformatted(STRING_RANGE(datestr));
         }
 
-        return cell_t((time_t)point->record.number);  
+        return table_cell_t((time_t)point->record.number);  
     }
     else if (point->type == WATCH_POINT_INTEGER)
     {
@@ -327,7 +327,7 @@ FOUNDATION_STATIC cell_t watch_point_column_value(table_element_ptr_t element, c
         if (column->flags & COLUMN_RENDER_ELEMENT)
             ImGui::Text("%.0lf", point->record.number);
 
-        return cell_t(point->record.number);  
+        return table_cell_t(point->record.number);  
     }
     else if (point->type == WATCH_POINT_TABLE || point->type == WATCH_POINT_PLOT)
     {
@@ -348,7 +348,7 @@ FOUNDATION_STATIC void watch_point_deallocate(watch_point_t* w)
     string_deallocate(w->name.str);
 }
 
-FOUNDATION_STATIC void watch_table_contextual_menu(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void watch_table_contextual_menu(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     watch_point_t* point = (watch_point_t*)element;
     if (!point)

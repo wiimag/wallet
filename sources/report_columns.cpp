@@ -44,7 +44,7 @@ FOUNDATION_FORCEINLINE hash_t hash(const report_expression_cache_value_t& value)
 
 database<report_expression_cache_value_t>* _report_expression_cache;
 
-FOUNDATION_STATIC cell_t report_column_evaluate_expression(table_element_ptr_t element, const column_t* column, 
+FOUNDATION_STATIC table_cell_t report_column_evaluate_expression(table_element_ptr_t element, const table_column_t* column, 
                                                            report_handle_t report_handle, const report_expression_column_t* ec)
 {
     title_t* title = *(title_t**)element;

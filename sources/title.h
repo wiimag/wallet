@@ -347,3 +347,11 @@ double title_current_price(const title_t* title);
  *  @return The average amount of days the title is held.
  */
 double title_average_days_held(const title_t* title);
+
+/*! Returns how much money we would have gained (or lost) if we kept the title. 
+ *
+ *  @param title The title to get the gain for.
+ *
+ *  @return The gain if we kept the title.
+ */
+double title_sell_gain_if_kept(const title_t* title);

@@ -19,4 +19,4 @@ void table_expr_shutdown();
  *  @param length The length of the type.
  *  @param drawer The drawer to register.
  */
-void table_expr_add_type_drawer(const char* type, size_t length, const function<void(const cell_t& value)>& drawer);
+void table_expr_add_type_drawer(const char* type, size_t length, const function<void(const table_cell_t& value)>& drawer);

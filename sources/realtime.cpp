@@ -478,7 +478,7 @@ FOUNDATION_STATIC int realtime_format_date_range_label(double value, char* buff,
     return (int)string_format(buff, size, STRING_CONST("%.3g mins."), value).length;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_draw_title(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t realtime_table_draw_title(table_element_ptr_t element, const table_column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
 
@@ -504,7 +504,7 @@ FOUNDATION_STATIC cell_t realtime_table_draw_title(table_element_ptr_t element, 
     return s->code;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_column_time(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t realtime_table_column_time(table_element_ptr_t element, const table_column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
 
@@ -518,19 +518,19 @@ FOUNDATION_STATIC cell_t realtime_table_column_time(table_element_ptr_t element,
     return s->timestamp;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_column_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t realtime_table_column_price(table_element_ptr_t element, const table_column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
     return s->price;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_column_volume(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t realtime_table_column_volume(table_element_ptr_t element, const table_column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
     return s->volume;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_column_last_change_p(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t realtime_table_column_last_change_p(table_element_ptr_t element, const table_column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
 
@@ -544,7 +544,7 @@ FOUNDATION_STATIC cell_t realtime_table_column_last_change_p(table_element_ptr_t
     return (last - prev) / prev * 100.0;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_column_sample_count(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t realtime_table_column_sample_count(table_element_ptr_t element, const table_column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
     return (double)array_size(s->records);
@@ -627,7 +627,7 @@ FOUNDATION_STATIC bool realtime_render_graph(const stock_realtime_t* s, time_t s
     return true;
 }
 
-FOUNDATION_STATIC cell_t realtime_table_draw_monitor(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t realtime_table_draw_monitor(table_element_ptr_t element, const table_column_t* column)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
 
@@ -646,7 +646,7 @@ FOUNDATION_STATIC cell_t realtime_table_draw_monitor(table_element_ptr_t element
     return (double)array_size(s->records);
 }
 
-FOUNDATION_STATIC void realtime_code_selected(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void realtime_code_selected(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     const stock_realtime_t* s = (const stock_realtime_t*)element;
     pattern_open(s->code, string_length(s->code));

@@ -98,14 +98,14 @@ FOUNDATION_STATIC double report_order_split_price_factor(report_title_order_t* o
     return price_factor;
 }
 
-FOUNDATION_STATIC void report_order_type_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_order_type_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     report_title_order_t* order = (report_title_order_t*)element;
     string_const_t tooltip = order->data["buy"].as_boolean() ? CTEXT("Buy") : CTEXT("Sell");
     ImGui::Text("%.*s", STRING_FORMAT(tooltip));
 }
 
-FOUNDATION_STATIC void report_order_total_value_adjusted_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void report_order_total_value_adjusted_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     report_title_order_t* order = (report_title_order_t*)element;
     
@@ -175,13 +175,13 @@ FOUNDATION_STATIC void report_order_total_value_adjusted_tooltip(table_element_p
     }
 }
 
-FOUNDATION_STATIC cell_t report_order_column_type(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_type(table_element_ptr_t element, const table_column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
     return order->data["buy"].as_boolean() ? CTEXT("") : CTEXT(ICON_MD_SELL);
 }
 
-FOUNDATION_STATIC cell_t report_order_column_date(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_date(table_element_ptr_t element, const table_column_t* column)
 {
     tm tm_date;
     report_title_order_t* order = (report_title_order_t*)element;
@@ -203,7 +203,7 @@ FOUNDATION_STATIC cell_t report_order_column_date(table_element_ptr_t element, c
     return odate;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_quantity(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_quantity(table_element_ptr_t element, const table_column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
 
@@ -223,7 +223,7 @@ FOUNDATION_STATIC cell_t report_order_column_quantity(table_element_ptr_t elemen
     return quantity;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_exchange_rate(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_exchange_rate(table_element_ptr_t element, const table_column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
 
@@ -264,7 +264,7 @@ FOUNDATION_STATIC cell_t report_order_column_exchange_rate(table_element_ptr_t e
     return order->exchange_rate;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_split_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_split_price(table_element_ptr_t element, const table_column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
     const double split_price = report_order_fetch_split_price(order);
@@ -301,7 +301,7 @@ FOUNDATION_STATIC cell_t report_order_column_split_price(table_element_ptr_t ele
     return split_price;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_close_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_close_price(table_element_ptr_t element, const table_column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
     const double close_price = report_order_fetch_close_price(order);
@@ -316,7 +316,7 @@ FOUNDATION_STATIC cell_t report_order_column_close_price(table_element_ptr_t ele
     return close_price;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_adjusted_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_adjusted_price(table_element_ptr_t element, const table_column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
 
@@ -335,7 +335,7 @@ FOUNDATION_STATIC cell_t report_order_column_adjusted_price(table_element_ptr_t 
     return adjusted_price;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_price(table_element_ptr_t element, const table_column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
 
@@ -357,7 +357,7 @@ FOUNDATION_STATIC cell_t report_order_column_price(table_element_ptr_t element, 
     return price;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_ask_price(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_ask_price(table_element_ptr_t element, const table_column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
 
@@ -378,7 +378,7 @@ FOUNDATION_STATIC cell_t report_order_column_ask_price(table_element_ptr_t eleme
     return price;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_total_value(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_total_value(table_element_ptr_t element, const table_column_t* column)
 {
     report_title_order_t* order = (report_title_order_t*)element;
 
@@ -389,7 +389,7 @@ FOUNDATION_STATIC cell_t report_order_column_total_value(table_element_ptr_t ele
     return total_value;
 }
 
-FOUNDATION_STATIC cell_t report_order_column_actions(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t report_order_column_actions(table_element_ptr_t element, const table_column_t* column)
 {
     if (column->flags & COLUMN_RENDER_ELEMENT)
     {

@@ -162,13 +162,13 @@ FOUNDATION_STATIC void test_runner_run_case(test_runner_case_t* tc)
     ImGui::End();
 }
 
-FOUNDATION_STATIC cell_t test_runner_case_name(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t test_runner_case_name(table_element_ptr_t element, const table_column_t* column)
 {
     const test_runner_case_t* tc = (const test_runner_case_t*)element;
     return string_to_const(tc->name);
 }
 
-FOUNDATION_STATIC void test_runner_case_name_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void test_runner_case_name_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     const test_runner_case_t* tc = (const test_runner_case_t*)element;
     if (tc->description.length > 0)
@@ -177,7 +177,7 @@ FOUNDATION_STATIC void test_runner_case_name_tooltip(table_element_ptr_const_t e
         ImGui::TrTextUnformatted("No description");
 }
 
-FOUNDATION_STATIC void test_runner_case_status_tooltip(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void test_runner_case_status_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     const test_runner_case_t* tc = (const test_runner_case_t*)element;
     if (tc->results.length > 0)
@@ -186,19 +186,19 @@ FOUNDATION_STATIC void test_runner_case_status_tooltip(table_element_ptr_const_t
         ImGui::TrTextUnformatted("No Results");
 }
 
-FOUNDATION_STATIC cell_t test_runner_case_suite(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t test_runner_case_suite(table_element_ptr_t element, const table_column_t* column)
 {
     const test_runner_case_t* tc = (const test_runner_case_t*)element;
     return string_to_const(tc->suite);
 }
 
-FOUNDATION_STATIC cell_t test_runner_case_filename(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t test_runner_case_filename(table_element_ptr_t element, const table_column_t* column)
 {
     const test_runner_case_t* tc = (const test_runner_case_t*)element;
     return path_file_name(STRING_ARGS(tc->filename));
 }
 
-FOUNDATION_STATIC cell_t test_runner_case_actions(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t test_runner_case_actions(table_element_ptr_t element, const table_column_t* column)
 {
     test_runner_case_t* tc = (test_runner_case_t*)element;
     if ((column->flags & COLUMN_RENDER_ELEMENT) != 0)
@@ -210,7 +210,7 @@ FOUNDATION_STATIC cell_t test_runner_case_actions(table_element_ptr_t element, c
     return (double)tc->skipped;
 }
 
-FOUNDATION_STATIC cell_t test_runner_case_status(table_element_ptr_t element, const column_t* column)
+FOUNDATION_STATIC table_cell_t test_runner_case_status(table_element_ptr_t element, const table_column_t* column)
 {
     const test_runner_case_t* tc = (const test_runner_case_t*)element;
     if (tc->status == 0)
@@ -222,7 +222,7 @@ FOUNDATION_STATIC cell_t test_runner_case_status(table_element_ptr_t element, co
     return ICON_MD_ERROR;
 }
 
-FOUNDATION_STATIC void test_runner_case_selected(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)
+FOUNDATION_STATIC void test_runner_case_selected(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     test_runner_case_t* tc = (test_runner_case_t*)element;
     test_runner_run_case(tc);

@@ -13,9 +13,9 @@
 
 #include <foundation/array.h>
 
-struct row_t;
+struct table_row_t;
 struct table_t;
-struct column_t;
+struct table_column_t;
 
 /*! Table flags that can define how table are displayed and what behavior they have. */
 typedef enum : size_t {
@@ -68,9 +68,6 @@ typedef enum : unsigned int {
 
     /*! Column is a number and should be rounded. */
     COLUMN_ROUND_NUMBER = 1 << 9,
-
-    /*! Column text is wrapped. */
-    //COLUMN_TEXT_WRAPPING = 1 << 10,
 
     /*! Column header text is hidden. */
     COLUMN_HIDE_HEADER_TEXT = 1 << 11,
@@ -188,7 +185,7 @@ struct cell_style_t
 };
 
 /*! Table cell value. */
-struct cell_t
+struct table_cell_t
 {
     /*! Cell format, usually the same as the column. */
     column_format_t format{ COLUMN_FORMAT_UNDEFINED };
@@ -209,7 +206,7 @@ struct cell_t
     /*! Cell styling. */
     cell_style_t style{};
 
-    FOUNDATION_FORCEINLINE cell_t()
+    FOUNDATION_FORCEINLINE table_cell_t()
         : format(COLUMN_FORMAT_UNDEFINED)
         , text(nullptr)
         , length(0)
@@ -217,12 +214,12 @@ struct cell_t
 
     }
 
-    FOUNDATION_FORCEINLINE cell_t(std::nullptr_t n)
-        : cell_t()
+    FOUNDATION_FORCEINLINE table_cell_t(std::nullptr_t n)
+        : table_cell_t()
     {
     }
 
-    FOUNDATION_FORCEINLINE cell_t(const char* text, size_t text_length, column_format_t format = COLUMN_FORMAT_TEXT)
+    FOUNDATION_FORCEINLINE table_cell_t(const char* text, size_t text_length, column_format_t format = COLUMN_FORMAT_TEXT)
         : format(format)
         , text(text)
         , length(text_length)
@@ -230,17 +227,17 @@ struct cell_t
 
     }
 
-    FOUNDATION_FORCEINLINE cell_t(string_const_t text, column_format_t format = COLUMN_FORMAT_TEXT)
-        : cell_t(text.str, text.length, format)
+    FOUNDATION_FORCEINLINE table_cell_t(string_const_t text, column_format_t format = COLUMN_FORMAT_TEXT)
+        : table_cell_t(text.str, text.length, format)
     {
     }
 
-    FOUNDATION_FORCEINLINE cell_t(const char* text, column_format_t format = COLUMN_FORMAT_TEXT)
-        : cell_t(text, string_length(text), format)
+    FOUNDATION_FORCEINLINE table_cell_t(const char* text, column_format_t format = COLUMN_FORMAT_TEXT)
+        : table_cell_t(text, string_length(text), format)
     {
     }
 
-    FOUNDATION_FORCEINLINE cell_t(string_table_symbol_t symbol)
+    FOUNDATION_FORCEINLINE table_cell_t(string_table_symbol_t symbol)
         : format(COLUMN_FORMAT_TEXT)
     {
         string_const_t s = string_table_decode_const(symbol);
@@ -248,21 +245,21 @@ struct cell_t
         length = s.length;
     }
 
-    FOUNDATION_FORCEINLINE cell_t(double value, column_format_t format = COLUMN_FORMAT_NUMBER)
+    FOUNDATION_FORCEINLINE table_cell_t(double value, column_format_t format = COLUMN_FORMAT_NUMBER)
         : format(format)
         , number(value)
         , length(sizeof(value))
     {
     }
 
-    FOUNDATION_FORCEINLINE cell_t(time_t time)
+    FOUNDATION_FORCEINLINE table_cell_t(time_t time)
         : format(COLUMN_FORMAT_DATE)
         , time(time)
         , length(sizeof(time))
     {
     }
 
-    FOUNDATION_FORCEINLINE cell_t(bool b)
+    FOUNDATION_FORCEINLINE table_cell_t(bool b)
         : format(COLUMN_FORMAT_BOOLEAN)
         , number(b ? 1.0 : 0.0)
         , length(1)
@@ -275,7 +272,7 @@ struct cell_t
  *  @param column  The column associated with the cell
  *  @return The cell value
  */
-typedef function<cell_t(table_element_ptr_t element, const column_t* column)> cell_fetch_value_handler_t;
+typedef function<table_cell_t(table_element_ptr_t element, const table_column_t* column)> cell_fetch_value_handler_t;
 
 /*! Cell event handler
  *  @param element The element associated with the cell
@@ -283,7 +280,7 @@ typedef function<cell_t(table_element_ptr_t element, const column_t* column)> ce
  *  @param cell    The element cell being process
  *  @return The cell value
  */
-typedef function<void(table_element_ptr_const_t element, const column_t* column, const cell_t* cell)> cell_callback_handler_t;
+typedef function<void(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)> cell_callback_handler_t;
 
 /*! Cell style handler
  *  @param element The element associated with the cell
@@ -291,7 +288,7 @@ typedef function<void(table_element_ptr_const_t element, const column_t* column,
  *  @param cell    The element cell being process
  *  @param style   The style to be applied to the cell which should be modified by the handler.
  */
-typedef function<void(table_element_ptr_const_t element, const column_t* column, const cell_t* cell, cell_style_t& style)> cell_style_handler_t;
+typedef function<void(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)> cell_style_handler_t;
 
 /*! Callback invoked when a table cell value needs to be fetched.
  *  @param element The element associated with the cell
@@ -312,7 +309,7 @@ typedef function<bool(table_element_ptr_const_t element, const char*, size_t)> t
  *  @param column         The column being sorted
  *  @param sort_direction The sort direction
  */
-typedef function<bool(table_t* table, column_t*, int sort_direction)> table_sort_handler_t;
+typedef function<bool(table_t* table, table_column_t*, int sort_direction)> table_sort_handler_t;
 
 /*! Callback invoked when the main table contextual menu should be shown. 
  *  @param table The table being sorted
@@ -324,17 +321,17 @@ typedef function<void(table_t* table)> table_context_menu_handler_t;
  *  @param row     The row being drawn
  *  @param element The element associated with the row
  */
-typedef function<bool(table_t* table, row_t* row, table_element_ptr_t element)> table_row_handler_t;
+typedef function<bool(table_t* table, table_row_t* row, table_element_ptr_t element)> table_row_handler_t;
 
 /*! Callback invoked when we are about to draw or drawing a table column header. 
  *  @param table   The table being sorted
  *  @param column  The column being drawn
  *  @param element The element associated with the column
  */
-typedef function<void(table_t* table, const column_t* column, int column_index)> column_header_render_handler_t;
+typedef function<void(table_t* table, const table_column_t* column, int column_index)> column_header_render_handler_t;
 
 /*! Column data structure */
-struct column_t
+struct table_column_t
 {
     bool used{ false };
 
@@ -355,6 +352,7 @@ struct column_t
 
     hash_t hovered_cell{ 0 };
     tick_t hovered_time{ 0 };
+    table_t* table{ nullptr };
 
     FOUNDATION_FORCEINLINE string_const_t get_name() const
     {
@@ -367,37 +365,37 @@ struct column_t
      *  @param handler The style formatter callback (See #cell_style_handler_t)
      *  @return The column
      */
-    FOUNDATION_FORCEINLINE column_t& set_style_formatter(const cell_style_handler_t& handler)
+    FOUNDATION_FORCEINLINE table_column_t& set_style_formatter(const cell_style_handler_t& handler)
     {
         style_formatter = handler;
         return *this;
     }
 
-    FOUNDATION_FORCEINLINE column_t& set_context_menu_callback(const cell_callback_handler_t& handler)
+    FOUNDATION_FORCEINLINE table_column_t& set_context_menu_callback(const cell_callback_handler_t& handler)
     {
         context_menu = handler;
         return *this;
     }
 
-    FOUNDATION_FORCEINLINE column_t& set_selected_callback(const cell_callback_handler_t& handler)
+    FOUNDATION_FORCEINLINE table_column_t& set_selected_callback(const cell_callback_handler_t& handler)
     {
         selected = handler;
         return *this;
     }
 
-    FOUNDATION_FORCEINLINE column_t& set_tooltip_callback(const cell_callback_handler_t& handler)
+    FOUNDATION_FORCEINLINE table_column_t& set_tooltip_callback(const cell_callback_handler_t& handler)
     {
         tooltip = handler;
         return *this;
     }
 
-    FOUNDATION_FORCEINLINE column_t& set_header_render_callback(const column_header_render_handler_t& handler)
+    FOUNDATION_FORCEINLINE table_column_t& set_header_render_callback(const column_header_render_handler_t& handler)
     {
         header_render = handler;
         return *this;
     }
 
-    FOUNDATION_FORCEINLINE column_t& set_width(float _width)
+    FOUNDATION_FORCEINLINE table_column_t& set_width(float _width)
     {
         this->width = _width;
         return *this;
@@ -410,7 +408,7 @@ struct column_t
 };
 
 /*! Row data structure */
-struct row_t
+struct table_row_t
 {
     table_element_ptr_t element;
     float height { 0 };
@@ -427,13 +425,13 @@ struct table_t
     string_t name { nullptr, 0 };
     table_flags_t flags;
 
-    column_t columns[64];
+    table_column_t columns[64];
 
     table_element_ptr_const_t elements{ nullptr };
     int element_count{ 0 };
     size_t element_size{ 0 };
 
-    row_t* rows{ nullptr };
+    table_row_t* rows{ nullptr };
     int rows_visible_count{ 0 };
     hash_t ordered_hash { 0 };
     float row_fixed_height{ -1.0f };
@@ -458,7 +456,7 @@ struct table_t
 struct table_sorting_context_t
 {
     table_t* table;
-    column_t* sorting_column;
+    table_column_t* sorting_column;
     int sort_direction;
     bool completly_sorted{ true };
     string_const_t search_filter;
@@ -513,7 +511,7 @@ void table_render(table_t* table, const T* elements, float outer_size_x = 0.0F, 
  *  @param flags                The column flags (See #column_flags_t)
  *  @return The column
  */
-column_t& table_add_column(table_t* table, 
+table_column_t& table_add_column(table_t* table, 
     const char* name, size_t name_length, 
     const cell_fetch_value_handler_t& fetch_value_handler,
     column_format_t format = COLUMN_FORMAT_TEXT,
@@ -528,7 +526,7 @@ column_t& table_add_column(table_t* table,
  *  @return The column
  */
 template <size_t N> FOUNDATION_FORCEINLINE
-column_t& table_add_column(table_t* table,
+table_column_t& table_add_column(table_t* table,
     const char(&name)[N],
     const cell_fetch_value_handler_t& fetch_value_handler,
     column_format_t format = COLUMN_FORMAT_TEXT,
@@ -550,7 +548,7 @@ column_t& table_add_column(table_t* table,
  *  @return The column
  */
 template <size_t N> FOUNDATION_FORCEINLINE
-column_t& table_add_column(table_t* table,
+table_column_t& table_add_column(table_t* table,
     const cell_fetch_value_handler_t& fetch_value_handler,
     const char(&name)[N],
     column_format_t format = COLUMN_FORMAT_TEXT,
