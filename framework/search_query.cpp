@@ -146,7 +146,7 @@ FOUNDATION_STATIC const char* search_query_parse_variable(const char* tok, const
 {
     // Find next space
     const char* pos = tok;
-    while (pos < end && !isspace(*pos))
+    while (pos < end && *pos > 0 && !isspace(*pos))
         ++pos;
 
     const size_t variable_length = (pos - tok);
@@ -881,7 +881,7 @@ search_query_token_t* search_query_parse_tokens(const char* text, size_t length)
     while (tok < end)
     {
         // Skip whitespace
-        while (tok < end && isspace(*tok))
+        while (tok < end && *tok > 0 && isspace(*tok))
             ++tok;
 
         // Check for end of string

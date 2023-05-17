@@ -97,12 +97,15 @@ string_const_t url_encode(const char* str, size_t str_length)
     string_t buf = string_static_buffer((str_length > 0 ? str_length : string_length(str)) * 3 + 1);
     char* pbuf = buf.str;
     while (*pstr) {
-        if (*pstr < 0 || isalnum(*pstr) || *pstr == '-' || *pstr == '_' || *pstr == '.' || *pstr == '~')
-            *pbuf++ = *pstr;
-        else if (*pstr == ' ')
-            *pbuf++ = '%', * pbuf++ = '2', * pbuf++ = '0';
+        char c = *pstr;
+        if (c > 0 && isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+            *pbuf++ = c;
+        else if (c == ' ')
+            *pbuf++ = '%', *pbuf++ = '2', * pbuf++ = '0';
         else
-            *pbuf++ = '%', * pbuf++ = to_hex(*pstr >> 4), * pbuf++ = to_hex(*pstr & 15);
+        {
+            pbuf += string_format(pbuf, buf.length - pointer_diff(pbuf, buf.str), STRING_CONST("%%%02X"), (unsigned char)c).length;
+        }
         pstr++;
     }
     *pbuf = '\0';
