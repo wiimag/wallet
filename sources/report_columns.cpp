@@ -21,7 +21,6 @@ struct report_expression_column_t
     char name[64];
     char expression[256];
     column_format_t format{ COLUMN_FORMAT_TEXT };
-    mutable int store_counter{ 0 };
 };
 
 struct report_expression_cache_value_t
@@ -42,22 +41,24 @@ FOUNDATION_FORCEINLINE hash_t hash(const report_expression_cache_value_t& value)
     return value.key;
 }
 
-database<report_expression_cache_value_t>* _report_expression_cache;
+static tick_t _report_expression_last_eval_ts = 0;
+static database<report_expression_cache_value_t>* _report_expression_cache;
 
 FOUNDATION_STATIC table_cell_t report_column_evaluate_expression(table_element_ptr_t element, const table_column_t* column, 
                                                            report_handle_t report_handle, const report_expression_column_t* ec)
 {
     title_t* title = *(title_t**)element;
     if (title == nullptr || title_is_index(title))
-        return DNAN;
+        return nullptr;
         
     report_t* report = report_get(report_handle);
     string_const_t report_name = SYMBOL_CONST(report->name);
-    const size_t expression_length = string_length(ec->expression);
+    string_const_t title_code = string_const(title->code, title->code_length);
+    string_const_t expression_string = string_const(ec->expression, string_length(ec->expression));
     hash_t key = hash_combine(
         string_hash(STRING_ARGS(report_name)), 
-        string_hash(title->code, title->code_length), 
-        string_hash(ec->expression, expression_length));
+        string_hash(STRING_ARGS(title_code)), 
+        string_hash(STRING_ARGS(expression_string)));
 
     report_expression_cache_value_t cvalue;
     if (_report_expression_cache->select(key, cvalue))
@@ -74,52 +75,67 @@ FOUNDATION_STATIC table_cell_t report_column_evaluate_expression(table_element_p
                 return cvalue.number;
             return SYMBOL_CONST(cvalue.symbol);
         }
+        else
+        {
+            log_debugf(HASH_REPORT, STRING_CONST("Cached expression '%.*s' for title '%.*s' in report '%.*s' has different format"),
+                STRING_FORMAT(expression_string), STRING_FORMAT(title_code), STRING_FORMAT(report_name));
+        }
     }
 
-    if (string_find_string(ec->expression, expression_length, STRING_CONST("$TITLE"), 0) != STRING_NPOS)
+    // Check if we are ready to evaluate another expression right away?
+    // We are doing this here so we do not block the UI thread for too long
+    if (time_elapsed(_report_expression_last_eval_ts) < 0.100)
+        return nullptr;
+
+    if (string_find_string(STRING_ARGS(expression_string), STRING_CONST("$TITLE"), 0) != STRING_NPOS)
     {
         if (!title_is_resolved(title))
-            return DNAN;
+            return nullptr;
     }
 
-    if (string_find_string(ec->expression, expression_length, STRING_CONST("$REPORT"), 0) != STRING_NPOS)
+    if (string_find_string(STRING_ARGS(expression_string), STRING_CONST("$REPORT"), 0) != STRING_NPOS)
     {
         if (report_is_loading(report))
-            return DNAN;
+            return nullptr;
     }
+
+    log_debugf(HASH_REPORT, STRING_CONST("Evaluating expression '%.*s' for title '%.*s' in report '%.*s'"),
+           STRING_FORMAT(expression_string), STRING_FORMAT(title_code), STRING_FORMAT(report_name));
 
     cvalue.key = key;
     cvalue.format = ec->format;
-    cvalue.time = time_current();
+    _report_expression_last_eval_ts = cvalue.time = time_current();
+
+    string_const_t column_name = string_const(ec->name, string_length(ec->name));
     
-    expr_set_or_create_global_var(STRING_CONST("$TITLE"), expr_result_t(title->code));
-    auto result = eval(ec->expression, expression_length);
+    expr_set_or_create_global_var(STRING_CONST("$TITLE"), expr_result_t(title_code));
+    expr_set_or_create_global_var(STRING_CONST("$REPORT"), expr_result_t(report_name));
+    expr_set_or_create_global_var(STRING_CONST("$COLUMN"), expr_result_t(column_name));
+    expr_set_or_create_global_var(STRING_CONST("$FORMAT"), expr_result_t((double)ec->format));
+    auto result = eval(STRING_ARGS(expression_string));
+
     if (ec->format == COLUMN_FORMAT_CURRENCY || ec->format == COLUMN_FORMAT_NUMBER || ec->format == COLUMN_FORMAT_PERCENTAGE)
     { 
         cvalue.number = result.as_number();
-        if (ec->store_counter++ > 0)
-            _report_expression_cache->put(cvalue);
+        _report_expression_cache->put(cvalue);
         return cvalue.number;
     }
     if (ec->format == COLUMN_FORMAT_BOOLEAN)
     {
         cvalue.number = result.as_boolean() ? 1.0 : 0.0;
-        if (ec->store_counter++ > 0)
-            _report_expression_cache->put(cvalue);
+        _report_expression_cache->put(cvalue);
         return cvalue.number;
     }
     if (ec->format == COLUMN_FORMAT_DATE)
     {
         cvalue.date = (time_t)result.as_number();
-        if (ec->store_counter++ > 0)
-            _report_expression_cache->put(cvalue);
+        _report_expression_cache->put(cvalue);
         return cvalue.date;
     }
     
     string_const_t str_value = result.as_string();
     cvalue.symbol = string_table_encode(str_value);
-    if (ec->store_counter++ > 0)
-        _report_expression_cache->put(cvalue);
+    _report_expression_cache->put(cvalue);
     return str_value;
 }
 
@@ -349,12 +365,6 @@ void report_expression_columns_finalize()
 
 void report_expression_column_reset(report_t* report)
 {
-    for (unsigned i = 0, end = array_size(report->expression_columns); i < end; ++i)
-    {
-        report_expression_column_t* c = report->expression_columns + i;
-        c->store_counter = 0;
-    }
-
     _report_expression_cache->clear();
 }
 

@@ -35,6 +35,11 @@ memory buffer. */
 #include <foundation/platform.h>
 #include <foundation/types.h>
 
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 26497)
+#endif
+
 /*! Allocate capacity bytes of memory for a string of length characters. The memory block will be
 initialized to zero. The length is capped to [0,capacity-1]. A null string is returned if
 a zero capacity is given.
@@ -1152,3 +1157,7 @@ string_to_const(string_t str) {
 	return (string_const_t){str.str, str.length};
 #endif
 }
+
+#ifdef _MSC_VER
+#pragma warning (pop)
+#endif

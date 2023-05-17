@@ -48,8 +48,8 @@ struct database
         hashtable64_t* old_table = hashes;
         capacity *= size_t(2);
         hashtable64_t* new_hash_table = hashtable64_allocate(capacity);
-        for (int i = 0, end = array_size(elements); i < end; ++i)
-            hashtable64_set(new_hash_table, HASHER(elements[i]), i + 1); // 1 based
+        for (unsigned i = 0, end = array_size(elements); i < end; ++i)
+            hashtable64_set(new_hash_table, HASHER(elements[i]), (uint64_t)(i + 1)); // 1 based
 
         hashes = new_hash_table;
         hashtable64_deallocate(old_table);

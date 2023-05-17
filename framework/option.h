@@ -72,7 +72,7 @@ struct option_t
         return *this;
     }
 
-    O& operator=(O&& o)
+    O& operator=(O&& o) noexcept
     {
         if (this == &o)
             return *this;

@@ -35,7 +35,7 @@ struct pattern_mark_t
 {
     time_t date;
     bool fetched {false};
-    double change_p { NAN };
+    double change_p { DNAN };
 };
 
 /*! Pattern flex entry state. */
@@ -61,8 +61,8 @@ struct pattern_flex_medavg_t
 /*! Pattern limits. */
 struct pattern_limits_t
 {
-    double xmin{ NAN }, xmax{ NAN };
-    double ymin{ NAN }, ymax{ NAN };
+    double xmin{ DNAN }, xmax{ DNAN };
+    double ymin{ DNAN }, ymax{ DNAN };
 };
 
 /*! Pattern data. */

@@ -787,7 +787,7 @@ FOUNDATION_STATIC bool financials_render_sheet_selector(const char* label, const
     char preview_buffer[64]{ "None" };
     string_t preview{ preview_buffer, 0 };
 
-    for (int i = 0, added = 0; i != N; ++i)
+    for (size_t i = 0, added = 0; i < N; ++i)
     {
         const auto& c = indicators[i];
         if (!c.selected)
@@ -948,7 +948,7 @@ FOUNDATION_STATIC void financials_window_render(window_handle_t win)
     if (window->show_cash_flow_values)
     {
         ImPlot::SetAxis(ImAxis_Y2);
-        const double bar_size = time_one_day() * 45;
+        const double bar_size = time_one_day() * 45.0;
         for (int i = 0; i < ARRAY_COUNT(CASH_FLOW_FIELDS); ++i)
         {
             const auto& c = CASH_FLOW_FIELDS[i];

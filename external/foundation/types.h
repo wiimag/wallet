@@ -31,6 +31,11 @@ on this foundation library. */
 #pragma clang diagnostic ignored "-Wpadded"
 #endif
 
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 4200)
+#endif
+
 // PRIMITIVE TYPES
 
 /*! Error severity level. The higher the value, the more severe the error. Error level 0
@@ -1778,4 +1783,8 @@ struct json_token_t {
 
 #if FOUNDATION_COMPILER_CLANG
 #pragma clang diagnostic pop
+#endif
+
+#ifdef _MSC_VER
+#pragma warning (pop)
 #endif

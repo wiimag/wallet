@@ -804,7 +804,7 @@ struct expr_result_t
 
         if (is_set())
         {
-            for (auto e : *this)
+            for (const auto& e : *this)
             {
                 if (e >= rhs)
                     return false;
@@ -832,7 +832,7 @@ struct expr_result_t
 
         if (is_set())
         {
-            for (auto e : *this)
+            for (const auto& e : *this)
             {
                 if (e <= rhs)
                     return false;
@@ -875,7 +875,7 @@ struct expr_result_t
 
         if (is_set())
         {
-            for (auto e : *this)
+            for (const auto& e : *this)
             {
                 if (e < rhs)
                     return false;
@@ -915,7 +915,7 @@ struct expr_result_t
         {
             for (unsigned i = 0, end = max(element_count(), rhs.element_count()); i < end; ++i)
             {
-                if (list[i].as_number(NAN) != rhs.as_number(NAN, i))
+                if (list[i].as_number(NAN) != rhs.as_number(DNAN, i))
                     return false;
             }
 
@@ -927,7 +927,7 @@ struct expr_result_t
             const uint16_t esize = element_size();
             for (unsigned i = 0, end = max(element_count(), rhs.element_count()); ptr && i < end; ++i)
             {
-                if (as_number(NAN, i) != rhs.as_number(NAN, i))
+                if (as_number(DNAN, i) != rhs.as_number(DNAN, i))
                     return false;
             }
 

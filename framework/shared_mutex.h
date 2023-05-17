@@ -29,7 +29,7 @@ public:
     }
 
     // Move constructor
-    FOUNDATION_FORCEINLINE shared_mutex(shared_mutex&& other)
+    FOUNDATION_FORCEINLINE shared_mutex(shared_mutex&& other) noexcept
     {
         #ifdef _WIN32
         mutex_ = other.mutex_;

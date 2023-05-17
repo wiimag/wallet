@@ -57,7 +57,7 @@ FOUNDATION_ALIGNED_STRUCT(stock_realtime_t, 8)
 {
     hash_t key;
     char   code[16];
-    time_t timestamp;
+    time_t timestamp{ 0 };
     double price;
     double volume;
     bool   refresh{ false };
@@ -225,8 +225,8 @@ FOUNDATION_ALIGNED_STRUCT(stock_t, 8)
  */
 struct stock_handle_t
 {
-    hash_t id;
-    string_table_symbol_t code;
+    hash_t id{ 0 };
+    string_table_symbol_t code { STRING_TABLE_NULL_SYMBOL };
     
     mutable const stock_t* ptr{ nullptr };
 

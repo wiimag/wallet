@@ -114,7 +114,7 @@ FOUNDATION_STATIC bool alerts_check_expression_condition_result(const expr_resul
 
     if (result.type == EXPR_RESULT_NUMBER)
     {
-        const double n = result.as_number(NAN);
+        const double n = result.as_number(DNAN);
         return math_trunc(n) != 0 && math_real_is_finite(n);
     }
     

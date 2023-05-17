@@ -99,6 +99,12 @@ thread local storage to ensure maximum portability across supported platforms */
 #else
 #define FOUNDATION_STATIC static
 #endif
+
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 26497)
+#endif
+
 // =======================================
 
 // First, platforms and architectures
@@ -860,6 +866,11 @@ thread local storage to ensure maximum portability across supported platforms */
 #define FOUNDATION_FORCEINLINE __forceinline
 #define FOUNDATION_NOINLINE __declspec(noinline)
 #define FOUNDATION_PURECALL __declspec(noalias)
+#ifdef __cplusplus
+#define FOUNDATION_CONSTEXPR constexpr
+#else
+#define FOUNDATION_CONSTEXPR
+#endif
 #define FOUNDATION_CONSTCALL __declspec(noalias)
 #define FOUNDATION_PRINTFCALL(start, num)
 #define FOUNDATION_ALIGN(alignment) __declspec(align(alignment))
@@ -1412,6 +1423,10 @@ uint512_is_null(const uint512_t u0) {
 #define FOUNDATION_FLEXIBLE_ARRAY 0
 #else
 #define FOUNDATION_FLEXIBLE_ARRAY
+#endif
+
+#ifdef _MSC_VER
+#pragma warning (pop)
 #endif
 
 /*!

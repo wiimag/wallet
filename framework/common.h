@@ -54,7 +54,7 @@ constexpr double DNAN = __builtin_nan("0");
     FOUNDATION_FORCEINLINE bool test(const T a, const T b) { return (a & b) == b; } \
     FOUNDATION_FORCEINLINE bool any(const T a, const T b) { return (a & b) != 0; } \
     FOUNDATION_FORCEINLINE bool none(const T a, const T b) { return (a & b) == 0; } \
-    FOUNDATION_FORCEINLINE bool one(const T a, const T b) { const auto bits = ((std::underlying_type_t<T>)a & (std::underlying_type_t<T>)b); return bits && !(bits & (bits-1)); }
+    FOUNDATION_FORCEINLINE constexpr bool one(const T a, const T b) { const auto bits = ((std::underlying_type_t<T>)a & (std::underlying_type_t<T>)b); return bits && !(bits & (bits-1)); }
 
 ////////////////////////////////////////////////////////////////////////////
 // ## Generics
@@ -337,7 +337,7 @@ FOUNDATION_FORCEINLINE constexpr time_t const time_one_day()
  *  
  *  @returns Tick count
  */
-FOUNDATION_FORCEINLINE tick_t time_to_tick(time_t time)
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTEXPR tick_t time_to_tick(time_t time)
 {
     return (tick_t)time * 1000;
 }

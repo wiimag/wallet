@@ -37,5 +37,5 @@ struct bulk_t
     stock_handle_t stock_handle;
     
     bool selected{ false };
-    double_option_t today_cap{ NAN };
+    double_option_t today_cap{ DNAN };
 };

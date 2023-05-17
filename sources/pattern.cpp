@@ -1283,7 +1283,7 @@ FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern
     {
         plot_context_t* c = (plot_context_t*)context;
         const day_result_t* history = (const day_result_t*)c->user_data;
-        const time_t ONE_DAY = time_one_day();
+        constexpr const time_t ONE_DAY = time_one_day();
 
         const day_result_t* ed = &history[idx];
         if ((ed->date / ONE_DAY) >= (c->ref / ONE_DAY))
@@ -1321,7 +1321,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
     {
         plot_context_t* c = (plot_context_t*)context;
         const day_result_t* history = (const day_result_t*)c->user_data;
-        const time_t ONE_DAY = time_one_day();
+        constexpr const time_t ONE_DAY = time_one_day();
 
         const day_result_t& ed = history[idx];
         const double days_diff = time_elapsed_days(ed.date, c->ref);
@@ -1405,7 +1405,7 @@ FOUNDATION_STATIC bool pattern_flex_update(pattern_t* pattern)
 
     bool first = true;
     const day_result_t& c = s->current;
-    const double one_day = (double)time_one_day();
+    constexpr const double one_day = (double)time_one_day();
     for (int i = min(PATTERN_FLEX_RANGE_COUNT, array_size(s->history)) - 1; i >= 0; --i)
     {
         pattern_flex_t f{};
@@ -2259,7 +2259,7 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
 
     const double day_range = time_elapsed_days(min_d, max_d);
 
-    const double bar_width = time_one_day() * 0.8;
+    constexpr const double bar_width = time_one_day() * 0.8;
     ImPlot::SetupLegend(ImPlotLocation_NorthWest);
 
     ImPlot::SetupAxis(ImAxis_X1, "##Date", ImPlotAxisFlags_LockMax | ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight);

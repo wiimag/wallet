@@ -27,6 +27,11 @@ http://cellperformance.beyond3d.com/articles/2006/07/increment-and-decrement-wra
 #include <foundation/types.h>
 #include <foundation/assert.h>
 
+#ifdef _MSC_VER
+#pragma warning (push)
+#pragma warning (disable: 26497)
+#endif
+
 #if FOUNDATION_COMPILER_INTEL
 #include <mathimf.h>
 #undef I
@@ -1556,4 +1561,8 @@ math_float_inc(float val, int units) {
 
 #if FOUNDATION_COMPILER_CLANG
 #pragma clang diagnostic pop
+#endif
+
+#ifdef _MSC_VER
+#pragma warning (pop)
 #endif

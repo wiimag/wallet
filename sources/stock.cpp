@@ -88,7 +88,7 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
     if (s == nullptr || !s->has_resolve(FetchLevel::FUNDAMENTALS))
         return false;
 
-    value = NAN;
+    value = DNAN;
         
     const char* ticker = string_table_decode(s->code);
     time_t since_last_year = time_add_days(time_now(), -465);
@@ -968,7 +968,7 @@ const day_result_t* stock_get_EOD(const stock_t* stock_data, time_t day_time, bo
     if (!history || history_count == 0)
         return nullptr;
 
-    const time_t ONE_DAY = time_one_day();
+    constexpr const time_t ONE_DAY = time_one_day();
     time_t day_trunc = (day_time / ONE_DAY);
     for (size_t i = 0, end = history_count; i < end; ++i)
     {

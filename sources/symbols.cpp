@@ -86,7 +86,7 @@ FOUNDATION_STATIC  string_table_symbol_t load_symbol_field_value(const json_obje
 
 FOUNDATION_STATIC void symbols_load(
     int current_symbols_load_id, 
-    symbol_t** out_symbols, 
+    symbol_t*& out_symbols, 
     const json_object_t& data, 
     const char* market, 
     const symbols_load_options_t& options = {})
@@ -94,8 +94,8 @@ FOUNDATION_STATIC void symbols_load(
     string_const_t market_cstr = string_const(market, string_length(market));
     if (const auto& lock = scoped_mutex_t(_symbols_lock))
     {
-        const size_t reserve_count = max(array_size(*out_symbols) + data.root->value_length, 1U);
-        array_reserve(*out_symbols, reserve_count);
+        const size_t reserve_count = max(array_size(out_symbols) + data.root->value_length, 1U);
+        array_reserve(out_symbols, reserve_count);
     }
 
     for (int i = 1; i < data.token_count; ++i)
@@ -151,19 +151,19 @@ FOUNDATION_STATIC void symbols_load(
             if (current_symbols_load_id != _loading_symbols_id)
                 return;
 
-            array_push(*out_symbols, symbol);
+            array_push(out_symbols, symbol);
         }
     }
 }
 
-FOUNDATION_STATIC void symbols_fetch(symbol_t** symbols, const char* market, bool filter_null_isin)
+FOUNDATION_STATIC void symbols_fetch(symbol_t*& symbols, const char* market, bool filter_null_isin)
 {
-    if (*symbols == nullptr)
-        array_reserve(*symbols, 1);
+    if (symbols == nullptr)
+        array_reserve(symbols, 1);
 
     int loading_symbols_id = ++_loading_symbols_id;
     if (!eod_fetch_async("exchange-symbol-list", market, FORMAT_JSON_CACHE,
-        [loading_symbols_id, market, symbols, filter_null_isin](const json_object_t& data)
+        [loading_symbols_id, market, &symbols, filter_null_isin](const json_object_t& data)
         {
             symbols_load_options_t options = {};
             options.filter_null_isin = filter_null_isin;
@@ -184,7 +184,7 @@ FOUNDATION_STATIC bool symbols_contains(const symbol_t* symbols, string_const_t 
     return false;
 }
 
-FOUNDATION_STATIC void symbols_read_search_results(int loading_symbols_id, const json_object_t& data, symbol_t** symbols, string_const_t search_filter)
+FOUNDATION_STATIC void symbols_read_search_results(int loading_symbols_id, const json_object_t& data, symbol_t*& symbols, string_const_t search_filter)
 {
     symbols_load_options_t options = {};
     options.filter_null_isin = false;
@@ -192,14 +192,14 @@ FOUNDATION_STATIC void symbols_read_search_results(int loading_symbols_id, const
     symbols_load(loading_symbols_id, symbols, data, nullptr, options);
 }
 
-FOUNDATION_STATIC void symbols_search(symbol_t** symbols, string_const_t search_filter)
+FOUNDATION_STATIC void symbols_search(symbol_t*& symbols, string_const_t search_filter)
 {
-    if (*symbols == nullptr)
-        array_reserve(*symbols, 1);
+    if (symbols == nullptr)
+        array_reserve(symbols, 1);
 
     int loading_symbols_id = ++_loading_symbols_id;
     if (!eod_fetch_async("search", search_filter.str, FORMAT_JSON_CACHE, "limit", "50",
-        [loading_symbols_id, symbols, search_filter](const json_object_t& data)
+        [loading_symbols_id, &symbols, search_filter](const json_object_t& data)
         {
             symbols_read_search_results(loading_symbols_id, data, symbols, search_filter);
         }, 6 * 60 * 60ULL))
@@ -275,10 +275,10 @@ FOUNDATION_STATIC double symbol_get_change(void* element, const table_column_t* 
     symbol_t* symbol = (symbol_t*)element;
     const stock_t* stock_data = symbol->stock;
     if (stock_data == nullptr)
-        return NAN;
+        return DNAN;
     const day_result_t* ed = rel_days == 0 ? &(stock_data->current) : stock_get_EOD(stock_data, rel_days, take_last);
     if (ed == nullptr)
-        return NAN;
+        return DNAN;
     if (rel_days == 0)
         return ed->change_p;
     return (stock_data->current.adjusted_close - ed->adjusted_close) / ed->adjusted_close * 100.0;
@@ -543,7 +543,7 @@ FOUNDATION_STATIC void symbols_render_search(string_const_t search_filter, const
         if (auto lock = scoped_mutex_t(_symbols_lock))
             array_clear(market_report->symbols);
 
-        symbols_search(&market_report->symbols, search_filter);
+        symbols_search(market_report->symbols, search_filter);
 
         if (market_report->table && ((selector && !market_report->table->selected)
             || (!selector && market_report->table->selected)))
@@ -582,7 +582,7 @@ void symbols_render(const char* market, bool filter_null_isin /*= true*/)
 
     if (market_report->symbols == nullptr)
     {
-        symbols_fetch(&market_report->symbols, market, filter_null_isin);
+        symbols_fetch(market_report->symbols, market, filter_null_isin);
 
         if (market_report->symbols && market_report->table == nullptr)
             market_report->table = symbols_table_init(market);

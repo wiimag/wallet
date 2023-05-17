@@ -351,7 +351,7 @@ FOUNDATION_STATIC void search_index_fundamental_object_data(const json_object_t&
             continue;
 
         time_t date;
-        double number = NAN;
+        double number = DNAN;
         if (value.length < 21 && string_try_convert_number(STRING_ARGS(value), number))
         {
             if (math_real_is_finite(number))

@@ -667,7 +667,7 @@ bool logo_render_icon(const char* symbol, size_t symbol_length, ImVec2& rendered
     int banner_width = 0, banner_height = 0, banner_channels = 0;
     uint32_t banner_color = 0;
     ImU32 bg_logo_banner_color = 0;
-    bgfx::TextureHandle texture = BGFX_INVALID_HANDLE, banner_texture;
+    bgfx::TextureHandle texture = BGFX_INVALID_HANDLE, banner_texture = BGFX_INVALID_HANDLE;
     {
         SHARED_READ_LOCK(_logos_mutex);
 
@@ -700,10 +700,10 @@ bool logo_render_icon(const char* symbol, size_t symbol_length, ImVec2& rendered
         rendered_size.y = height * hratio;
     }
     ImVec2 spos = ImGui::GetCursorScreenPos();
-    spos.y = (float)math_ceil(spos.y + 0.5f);
+    spos.y = (float)math_ceil(spos.y + 0.5);
 
     if (channels == 3)
-        rendered_size.y = (float)math_floor(rendered_size.y + 0.5f);
+        rendered_size.y = (float)math_floor(rendered_size.y + 0.5);
     const ImRect logo_rect(spos, spos + rendered_size);
     
     ImDrawList* dl = ImGui::GetWindowDrawList();

@@ -410,7 +410,7 @@ template <size_t N> FOUNDATION_FORCEINLINE constexpr string_const_t string_const
  * @param s The string to check.
  * @return True if the string is null, false otherwise.
  */
-FOUNDATION_FORCEINLINE bool string_is_null(string_const_t s)
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTEXPR bool string_is_null(string_const_t s)
 {
     return s.str == nullptr || s.length == 0;
 }
@@ -453,7 +453,7 @@ FOUNDATION_FORCEINLINE bool string_equal(string_const_t lhs, string_t rhs)
  * @param s The string to check.
  * @return True if the string is null, false otherwise.
  */
-FOUNDATION_FORCEINLINE bool string_is_null(string_t s)
+FOUNDATION_FORCEINLINE FOUNDATION_CONSTEXPR bool string_is_null(string_t s)
 {
     return s.str == nullptr || s.length == 0;
 }
