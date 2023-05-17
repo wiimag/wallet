@@ -226,7 +226,16 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
 
         if (entry->current.date != d.date && !math_real_is_nan(d.close))
         {
-            entry->current = d;
+            entry->current.date = d.date;
+            entry->current.open = d.open;
+            entry->current.adjusted_close = entry->current.close = d.close;
+            entry->current.low = d.low;
+            entry->current.high = d.high;
+            entry->current.change = d.change;
+            entry->current.change_p = d.change_p;
+            entry->current.change_p_high = d.change_p_high;
+            entry->current.volume = d.volume;
+            entry->current.previous_close = d.previous_close;
         }
         else
         {
@@ -346,12 +355,11 @@ FOUNDATION_STATIC void stock_read_technical_results(const json_object_t& json, s
     }
     
     day_result_t* history = s->history;
-    int h = 0, h_end = array_size(history);
-    //bool applied_to_current = false;
+    unsigned h = 0, h_end = array_size(history);
     for (size_t i = 0; i < json.root->value_length; ++i)
     {
         const auto& e = json[i];
-        const time_t date = string_to_date(STRING_ARGS(e["date"].as_string()));
+        const time_t date = e["date"].as_time();
 
         for (; h != h_end;)
         {
@@ -361,16 +369,13 @@ FOUNDATION_STATIC void stock_read_technical_results(const json_object_t& json, s
                 for (size_t i = 0; i < desc.field_count; i++)
                 {
                     const double v = e[desc.field_names[i]].as_number();
+                    FOUNDATION_ASSERT(math_real_is_finite(v));
                     *(double*)(((uint8_t*)ed) + desc.field_offsets[i]) = v;
 
                     double& current_d = *(double*)(((uint8_t*)&s->current) + desc.field_offsets[i]);
                     if (math_real_is_nan(current_d))
                         current_d = v;
-
-                    //if (!applied_to_current)
-                      //  *(double*)(((uint8_t*)&s->current) + desc.field_offsets[i]) = v;
                 }
-                //applied_to_current = true;
                 break;
             }
             else if (ed->date < date)
@@ -821,7 +826,8 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
 
     if ((fetch_levels & FetchLevel::EOD) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::EOD) == 0)
     {
-        if (eod_fetch_async("eod", ticker, FORMAT_JSON_WITH_ERROR, "order", "d", LC1(stock_read_eod_results(_1, index)), 12ULL * 3600ULL))
+        if (eod_fetch_async("eod", ticker, FORMAT_JSON_WITH_ERROR, 
+            "order", "d", LC1(stock_read_eod_results(_1, index)), 12ULL * 3600ULL))
         {
             entry->mark_fetched(FetchLevel::EOD);
             status = STATUS_RESOLVING;

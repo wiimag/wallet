@@ -185,7 +185,7 @@ FOUNDATION_STATIC void cell_label(string_const_t label)
     {
         const float space = ImGui::GetContentRegionAvail().x;
         ImGui::TextUnformatted(label.str, label.str + label.length);
-        if (ImGui::IsItemHovered() && ImGui::GetItemRectSize().x >space)
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && ImGui::GetItemRectSize().x >space)
             ImGui::SetTooltip(" %.*s ", STRING_FORMAT(label));
     }
 }
@@ -221,7 +221,7 @@ void table_cell_right_aligned_label(const char* label, size_t label_length, cons
         ImGui::TextURL(label, text_display_end, url, url_length);
     else
         ImGui::TextUnformatted(label, text_display_end);
-    if (ImGui::IsItemHovered() && tx > ImGui::GetColumnWidth() * 1.05f)
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && tx > ImGui::GetColumnWidth() * 1.05f)
         ImGui::SetTooltip(" %.*s ", (int)label_length, label);
 }
 
@@ -236,7 +236,7 @@ void table_cell_left_aligned_column_label(const char* label, void* payload)
 
     auto tx = ImGui::CalcTextSize(label, text_display_end).x;
     ImGui::TextUnformatted(label, text_display_end);
-    if (ImGui::IsItemHovered() && tx > ImGui::GetColumnWidth() * 1.05f)
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && tx > ImGui::GetColumnWidth() * 1.05f)
         ImGui::SetTooltip(" %.*s ", (int)label_length, label);
 }
 
@@ -846,7 +846,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
         ImGui::EndGroup();
 
         // Handle tooltip
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         {
             if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             {
@@ -1024,6 +1024,10 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
     if (!ImGui::BeginTable(table->name.str, column_count, flags, outer_size))
         return;
 
+    auto& io = ImGui::GetIO();
+    const float old_hovered_delay = io.HoverDelayNormal;
+    io.HoverDelayNormal = 0.5f;
+
     // Make top row always visible
     ImGui::TableSetupScrollFreeze(table->column_freeze, 1);
 
@@ -1036,6 +1040,8 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
     table_render_elements(table, column_count);
 
     table_handle_horizontal_scrolling(table);
+
+    io.HoverDelayNormal = old_hovered_delay;
 
     ImGui::EndTable();
 }

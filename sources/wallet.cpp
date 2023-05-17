@@ -206,7 +206,7 @@ FOUNDATION_STATIC table_cell_t wallet_history_column_date(table_element_ptr_t el
         const float width = ImGui::GetContentRegionAvail().x;
         const float field_width = ImGui::CalcTextSize(field_str.str, field_str.str + field_str.length).x;
         ImGui::TextUnformatted(field_str.str, field_str.str + field_str.length);
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
             h->show_edit_ui = true;
 
         const float button_width = IM_SCALEF(28.0f);
@@ -988,7 +988,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         ImGui::MoveCursor(available_space - last_item_size - IM_SCALEF(22.0f) - control_padding, 0, true);
         if (ImGui::Checkbox("##History", &wallet->track_history))
             updated |= true;
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
             ImGui::SetTooltip(tr("Track historical data for this report."));
     }
 

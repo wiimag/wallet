@@ -84,7 +84,7 @@ FOUNDATION_STATIC table_cell_t report_column_evaluate_expression(table_element_p
 
     // Check if we are ready to evaluate another expression right away?
     // We are doing this here so we do not block the UI thread for too long
-    if (time_elapsed(_report_expression_last_eval_ts) < 0.100)
+    if (time_elapsed(_report_expression_last_eval_ts) < 0.050)
         return nullptr;
 
     if (string_find_string(STRING_ARGS(expression_string), STRING_CONST("$TITLE"), 0) != STRING_NPOS)

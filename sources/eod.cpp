@@ -427,7 +427,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
         ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
         ImGui::TextWrapped(tr("EOD API Key is required to use this application."));
         ImGui::NewLine();
-        ImGui::TrTextWrapped("You can get a free API key by registering at the link above. Please enter your API key below and press Continue");
+        ImGui::TrTextWrapped("You can get an API key by registering at the link above. Please enter your API key below and press Continue");
 
         ImGui::NewLine();
         string_t eod_key = eod_get_key();

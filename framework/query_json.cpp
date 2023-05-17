@@ -90,8 +90,11 @@ double json_read_number(const char* json, const json_token_t* tokens, const json
     if (value.type == JSON_PRIMITIVE || value.type == JSON_STRING)
     {
         string_const_t str_n = string_const(json + value.value, value.value_length);
+        if (string_equal(str_n.str, str_n.length, STRING_CONST("null")))
+            return default_value;
+
         double n = string_to_float64(STRING_ARGS(str_n));
-        if (n == 0 && str_n.length > 0 && str_n.str[0] != '0')
+        if (n == 0 && str_n.length > 0 && str_n.str[0] != '0' && str_n.str[0] != '-')
             return default_value;
         return n;
     }

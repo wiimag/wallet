@@ -715,7 +715,7 @@ FOUNDATION_STATIC void timeline_report_toolbar(timeline_report_t* report)
     string_const_t last_date_string = string_from_date(last_day->date);
 
     ImGui::Text(ICON_MD_STACKED_LINE_CHART " [%u] %.*s", transaction_count, STRING_FORMAT(last_date_string));
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
     {
         auto first_day = &report->days[0];
         string_const_t first_date_string = string_from_date(first_day->date);
@@ -724,24 +724,24 @@ FOUNDATION_STATIC void timeline_report_toolbar(timeline_report_t* report)
 
     ImGui::SameLine();
     ImGui::Text(ICON_MD_WALLET " %.2lf $", last_day->total_fund);
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::SetTooltip(tr("You should have about %.0lf $ fund remaining as of %.*s"), last_day->total_fund, STRING_FORMAT(last_date_string));
 
     ImGui::SameLine();
     ImGui::Text(ICON_MD_DIFFERENCE " %.2lf $", last_day->total_gain);
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::SetTooltip(tr("You've made about %.0lf $ by selling stock so far"), last_day->total_gain);
 
     ImGui::SameLine();
     ImGui::Text(ICON_MD_ASSIGNMENT_RETURN " %.2lf $", last_day->total_dividends);
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::SetTooltip(tr("You've made about %.0lf $ in dividend's return."), last_day->total_dividends);
 
     ImGui::SameLine();
     const double raw_investment_cost = last_day->total_investment - last_day->total_dividends - last_day->total_gain;
     string_const_t currency_formatted = string_from_currency(raw_investment_cost, STRING_ARGS(LARGE_AMOUNT_FORMAT));
     ImGui::Text(ICON_MD_SAVINGS " %.*s", STRING_FORMAT(currency_formatted));
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
     {
         const double imin = min(raw_investment_cost, last_day->total_investment);
         const double imax = max(raw_investment_cost, last_day->total_investment);
@@ -752,14 +752,14 @@ FOUNDATION_STATIC void timeline_report_toolbar(timeline_report_t* report)
     const double total_value_adjusted = last_day->total_value + last_day->total_dividends + last_day->total_fund;
     currency_formatted = string_from_currency(total_value_adjusted, STRING_ARGS(LARGE_AMOUNT_FORMAT));
     ImGui::Text(ICON_MD_ACCOUNT_BALANCE_WALLET " %.*s", STRING_FORMAT(currency_formatted));
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::SetTooltip(tr("As of %.*s your stock value is worth about %.0lf $."), STRING_FORMAT(last_date_string), total_value_adjusted);
 
     ImGui::SameLine();
     const double total_gain = total_value_adjusted - raw_investment_cost;
     currency_formatted = string_from_currency(total_gain, STRING_ARGS(LARGE_AMOUNT_FORMAT));
     ImGui::Text(ICON_MD_PRICE_CHANGE " %.*s", STRING_FORMAT(currency_formatted));
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::SetTooltip(tr("As of %.*s you can say that you've gain or lost about %.0lf $."), STRING_FORMAT(last_date_string), total_gain);
 
     ImGui::EndGroup();

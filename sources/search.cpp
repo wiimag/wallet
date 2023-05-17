@@ -1245,7 +1245,7 @@ FOUNDATION_STATIC void search_window_render(void* user_data)
             elapsed_time *= 1000.0;
         }
         ImGui::TrText("Search found %u result(s) and took %.3lg %s", array_size(sw->results), elapsed_time, time_unit);
-        if (ImGui::IsItemHovered())
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         {
             ImGui::SetTooltip(" Symbols: %u \n Properties: %u ", search_database_document_count(sw->db), search_database_index_count(sw->db));
         }

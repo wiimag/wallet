@@ -552,7 +552,7 @@ FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_
         report->show_add_title_ui = true;
     }
     ImGui::PopStyleColor();
-    if (ImGui::IsItemHovered())
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::SetTooltip(tr("Add title"));
 }
 
