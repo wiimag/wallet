@@ -753,7 +753,13 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
     {
         // Create stock slot and trigger async resolution.
         if (array_size(_db_stocks) >= _db_capacity)
+        {
+            for (size_t i = 0; i < array_size(_trashed_history); ++i)
+                array_deallocate(_trashed_history[i]);
+            array_clear(_trashed_history);
+
             stock_grow_db();
+        }
 
         // Create slot
         _db_stocks = array_push(_db_stocks, stock_t{});
