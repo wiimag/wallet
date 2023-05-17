@@ -221,11 +221,11 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
         SHARED_READ_LOCK(_db_lock);
         stock_t* entry = &_db_stocks[index];
 
-        if (entry->current.date != 0 && entry->current.date != d.date)
-            array_push(entry->previous, entry->current);
-
-        if (entry->current.date != d.date && !math_real_is_nan(d.close))
+        if (entry->current.date < d.date && !math_real_is_nan(d.close))
         {
+            if (entry->current.date != 0)
+                array_push(entry->previous, entry->current);
+
             entry->current.date = d.date;
             entry->current.open = d.open;
             entry->current.adjusted_close = entry->current.close = d.close;
@@ -236,10 +236,12 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
             entry->current.change_p_high = d.change_p_high;
             entry->current.volume = d.volume;
             entry->current.previous_close = d.previous_close;
+
+            log_infof(HASH_STOCK, STRING_CONST("Stock '%.*s' has new real time data (%.2lf)"), STRING_FORMAT(code), d.price);
         }
         else
         {
-            log_debugf(HASH_STOCK, STRING_CONST("Stock '%.*s' has no new real time data"), STRING_FORMAT(code));
+            //log_debugf(HASH_STOCK, STRING_CONST("Stock '%.*s' has no new real time data"), STRING_FORMAT(code));
         }
 
         entry->mark_resolved(FetchLevel::REALTIME);
@@ -803,8 +805,8 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
     status_t status = STATUS_OK;
     if ((fetch_levels & FetchLevel::REALTIME) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::REALTIME) == 0)
     {
-        const uint64_t invalid_cache_query_after_seconds = main_is_running_tests() ? 30ULL : 5 * 60ULL;
-        if (eod_fetch_async("real-time", ticker, FORMAT_JSON_CACHE, LC1(stock_read_real_time_results(_1, index)), invalid_cache_query_after_seconds))
+        if (eod_fetch_async("real-time", ticker, FORMAT_JSON, 
+            LC1(stock_read_real_time_results(_1, index)), 0))
         {
             entry->mark_fetched(FetchLevel::REALTIME);
             status = STATUS_RESOLVING;

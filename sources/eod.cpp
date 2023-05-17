@@ -497,7 +497,7 @@ FOUNDATION_STATIC void eod_update()
     if (time_elapsed(EOD->UPDATE_TICK) > 60)
     {
         EOD->UPDATE_TICK = time_current();
-        eod_fetch_async("user", "", FORMAT_JSON_WITH_ERROR, eod_update_status);
+        eod_fetch_async("user", "", FORMAT_JSON_WITH_ERROR, eod_update_status, 0);
     }
 }
 

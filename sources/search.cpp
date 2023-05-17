@@ -1930,7 +1930,7 @@ FOUNDATION_STATIC expr_result_t search_expr_eval(const expr_func_t* f, vec_expr_
 
                 expr_result_t result(code);
                 array_push(results, result);
-            });
+            }, 0);
         }
     }
 

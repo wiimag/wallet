@@ -662,6 +662,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
         else
         {
             log_debugf(HASH_QUERY, STRING_CONST("Updating query %s"), query);
+            warning_logged = true;
         }
     }
 
@@ -686,7 +687,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
             if (cache_file_stream == nullptr)
                 return false;
 
-            log_debugf(0, STRING_CONST("Writing query %.*s to %.*s"), STRING_FORMAT(query_copy), STRING_FORMAT(cache_file_path));
+            //log_debugf(0, STRING_CONST("Writing query %.*s to %.*s"), STRING_FORMAT(query_copy), STRING_FORMAT(cache_file_path));
             stream_write_string(cache_file_stream, json.buffer, string_length(json.buffer));
             stream_deallocate(cache_file_stream);
         }

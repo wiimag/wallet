@@ -1,10 +1,11 @@
 # Changelog
 
-## [0.24.7] - 2023-05-17
+## [0.24.8] - 2023-05-17
 - Add `FETCH(...)` expression to fetch arbitrary data from the backend. (i.e. `COUNT(MAP(FETCH("exchange-symbol-list", "TO"), INDEX($1, 1)))`)
 - Add bulk extractor tooling to extract bulk data from EOD and save it to a JSON file.
 - Add support to build watch table for stock patterns. See `Pattern/Open Watch Context`.
 - Fix missing description in the search window when language is default english.
+- Fix real-time refresh rate from 5 minutes to 1 minute.
 - Improve how the total gain is computed in the wallet view.
 - Improve INDX display in the pattern and report views.
 - Improve rendering of logos in the add new title dialog.

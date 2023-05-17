@@ -61,7 +61,7 @@ FOUNDATION_STATIC table_cell_t report_column_evaluate_expression(table_element_p
         string_hash(STRING_ARGS(expression_string)));
 
     report_expression_cache_value_t cvalue;
-    if (_report_expression_cache->select(key, cvalue))
+    if (_report_expression_cache->select(key, cvalue) && time_elapsed(cvalue.time) < 5 * 60.0)
     {
         if (cvalue.format == ec->format)
         {
@@ -365,7 +365,7 @@ void report_expression_columns_finalize()
 
 void report_expression_column_reset(report_t* report)
 {
-    _report_expression_cache->clear();
+    //_report_expression_cache->clear();
 }
 
 void report_expression_columns_save(report_t* report)
