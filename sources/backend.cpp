@@ -196,7 +196,7 @@ FOUNDATION_STATIC void backend_establish_connection()
     else
         _backend_module->url = string_clone(STRING_CONST("https://wallet.wiimag.com"));
 
-    const char* connect_status_query = string_format_static_const("%.*s/status", STRING_FORMAT(_backend_module->url));
+    const char* connect_status_query = string_format_static_const("%.*s/api/status", STRING_FORMAT(_backend_module->url));
     query_execute_async_json(connect_status_query, FORMAT_JSON_WITH_ERROR, [](const json_object_t& res)
     {
         if (!res.resolved())
