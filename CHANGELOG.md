@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.24.10] - 2023-05-19
+## [0.24.11] - 2023-05-19
 - Add `FETCH(...)` expression to fetch arbitrary data from the backend. (i.e. `COUNT(MAP(FETCH("exchange-symbol-list", "TO"), INDEX($1, 1)))`)
 - Add bulk extractor tooling to extract bulk data from EOD and save it to a JSON file.
 - Add support to build watch table for stock patterns. See `Pattern/Open Watch Context`.
@@ -11,6 +11,7 @@
 - Improve INDX display in the pattern and report views.
 - Improve rendering of logos in the add new title dialog.
 - Improve report expression column evaluation by running them asynchronously.
+- Update how downloading the latest version works. We now use the backend to get the latest version number and download the MSI package from the backend. You will need to download the next version from the web site https://wallet.wiimag.com
 
 ## [0.23.4] - 2023-05-10
 - Add expression file example `report_slope_down.expr` to report titles that are going down but for which you have a gain.

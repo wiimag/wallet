@@ -101,6 +101,7 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res,
         const char* package_platform = backend_platform_name_for_package();
 
         // We got a new version
+        string_const_t versiontag = e["version"].as_string();
         string_const_t url = e["package"][package_platform]["url"].as_string();
         if (url.length == 0)
             continue;
@@ -108,17 +109,17 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res,
         string_const_t description = e["description"].as_string();
 
         char download_url_buffer[1024];
-        string_t download_url = string_format(STRING_BUFFER(download_url_buffer), STRING_CONST("%.*s://%.*s/%.*s"), 
-            STRING_FORMAT(proto), STRING_FORMAT(host), STRING_FORMAT(url));
+        string_t download_url = string_format(STRING_BUFFER(download_url_buffer), STRING_CONST("%.*s://%.*s/releases/%.*s"), 
+            STRING_FORMAT(proto), STRING_FORMAT(host), STRING_FORMAT(versiontag));
         
         string_const_t titletr = tr(STRING_CONST("A new version is available"), true);
 
         char msg_buffer[1024];
         string_t msgtr = tr_format(STRING_BUFFER(msg_buffer), 
             "Currently you are using version {1}\n\n"
-            "{3}\n"
+            "{3}\n\n"
             "Do you want to download version {0} and install it?\n\n"
-            "This will close the application to launch the installer.\n\nSource: {2}", 
+            "This will close the application to launch the installer.", 
             versionstr, myversionstr, download_url, description);
 
         bool download_new_version = false;

@@ -2546,11 +2546,6 @@
 			fr = "Une nouvelle version est disponible"
 		}
 		{
-			hash = "59ce81420a405840"
-			en = "Currently you are using version {1}\n\nDo you want to download version {0} and install it?\n\nThis will close the application to launch the installer.\n\nSource: {2}"
-			fr = "Vous utilisez actuellement la version {1}\n\nVoulez-vous telecharger la version {0} et l'installer?\n\nCela fermera l'application pour lancer l'installateur.\n\nSource: {2}"
-		}
-		{
 			hash = "db8f25e36d3b07d5"
 			en = "\xee\x8b\xab Investments"
 			fr = "\xee\x8b\xab Investissements"
@@ -3292,8 +3287,8 @@
 		}
 		{
 			hash = "7365d92bfc007682"
-			en = "Currently you are using version {1}\n\n{3}\nDo you want to download version {0} and install it?\n\nThis will close the application to launch the installer.\n\nSource: {2}"
-			fr = "Vous utilisez actuellement la version {1}\n\n{3}\nVoulez-vous t\xc3\xa9l\xc3\xa9charger la version {0} et l'installer?\n\nCela fermera l'application pour lancer l'installateur.\n\nSource: {2}"
+			en = "Currently you are using version {1}\n\n{3}\n\nDo you want to download version {0} and install it?\n\nThis will close the application to launch the installer."
+			fr = "Vous utilisez actuellement la version {1}\n\n{3}\n\nVoulez-vous t\xc3\xa9l\xc3\xa9charger la version {0} et l'installer?\n\nCela fermera l'application pour lancer l'installateur."
 		}
 		{
 			hash = "35e2d342bf4be03f"
