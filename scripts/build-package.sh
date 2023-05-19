@@ -162,37 +162,7 @@ if [ ! -f "$MSI_OUTPUT_PATH" ]; then
   exit 1
 fi
 
-# Define ballet release path
-#BALLET_RELEASE_DIR_PATH="../ballet/public/releases/win32/"
-#BALLET_RELEASE_DIR_PATH=$(cygpath -w $(realpath $BALLET_RELEASE_DIR_PATH))
-
-# Publish files to the ballet repo
-publish_file "CHANGELOG.md" "../ballet/public/"
-publish_file "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}_portable.exe"
-#publish_file "$MSI_OUTPUT_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}.msi"  
-
 # Generate versions.json
-# {
-#    "name": "Wallet",
-#    "description": "Wallet",
-#    "versions": [
-#        {
-#            "version": "0.24.8",
-#            "date": "2023-05-17T14:52:00.000Z",
-#            "description": "Fix real-time refresh rate from 5 minutes to 1 minute.",
-#            "package": {
-#                "osx": {
-#                    "url": "wallet_release_latest_backend.zip"
-#                },
-#                "windows": {
-#                    "url": "wallet_release_latest_backend.msi"
-#                }
-#            }
-#        }
-#    ]
-#}
-
-# Define versions.json path
 VERSIONS_JSON_PATH="releases/versions.json"
 
 # Get last commit message
@@ -213,10 +183,43 @@ echo "        \"windows\": {" >> "$VERSIONS_JSON_PATH"
 echo "          \"url\": \"${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.msi\"" >> "$VERSIONS_JSON_PATH"
 echo "        }" >> "$VERSIONS_JSON_PATH"
 echo "      }" >> "$VERSIONS_JSON_PATH"
+echo "    }" >> "$VERSIONS_JSON_PATH"
 echo "  ]" >> "$VERSIONS_JSON_PATH"
 echo "}" >> "$VERSIONS_JSON_PATH"
 
+# Use gcloud to upload the file to the bucket wallet-releases-01
+echo "Uploading $MSI_OUTPUT_PATH to the releases bucket"
+echo
+MSI_BASENAME=$(basename "$MSI_OUTPUT_PATH")
+gsutil cp "$MSI_OUTPUT_PATH" "gs://wallet-releases-01/$MSI_BASENAME"
+if [ $? -ne 0 ]; then
+  echo "Failed to upload $MSI_OUTPUT_PATH to the releases bucket"
+  exit 1
+fi
+
+PROJECT_PORTABLE_EXE_PATH="releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}_portable.exe"
+publish_file "$PROJECT_EXE_PATH" "$PROJECT_PORTABLE_EXE_PATH"
+PROJECT_PORTABLE_EXE_BASENAME=$(basename "$PROJECT_PORTABLE_EXE_PATH")
+gsutil cp "$PROJECT_PORTABLE_EXE_PATH" "gs://wallet-releases-01/$PROJECT_PORTABLE_EXE_BASENAME"
+if [ $? -ne 0 ]; then
+  echo "Failed to upload $PROJECT_PORTABLE_EXE_PATH to the releases bucket"
+  exit 1
+fi
+
 publish_file "$VERSIONS_JSON_PATH" "../ballet/public/releases/versions.json"
+VERSIONS_JSON_BASENAME=$(basename "$VERSIONS_JSON_PATH")
+gsutil cp "$VERSIONS_JSON_PATH" "gs://wallet-releases-01/$VERSIONS_JSON_BASENAME"
+if [ $? -ne 0 ]; then
+  echo "Failed to upload $VERSIONS_JSON_PATH to the releases bucket"
+  exit 1
+fi
+
+publish_file "CHANGELOG.md" "../ballet/public/"
+gsutil cp "CHANGELOG.md" "gs://wallet-releases-01/CHANGELOG.md"
+if [ $? -ne 0 ]; then
+  echo "Failed to upload $VERSIONS_JSON_PATH to the releases bucket"
+  exit 1
+fi
 
 # Print the build zip path
 echo
