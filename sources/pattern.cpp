@@ -15,6 +15,7 @@
 #include "financials.h"
 #include "logo.h"
 #include "watches.h"
+#include "backend.h"
 
 #include <framework/app.h>
 #include <framework/jobs.h>
@@ -3166,11 +3167,13 @@ bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show
 {
     ImGui::BeginGroup();
 
+    string_const_t code = string_const(symbol, symbol_length);
+
     bool item_executed = false;
     if (show_all)
     {
         ImGui::AlignTextToFramePadding();
-        if (ImGui::Selectable(tr("Load Pattern"), false, ImGuiSelectableFlags_AllowItemOverlap))
+        if (ImGui::Selectable(tr(ICON_MD_INSIGHTS " Load Pattern"), false, ImGuiSelectableFlags_AllowItemOverlap))
         {
             item_executed = true;
         }
@@ -3213,6 +3216,14 @@ bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show
             }
         }
     }
+
+    ImGui::AlignTextToFramePadding();
+    if (ImGui::Selectable(tr(ICON_MD_PUBLIC " Open Wallet Page"), false, ImGuiSelectableFlags_AllowItemOverlap))
+        backend_open_url(STRING_CONST("/s/%.*s"), STRING_FORMAT(code));
+
+    ImGui::AlignTextToFramePadding();
+    if (ImGui::Selectable(tr(ICON_MD_PUBLIC " Open EOD Page"), false, ImGuiSelectableFlags_AllowItemOverlap))
+        backend_open_url(STRING_CONST("/eod/%.*s"), STRING_FORMAT(code));
 
     ImGui::AlignTextToFramePadding();
     if (ImGui::Selectable(tr(ICON_MD_WATCH " Open Watch Context"), false, ImGuiSelectableFlags_AllowItemOverlap))

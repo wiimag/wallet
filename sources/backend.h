@@ -26,3 +26,5 @@ bool backend_execute_news_search_query(const char* symbol, size_t symbol_length,
 void backend_check_new_version(bool use_notif = false);
 
 string_t backend_translate_text(const char* id, size_t id_length, const char* text, size_t text_length, const char* lang, size_t lang_length);
+
+bool backend_open_url(const char* url, size_t url_length, ...);

@@ -196,6 +196,7 @@ FOUNDATION_STATIC curl_slist* query_create_user_agent_header_list()
 FOUNDATION_STATIC curl_slist* query_create_common_header_list()
 {
     curl_slist* header_chunk = query_create_user_agent_header_list();
+    //header_chunk = curl_slist_append(header_chunk, "Accept: application/json");
     header_chunk = curl_slist_append(header_chunk, "Content-Type: application/json");
     return header_chunk;
 }

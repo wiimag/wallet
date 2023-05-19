@@ -2,8 +2,8 @@
 	images = []
 	strings = [
 		{
-			fr = "<racine>"
-			en = "<root>"
+			en = "English"
+			fr = "Fran\xc3\xa7ais"
 		}
 		{
 			hash = "315259d58df4971e"
@@ -1486,9 +1486,9 @@
 			fr = "Ouvrir le Site Web \xee\xa2\x9e"
 		}
 		{
-			hash = "500c22d8efcc00ed"
-			en = "Load Pattern"
-			fr = "Charger le Mod\xc3\xa8le"
+			hash = "9b680b4b72799fc5"
+			en = "\xef\x82\x92 Load Pattern"
+			fr = "\xef\x82\x92 Charger le Mod\xc3\xa8le"
 		}
 		{
 			hash = "cc51d3163285e8a6"
@@ -3874,6 +3874,16 @@
 			hash = "f310b49fee1b0c7"
 			en = " Total Gain %% (based on the initial funds)"
 			fr = " Gain total %% (bas\xc3\xa9 sur les fonds initiaux)"
+		}
+		{
+			hash = "62b44addc691680c"
+			en = "\xee\xa0\x8b Open Wallet Page"
+			fr = "\xee\xa0\x8b Acc\xc3\xa9der au titre en ligne"
+		}
+		{
+			hash = "c50fccc7176735d2"
+			en = "\xee\xa0\x8b Open EOD Page"
+			fr = "@TODO"
 		}
 	]
 }

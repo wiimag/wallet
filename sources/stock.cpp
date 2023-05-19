@@ -237,7 +237,7 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
             entry->current.volume = d.volume;
             entry->current.previous_close = d.previous_close;
 
-            log_infof(HASH_STOCK, STRING_CONST("Stock '%.*s' has new real time data (%.2lf)"), STRING_FORMAT(code), d.price);
+            log_debugf(HASH_STOCK, STRING_CONST("Stock '%.*s' has new real time data (%.2lf)"), STRING_FORMAT(code), d.price);
         }
         else
         {

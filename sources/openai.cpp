@@ -161,7 +161,7 @@ FOUNDATION_STATIC bool openai_execute_query(const char* query, config_handle_t d
 
 FOUNDATION_STATIC void openai_check_connectivity()
 {
-    query_execute_json(openai_build_url("models"), nullptr, [](const json_object_t& res)
+    query_execute_async_json(openai_build_url("models"), nullptr, [](const json_object_t& res)
     {
         _openai_module->connected = res.is_valid();
         if (_openai_module->connected)

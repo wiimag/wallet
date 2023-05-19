@@ -162,17 +162,61 @@ if [ ! -f "$MSI_OUTPUT_PATH" ]; then
   exit 1
 fi
 
-# Copy to ballet repo
-PROJECT_PACKAGE_NAME="${SHORT_NAME}_release_latest_backend"
-
 # Define ballet release path
-BALLET_RELEASE_DIR_PATH="../ballet/public/releases/win32/"
-BALLET_RELEASE_DIR_PATH=$(cygpath -w $(realpath $BALLET_RELEASE_DIR_PATH))
+#BALLET_RELEASE_DIR_PATH="../ballet/public/releases/win32/"
+#BALLET_RELEASE_DIR_PATH=$(cygpath -w $(realpath $BALLET_RELEASE_DIR_PATH))
 
 # Publish files to the ballet repo
 publish_file "CHANGELOG.md" "../ballet/public/"
-publish_file "$PROJECT_EXE_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}_portable.exe"
-publish_file "$MSI_OUTPUT_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}.msi"  
+publish_file "$PROJECT_EXE_PATH" "releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}_portable.exe"
+#publish_file "$MSI_OUTPUT_PATH" "$BALLET_RELEASE_DIR_PATH/${PROJECT_PACKAGE_NAME}.msi"  
+
+# Generate versions.json
+# {
+#    "name": "Wallet",
+#    "description": "Wallet",
+#    "versions": [
+#        {
+#            "version": "0.24.8",
+#            "date": "2023-05-17T14:52:00.000Z",
+#            "description": "Fix real-time refresh rate from 5 minutes to 1 minute.",
+#            "package": {
+#                "osx": {
+#                    "url": "wallet_release_latest_backend.zip"
+#                },
+#                "windows": {
+#                    "url": "wallet_release_latest_backend.msi"
+#                }
+#            }
+#        }
+#    ]
+#}
+
+# Define versions.json path
+VERSIONS_JSON_PATH="releases/versions.json"
+
+# Get last commit message
+LAST_COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+
+# Create versions.json if it does not exist
+echo "Creating versions.json file"
+echo "{" > "$VERSIONS_JSON_PATH"
+echo "  \"name\": \"$SHORT_NAME\"," >> "$VERSIONS_JSON_PATH"
+echo "  \"description\": \"${SHORT_NAME}_${TODAY}_${BRANCH_NAME}\"," >> "$VERSIONS_JSON_PATH"
+echo "  \"versions\": [" >> "$VERSIONS_JSON_PATH"
+echo "    {" >> "$VERSIONS_JSON_PATH"
+echo "      \"version\": \"$VERSION_MAJOR.$VERSION_MINOR.$VERSION_PATCH\"," >> "$VERSIONS_JSON_PATH"
+echo "      \"date\": \"$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")\"," >> "$VERSIONS_JSON_PATH"
+echo "      \"description\": \"$LAST_COMMIT_MESSAGE\"," >> "$VERSIONS_JSON_PATH"
+echo "      \"package\": {" >> "$VERSIONS_JSON_PATH"
+echo "        \"windows\": {" >> "$VERSIONS_JSON_PATH"
+echo "          \"url\": \"${SHORT_NAME}_${TODAY}_${BRANCH_NAME}.msi\"" >> "$VERSIONS_JSON_PATH"
+echo "        }" >> "$VERSIONS_JSON_PATH"
+echo "      }" >> "$VERSIONS_JSON_PATH"
+echo "  ]" >> "$VERSIONS_JSON_PATH"
+echo "}" >> "$VERSIONS_JSON_PATH"
+
+publish_file "$VERSIONS_JSON_PATH" "../ballet/public/releases/versions.json"
 
 # Print the build zip path
 echo

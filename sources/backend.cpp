@@ -227,6 +227,26 @@ FOUNDATION_STATIC bool backend_open_web_site(const dispatcher_event_args_t& args
 // ## PUBLIC
 //
 
+bool backend_open_url(const char* url, size_t url_length, ...)
+{
+    // Remove leading slash
+    if (url_length > 0 && url[0] == '/')
+    {
+        ++url;
+        --url_length;
+    }
+
+    va_list args;
+    va_start(args, url_length);
+    string_t uri = string_vformat(SHARED_BUFFER(256), url, url_length, args);
+    va_end(args);
+
+    string_t urlstr = string_format(SHARED_BUFFER(2048), 
+        STRING_CONST("%.*s/%.*s"), STRING_FORMAT(_backend_module->url), STRING_FORMAT(uri));
+
+    return system_execute_command(STRING_ARGS(urlstr));
+}
+
 string_t backend_translate_text(const char* id, size_t id_length, const char* text, size_t text_length, const char* lang, size_t lang_length)
 {
     if (!backend_is_connected())
