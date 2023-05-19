@@ -206,7 +206,6 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-publish_file "$VERSIONS_JSON_PATH" "../ballet/public/releases/versions.json"
 VERSIONS_JSON_BASENAME=$(basename "$VERSIONS_JSON_PATH")
 gsutil cp "$VERSIONS_JSON_PATH" "gs://wallet-releases-01/$VERSIONS_JSON_BASENAME"
 if [ $? -ne 0 ]; then
