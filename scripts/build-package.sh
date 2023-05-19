@@ -197,7 +197,7 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-PROJECT_PORTABLE_EXE_PATH="releases/${SHORT_NAME}_${TODAY}_${BRANCH_NAME}_portable.exe"
+PROJECT_PORTABLE_EXE_PATH="releases/wallet_release_latest_backend_portable.exe"
 publish_file "$PROJECT_EXE_PATH" "$PROJECT_PORTABLE_EXE_PATH"
 PROJECT_PORTABLE_EXE_BASENAME=$(basename "$PROJECT_PORTABLE_EXE_PATH")
 gsutil cp "$PROJECT_PORTABLE_EXE_PATH" "gs://wallet-releases-01/$PROJECT_PORTABLE_EXE_BASENAME"
