@@ -29,7 +29,6 @@ struct wallet_history_t
     double broker_value{ 0 };
     double other_assets{ 0 };
 
-    bool show_edit_ui{ false };
     wallet_t* source{ nullptr };
 };
 

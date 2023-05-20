@@ -2086,41 +2086,6 @@ void report_menu(report_t* report)
     }
 }
 
-// TODO: Use app API to spawn dialog
-bool report_render_dialog_begin(string_const_t name, bool* show_ui, unsigned int flags /*= ImGuiWindowFlags_NoSavedSettings*/)
-{
-    if (show_ui == nullptr || *show_ui == false)
-        return false;
-    _last_show_ui_ptr = show_ui;
-
-    if (*show_ui && shortcut_executed(ImGuiKey_Escape))
-    {
-        *show_ui = false;
-    }
-
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f), ImGuiCond_Once, ImVec2(0.5f, 0.5f));
-    if (!ImGui::Begin(name.str, show_ui, ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_AlwaysUseWindowPadding | flags))
-    {
-        ImGui::End();
-        return false;
-    }
-
-    return true;
-}
-
-bool report_render_dialog_end(bool* show_ui /*= nullptr*/)
-{
-    if (show_ui == nullptr)
-        show_ui = _last_show_ui_ptr;
-    if (show_ui != nullptr && !ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
-        *show_ui = false;
-
-    ImGui::End();
-
-    return show_ui && *show_ui == false;
-}
-
 void report_open_create_dialog()
 {
     string_const_t title = tr(STRING_CONST("Create Report##1"), true);

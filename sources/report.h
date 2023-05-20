@@ -194,24 +194,6 @@ bool report_sync_titles(report_t* report, double timeout_seconds = 60.0);
 /*! Sort all loaded reports from their usage. */
 void report_sort_order();
 
-/*! Renders report dialog window.
- *
- * @param name      The name of the dialog.
- * @param show_ui   If not null, the dialog will be closed when the value is set to false.
- * @param flags     ImGui window flags.
- * 
- * @return          True if the dialog is still open, false otherwise.
- */
-bool report_render_dialog_begin(string_const_t name, bool* show_ui, unsigned int flags = /*ImGuiWindowFlags_NoSavedSettings*/1 << 8);
-
-/*! Ends the rendering of a report dialog window.
- *
- * @param show_ui   If not null, the dialog will be closed when the value is set to false.
- * 
- * @return          True if the dialog is still open, false otherwise.
- */
-bool report_render_dialog_end(bool* show_ui = nullptr);
-
 /*! Open the report transaction graph window.
  * 
  * @param report   The report to render the graph for. 
