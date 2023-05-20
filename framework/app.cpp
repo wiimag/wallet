@@ -357,8 +357,8 @@ void app_open_dialog(const char* title, const app_dialog_handler_t& handler, uin
 
 void app_register_menu(
     hash_t context, 
-    const char* path, size_t path_length, 
-    const char* shortcut, size_t shortcut_length,
+    STRING_PARAM(path),
+    STRING_PARAM(shortcut),
     app_menu_flags_t flags, 
     app_event_handler_t&& handler, void* user_data)
 {
@@ -370,8 +370,8 @@ void app_register_menu(
     menu.flags = flags;
     menu.user_data = user_data;
     menu.append_menu = test(flags, AppMenuFlags::Append);
-    string_t full_path = string_copy(STRING_BUFFER(menu.path), path, path_length);
-    string_t shortcutstr = string_copy(STRING_BUFFER(menu.shortcut), shortcut, shortcut_length);
+    string_t full_path = string_copy(STRING_BUFFER(menu.path), STRING_PARAM_ARGS(path));
+    string_t shortcutstr = string_copy(STRING_BUFFER(menu.shortcut), STRING_PARAM_ARGS(shortcut));
 
     menu.shortcut_key = app_string_to_shortcut_key_coord(STRING_ARGS(shortcutstr));
     if (menu.shortcut_key != 0)

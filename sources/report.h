@@ -165,11 +165,8 @@ report_handle_t report_find_no_case(const char* name, size_t name_length);
 /*! Returns true if the report handle is valid. */
 bool report_handle_is_valid(report_handle_t handle);
 
-/*! Render the report create dialog which ask the user to enter a name for the new report.
- *
- * @param show_ui   If not null, the dialog will be closed when the value is set to false.
- */
-void report_render_create_dialog(bool* show_ui);
+/*! Opens the report name input dialog in order to create a new report. */
+void report_open_create_dialog();
 
 /*! Initiate a report summary update (that is displayed in the summary panel)
  * 
@@ -179,7 +176,7 @@ void report_summary_update(report_t* report);
 
 /*! Initiate a report refreshing process.
  * 
- * @param report    The report to refresh.
+ * @param report   The report to refresh.
  * 
  * @return         True if the report is currently loading.
  */

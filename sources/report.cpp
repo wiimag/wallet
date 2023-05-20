@@ -1466,75 +1466,6 @@ FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_
     report_refresh(report);
 }
 
-FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title, string_const_t apply_label, string_const_t initial_value, string_const_t hint, bool* show_ui)
-{
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(6), IM_SCALEF(10)));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(IM_SCALEF(6), IM_SCALEF(10)));
-    if (!report_render_dialog_begin(title, show_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar))
-    {
-        ImGui::PopStyleVar(2);
-        return string_null();
-    }
-
-    bool applied = false;
-    bool can_apply = false;
-    static char input[64] = { '\0' };
-    size_t input_length = 0;
-
-    if (ImGui::IsWindowAppearing())
-    {
-        input_length = string_copy(STRING_BUFFER(input), STRING_ARGS(initial_value)).length;
-    }
-
-    const float available_space = ImGui::GetContentRegionAvail().x;
-
-    if (ImGui::BeginChild("##Content", ImVec2(IM_SCALEF(350.0f), IM_SCALEF(90.0f)), false))
-    {
-        if (ImGui::IsWindowAppearing())
-            ImGui::SetKeyboardFocusHere();
-
-        ImGui::ExpandNextItem();
-        if (ImGui::InputTextEx("##InputField", hint.str, STRING_BUFFER(input), ImVec2(0, 0),
-            ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
-        {
-            applied = true;
-        }
-
-        input_length = string_length(input);
-        if (input_length > 0)
-            can_apply = true;
-
-        static float apply_button_width = IM_SCALEF(90);
-        static float cancel_button_width = IM_SCALEF(90);
-        const float button_between_space = IM_SCALEF(4);
-
-        ImGui::MoveCursor(available_space - cancel_button_width - apply_button_width - button_between_space, IM_SCALEF(8));
-        if (ImGui::Button(tr("Cancel"), { IM_SCALEF(90), IM_SCALEF(24) }))
-        {
-            applied = false;
-            *show_ui = false;
-        }
-        cancel_button_width = ImGui::GetItemRectSize().x;
-
-        ImGui::SameLine();
-        ImGui::BeginDisabled(!can_apply);
-        if (ImGui::Button(apply_label.str, { IM_SCALEF(90), IM_SCALEF(24) }))
-            applied = true;
-        apply_button_width = ImGui::GetItemRectSize().x;
-        ImGui::EndDisabled();
-
-        if (can_apply && applied)
-            *show_ui = false;
-    } ImGui::EndChild();
-
-    ImGui::PopStyleVar(2);
-    report_render_dialog_end();
-    if (can_apply && applied)
-        return string_const(input, input_length);
-
-    return string_null();
-}
-
 FOUNDATION_STATIC void report_render_add_title_dialog(report_t* report)
 {
     ImGui::SetNextWindowSize(ImVec2(1200, 600), ImGuiCond_Once);
@@ -1729,11 +1660,6 @@ FOUNDATION_STATIC report_handle_t report_allocate(const char* name, size_t name_
     return report->id;
 }
 
-FOUNDATION_STATIC void report_render_windows()
-{
-    report_render_create_dialog(&SETTINGS.show_create_report_ui);
-}
-
 FOUNDATION_STATIC report_handle_t report_load(config_handle_t data)
 {
     string_const_t report_name = data["name"].as_string();
@@ -1838,7 +1764,7 @@ FOUNDATION_STATIC void report_open_export_dialog(report_t* report)
 FOUNDATION_STATIC void report_render_menus()
 {
     if (shortcut_executed(ImGuiKey_F2))
-        SETTINGS.show_create_report_ui = true;
+        report_open_create_dialog();
 
     if (!ImGui::BeginMenuBar())
         return;
@@ -1847,8 +1773,8 @@ FOUNDATION_STATIC void report_render_menus()
     {
         if (ImGui::BeginMenu(tr("Create")))
         {
-            if (ImGui::MenuItem(tr("Report"), "F2", &SETTINGS.show_create_report_ui))
-                SETTINGS.show_create_report_ui = true;
+            if (ImGui::MenuItem(tr("Report"), "F2"))
+                report_open_create_dialog();
             ImGui::EndMenu();
         }
 
@@ -2216,13 +2142,21 @@ bool report_render_dialog_end(bool* show_ui /*= nullptr*/)
     return show_ui && *show_ui == false;
 }
 
-void report_render_create_dialog(bool* show_ui)
+void report_open_create_dialog()
 {
-    FOUNDATION_ASSERT(show_ui);
-
-    string_const_t name = report_render_input_dialog(RTEXT("Create Report##1"), RTEXT("Create"), CTEXT(""), RTEXT("Name"), show_ui);
-    if (!string_is_null(name))
-        report_create(STRING_ARGS(name));
+    string_const_t title = tr(STRING_CONST("Create Report##1"), true);
+    string_const_t hint = tr(STRING_CONST("Name"), true);
+    string_const_t apply_button = tr(STRING_CONST("Create"), true);
+    app_open_input_dialog(
+        STRING_ARGS(title), 
+        STRING_ARGS(apply_button), 
+        STRING_CONST(""),
+        STRING_ARGS(hint), 
+    [](string_const_t name, bool canceled)
+    {
+        if (!canceled && !string_is_null(name))
+            report_create(STRING_ARGS(name));
+    });
 }
 
 report_handle_t report_load(string_const_t report_file_path)
@@ -2571,7 +2505,6 @@ FOUNDATION_STATIC void report_initialize()
 
         module_register_tabs(HASH_REPORT, report_render_tabs);
         module_register_menu(HASH_REPORT, report_render_menus);
-        module_register_window(HASH_REPORT, report_render_windows);
     }
 
     report_expression_columns_initialize();

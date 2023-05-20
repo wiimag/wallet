@@ -15,14 +15,11 @@ struct settings_t
     // Preferences
     bool show_logo_banners{ true };
 
-    char preferred_currency[32] { '\0' };
     char search_terms[256]{ '\0' };
     char search_filter[256]{ '\0' };
 
     double good_dividends_ratio{ 0.04 };
-
-    // Dialog toggles
-    bool show_create_report_ui{ false };
+    char preferred_currency[32] { '\0' };
 };
 
 void settings_draw();

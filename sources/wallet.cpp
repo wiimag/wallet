@@ -164,9 +164,7 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
     {
         ImGui::SameLine();
         if (ImGui::Button(tr("Create New")))
-        {
-            SETTINGS.show_create_report_ui = true;
-        }
+            report_open_create_dialog();
     }
     ImGui::EndGroup();
 }

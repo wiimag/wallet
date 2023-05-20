@@ -145,17 +145,15 @@ void app_menu_end(GLFWwindow* window);
  *
  *  @param context       The context of the menu item.
  *  @param path          The path of the menu item.
- *  @param path_length   The length of the path.
  *  @param shortcut      The shortcut of the menu item.
- *  @param shortcut_length The length of the shortcut.
  *  @param flags         The flags of the menu item.
  *  @param handler       The handler to be called when the menu item is selected.
  *  @param user_data     The user data to be passed to the handler.
  */
 void app_register_menu(
     hash_t context, 
-    const char* path, size_t path_length,
-    const char* shortcut, size_t shortcut_length,
+    STRING_PARAM(path),
+    STRING_PARAM(shortcut),
     app_menu_flags_t flags, 
     app_event_handler_t&& handler, void* user_data = nullptr);
 
