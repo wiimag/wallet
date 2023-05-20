@@ -663,33 +663,29 @@ void report_open_buy_lot_dialog(report_t* report, title_t* title)
     }, IM_SCALEF(550), IM_SCALEF(120), true, nullptr, nullptr);
 }
 
-void report_render_sell_lot_dialog(report_t* report, title_t* title)
+void report_open_sell_lot_dialog(report_t* report, title_t* title)
 {
     string_const_t fmttr = tr(STRING_CONST(ICON_MD_SELL " Sell %.*s##7"), true);
     string_const_t title_popup_id = string_format_static(STRING_ARGS(fmttr), title->code_length, title->code);
-    if (!report_render_dialog_begin(title_popup_id, &title->show_sell_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
-        return;
 
-    static double quantity = 100.0f;
-    static double price = 0.0f;
-    static double price_scale = 1.0f;
-    static tm tm_date;
-    static bool reset_date = true;
-
-    if (ImGui::IsWindowAppearing() || math_real_is_nan(price))
+    app_open_dialog(title_popup_id.str, [report, title](void* user_data) -> bool
     {
-        quantity = title->average_quantity;
-        price = title->stock->current.adjusted_close;
-        price_scale = price / 10.0f;
-        reset_date = true;
+        static double quantity = 100.0f;
+        static double price = 0.0f;
+        static double price_scale = 1.0f;
+        static tm tm_date;
+        static bool reset_date = true;
 
-        ImGui::SetDateToday(&tm_date);
-    }
+        if (ImGui::IsWindowAppearing() || math_real_is_nan(price))
+        {
+            quantity = title->average_quantity;
+            price = title->stock->current.adjusted_close;
+            price_scale = price / 10.0f;
+            reset_date = true;
 
-    ImGui::MoveCursor(2, 10);
-    const ImVec2 content_size = ImVec2(IM_SCALEF(560.0f), IM_SCALEF(105.0f));
-    if (ImGui::BeginChild("##Content", content_size, false))
-    {
+            ImGui::SetDateToday(&tm_date);
+        }
+
         const float control_width = IM_SCALEF(165.0f);
         ImGui::Columns(3);
 
@@ -729,7 +725,8 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
 
         ImGui::MoveCursor(0, -5);
         if (ImGui::Button(tr("Cancel"), { IM_SCALEF(70.0f) , IM_SCALEF(24.0f) }))
-            title->show_sell_ui = false;
+            return false;
+
         ImGui::SameLine();
         ImGui::MoveCursor(0, -5);
         if (ImGui::Button(tr("Apply"), { IM_SCALEF(75.0f) , IM_SCALEF(24.0f) }))
@@ -742,12 +739,14 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title)
             config_set(new_order, STRING_CONST("sell"), true);
             config_set(new_order, STRING_CONST("qty"), quantity);
             config_set(new_order, STRING_CONST("price"), price);
-            title->show_sell_ui = false;
 
             title_refresh(title);
             report_trigger_update(report);
-        }
-    } ImGui::EndChild();
 
-    report_render_dialog_end();
+            return false;
+        }
+
+        return true;
+        
+    }, IM_SCALEF(560), IM_SCALEF(120), true, nullptr, nullptr);
 }

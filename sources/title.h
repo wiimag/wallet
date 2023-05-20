@@ -75,8 +75,6 @@ FOUNDATION_ALIGNED_STRUCT(title_t, 8)
     double_option_t ask_price{ DNAN };
     double_option_t today_exchange_rate{ 1.0 };
     mutable double_option_t average_days_held{ DNAN };
-
-    bool show_sell_ui{ false };
 };
 
 /*! Allocates a new title to be assigned to a report wallet.

@@ -498,7 +498,7 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
             report_open_buy_lot_dialog(report_get(report_handle), title);
 
         if (ImGui::MenuItem(tr("Sell")))
-            ((title_t*)title)->show_sell_ui = true;
+            report_open_sell_lot_dialog(report_get(report_handle), title);
 
         if (ImGui::MenuItem(tr("Details")))
             report_open_title_details_dialog(report_get(report_handle), title);
@@ -1146,7 +1146,7 @@ FOUNDATION_STATIC void report_title_open_sell_view(table_element_ptr_const_t ele
     if (title->average_quantity == 0)
         report_open_title_details_dialog(report, title);
     else
-        title->show_sell_ui = true;
+        report_open_sell_lot_dialog(report, title);
 }
 
 FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_handle, table_t* table)
@@ -1483,16 +1483,6 @@ FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_
     title_t* new_title = report_title_add(report, code);
     report_open_buy_lot_dialog(report, new_title);
     report_refresh(report);
-}
-
-FOUNDATION_STATIC void report_render_dialogs(report_t* report)
-{
-    for (int i = 0, end = array_size(report->titles); i != end; ++i)
-    {
-        title_t* title = report->titles[i];
-        if (title->show_sell_ui)
-            report_render_sell_lot_dialog(report, title);
-    }
 }
 
 FOUNDATION_STATIC bool report_initial_sync(report_t* report)
@@ -2251,8 +2241,6 @@ void report_render(report_t* report)
                 report_open_add_title_dialog(report);
         }
     }, summary_frame, IMGUI_SPLITTER_HORIZONTAL, 0, (space_left - IM_SCALEF(250.0f)) / space_left);
-    
-    report_render_dialogs(report);
 }
 
 void report_sort_order()
