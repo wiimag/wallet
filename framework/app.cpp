@@ -340,6 +340,8 @@ void app_open_dialog(const char* title, const app_dialog_handler_t& handler, uin
         if (string_equal(title, string_length(title), dlg->title, string_length(dlg->title)))
         {
             log_warnf(0, WARNING_UI, STRING_CONST("Dialog %s is already opened"), dlg->title);
+            if (close_handler)
+                close_handler(user_data);
             return;
         }
     }

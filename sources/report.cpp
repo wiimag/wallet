@@ -501,7 +501,7 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
             ((title_t*)title)->show_sell_ui = true;
 
         if (ImGui::MenuItem(tr("Details")))
-            ((title_t*)title)->show_details_ui = true;
+            report_open_title_details_dialog(report_get(report_handle), title);
 
         ImGui::Separator();
 
@@ -664,13 +664,11 @@ FOUNDATION_STATIC table_cell_t report_column_draw_title(table_element_ptr_t elem
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
                 if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
                 {
+                    report_t* report = (report_t*)column->table->user_data;
                     if (has_orders)
-                        title->show_details_ui = true;
-                    else if (column->table->user_data)
-                    {
-                        report_t* report = (report_t*)column->table->user_data;
+                        report_open_title_details_dialog(report, title);
+                    else
                         report_open_buy_lot_dialog(report, title);
-                    }
                 }
                 ImGui::PopStyleColor(1);
             }
@@ -709,13 +707,12 @@ FOUNDATION_STATIC table_cell_t report_column_draw_title(table_element_ptr_t elem
                 ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 0));
                 if (ImGui::SmallButton(ICON_MD_FORMAT_LIST_BULLETED))
                 {
+                    report_t* report = (report_t*)column->table->user_data;
+                    FOUNDATION_ASSERT(report);
                     if (has_orders)
-                        title->show_details_ui = true;
-                    else if (column->table->user_data)
-                    {
-                        report_t* report = (report_t*)column->table->user_data;
+                        report_open_title_details_dialog(report, title);
+                    else
                         report_open_buy_lot_dialog(report, title);
-                    }
                 }
                 ImGui::PopStyleColor(1);
             }
@@ -849,7 +846,8 @@ FOUNDATION_STATIC void report_title_open_details_view(table_element_ptr_const_t 
     title_t* title = *(title_t**)element;
     if (title == nullptr)
         return;
-    title->show_details_ui = true;
+    report_t* report = (report_t*)column->table->user_data;
+    report_open_title_details_dialog(report, title);
 }
 
 FOUNDATION_STATIC void report_title_day_change_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
@@ -1144,8 +1142,9 @@ FOUNDATION_STATIC void report_title_open_sell_view(table_element_ptr_const_t ele
     if (title == nullptr)
         return;
 
+    report_t* report = (report_t*)column->table->user_data;
     if (title->average_quantity == 0)
-        title->show_details_ui = true;
+        report_open_title_details_dialog(report, title);
     else
         title->show_sell_ui = true;
 }
@@ -1493,8 +1492,6 @@ FOUNDATION_STATIC void report_render_dialogs(report_t* report)
         title_t* title = report->titles[i];
         if (title->show_sell_ui)
             report_render_sell_lot_dialog(report, title);
-        else if (title->show_details_ui)
-            report_render_title_details(report, title);
     }
 }
 

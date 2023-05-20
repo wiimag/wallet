@@ -477,57 +477,68 @@ FOUNDATION_STATIC string_const_t report_title_order_window_id(const title_t* tit
         id, title->stock->current.close);
 }
 
-void report_render_title_details(report_t* report, title_t* title)
+struct report_title_details_dialog_t
 {
-    const bool title_is_sold = title_sold(title);
-    const bool show_ask_price = title->average_ask_price > 0 || (title->average_quantity == 0 && title->sell_total_quantity == 0);
+    table_t* table = nullptr;
+    report_title_order_t* orders = nullptr;
 
-    ImGui::SetNextWindowSize(ImVec2(show_ask_price || title_is_sold ? IM_SCALEF(950) : IM_SCALEF(550), IM_SCALEF(350)), ImGuiCond_FirstUseEver);
+    title_t* title = nullptr;
+    report_t* report = nullptr;
+
+    bool title_is_sold{ false };
+    bool show_ask_price{ false };
+};
+
+void report_title_details_dialog_close_handler(void* user_data)
+{
+    report_title_details_dialog_t* dlg = (report_title_details_dialog_t*)user_data;
+
+    array_deallocate(dlg->orders);
+    table_deallocate(dlg->table);
+
+    MEM_DELETE(dlg);
+}
+
+void report_open_title_details_dialog(report_t* report, title_t* title)
+{
+    report_title_details_dialog_t* dialog = MEM_NEW(HASH_REPORT, report_title_details_dialog_t);
+    dialog->title = title;
+    dialog->report = report;
+    dialog->title_is_sold = title_sold(title);
+    dialog->show_ask_price = title->average_ask_price > 0 || (title->average_quantity == 0 && title->sell_total_quantity == 0);
+
     string_const_t id = report_title_order_window_id(title);
-    if (!report_render_dialog_begin(id, &title->show_details_ui, ImGuiWindowFlags_NoCollapse))
-        return;
-
-    static table_t* table = nullptr;
-    static report_title_order_t* orders = nullptr;
-    if (ImGui::IsWindowAppearing())
+    app_open_dialog(id.str, [](void* user_data) -> bool
     {
-        if (orders)
-            array_deallocate(orders);
-
-        if (table)
-            table_deallocate(table);
-
-        table = report_create_title_details_table(title_is_sold, show_ask_price);
-
-        for (auto corder : title->data["orders"])
+        report_title_details_dialog_t* dlg = (report_title_details_dialog_t*)user_data;
+        if (ImGui::IsWindowAppearing())
         {
-            report_title_order_t o{ title, report, corder };
-            array_push_memcpy(orders, &o);
+            dlg->table = report_create_title_details_table(dlg->title_is_sold, dlg->show_ask_price);
+
+            for (auto corder : dlg->title->data["orders"])
+            {
+                report_title_order_t o{ dlg->title, dlg->report, corder };
+                array_push_memcpy(dlg->orders, &o);
+            }
+
+            array_sort(dlg->orders, ARRAY_GREATER_BY(data["date"].as_number()));
         }
 
-        array_sort(orders, ARRAY_GREATER_BY(data["date"].as_number()));
-    }
-
-    ImGui::PushStyleCompact();
-    table_render(table, orders, array_size(orders), sizeof(report_title_order_t), 0.0f, 0.0f);
-    foreach (order, orders)
-    {
-        if (order->deleted)
+        ImGui::PushStyleCompact();
+        table_render(dlg->table, dlg->orders, array_size(dlg->orders), sizeof(report_title_order_t), 0.0f, 0.0f);
+        foreach (order, dlg->orders)
         {
-            size_t index = order - &orders[0];
-            array_erase_memcpy_safe(orders, index);
+            if (order->deleted)
+            {
+                size_t index = order - &dlg->orders[0];
+                array_erase_memcpy_safe(dlg->orders, index);
+            }
         }
-    }
-    ImGui::PopStyleCompact();
+        ImGui::PopStyleCompact();
 
-    if (report_render_dialog_end())
-    {
-        array_deallocate(orders);
-        orders = nullptr;
-
-        table_deallocate(table);
-        table = nullptr;
-    }
+        return true;
+    }, dialog->show_ask_price || dialog->title_is_sold ? IM_SCALEF(950) : IM_SCALEF(550), IM_SCALEF(350), true, 
+        dialog, report_title_details_dialog_close_handler);
 }
 
 void report_open_buy_lot_dialog(report_t* report, title_t* title)

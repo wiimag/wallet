@@ -237,7 +237,7 @@ void report_render_sell_lot_dialog(report_t* report, title_t* title);
  * @param report    The report to render the title details for.
  * @param title     The title to render the details for.
  */
-void report_render_title_details(report_t* report, title_t* title);
+void report_open_title_details_dialog(report_t* report, title_t* title);
 
 /*! Add a new title to a report.
  *
