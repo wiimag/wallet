@@ -74,7 +74,7 @@ struct app_menu_t
 };
 
 static app_menu_t* _menus = nullptr;
-static app_dialog_t* _dialogs = nullptr;
+static app_dialog_t** _dialogs = nullptr;
 
 //
 // # PRIVATE
@@ -84,11 +84,12 @@ FOUNDATION_STATIC void app_dialogs_shutdown()
 {
     for (unsigned i = 0, end = array_size(_dialogs); i < end; ++i)
     {
-        app_dialog_t& dlg = _dialogs[i];
-        if (dlg.close_handler)
-            dlg.close_handler(dlg.user_data);
-        dlg.close_handler.~function();
-        dlg.handler.~function();
+        app_dialog_t* dlg = _dialogs[i];
+        if (dlg->close_handler)
+            dlg->close_handler(dlg->user_data);
+        dlg->close_handler.~function();
+        dlg->handler.~function();
+        MEM_DELETE(dlg);
     }
 
     array_deallocate(_dialogs);
@@ -279,27 +280,26 @@ FOUNDATION_STATIC void app_dialogs_render()
 {
     for (unsigned i = 0, end = array_size(_dialogs); i < end; ++i)
     {
-        app_dialog_t& dlg = _dialogs[i];
-        if (!dlg.window_opened_once)
+        app_dialog_t* dlg = _dialogs[i];
+        if (!dlg->window_opened_once)
         {
             const ImVec2 window_size = ImGui::GetWindowSize();
-            ImGui::SetNextWindowPos(ImVec2((window_size.x - dlg.width) / 2.0f, (window_size.y - dlg.height) / 2.0f), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSizeConstraints(ImVec2(dlg.width, dlg.height), ImVec2(INFINITY, INFINITY));
+            ImGui::SetNextWindowPos(ImVec2((window_size.x - dlg->width) / 2.0f, (window_size.y - dlg->height) / 2.0f), ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowSizeConstraints(ImVec2(dlg->width, dlg->height), ImVec2(INFINITY, INFINITY));
             ImGui::SetNextWindowFocus();
-            dlg.window_opened_once = true;
+            dlg->window_opened_once = true;
         }
 
-        if (ImGui::Begin(dlg.title, &dlg.opened, (ImGuiWindowFlags_NoCollapse) | (dlg.can_resize ? ImGuiWindowFlags_None : ImGuiWindowFlags_NoResize)))
+        if (ImGui::Begin(dlg->title, &dlg->opened, (ImGuiWindowFlags_NoCollapse) | (dlg->can_resize ? ImGuiWindowFlags_None : ImGuiWindowFlags_NoResize)))
         {
             if (ImGui::IsWindowFocused() && shortcut_executed(ImGuiKey_Escape))
-                dlg.opened = false;
+                dlg->opened = false;
 
-            if (!dlg.opened || !dlg.handler(dlg.user_data))
+            if (!dlg->opened || !dlg->handler(dlg->user_data))
             {
-                if (dlg.close_handler)
-                    dlg.close_handler(dlg.user_data);
-                dlg.handler.~function();
-                dlg.close_handler.~function();
+                if (dlg->close_handler)
+                    dlg->close_handler(dlg->user_data);
+                MEM_DELETE(dlg);
                 array_erase(_dialogs, i);
                 ImGui::End();
                 break;
@@ -336,23 +336,25 @@ void app_open_dialog(const char* title, const app_dialog_handler_t& handler, uin
 
     for (unsigned i = 0, end = array_size(_dialogs); i < end; ++i)
     {
-        app_dialog_t& dlg = _dialogs[i];
-        if (string_equal(title, string_length(title), dlg.title, string_length(dlg.title)))
+        app_dialog_t* dlg = _dialogs[i];
+        if (string_equal(title, string_length(title), dlg->title, string_length(dlg->title)))
         {
-            log_warnf(0, WARNING_UI, STRING_CONST("Dialog %s is already opened"), dlg.title);
+            log_warnf(0, WARNING_UI, STRING_CONST("Dialog %s is already opened"), dlg->title);
             return;
         }
     }
 
-    app_dialog_t dlg{};
-    dlg.can_resize = can_resize;
-    if (width) dlg.width = width;
-    if (height) dlg.height = height;
-    dlg.handler = handler;
-    dlg.close_handler = close_handler;
-    dlg.user_data = user_data;
-    string_copy(STRING_BUFFER(dlg.title), title, string_length(title));
-    array_push_memcpy(_dialogs, &dlg);
+    app_dialog_t* dlg = MEM_NEW(HASH_APP, app_dialog_t);
+    dlg->opened = true;
+    dlg->window_opened_once = false;
+    dlg->can_resize = can_resize;
+    if (width) dlg->width = width;
+    if (height) dlg->height = height;
+    dlg->handler = handler;
+    dlg->close_handler = close_handler;
+    dlg->user_data = user_data;
+    string_copy(STRING_BUFFER(dlg->title), title, string_length(title));
+    array_push(_dialogs, dlg);
 }
 
 void app_register_menu(

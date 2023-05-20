@@ -125,9 +125,9 @@ template<typename VoidHandler>
 FOUNDATION_FORCEINLINE void app_open_dialog(
     const char* title,
     uint32_t width, uint32_t height, bool can_resize, 
-    VoidHandler&& handler)
+    const VoidHandler& handler)
 {
-    app_open_dialog(title, [=](void* user_data)->bool
+    app_open_dialog(title, [handler](void* user_data)->bool
     {
         FOUNDATION_ASSERT(user_data == nullptr);
         handler();

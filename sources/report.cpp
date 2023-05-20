@@ -530,6 +530,20 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
     #endif
 }
 
+FOUNDATION_STATIC void report_open_add_title_dialog(report_t* report)
+{
+    ImGui::SetNextWindowSize(ImVec2(1200, 600), ImGuiCond_Once);
+
+    string_const_t fmttr = RTEXT("Add Title (%.*s)##5");
+    string_const_t popup_id = string_format_static(STRING_ARGS(fmttr), STRING_FORMAT(string_table_decode_const(report->name)));
+    app_open_dialog(popup_id.str, IM_SCALEF(800), IM_SCALEF(500), true, [report]()
+    {
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetKeyboardFocusHere();
+        symbols_render_search(L1(report_render_add_title_from_ui(report, _1)));
+    });
+}
+
 FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_handle, table_t* table, const table_column_t* column, int column_index)
 {
     string_const_t title = column->get_name();
@@ -548,7 +562,7 @@ FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_
         report_t* report = report_get(report_handle);
         FOUNDATION_ASSERT(report);
 
-        report->show_add_title_ui = true;
+        report_open_add_title_dialog(report);
     }
     ImGui::PopStyleColor();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
@@ -1230,7 +1244,7 @@ FOUNDATION_STATIC void report_table_context_menu(report_handle_t report_handle, 
     {
         report_t* report = report_get(report_handle);
         if (ImGui::MenuItem(tr(ICON_MD_ADD " Add title")))
-            report->show_add_title_ui = true;
+            report_open_add_title_dialog(report_get(report_handle));
 
         if (ImGui::MenuItem(tr(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns")))
             report_open_expression_columns_dialog(report_handle);
@@ -1250,10 +1264,9 @@ FOUNDATION_STATIC report_handle_t report_create(const char* name, size_t name_le
     report_t* report = report_get(report_handle);
     report->save = true;
     report->show_summary = true;
-    report->show_add_title_ui = true;
-
     log_infof(HASH_REPORT, STRING_CONST("Created report %.*s"), (int)name_length, name);
-
+    
+    report_open_add_title_dialog(report);
     return report_handle;
 }
 
@@ -1462,47 +1475,20 @@ FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_
 {
     title_t* new_title = report_title_add(report, code);
     new_title->show_buy_ui = true;
-    report->show_add_title_ui = false;
     report_refresh(report);
-}
-
-FOUNDATION_STATIC void report_render_add_title_dialog(report_t* report)
-{
-    ImGui::SetNextWindowSize(ImVec2(1200, 600), ImGuiCond_Once);
-
-    string_const_t fmttr = RTEXT("Add Title (%.*s)##5");
-    string_const_t popup_id = string_format_static(STRING_ARGS(fmttr), STRING_FORMAT(string_table_decode_const(report->name)));
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(6), IM_SCALEF(2)));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(IM_SCALEF(6), IM_SCALEF(4)));
-    if (report_render_dialog_begin(popup_id, &report->show_add_title_ui, ImGuiWindowFlags_None))
-    {
-        if (ImGui::IsWindowAppearing())
-            ImGui::SetKeyboardFocusHere();
-        symbols_render_search(L1(report_render_add_title_from_ui(report, _1)));
-
-        report_render_dialog_end();
-    }
-    ImGui::PopStyleVar(2);
 }
 
 FOUNDATION_STATIC void report_render_dialogs(report_t* report)
 {
-    if (report->show_add_title_ui)
+    for (int i = 0, end = array_size(report->titles); i != end; ++i)
     {
-        report_render_add_title_dialog(report);
-    }
-    else
-    {
-        for (int i = 0, end = array_size(report->titles); i != end; ++i)
-        {
-            title_t* title = report->titles[i];
-            if (title->show_buy_ui)
-                report_render_buy_lot_dialog(report, title);
-            else if (title->show_sell_ui)
-                report_render_sell_lot_dialog(report, title);
-            else if (title->show_details_ui)
-                report_render_title_details(report, title);
-        }
+        title_t* title = report->titles[i];
+        if (title->show_buy_ui)
+            report_render_buy_lot_dialog(report, title);
+        else if (title->show_sell_ui)
+            report_render_sell_lot_dialog(report, title);
+        else if (title->show_details_ui)
+            report_render_title_details(report, title);
     }
 }
 
@@ -2060,7 +2046,7 @@ void report_menu(report_t* report)
             ImGui::Separator();
 
             if (ImGui::MenuItem(tr(ICON_MD_ADD " Add Title")))
-                report->show_add_title_ui = true;
+                report_open_add_title_dialog(report);
 
             if (ImGui::MenuItem(tr(ICON_MD_DASHBOARD_CUSTOMIZE " Expression Columns")))
                 report_open_expression_columns_dialog(report_get_handle(report));
@@ -2259,7 +2245,7 @@ void report_render(report_t* report)
         else
         {
             if (ImGui::CenteredButton(tr("Add New Title"), { IM_SCALEF(180), IM_SCALEF(30) }))
-                report->show_add_title_ui = true;
+                report_open_add_title_dialog(report);
         }
     }, summary_frame, IMGUI_SPLITTER_HORIZONTAL, 0, (space_left - IM_SCALEF(250.0f)) / space_left);
     
