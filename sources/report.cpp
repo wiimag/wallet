@@ -250,6 +250,7 @@ FOUNDATION_STATIC void report_table_setup(report_handle_t report_handle, table_t
     table->context_menu = L3(report_table_context_menu(report_handle, _1, _2, _3));
     table->row_begin = report_table_row_begin;
     table->row_end = report_table_row_end;
+    table->user_data = report_get(report_handle);
 }
 
 FOUNDATION_STATIC bool report_column_show_alternate_data()
@@ -483,7 +484,7 @@ FOUNDATION_STATIC void report_column_price_alert_menu(const title_t* title)
 FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_handle, table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
 {
     #if BUILD_APPLICATION
-    const title_t* title = *(const title_t**)element;
+    title_t* title = *(title_t**)element;
 
     ImGui::MoveCursor(8.0f, 4.0f);
     ImGui::BeginGroup();
@@ -494,7 +495,7 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
         ImGui::EndDisabled();
 
         if (ImGui::MenuItem(tr("Buy")))
-            ((title_t*)title)->show_buy_ui = true;
+            report_open_buy_lot_dialog(report_get(report_handle), title);
 
         if (ImGui::MenuItem(tr("Sell")))
             ((title_t*)title)->show_sell_ui = true;
@@ -532,16 +533,16 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
 
 FOUNDATION_STATIC void report_open_add_title_dialog(report_t* report)
 {
-    ImGui::SetNextWindowSize(ImVec2(1200, 600), ImGuiCond_Once);
-
     string_const_t fmttr = RTEXT("Add Title (%.*s)##5");
-    string_const_t popup_id = string_format_static(STRING_ARGS(fmttr), STRING_FORMAT(string_table_decode_const(report->name)));
-    app_open_dialog(popup_id.str, IM_SCALEF(800), IM_SCALEF(500), true, [report]()
+    string_const_t report_name = string_table_decode_const(report->name);
+    string_const_t popup_id = string_format_static(STRING_ARGS(fmttr), STRING_FORMAT(report_name));
+    app_open_dialog(popup_id.str, [](void* user_data) -> bool
     {
+        report_t* report = (report_t*)user_data;
         if (ImGui::IsWindowAppearing())
             ImGui::SetKeyboardFocusHere();
-        symbols_render_search(L1(report_render_add_title_from_ui(report, _1)));
-    });
+        return !symbols_render_search(L1(report_render_add_title_from_ui(report, _1)));
+    }, IM_SCALEF(800), IM_SCALEF(500), true, report, nullptr);
 }
 
 FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_handle, table_t* table, const table_column_t* column, int column_index)
@@ -665,8 +666,11 @@ FOUNDATION_STATIC table_cell_t report_column_draw_title(table_element_ptr_t elem
                 {
                     if (has_orders)
                         title->show_details_ui = true;
-                    else
-                        title->show_buy_ui = true;
+                    else if (column->table->user_data)
+                    {
+                        report_t* report = (report_t*)column->table->user_data;
+                        report_open_buy_lot_dialog(report, title);
+                    }
                 }
                 ImGui::PopStyleColor(1);
             }
@@ -707,8 +711,11 @@ FOUNDATION_STATIC table_cell_t report_column_draw_title(table_element_ptr_t elem
                 {
                     if (has_orders)
                         title->show_details_ui = true;
-                    else
-                        title->show_buy_ui = true;
+                    else if (column->table->user_data)
+                    {
+                        report_t* report = (report_t*)column->table->user_data;
+                        report_open_buy_lot_dialog(report, title);
+                    }
                 }
                 ImGui::PopStyleColor(1);
             }
@@ -1127,7 +1134,8 @@ FOUNDATION_STATIC void report_title_open_buy_view(table_element_ptr_const_t elem
     if (title == nullptr)
         return;
 
-    title->show_buy_ui = true;
+    report_t* report = (report_t*)column->table->user_data;
+    report_open_buy_lot_dialog(report, title);
 }
 
 FOUNDATION_STATIC void report_title_open_sell_view(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
@@ -1474,7 +1482,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
 FOUNDATION_STATIC void report_render_add_title_from_ui(report_t* report, string_const_t code)
 {
     title_t* new_title = report_title_add(report, code);
-    new_title->show_buy_ui = true;
+    report_open_buy_lot_dialog(report, new_title);
     report_refresh(report);
 }
 
@@ -1483,9 +1491,7 @@ FOUNDATION_STATIC void report_render_dialogs(report_t* report)
     for (int i = 0, end = array_size(report->titles); i != end; ++i)
     {
         title_t* title = report->titles[i];
-        if (title->show_buy_ui)
-            report_render_buy_lot_dialog(report, title);
-        else if (title->show_sell_ui)
+        if (title->show_sell_ui)
             report_render_sell_lot_dialog(report, title);
         else if (title->show_details_ui)
             report_render_title_details(report, title);

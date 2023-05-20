@@ -39,6 +39,7 @@ struct market_report_t
     string_table_symbol_t market;
     symbol_t* symbols;
     table_t* table;
+    bool selected{ false };
 
     char search_filter[512];
 
@@ -198,7 +199,7 @@ FOUNDATION_STATIC void symbols_search(symbol_t*& symbols, string_const_t search_
         array_reserve(symbols, 1);
 
     int loading_symbols_id = ++_loading_symbols_id;
-    if (!eod_fetch_async("search", search_filter.str, FORMAT_JSON_CACHE, "limit", "50",
+    if (!eod_fetch_async("search", search_filter.str, FORMAT_JSON_CACHE, "limit", "5",
         [loading_symbols_id, &symbols, search_filter](const json_object_t& data)
         {
             symbols_read_search_results(loading_symbols_id, data, symbols, search_filter);
@@ -442,7 +443,13 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
         if (selector)
         {
             if (ImGui::MenuItem(tr("Select symbol")))
+            {
                 selector(code);
+
+                market_report_t* report = (market_report_t*)column->table->user_data;
+                FOUNDATION_ASSERT(report);
+                report->selected = true;
+            }
         }
         else if (pattern_contextual_menu(STRING_ARGS(code)))
         {
@@ -458,7 +465,13 @@ FOUNDATION_STATIC table_t* symbols_table_init(const char* name, function<void(st
         {
             const symbol_t* symbol = (const symbol_t*)element;
             if (symbol != nullptr)
+            {
                 selector(string_table_decode_const(symbol->code));
+
+                market_report_t* report = (market_report_t*)column->table->user_data;
+                FOUNDATION_ASSERT(report);
+                report->selected = true;
+            }
         };
     }
 
@@ -526,14 +539,21 @@ FOUNDATION_STATIC market_report_t* symbols_get_or_create_market(const char* mark
     market_report_t* market_report = &_markets[array_size(_markets) - 1];
     market_report->search_filter[0] = 0;
     market_report->market = market_symbol;
+    market_report->selected = false;
     return market_report;
 }
 
-FOUNDATION_STATIC void symbols_render_search(string_const_t search_filter, const function<void(string_const_t)>& selector = nullptr)
+FOUNDATION_STATIC bool symbols_render_search(string_const_t search_filter, const function<void(string_const_t)>& selector = nullptr)
 {
     market_report_t* market_report = symbols_get_or_create_market(STRING_CONST("search"));
     if (market_report == nullptr)
-        return;
+        return false;
+
+    if (ImGui::IsWindowAppearing())
+    {
+        market_report->selected = false;
+        symbols_market_deallocate(market_report);
+    }
 
     hash_t search_hash = string_hash(STRING_ARGS(search_filter));
     if (selector)
@@ -553,7 +573,10 @@ FOUNDATION_STATIC void symbols_render_search(string_const_t search_filter, const
         }
 
         if (market_report->symbols && market_report->table == nullptr)
+        {
             market_report->table = symbols_table_init("Search", selector);
+            market_report->table->user_data = market_report;
+        }
 
         market_report->hash = search_hash;
     }
@@ -568,6 +591,8 @@ FOUNDATION_STATIC void symbols_render_search(string_const_t search_filter, const
     {
         ImGui::TextWrapped(tr("No search results for %.*s\nYou can still add the search term as a title by pressing Add."), STRING_FORMAT(search_filter));
     }
+
+    return market_report->selected;
 }
 
 //
@@ -585,7 +610,10 @@ void symbols_render(const char* market, bool filter_null_isin /*= true*/)
         symbols_fetch(market_report->symbols, market, filter_null_isin);
 
         if (market_report->symbols && market_report->table == nullptr)
+        {
             market_report->table = symbols_table_init(market);
+            market_report->table->user_data = market_report;
+        }
     }
 
     size_t symbol_count = array_size(market_report->symbols);
@@ -602,7 +630,7 @@ void symbols_render(const char* market, bool filter_null_isin /*= true*/)
     }
 }
 
-void symbols_render_search(const function<void(string_const_t)>& selector /*= nullptr*/)
+bool symbols_render_search(const function<void(string_const_t)>& selector /*= nullptr*/)
 {
     static float add_button_width = IM_SCALEF(70.0f);
     ImGui::Spacing();
@@ -614,14 +642,18 @@ void symbols_render_search(const function<void(string_const_t)>& selector /*= nu
     {
         ImGui::SameLine();
         if (ImGui::Button(tr("Add")))
+        {
             selector(search_filter);
+            return true;
+        }
         add_button_width = ImGui::GetItemRectSize().x + IM_SCALEF(8.0f);
     }
 
     if (SETTINGS.search_terms[0] != '\0')
-        symbols_render_search(search_filter, selector);
-    else
-        ImGui::TrTextUnformatted("No search query");
+        return symbols_render_search(search_filter, selector);
+    
+    ImGui::TrTextUnformatted("No search query");
+    return false;
 }
 
 FOUNDATION_STATIC bool symbols_fetch_market_symbols(const char* market, size_t market_length, string_t*& symbols)

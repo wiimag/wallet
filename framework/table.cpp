@@ -351,6 +351,7 @@ table_t* table_allocate(const char* name, table_flags_t flags /*= TABLE_DEFAULT_
     new_table->name = string_allocate_format(STRING_CONST("Table_%s_1"), name);
     new_table->sort = &table_default_sorter;
     new_table->flags |= flags;
+    new_table->user_data = nullptr;
     return new_table;
 }
 

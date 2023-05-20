@@ -450,6 +450,8 @@ struct table_t
     cell_callback_handler_t selected;
     table_row_handler_t row_begin;
     table_row_handler_t row_end;
+
+    void* user_data{ nullptr };
 };
 
 /*! Table sorting context */

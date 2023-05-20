@@ -9,6 +9,7 @@
 #include "stock.h"
 #include "wallet.h"
 
+#include <framework/app.h>
 #include <framework/imgui.h>
 #include <framework/table.h>
 #include <framework/math.h>
@@ -529,44 +530,40 @@ void report_render_title_details(report_t* report, title_t* title)
     }
 }
 
-void report_render_buy_lot_dialog(report_t* report, title_t* title)
+void report_open_buy_lot_dialog(report_t* report, title_t* title)
 {
     string_const_t fmttr = tr(STRING_CONST(ICON_MD_LOCAL_OFFER " Buy %.*s##13"), true);
     string_const_t title_buy_popup_id = string_format_static(STRING_ARGS(fmttr), title->code_length, title->code);
-    if (!report_render_dialog_begin(title_buy_popup_id, &title->show_buy_ui, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings))
-        return;
 
-    static double quantity = 100.0f;
-    static double price = 0.0f;
-    static double price_scale = 1.0f;
-    static double exchange_rate = 1.0;
-    static tm tm_date;
-    static bool reset_date = true;
-
-    string_t preferred_currency = report->wallet->preferred_currency;
-
-    if (ImGui::IsWindowAppearing() || math_real_is_nan(price))
+    app_open_dialog(title_buy_popup_id.str, [report, title](void* user_data)
     {
-        quantity = max(math_round(title->average_quantity * 0.1), 100);
-        price = title->stock->current.adjusted_close;
-        price_scale = price / 10.0f;
-        reset_date = true;
-        exchange_rate= DNAN;
+        static tm tm_date;
+        static double quantity = 100.0f;
+        static double price = 0.0f;
+        static double price_scale = 1.0f;
+        static double exchange_rate = 1.0;
+        static bool reset_date = true;
 
-        ImGui::SetDateToday(&tm_date);
-    }
+        string_t preferred_currency = report->wallet->preferred_currency;
 
-    if (math_real_is_nan(exchange_rate) && title->stock->has_resolve(FetchLevel::FUNDAMENTALS))
-    {
-        string_const_t stock_currency = SYMBOL_CONST(title->stock->currency);
-        exchange_rate = math_ifnan(stock_exchange_rate(STRING_ARGS(preferred_currency), STRING_ARGS(stock_currency)), 1.0);
-    }
+        if (ImGui::IsWindowAppearing() || math_real_is_nan(price))
+        {
+            quantity = max(math_round(title->average_quantity * 0.1), 100);
+            price = title->stock->current.adjusted_close;
+            price_scale = price / 10.0f;
+            reset_date = true;
+            exchange_rate= DNAN;
 
-    const ImVec2 content_size = ImVec2(IM_SCALEF(560.0f), IM_SCALEF(105.0f));
-    ImGui::MoveCursor(IM_SCALEF(2.0f), IM_SCALEF(10.0f));
-    if (ImGui::BeginChild("##Content", content_size, false))
-    {
-        const float control_width = (content_size.x - IM_SCALEF(40.0f)) / 3;
+            ImGui::SetDateToday(&tm_date);
+        }
+
+        if (math_real_is_nan(exchange_rate) && title->stock->has_resolve(FetchLevel::FUNDAMENTALS))
+        {
+            string_const_t stock_currency = SYMBOL_CONST(title->stock->currency);
+            exchange_rate = math_ifnan(stock_exchange_rate(STRING_ARGS(preferred_currency), STRING_ARGS(stock_currency)), 1.0);
+        }
+
+        const float control_width = (ImGui::GetContentRegionAvail().x - IM_SCALEF(40.0f)) / 3;
         ImGui::Columns(3);
 
         if (ImGui::IsWindowAppearing())
@@ -593,7 +590,8 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
 
         ImGui::NextColumn();
         ImGui::SetNextItemWidth(control_width);
-        ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, math_real_is_nan(price) ? "-" : (price < 0.5 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
+        ImGui::InputDouble("##Price", &price, price_scale, price_scale * 2.0f, 
+            math_real_is_nan(price) ? "-" : (price < 0.5 ? "%.3lf $" : "%.2lf $"), ImGuiInputTextFlags_None);
         if (price < 0)
             price = title->stock->current.adjusted_close;
 
@@ -630,7 +628,8 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
 
         ImGui::SameLine(ImGui::GetContentRegionAvail().x - IM_SCALEF(152.0f));
         if (ImGui::Button(tr("Cancel"), { IM_SCALEF(70.0f) , IM_SCALEF(24.0f) }))
-            title->show_buy_ui = false;
+            return false;
+
         ImGui::SameLine();
         if (ImGui::Button(tr("Apply"), { IM_SCALEF(75.0f), IM_SCALEF(24.0f) }))
         {
@@ -642,14 +641,15 @@ void report_render_buy_lot_dialog(report_t* report, title_t* title)
             config_set(new_order, STRING_CONST("buy"), true);
             config_set(new_order, STRING_CONST("qty"), quantity);
             config_set(new_order, STRING_CONST("price"), price);
-            title->show_buy_ui = false;
 
             title_refresh(title);
             report_trigger_update(report);
-        }
-    } ImGui::EndChild();
 
-    report_render_dialog_end(&title->show_buy_ui);
+            return false;
+        }
+
+        return true;
+    }, IM_SCALEF(550), IM_SCALEF(120), true, nullptr, nullptr);
 }
 
 void report_render_sell_lot_dialog(report_t* report, title_t* title)

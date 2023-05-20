@@ -223,7 +223,7 @@ void report_graph_show_transactions(report_t* report);
  * @param report    The report to render the buy lot dialog for.
  * @param title     The title to render the buy lot dialog for.
  */
-void report_render_buy_lot_dialog(report_t* report, title_t* title);
+void report_open_buy_lot_dialog(report_t* report, title_t* title);
 
 /*! Opens and renders the sell title lot dialog.
  *

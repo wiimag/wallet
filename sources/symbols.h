@@ -43,4 +43,4 @@ void symbols_render(const char* market, bool filter_null_isin = true);
 /// 
 /// </summary>
 /// <param name="selector"></param>
-void symbols_render_search(const function<void(string_const_t)>& selector = nullptr);
+bool symbols_render_search(const function<void(string_const_t)>& selector = nullptr);
