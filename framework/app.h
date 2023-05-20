@@ -164,3 +164,21 @@ void app_register_menu(
  *  @param window The window to render the menu items for.
  */
 void app_menu_help(GLFWwindow* window);
+
+/*! Opens and render an input dialog used to query the user for an input string.
+ *
+ *  This dialog is modal and mainly useful to get a quick user input. In example
+ *  to rename a document or to get the name of a new document.
+ *
+ *  @param title         The title of the dialog.
+ *  @param apply_label   The label of the apply button.
+ *  @param initial_value The initial value of the input field.
+ *  @param hint          The hint of the input field.
+ *  @param callback      The callback to be called when the dialog is closed.
+ */
+void app_open_input_dialog(
+    STRING_PARAM(title), 
+    STRING_PARAM(apply_label), 
+    STRING_PARAM(initial_value), 
+    STRING_PARAM(hint), 
+    const function<void(string_const_t value, bool canceled)>& callback);

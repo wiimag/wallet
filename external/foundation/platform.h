@@ -1100,6 +1100,10 @@ typedef volatile _Atomic(void*) atomicptr_t;
 #define STRING_BUFFER(s) (s), (sizeof((s))/sizeof((s[0])))
 #define STRING_LENGTH(s) (s), (string_length(s))
 #define STRING_ARGS_BUFFER(s, buf) (s).str, (s).length, (sizeof((buf))/sizeof((buf[0])))
+#define STRING_PARAM(name) const char* name, size_t name##_length
+#define STRING_PARAM_FORMAT(name) (int)name##_length, name
+#define STRING_PARAM_ARGS(name) name, name##_length
+#define STRING_PARAM_CONST(name) { name, name##_length }
 // =======================================
 // 
 // Misc

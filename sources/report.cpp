@@ -45,6 +45,7 @@
 
 #define E32(FN, P1, P2, P3) L2(FN(P1, P2, P3))
 
+constexpr string_const_t REPORTS_DIR_NAME = CTEXT("reports");
 static const ImU32 BACKGROUND_WATCH_COLOR = ImColor::HSV(120 / 360.0f, 0.30f, 0.61f);
 
 typedef enum report_column_formula_enum_t : unsigned int {
@@ -64,8 +65,6 @@ typedef enum report_column_formula_enum_t : unsigned int {
 
 static report_t* _reports = nullptr;
 static bool* _last_show_ui_ptr = nullptr;
-static string_const_t REPORTS_DIR_NAME = CTEXT("reports");
-
 // 
 // # PRIVATE
 //
@@ -1536,15 +1535,6 @@ FOUNDATION_STATIC string_const_t report_render_input_dialog(string_const_t title
     return string_null();
 }
 
-FOUNDATION_STATIC void report_render_rename_dialog(report_t* report)
-{
-    string_const_t current_name = string_table_decode_const(report->name);
-    string_const_t name = report_render_input_dialog(RTEXT("Rename##1"), RTEXT("Apply"), current_name, 
-        current_name, &report->show_rename_ui);
-    if (!string_is_null(name))
-        report_rename(report, name);
-}
-
 FOUNDATION_STATIC void report_render_add_title_dialog(report_t* report)
 {
     ImGui::SetNextWindowSize(ImVec2(1200, 600), ImGuiCond_Once);
@@ -1569,10 +1559,6 @@ FOUNDATION_STATIC void report_render_dialogs(report_t* report)
     if (report->show_add_title_ui)
     {
         report_render_add_title_dialog(report);
-    }
-    else if (report->show_rename_ui)
-    {
-        report_render_rename_dialog(report);
     }
     else
     {
@@ -1924,6 +1910,23 @@ FOUNDATION_STATIC void report_render_tabs()
     }
 }
 
+FOUNDATION_STATIC void report_open_rename_dialog(report_t* report)
+{
+    string_const_t title = tr(STRING_CONST("Rename##1"));
+    string_const_t apply_button = tr(STRING_CONST("Apply"));
+    string_const_t current_name = string_table_decode_const(report->name);
+    app_open_input_dialog(
+        STRING_ARGS(title), 
+        STRING_ARGS(apply_button), 
+        STRING_ARGS(current_name), 
+        STRING_ARGS(current_name), 
+    [report](string_const_t name, bool canceled)
+    {
+        if (!canceled && !string_is_null(name))
+            report_rename(report, name);
+    });
+}
+
 // 
 // # PUBLIC API
 //
@@ -2113,7 +2116,7 @@ void report_menu(report_t* report)
         ImGui::Separator();
 
         if (ImGui::TrMenuItem("Rename"))
-            report->show_rename_ui = true;
+            report_open_rename_dialog(report);
 
         if (ImGui::TrMenuItem("Delete"))
             report_delete(report);

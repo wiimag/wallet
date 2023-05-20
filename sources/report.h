@@ -75,7 +75,6 @@ struct report_t
     bool show_sold_title{ false };
     bool show_no_transaction_title{ false };
     bool show_add_title_ui{ false };
-    bool show_rename_ui{ false };
 
     report_expression_column_t* expression_columns{ nullptr };
 };

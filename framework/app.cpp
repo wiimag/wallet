@@ -41,6 +41,19 @@ struct app_dialog_t
     void* user_data{ nullptr };
 };
 
+struct app_input_dialog_t
+{
+    string_t title;
+    string_t apply_label;
+    string_t initial_value;
+    string_t hint;
+
+    bool closed;
+    char input[1024];
+
+    function<void(string_const_t value, bool canceled)> callback;
+};
+
 struct app_menu_t
 {
     hash_t context;
@@ -296,6 +309,23 @@ FOUNDATION_STATIC void app_dialogs_render()
     }
 }
 
+FOUNDATION_STATIC void app_input_dialog_close_handler(void* user_data)
+{
+    FOUNDATION_ASSERT(user_data);
+    app_input_dialog_t* dlg = (app_input_dialog_t*)user_data;
+
+    if (dlg->callback && !dlg->closed)
+        dlg->callback(string_null(), true);
+
+    string_deallocate(dlg->title.str);
+    string_deallocate(dlg->apply_label.str);
+    string_deallocate(dlg->initial_value.str);
+    string_deallocate(dlg->hint.str);
+
+    dlg->callback.~function();
+    memory_deallocate(dlg);
+}
+
 //
 // # PUPLIC API
 //
@@ -374,6 +404,80 @@ void app_menu_begin(GLFWwindow* window)
 void app_menu_end(GLFWwindow* window)
 {
     app_menu(true);
+}
+
+void app_open_input_dialog(
+    STRING_PARAM(title), 
+    STRING_PARAM(apply_label), 
+    STRING_PARAM(initial_value), 
+    STRING_PARAM(hint), 
+    const function<void(string_const_t value, bool canceled)>& callback)
+{
+    FOUNDATION_ASSERT(callback);
+
+    app_input_dialog_t* dlg = memory_allocate<app_input_dialog_t>(HASH_APP);
+    dlg->closed = false;
+    dlg->callback = callback;
+    dlg->title = string_clone(STRING_PARAM_ARGS(title));
+    dlg->apply_label = string_clone(STRING_PARAM_ARGS(apply_label));
+    dlg->initial_value = string_clone(STRING_PARAM_ARGS(initial_value));
+    dlg->hint = string_clone(STRING_PARAM_ARGS(hint));
+    string_copy(STRING_BUFFER(dlg->input), STRING_ARGS(dlg->initial_value));
+
+    app_open_dialog(dlg->title.str, [](void* user_data) -> bool
+    {
+        FOUNDATION_ASSERT(user_data);
+        app_input_dialog_t& dlg = *(app_input_dialog_t*)user_data;
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(6), IM_SCALEF(10)));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(IM_SCALEF(6), IM_SCALEF(10)));
+
+        bool applied = false;
+        bool canceled = false;
+        bool can_apply = false;
+
+        if (ImGui::IsWindowAppearing())
+            ImGui::SetKeyboardFocusHere();
+
+        ImGui::ExpandNextItem();
+        if (ImGui::InputTextEx("##InputField", dlg.hint.str, STRING_BUFFER(dlg.input), 
+            ImVec2(0, 0), ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
+        {
+            applied  = true;
+        }
+
+        const size_t input_length = string_length(dlg.input);
+        if (input_length > 0)
+            can_apply = true;
+
+        static float apply_button_width = IM_SCALEF(90);
+        static float cancel_button_width = IM_SCALEF(90);
+        const float button_between_space = IM_SCALEF(8);
+
+        const float available_space = ImGui::GetContentRegionAvail().x;
+        ImGui::MoveCursor(available_space - cancel_button_width - apply_button_width - button_between_space, IM_SCALEF(8));
+        if (ImGui::Button(tr("Cancel"), { IM_SCALEF(90), IM_SCALEF(24) }))
+            canceled = true;
+        cancel_button_width = ImGui::GetItemRectSize().x;
+
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!can_apply);
+        if (ImGui::Button(dlg.apply_label.str, { IM_SCALEF(90), IM_SCALEF(24) }))
+            applied = true;
+        apply_button_width = ImGui::GetItemRectSize().x;
+        ImGui::EndDisabled();
+
+        ImGui::PopStyleVar(2);
+
+        if (can_apply && applied)
+        {
+            dlg.callback.invoke(string_to_const(dlg.input), false);
+            dlg.closed = true;
+        }
+
+        return !dlg.closed && !canceled;
+
+    }, IM_SCALEF(300), IM_SCALEF(100), false, dlg, app_input_dialog_close_handler);
 }
 
 void app_menu_help(GLFWwindow* window)

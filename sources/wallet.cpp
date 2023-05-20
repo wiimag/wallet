@@ -396,7 +396,7 @@ FOUNDATION_STATIC table_t* wallet_history_create_table(report_t* report)
     return history_table;
 }
 
-FOUNDATION_STATIC void report_render_history_edit_dialog(report_t* report, wallet_history_t* h)
+FOUNDATION_STATIC void wallet_render_history_edit_dialog(report_t* report, wallet_history_t* h)
 {
     ImGui::SetNextWindowSize(ImVec2(IM_SCALEF(255), IM_SCALEF(240)), ImGuiCond_FirstUseEver);
     string_const_t fmttr = RTEXT("Edit History (%.*s)###EH20");
@@ -680,7 +680,7 @@ FOUNDATION_STATIC void wallet_history_draw_summary(report_handle_t report_id)
     {
         wallet_history_t* h = &report->wallet->history[i];
         if (h->show_edit_ui)
-            report_render_history_edit_dialog(report, h);
+            wallet_render_history_edit_dialog(report, h);
     }
 }
 
