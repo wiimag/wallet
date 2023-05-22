@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.24.12] - 2023-05-20
+## [0.24.13] - 2023-05-22
 - Add `FETCH(...)` expression to fetch arbitrary data from the backend. (i.e. `COUNT(MAP(FETCH("exchange-symbol-list", "TO"), INDEX($1, 1)))`)
 - Add bulk extractor tooling to extract bulk data from EOD and save it to a JSON file.
 - Add support to build watch table for stock patterns. See `Pattern/Open Watch Context`.
@@ -12,6 +12,7 @@
 - Improve rendering of logos in the add new title dialog.
 - Improve report dialogs such as the buy, sell, details dialogs, etc...
 - Improve report expression column evaluation by running them asynchronously.
+- Update alerts `Date Creation` to display how much time has passed since the alert was created instead of the date.
 - Update how downloading the latest version works. We now use the backend to get the latest version number and download the MSI package from the backend. You will need to download the next version from the web site https://wallet.wiimag.com
 
 ## [0.23.4] - 2023-05-10

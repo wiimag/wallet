@@ -323,7 +323,7 @@ FOUNDATION_STATIC void alerts_render_table(expr_evaluator_t*& evaluators)
             if (ImGui::TableNextColumn())
             {
                 char time_buffer[64];
-                string_t datestr = localization_string_from_time(STRING_BUFFER(time_buffer), time_to_tick(ev.creation_date));
+                string_t datestr = tr_format(STRING_BUFFER(time_buffer), "{0,since}", ev.creation_date);
                 ImGui::TextUnformatted(STRING_RANGE(datestr));
             }
 
