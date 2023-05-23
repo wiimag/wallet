@@ -20,9 +20,20 @@ struct table_column_t;
 /*! Table flags that can define how table are displayed and what behavior they have. */
 typedef enum : size_t {
     TABLE_DEFAULT_OPTIONS = 0,
+
+    /*! If this flag is set, the table will display a summary row at the bottom. */
     TABLE_SUMMARY = 1ULL << 32,
+
+    /*! If this flag is set, when a row is hovered, it will be highlighted. */
     TABLE_HIGHLIGHT_HOVERED_ROW = 1ULL << 33,
-    TABLE_LOCALIZATION_CONTENT = 1ULL << 34
+
+    /*! If this flag is set, the column header labels will be translated. */
+    TABLE_LOCALIZATION_CONTENT = 1ULL << 34,
+
+    /*! Add a new input row at the beginning of the table. 
+     *
+     *  The #fetch_value cell callback will be called with the column flag #COLUMN_ADD_NEW_ELEMENT */
+    TABLE_ADD_NEW_ROW = 1ULL << 35,
 } table_flag_t;
 typedef size_t table_flags_t;
 
@@ -119,6 +130,11 @@ typedef enum : unsigned int {
      */
     COLUMN_SORTING_ELEMENT = 1 << 29,
 
+    /*! This flags is dynamically set when calling #fetch_value to indicate that we are adding a new element.
+     *  This can be used to return a different value when adding a new element.
+     */
+    COLUMN_ADD_NEW_ELEMENT = 1 << 30,
+
     COLUMN_ALIGNMENT_MASK = COLUMN_LEFT_ALIGN | COLUMN_RIGHT_ALIGN | COLUMN_MIDDLE_ALIGN,
 } column_flag_t;
 typedef unsigned int column_flags_t;
@@ -165,6 +181,14 @@ typedef enum : unsigned int {
 } column_style_type_t;
 typedef unsigned int column_styles_t;
 
+typedef enum {
+
+    TABLE_CELL_EVENT_NONE = 0,
+    TABLE_CELL_EVENT_NEW_ELEMENT = 1,
+    TABLE_CELL_EVENT_DELETED_ELEMENT = 2,
+
+} table_cell_event_t;
+
 /*! Abstract table element pointer. */
 typedef void* table_element_ptr_t;
 
@@ -205,6 +229,9 @@ struct table_cell_t
 
     /*! Cell styling. */
     cell_style_t style{};
+
+    /*! Event flags */
+    table_cell_event_t event{ TABLE_CELL_EVENT_NONE };
 
     FOUNDATION_FORCEINLINE table_cell_t()
         : format(COLUMN_FORMAT_UNDEFINED)
@@ -263,6 +290,12 @@ struct table_cell_t
         : format(COLUMN_FORMAT_BOOLEAN)
         , number(b ? 1.0 : 0.0)
         , length(1)
+    {
+    }
+
+    FOUNDATION_FORCEINLINE table_cell_t(table_cell_event_t event_type)
+        : format(COLUMN_FORMAT_UNDEFINED)
+        , event(event_type)
     {
     }
 };
@@ -452,6 +485,7 @@ struct table_t
     table_row_handler_t row_end;
 
     void* user_data{ nullptr };
+    void* new_row_data{ nullptr };
 };
 
 /*! Table sorting context */

@@ -438,7 +438,7 @@ FOUNDATION_STATIC table_cell_t report_column_get_value(table_element_ptr_t eleme
 FOUNDATION_STATIC void report_column_price_alert_menu(const title_t* title)
 {
     const double current_price = title_current_price(title);
-    if (!math_real_is_finite(current_price) || !ImGui::TrBeginMenu("Price Alerts"))
+    if (!math_real_is_finite(current_price) || !ImGui::TrBeginMenu(ICON_MD_NOTIFICATIONS " Price Alerts"))
         return;
 
     ImGui::MoveCursor(8.0f, 4.0f);
@@ -490,18 +490,21 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
     ImGui::BeginGroup();
     {
         ImGui::BeginDisabled(true);
-        ImGui::MenuItem(title->code);
+        ImGui::MenuItem(stock_get_name(title->stock).str);
         ImGui::Separator();
         ImGui::EndDisabled();
 
-        if (ImGui::MenuItem(tr("Buy")))
+        if (ImGui::MenuItem(tr(ICON_MD_SHOPPING_CART " Buy")))
             report_open_buy_lot_dialog(report_get(report_handle), title);
 
-        if (ImGui::MenuItem(tr("Sell")))
+        if (ImGui::MenuItem(tr(ICON_MD_SELL " Sell")))
             report_open_sell_lot_dialog(report_get(report_handle), title);
 
-        if (ImGui::MenuItem(tr("Details")))
+        if (ImGui::MenuItem(tr(ICON_MD_LIST_ALT " Details")))
             report_open_title_details_dialog(report_get(report_handle), title);
+
+        if (ImGui::MenuItem(tr(ICON_MD_ASSIGNMENT_RETURNED " Manage Dividends")))
+            report_open_dividends_dialog(report_get(report_handle), title);
 
         ImGui::Separator();
 
@@ -511,20 +514,20 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
 
         ImGui::Separator();
 
-        if (ImGui::TrMenuItem("Read News"))
+        if (ImGui::TrMenuItem(ICON_MD_NEWSPAPER " Read News"))
             news_open_window(title->code, title->code_length);
 
-        if (ImGui::TrMenuItem("Show Financials"))
+        if (ImGui::TrMenuItem(ICON_MD_ACCOUNT_BALANCE_WALLET " Show Financials"))
             financials_open_window(title->code, title->code_length);
 
         #if BUILD_DEVELOPMENT
-        if (ImGui::TrMenuItem("Browse Fundamentals"))
+        if (ImGui::TrMenuItem(ICON_MD_LOGO_DEV " Browse Fundamentals"))
             system_execute_command(eod_build_url("fundamentals", title->code, FORMAT_JSON).str);
         #endif
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem(tr("Remove")))
+        if (ImGui::MenuItem(tr(ICON_MD_AUTO_DELETE " Remove")))
             report_title_remove(report_handle, title);
     }
     ImGui::EndGroup();

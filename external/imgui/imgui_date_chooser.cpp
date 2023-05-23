@@ -168,7 +168,7 @@ namespace ImGui {
         float widthAdder = 0;
         const float widthRequiredByCalendar = 2.f * arrowLeftWidth + 2.f * arrowRightWidth + ImGui::CalcTextSize(monthNames[maxMonthWidthIndex]).x + ImGui::CalcTextSize("9999").x + 180.f + widthAdder;
         const float widthRequiredByTextBox = label_size.x + ImGui::CalcTextSize(currentText).x;// + style.FramePadding.x*2.0f;
-        const float w = widthRequiredByCalendar > widthRequiredByTextBox ? widthRequiredByCalendar : widthRequiredByTextBox;//ImGui::CalcItemWidth();
+        const float w = (widthRequiredByCalendar > widthRequiredByTextBox ? widthRequiredByCalendar : widthRequiredByTextBox);//ImGui::CalcItemWidth();
 
         const int height_in_items = 1 + 1 + 1 + 4;
         const int items_count = height_in_items;
@@ -177,16 +177,16 @@ namespace ImGui {
         bool value_changed = false;
 
         ImGui::SetNextWindowSize(ImVec2(w, w));
-        ImGui::SetNextWindowSizeConstraints(ImVec2(w, popup_height + 30), ImVec2(w, popup_height + 50));
+        ImGui::SetNextWindowSizeConstraints(ImVec2(w, popup_height + 30), ImVec2(w, popup_height + 70));
 
         if (!ImGui::BeginCombo(label, currentText, ImGuiComboFlags_None))
             return value_changed;
 
         if (g.IO.MouseClicked[1])
         {
-            // reset date when user right clicks the date chooser header whe the dialog is open
+            // reset date when user right clicks the date chooser header when the dialog is open
             d = GetCurrentDate();
-            // move d at the first day of the month: mandatory fo the algo I'll use below
+            // move d at the first day of the month: mandatory for the algo I'll use below
             d.tm_mday = 1;
             RecalculateDateDependentFields(d);  // now d.tm_wday is correct
         }
