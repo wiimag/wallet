@@ -25,8 +25,8 @@ struct report_expression_column_t
 
 struct report_expression_cache_value_t
 {
-    hash_t key;
-    tick_t time;
+    hash_t key{0};
+    tick_t time{0};
     column_format_t format;
 
     union {
@@ -44,6 +44,27 @@ FOUNDATION_FORCEINLINE hash_t hash(const report_expression_cache_value_t& value)
 static tick_t _report_expression_last_eval_ts = 0;
 static database<report_expression_cache_value_t>* _report_expression_cache;
 
+FOUNDATION_STATIC table_cell_t report_column_cache_value_to_cell(const report_expression_cache_value_t& cvalue, const report_expression_column_t* ec)
+{
+    if (cvalue.key == 0)
+        return nullptr;
+
+    if (cvalue.format == ec->format)
+    {
+        if (ec->format == COLUMN_FORMAT_DATE)
+            return cvalue.date;
+        if (ec->format == COLUMN_FORMAT_BOOLEAN)
+            return math_real_is_zero(cvalue.number) ? false : true;
+        if (ec->format == COLUMN_FORMAT_CURRENCY ||
+            ec->format == COLUMN_FORMAT_NUMBER ||
+            ec->format == COLUMN_FORMAT_PERCENTAGE)
+            return cvalue.number;
+        return SYMBOL_CONST(cvalue.symbol);
+    }
+
+    return nullptr;
+}
+
 FOUNDATION_STATIC table_cell_t report_column_evaluate_expression(table_element_ptr_t element, const table_column_t* column, 
                                                            report_handle_t report_handle, const report_expression_column_t* ec)
 {
@@ -60,20 +81,12 @@ FOUNDATION_STATIC table_cell_t report_column_evaluate_expression(table_element_p
         string_hash(STRING_ARGS(title_code)), 
         string_hash(STRING_ARGS(expression_string)));
 
-    report_expression_cache_value_t cvalue;
+    report_expression_cache_value_t cvalue{};
     if (_report_expression_cache->select(key, cvalue) && time_elapsed(cvalue.time) < 5 * 60.0)
     {
         if (cvalue.format == ec->format)
         {
-            if (ec->format == COLUMN_FORMAT_DATE)
-                return cvalue.date;
-            if (ec->format == COLUMN_FORMAT_BOOLEAN)
-                return math_real_is_zero(cvalue.number) ? false : true;
-            if (ec->format == COLUMN_FORMAT_CURRENCY || 
-                ec->format == COLUMN_FORMAT_NUMBER || 
-                ec->format == COLUMN_FORMAT_PERCENTAGE)
-                return cvalue.number;
-            return SYMBOL_CONST(cvalue.symbol);
+            return report_column_cache_value_to_cell(cvalue, ec);
         }
         else
         {
@@ -85,18 +98,18 @@ FOUNDATION_STATIC table_cell_t report_column_evaluate_expression(table_element_p
     // Check if we are ready to evaluate another expression right away?
     // We are doing this here so we do not block the UI thread for too long
     if (time_elapsed(_report_expression_last_eval_ts) < 0.050)
-        return nullptr;
+         return report_column_cache_value_to_cell(cvalue, ec);
 
     if (string_find_string(STRING_ARGS(expression_string), STRING_CONST("$TITLE"), 0) != STRING_NPOS)
     {
         if (!title_is_resolved(title))
-            return nullptr;
+            return report_column_cache_value_to_cell(cvalue, ec);
     }
 
     if (string_find_string(STRING_ARGS(expression_string), STRING_CONST("$REPORT"), 0) != STRING_NPOS)
     {
         if (report_is_loading(report))
-            return nullptr;
+            return report_column_cache_value_to_cell(cvalue, ec);
     }
 
     log_debugf(HASH_REPORT, STRING_CONST("Evaluating expression '%.*s' for title '%.*s' in report '%.*s'"),
@@ -365,6 +378,10 @@ void report_expression_columns_finalize()
 
 void report_expression_column_reset(report_t* report)
 {
+    for (auto e = _report_expression_cache->begin_exclusive_lock(); e != _report_expression_cache->end_exclusive_lock(); ++e)
+    {
+        e->time = 0;
+    }
     //_report_expression_cache->clear();
 }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## [0.25.1] - 2023-05-23
+
+- Add report dividend management window.
+
 ## [0.24.13] - 2023-05-22
 - Add `FETCH(...)` expression to fetch arbitrary data from the backend. (i.e. `COUNT(MAP(FETCH("exchange-symbol-list", "TO"), INDEX($1, 1)))`)
 - Add bulk extractor tooling to extract bulk data from EOD and save it to a JSON file.

@@ -36,6 +36,7 @@ static const ImU32 BACKGROUND_SOLD_COLOR = ImColor::HSV(226 / 360.0f, 0.45f, 0.5
 static const ImU32 BACKGROUND_INDX_COLOR = ImColor::HSV(220 / 360.0f, 0.20f, 0.51f);
 static const ImU32 BACKGROUND_LIGHT_TEXT_COLOR = ImColor::HSV(40 / 360.0f, 0.05f, 0.10f);
 static const ImU32 BACKGROUND_DARK_TEXT_COLOR = ImColor::HSV(40 / 360.0f, 0.05f, 1.0f);
+static const ImU32 BACKGROUND_NEW_ROW_COLOR = ImColor::HSV(227 / 360.0f, 0.20f, 0.71f);
 static const ImU32 BACKGROUND_HIGHLIGHT_COLOR = ImColor::HSV(227 / 360.0f, 0.20f, 0.51f);
 static const ImU32 BACKGROUND_GOOD_COLOR = ImColor::HSV(100 / 360.0f, 0.99f, 0.70f); // hsv(99, 91%, 69%)
 static const ImU32 BACKGROUND_WARN_COLOR = ImColor::HSV(13 / 360.0f, 0.89f, 0.51f); // hsv(13, 89%, 51%)

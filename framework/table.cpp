@@ -359,6 +359,7 @@ void table_deallocate(table_t* table)
 {
     if (table)
     {
+        memory_deallocate(table->new_row_data);
         string_deallocate(table->name.str);
         array_deallocate(table->rows);
         table->~table_t();
@@ -712,6 +713,69 @@ FOUNDATION_FORCEINLINE bool table_column_is_number_value_trimmed(const table_col
    return false;
 }
 
+FOUNDATION_STATIC bool table_render_add_new_row_element(table_t* table, int column_count)
+{
+    const auto font_height = table_default_row_height();
+
+    if (table->new_row_data == nullptr && table->element_size > 0)
+        table->new_row_data = memory_allocate(0, table->element_size, 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
+
+    table_element_ptr_t element = table->new_row_data;
+
+    ImGui::TableNextRow(0, table->row_fixed_height);
+
+    ImGuiTable* ct = ImGui::GetCurrentTable();
+    const size_t max_column_count = sizeof(table->columns) / sizeof(table->columns[0]);
+    for (int i = 0, column_index = 0; i < max_column_count; ++i)
+    {
+        table_column_t& column = table->columns[i];
+        if (column_index == column_count)
+            break;
+        else if (!column.used)
+            continue;
+
+        column_index++;
+        if (!ImGui::TableNextColumn())
+            continue;
+
+        if (!column.fetch_value)
+            continue;
+
+        char cell_id_buf[64];
+        string_t cell_id = string_format(STRING_BUFFER(cell_id_buf), STRING_CONST("new_cell_%d"), column_index);
+        ImGui::PushID(cell_id.str, cell_id.str + cell_id.length);
+        ImGui::BeginGroup();
+
+        const ImRect cell_rect = ImGui::TableGetCellBgRect(ct, i);
+        const ImVec2 cell_min = ImVec2(cell_rect.Min.x, cell_rect.Min.y);
+        const ImVec2 cell_max = ImVec2(
+            cell_rect.Min.x + cell_rect.GetWidth(),
+            cell_rect.Min.y + cell_rect.GetHeight());
+        _table_last_cell_rect.Min = cell_min;
+        _table_last_cell_rect.Max = cell_max;
+
+        //ImDrawList* dl = ImGui::GetWindowDrawList();
+        //dl->AddRectFilled(cell_min, cell_max, BACKGROUND_NEW_ROW_COLOR, 0, 0);
+
+        column.flags |= COLUMN_ADD_NEW_ELEMENT | COLUMN_RENDER_ELEMENT;
+        table_cell_t cell = column.fetch_value(element, &column);
+        column.flags &= ~(COLUMN_ADD_NEW_ELEMENT | COLUMN_RENDER_ELEMENT);
+
+        ImGui::EndGroup();
+        ImGui::PopID();
+
+        if (cell.event == TABLE_CELL_EVENT_NEW_ELEMENT)
+            return true;
+    }
+
+    // Draw some new row separator. This is a bit hacky, but it works.
+    ImGui::TableNextRow(0, 1);
+    ImGui::Separator();
+    ImGui::TableNextRow(0, 1);
+
+    return false;
+}
+
 FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_index, int column_count)
 {
     const auto font_height = table_default_row_height();
@@ -895,10 +959,6 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             ImGui::EndPopup();
         }
 
-
-        if (*(uintptr_t**)element == nullptr)
-            break;
-
         #if ENABLE_ROW_HEIGHT_MIDDLE
         const float row_cursor_height = (ImGui::GetCursorPosY() - row_cursor_y) - 4.0f;
         max_cell_height = max(max(row_cursor_height, cell_max.y - cell_min.y), max_cell_height);
@@ -948,6 +1008,13 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
     //TIME_TRACKER(0.008, "Render table %.*s", STRING_FORMAT(table->name));
 
     ImGuiTable* imtable = ImGui::GetCurrentTable();
+
+    if (table->flags & TABLE_ADD_NEW_ROW)
+    {
+        const size_t element_count_before = table->element_count;
+        if (table_render_add_new_row_element(table, column_count))
+            return;
+    }
 
     ImGuiListClipper clipper;
     clipper.Begin(table->rows_visible_count, table->row_fixed_height);

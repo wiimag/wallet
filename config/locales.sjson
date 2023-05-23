@@ -3878,7 +3878,72 @@
 		{
 			hash = "c50fccc7176735d2"
 			en = "\xee\xa0\x8b Open EOD Page"
-			fr = "\xee\xa0\x8b Acc\xc3\xa9der à l'historique en ligne"
+			fr = "\xee\xa0\x8b Acc\xc3\xa9der \xc3\xa0 l'historique en ligne"
+		}
+		{
+			hash = "51d79e120fc31e4c"
+			en = "\xee\xa1\xa1 Manage Dividends"
+			fr = "\xee\xa1\xa1 G\xc3\xa9rer les dividendes"
+		}
+		{
+			hash = "8dc30639ef413d86"
+			en = "{1} Dividends - {0}"
+			fr = "{1} Dividendes - {0}"
+		}
+		{
+			hash = "703479a45c356a32"
+			en = "Amount"
+			fr = "Montant"
+		}
+		{
+			hash = "5ce10eb2301f2bac"
+			en = "Exchange Rate"
+			fr = "Taux de change"
+		}
+		{
+			hash = "3112850421168630"
+			en = "\xee\xa1\xb2||Delete"
+			fr = "\xee\xa1\xb2||Supprimer"
+		}
+		{
+			hash = "5a35d5daa44a4f2a"
+			en = "\xee\xa3\x8c Buy"
+			fr = "\xee\xa3\x8c Acheter"
+		}
+		{
+			hash = "6e4c1f1e09eaeed3"
+			en = "\xef\x81\x9b Sell"
+			fr = "\xef\x81\x9b Vendre"
+		}
+		{
+			hash = "4aecc393a2bc2480"
+			en = "\xee\x83\xae Details"
+			fr = "\xee\x83\xae D\xc3\xa9tails des transactions"
+		}
+		{
+			hash = "951384ba7ffda21"
+			en = "\xee\xa1\x90 Show Financials"
+			fr = "\xee\xa1\x90 Afficher les donn\xc3\xa9es financi\xc3\xa8res"
+		}
+		{
+			hash = "ed177b8e1efe078b"
+			en = "\xee\xab\x96 Browse Fundamentals"
+			fr = "\xee\xab\x96 Parcourir les donn\xc3\xa9es fondamentales"
+		}
+		{
+			hash = "d4e1de03ca6e9126"
+			en = "\xee\xa9\x8c Remove"
+			fr = "\xee\xa9\x8c Supprimer"
+		}
+		{
+			hash = "47d543c5e994ad45"
+			en = "\xee\x9f\xb4 Price Alerts"
+			fr = "@TODO"
+		}
+		{
+			hash = "893e6cef9784e511"
+			en = "{0,since}"
+			fr = "@TODO"
 		}
 	]
 }

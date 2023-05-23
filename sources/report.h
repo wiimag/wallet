@@ -221,6 +221,15 @@ void report_open_sell_lot_dialog(report_t* report, title_t* title);
  */
 void report_open_title_details_dialog(report_t* report, title_t* title);
 
+/*! Opens the report dividends manager.
+ *
+ *  The report dividends manager allow the user to add, edit and remove dividends batches.
+ *
+ *  @param report    The report to render the dividends manager for.
+ *  @param title     The title to render the dividends manager for.
+ */
+void report_open_dividends_dialog(report_t* report, title_t* title);
+
 /*! Add a new title to a report.
  *
  * @param report        The report to add the title to.
