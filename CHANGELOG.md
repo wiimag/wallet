@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.25.3] - 2023-05-24
+## [0.25.4] - 2023-05-24
 
 - Add report dividend management window.
 - Add support to download logos from the new https://wallet.wiimag/img/logo/SYMBOL endpoint.

@@ -95,7 +95,7 @@ FOUNDATION_STATIC const char* eod_ensure_key_loaded()
 
     string_const_t eod_key_file_path = session_get_user_file_path(STRING_CONST("eod.key"));
     if (!fs_is_file(STRING_ARGS(eod_key_file_path)))
-        return string_copy(STRING_BUFFER(EOD->KEY), STRING_CONST("demo")).str;
+        return string_copy(STRING_BUFFER(EOD->KEY), STRING_CONST("")).str;
     
     stream_t* key_stream = fs_open_file(STRING_ARGS(eod_key_file_path), STREAM_IN);
     if (key_stream == nullptr)
@@ -148,9 +148,12 @@ bool eod_save_key(string_t eod_key)
 {
     eod_key.length = string_length(eod_key.str);
 
+    if (eod_key.length == 0)
+        return false;
+
     // Force demo key if the key is empty
     if (eod_key.length == 0)
-        eod_key = string_copy(STRING_BUFFER(EOD->KEY), STRING_CONST("demo"));
+        eod_key = string_copy(STRING_BUFFER(EOD->KEY), STRING_CONST(""));
     else if (eod_key.str != EOD->KEY)
         string_copy(STRING_BUFFER(EOD->KEY), STRING_ARGS(eod_key));
         
@@ -194,7 +197,10 @@ string_const_t eod_build_url(const char* api, const char* ticker, query_format_t
         eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_ARGS(escaped_ticker));
     }
     eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("?api_token="));
-    eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, api_key, string_length(api_key));
+    if (string_length(api_key))
+        eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, api_key, string_length(api_key));
+    else
+        eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("invalid"));
 
     if (format == FORMAT_JSON || format == FORMAT_JSON_CACHE || format == FORMAT_JSON_WITH_ERROR)
         eod_url = string_append(STRING_ARGS(eod_url), EOD_URL_BUFFER.length, STRING_CONST("&fmt=json"));
@@ -287,7 +293,10 @@ const char* eod_build_url(const char* api, query_format_t format, const char* ur
             url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("&"));
 
         url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("api_token="));
-        url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), api_key, api_key_length);
+        if (api_key_length)
+            url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), api_key, api_key_length);
+        else
+            url = string_append(STRING_ARGS_BUFFER(url, URL_BUFFER), STRING_CONST("invalid"));
     }
     
     return url.str;
@@ -424,31 +433,36 @@ FOUNDATION_STATIC void eod_show_login_dialog()
     app_open_dialog("Enter EOD API KEY", [](void*)->bool
     {     
         // Explain that the EOD api needs to be set
-        ImGui::TextURL(tr("EOD API Key"), nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
         ImGui::TextWrapped(tr("EOD API Key is required to use this application."));
         ImGui::NewLine();
-        ImGui::TrTextWrapped("You can get an API key by registering at the link above. Please enter your API key below and press Continue");
+        ImGui::TrTextWrapped("You can get an API key by registering at the link below. Make sure to get a ***ALL-IN-ONE*** Package API key. Please enter your API key below and press Continue.");
+
+        ImGui::NewLine();
+        ImGui::TextURL(tr("Get your EOD API Key here"), nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
 
         ImGui::NewLine();
         string_t eod_key = eod_get_key();
         ImGui::ExpandNextItem();
-        if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length,
+        if (ImGui::InputTextWithHint("##EODKey", tr("Enter your EOD API key"), eod_key.str, eod_key.length,
             ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_Password))
         {
             eod_save_key(eod_key);
         }
 
+        ImGui::BeginDisabled(string_length(eod_key.str) == 0);
         static float continue_button_width = IM_SCALEF(100);
         ImGui::MoveCursor(ImGui::GetContentRegionAvail().x - continue_button_width, 0);
         if (ImGui::Button(tr("Continue"), {IM_SCALEF(100), IM_SCALEF(30)}))
         {
             eod_refresh();
+            ImGui::EndDisabled();
             return false;
         }
         continue_button_width = ImGui::GetItemRectSize().x;
+        ImGui::EndDisabled();
 
         return true;
-    }, IM_SCALEF(300), IM_SCALEF(250), false, nullptr, nullptr);
+    }, IM_SCALEF(330), IM_SCALEF(290), true, nullptr, nullptr);
 }
 
 FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
@@ -484,10 +498,9 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
     dispatch(eod_update_window_title);
 
     const bool is_demo_key = string_equal(STRING_LENGTH(EOD->KEY), STRING_CONST("demo"));
-    const bool is_wallet_key = string_equal(STRING_LENGTH(EOD->KEY), STRING_CONST("wallet"));
 
     // If we are still disconnected and no valid key is set, show the login dialog
-    if (!is_wallet_key && !EOD->PROMPT_EOD_API_KEY && (!EOD->CONNECTED || is_demo_key))
+    if (!EOD->PROMPT_EOD_API_KEY && (EOD->KEY[0] == 0 || !EOD->CONNECTED || is_demo_key))
         eod_show_login_dialog();
     #endif
 }
@@ -523,10 +536,11 @@ FOUNDATION_STATIC void eod_main_menu_status()
 
         ImGui::Separator();
         ImGui::TextURL("EOD API Key", nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
-        if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length,
-            ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_Password))
+        if (ImGui::InputTextWithHint("##EODKey", tr("Enter your EOD API key"), eod_key.str, eod_key.length,
+            ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_Password))
         {
             eod_save_key(eod_key);
+            eod_refresh();
         }
 
         ImGui::EndMenu();

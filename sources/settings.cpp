@@ -96,7 +96,7 @@ void settings_draw()
 
         ImGui::NextColumn();
         ImGui::ExpandNextItem();
-        if (ImGui::InputTextWithHint("##EODKey", "demo", eod_key.str, eod_key.length, ImGuiInputTextFlags_Password))
+        if (ImGui::InputTextWithHint("##EODKey", tr("Enter your EOD API key"), eod_key.str, eod_key.length, ImGuiInputTextFlags_Password))
             eod_save_key(eod_key);
         ImGui::NextColumn();
     }
