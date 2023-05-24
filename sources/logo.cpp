@@ -372,6 +372,7 @@ FOUNDATION_STATIC bool logo_download_image(logo_t* logo, logo_image_t* image)
             return (image->status = STATUS_ERROR_NOT_AVAILABLE);
         }
 
+        #if 0
         string_const_t url = string_table_decode_const(s->logo);
         if (url.length == 0)
         {
@@ -384,6 +385,10 @@ FOUNDATION_STATIC bool logo_download_image(logo_t* logo, logo_image_t* image)
 
         // Initiate the logo download
         const char* image_url = eod_build_image_url(STRING_ARGS(url));
+        #else
+        string_const_t symbol = string_table_decode_const(logo->symbol);
+        const char* image_url = string_format_static_const("http://localhost.wiimag.com/img/logo/%.*s?d=0", STRING_FORMAT(symbol));
+        #endif
         log_debugf(HASH_LOGO, STRING_CONST("Downloading logo %s"), image_url);
         download_stream = query_execute_download_file(image_url);
 
@@ -720,10 +725,10 @@ bool logo_render_icon(const char* symbol, size_t symbol_length, ImVec2& rendered
     const float h = math_floor(height * ratio);
     const float y = (rendered_size.y - h) * 0.5f;
 
-    const float yoffset = channels == 3 ? 0.0 : 2.0f;
-    const float hoffset = channels == 3 ? 0.0 : 4.0f;
+    const float yoffset = 0;//channels == 3 ? 0.0 : IM_SCALEF(1);
+    const float hoffset = 0;//channels == 3 ? 0.0 : IM_SCALEF(1);
 
-    dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min + ImVec2(x, y - yoffset), logo_rect.Min + ImVec2(x + w, y + h - hoffset));
+    dl->AddImage((ImTextureID)(intptr_t)texture.idx, logo_rect.Min + ImVec2(x, y + yoffset), logo_rect.Min + ImVec2(x + w, y + h + hoffset));
     dl->PopClipRect();
 
     if (fill_rect)

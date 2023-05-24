@@ -1835,6 +1835,40 @@ FOUNDATION_STATIC void report_open_rename_dialog(report_t* report)
     });
 }
 
+FOUNDATION_STATIC bool report_handle_shortcuts(report_t* report)
+{
+    if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+        return false;
+
+    if (shortcut_executed(ImGuiKey_F4))
+    {
+        report_toggle_show_summary(report);
+        return true;
+    }
+
+    if (shortcut_executed(true, ImGuiKey_S))
+    {
+        report_save(report);
+        return true;
+    }
+
+    if (shortcut_executed(ImGuiKey_S))
+    {
+        report->show_sold_title = !report->show_sold_title;
+        report_filter_out_titles(report);
+        return true;
+    }
+
+    if (shortcut_executed(ImGuiKey_N))
+    {
+        report->show_no_transaction_title = !report->show_no_transaction_title;
+        report_filter_out_titles(report);
+        return true;
+    }
+
+    return false;
+}
+
 // 
 // # PUBLIC API
 //
@@ -2008,10 +2042,7 @@ bool report_refresh(report_t* report)
 
 void report_menu(report_t* report)
 {
-    if (shortcut_executed(ImGuiKey_F4))
-        report_toggle_show_summary(report);
-    else if (shortcut_executed(true, ImGuiKey_S))
-        report_save(report);
+    report_handle_shortcuts(report);
 
     if (ImGui::BeginPopupContextItem())
     {
