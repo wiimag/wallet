@@ -3938,12 +3938,12 @@
 		{
 			hash = "47d543c5e994ad45"
 			en = "\xee\x9f\xb4 Price Alerts"
-			fr = "@TODO"
+			fr = "\xee\x9f\xb4 Alertes de prix"
 		}
 		{
 			hash = "893e6cef9784e511"
 			en = "{0,since}"
-			fr = "@TODO"
+			fr = "{0,since}"
 		}
 	]
 }
