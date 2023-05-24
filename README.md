@@ -3,6 +3,8 @@ Wallet App
 
 Manage your stock and finance
 
+If you are only interested in the application framework used to build the Wallet app, please visit <https://github.com/wiimag/framework>.
+
 ## Introduction
 
 Tired of losing money in the stock market like a forgetful gambler? Say hello to the Wallet app! It's not a tool for managing your bank account or credit card - that's what your banker is for (or your piggy bank if you're old school). Instead, it's a desktop app designed to help you manage your stocks and finance, minus the stress and confusion.
@@ -12,6 +14,12 @@ Created out of frustration with the lack of a user-friendly and cheap stock mana
 And the best part? You don't have to be an expert to use the Wallet app - it's perfect for beginners and inexperienced investors too! It's designed to help you keep track of your stocks and finances, learn how to invest wisely, and make better decisions without feeling like you need a degree in finance. So why not give it a try and start your journey to becoming a stock market pro?
 
 ![Wallet App](https://wallet.wiimag.com/manual/en/img/wallet.png)
+
+## [EODHD API Key Required](https://eodhistoricaldata.com/r/?ref=PF9TZC2T)
+
+The application uses exclusively the [EODHD](https://eodhistoricaldata.com/r/?ref=PF9TZC2T) data APIs. You can get your API key [here](https://eodhistoricaldata.com/r/?ref=PF9TZC2T). Currently the application only works with the __ALL-IN-ONE Package__. As of now I cannot guarantee that the application will work with the other packages. I strongly recommend that you get an API key with all the features. It will cost you around 80 US$ per month. But it is worth it. In most country you can deduct that cost from your taxes.
+
+Make sure you understand the [EODHD Terms and Conditions](https://eodhistoricaldata.com/financial-apis/terms-conditions/) before using the application.
 
 ## [Download](https://wallet.wiimag.com/releases/latest)
 
