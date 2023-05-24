@@ -1,6 +1,6 @@
 # These are supported funding model platforms
 
-github: [wiimag, jschmidt42]
+github: [jschmidt42]
 custom: ['https://wallet.wiimag.com', 'https://eodhistoricaldata.com/r/?ref=PF9TZC2T']
 
 #patreon: # Replace with a single Patreon username
