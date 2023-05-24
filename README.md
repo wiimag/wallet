@@ -5,6 +5,10 @@ Manage your stock and finance
 
 If you are only interested in the application framework used to build the Wallet app, please visit <https://github.com/wiimag/framework>.
 
+If you are interested in the Wallet app, please visit <https://wallet.wiimag.com>.
+
+If you find this application useful and want to support its developement, please consider making a [donation](https://www.paypal.com/donate/?business=9BP5HBC9GFYYA&amount=10&no_recurring=0&item_name=I+make+applications+for+the+love+of+programming.+You+can+support+me+to+continue+the+developement.+Thanks+for+your+support.+%F0%9F%9A%80&currency_code=CAD) or a [feature request](https://www.paypal.com/donate/?business=9BP5HBC9GFYYA&amount=200&no_recurring=0&item_name=Wallet+App+Feature+Request&currency_code=CAD).
+
 ## Introduction
 
 Tired of losing money in the stock market like a forgetful gambler? Say hello to the Wallet app! It's not a tool for managing your bank account or credit card - that's what your banker is for (or your piggy bank if you're old school). Instead, it's a desktop app designed to help you manage your stocks and finance, minus the stress and confusion.
