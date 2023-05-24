@@ -3945,5 +3945,10 @@
 			en = "{0,since}"
 			fr = "{0,since}"
 		}
+		{
+			hash = "14f04635523845d9"
+			en = "You can get an API key by registering at the link above. Please enter your API key below and press Continue"
+			fr = "Vous pouvez obtenir une cl\xc3\xa9 API en vous inscrivant au lien ci-dessus. Veuillez entrer votre cl\xc3\xa9 API ci-dessous et appuyez sur Continuer"
+		}
 	]
 }

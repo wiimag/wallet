@@ -1,7 +1,29 @@
-Wallet 300K
-===========
+Wallet App
+==========
 
 Manage your stock and finance
+
+## Introduction
+
+Tired of losing money in the stock market like a forgetful gambler? Say hello to the Wallet app! It's not a tool for managing your bank account or credit card - that's what your banker is for (or your piggy bank if you're old school). Instead, it's a desktop app designed to help you manage your stocks and finance, minus the stress and confusion.
+
+Created out of frustration with the lack of a user-friendly and cheap stock management tool, the Wallet app was born from the ashes of a Google Spreadsheet that was slower than a snail on a lazy day (I was abusing the `GOOGLEFINANCE` function!). It's portable, fast, and easy to use.
+
+And the best part? You don't have to be an expert to use the Wallet app - it's perfect for beginners and inexperienced investors too! It's designed to help you keep track of your stocks and finances, learn how to invest wisely, and make better decisions without feeling like you need a degree in finance. So why not give it a try and start your journey to becoming a stock market pro?
+
+![Wallet App](https://wallet.wiimag.com/manual/en/img/wallet.png)
+
+## [Download](https://wallet.wiimag.com/releases/latest)
+
+You can download the installation and portable packages at <https://wallet.wiimag.com>.
+
+## Getting Started
+
+* [English](https://wallet.wiimag.com/manual/en/)
+* [Français](https://wallet.wiimag.com/manual/fr/)
+* [Expressions](https://wallet.wiimag.com/manual/en/expressions.md)
+
+_Otherwise if you feel like it, you can also build the application from source. Instructions are below._
 
 ## Requirements
 
