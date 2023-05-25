@@ -36,7 +36,9 @@ static struct EOD_MODULE {
     char KEY[32] = { '\0' };
     char API_URL[128] = EOD_URL "/api/";
     
-    bool CONNECTED = true; // We assume that we are connected by default.
+    bool CONNECTING = true;
+    bool CONNECTED = false;
+    bool CONNECTION_VALID = true;
     
     char STATUS[128] = "Disconnected";
     char SUBSCRIPTION_TYPE[64] = "demo";
@@ -109,7 +111,7 @@ FOUNDATION_STATIC const char* eod_ensure_key_loaded()
 
 FOUNDATION_STATIC uint64_t eod_fix_invalid_cache_query_after_seconds(uint64_t& invalid_cache_query_after_seconds)
 {
-    if (!EOD->CONNECTED || eod_is_at_capacity())
+    if (!eod_connected() || eod_is_at_capacity())
         return UINT64_MAX;
 
     // No need to refresh information on the weekend as often since the stock market doesn't move at this time.
@@ -135,7 +137,7 @@ bool eod_availalble()
 
 bool eod_connected()
 {
-    return EOD->CONNECTED;
+    return EOD->CONNECTED || EOD->CONNECTING;
 }
 
 string_t eod_get_key()
@@ -326,7 +328,7 @@ bool eod_fetch(const char* api, const char* ticker, query_format_t format, const
 {
     string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
 
-    if (!EOD->CONNECTED && format != FORMAT_JSON_WITH_ERROR)
+    if (!eod_connected() && format != FORMAT_JSON_WITH_ERROR)
         log_warnf(HASH_EOD, WARNING_NETWORK, STRING_CONST("Query to %.*s might fail as we are not connected to EOD services."), STRING_FORMAT(url));
 
     return query_execute_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
@@ -379,7 +381,7 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
 {
     string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
 
-    if (!EOD->CONNECTED && format != FORMAT_JSON_WITH_ERROR)
+    if (!eod_connected() && format != FORMAT_JSON_WITH_ERROR)
         log_warnf(HASH_EOD, WARNING_NETWORK, STRING_CONST("Query to %.*s might fail as we are not connected to EOD services."), STRING_FORMAT(url));
 
     return query_execute_async_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
@@ -408,10 +410,21 @@ FOUNDATION_STATIC void eod_update_window_title()
     string_const_t version_string = string_from_version_static(version_make(VERSION_MAJOR, VERSION_MINOR, VERSION_PATCH, VERSION_BUILD, 0));
 
     char title[128] = PRODUCT_NAME;
-    if (license_name.length)
+    if (EOD->CONNECTING)
     {
-        string_format(STRING_BUFFER(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
-            app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
+        string_format(STRING_BUFFER(title), STRING_CONST("%s (Connecting...) v.%.*s"), app_title(), STRING_FORMAT(version_string));
+    }
+    else if (license_name.length)
+    {
+        if (EOD->CONNECTED)
+        {
+            string_format(STRING_BUFFER(title), STRING_CONST("%s (%.*s) [%.*s] v.%.*s"),
+                app_title(), STRING_FORMAT(license_name), STRING_FORMAT(branch_name), STRING_FORMAT(version_string));
+        }
+        else
+        {
+            string_format(STRING_BUFFER(title), STRING_CONST("%s v.%.*s"), app_title(), STRING_FORMAT(version_string));
+        }
     }
     else
     {
@@ -455,6 +468,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
         if (ImGui::Button(tr("Continue"), {IM_SCALEF(100), IM_SCALEF(30)}))
         {
             eod_refresh();
+            eod_update();
             ImGui::EndDisabled();
             return false;
         }
@@ -469,7 +483,9 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
 {
     const bool previous_connection_status = EOD->CONNECTED;
 
-    EOD->CONNECTED = json.error_code == 0 && json.status_code < 400;
+    EOD->CONNECTING = false;
+    EOD->CONNECTION_VALID = json["valid"].as_boolean(true);
+    EOD->CONNECTED = json.error_code == 0 && json.status_code < 400 && EOD->CONNECTION_VALID;
     EOD->API_CALLS = EOD->CONNECTED ? json["apiRequests"].as_number() : 0;
     EOD->API_LIMIT = EOD->CONNECTED ? json["dailyRateLimit"].as_number() : 1;
     EOD->CAPACITY = EOD->API_CALLS / EOD->API_LIMIT;
@@ -505,7 +521,7 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
     #endif
 }
 
-FOUNDATION_STATIC void eod_update()
+void eod_update()
 {    
     if (time_elapsed(EOD->UPDATE_TICK) > 60)
     {
@@ -541,6 +557,7 @@ FOUNDATION_STATIC void eod_main_menu_status()
         {
             eod_save_key(eod_key);
             eod_refresh();
+            eod_update();
         }
 
         ImGui::EndMenu();
@@ -565,10 +582,11 @@ FOUNDATION_STATIC void eod_main_menu_status()
         }
     }
 
+    const bool in_error = !EOD->CONNECTED || !EOD->CONNECTION_VALID || eod_is_at_capacity();
     const ImRect status_box(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
     const ImVec2 status_box_center = status_box.GetCenter() + ImVec2(IM_SCALEF(-2.0f), IM_SCALEF(2.0f));
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
-    draw_list->AddCircleFilled(status_box_center, status_box_size.x / 2.0f, EOD->CONNECTED ? (eod_is_at_capacity() ? red : green) : gray);
+    draw_list->AddCircleFilled(status_box_center, status_box_size.x / 2.0f, in_error ? red : (EOD->CONNECTED ? green : gray));
 
     ImGui::EndGroup();
 }

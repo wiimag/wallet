@@ -24,6 +24,9 @@ double eod_capacity();
 /*! Check if the EOD service is available and usable. (i.e. connected at not at capacity) */
 bool eod_availalble();
 
+/*! Force update the EOD connectivity state */
+void eod_update();
+
 /*! @brief Save the API EOD key.
  *  @param eod_key The key to save.
  *  @return Returns true if the key was saved.

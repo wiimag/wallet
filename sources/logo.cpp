@@ -387,7 +387,7 @@ FOUNDATION_STATIC bool logo_download_image(logo_t* logo, logo_image_t* image)
         const char* image_url = eod_build_image_url(STRING_ARGS(url));
         #else
         string_const_t symbol = string_table_decode_const(logo->symbol);
-        const char* image_url = string_format_static_const("http://localhost.wiimag.com/img/logo/%.*s?d=0", STRING_FORMAT(symbol));
+        const char* image_url = string_format_static_const("https://wallet.wiimag.com/img/logo/%.*s?d=0", STRING_FORMAT(symbol));
         #endif
         log_debugf(HASH_LOGO, STRING_CONST("Downloading logo %s"), image_url);
         download_stream = query_execute_download_file(image_url);
