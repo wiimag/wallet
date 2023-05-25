@@ -1,9 +1,10 @@
 # Changelog
 
-## [0.25.6] - 2023-05-25
+## [0.25.7] - 2023-05-25
 
 - Add report dividend management window.
 - Add support to download logos from the new https://wallet.wiimag/img/logo/SYMBOL endpoint.
+- Fix `MAP(...)` to set the default comparison index to the last index of the array.
 - Fix initial usage of the "demo" key when lauching the application for the first time.
 - Improve connectivity state reporting.
 

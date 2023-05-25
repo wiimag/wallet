@@ -214,8 +214,10 @@ FOUNDATION_STATIC string_const_t search_database_format_word(const char* word, s
     }
 
     static thread_local char word_lower_buffer[SEARCH_INDEX_WORD_MAX_LENGTH];
+    #if BUILD_DEVELOPMENT
     if (word_length >= ARRAY_COUNT(word_lower_buffer))
         log_warnf(0, WARNING_INVALID_VALUE, STRING_CONST("Word too long, truncating to %u characters: %.*s"), SEARCH_INDEX_WORD_MAX_LENGTH, (int)word_length, word);
+    #endif
 
     string_t word_lower = lower_case_word ? 
         string_to_lower_utf8(STRING_BUFFER(word_lower_buffer), word, word_length) :

@@ -1340,10 +1340,13 @@ bool stock_ignore_symbol(const char* symbol, size_t length, hash_t key)
     // Track invalid symbols to avoid spamming the API.
     stock_invalid_symbol_t invalid_symbol{ key };
     invalid_symbol.last_checked = time_now();
-    string_t s = string_copy(STRING_BUFFER(invalid_symbol.symbol), symbol, length);
 
+    #if BUILD_DEVELOPMENT
     // TODO: Add and log reason for ignoring symbol.
+    string_t s = string_copy(STRING_BUFFER(invalid_symbol.symbol), symbol, length);
     log_warnf(HASH_STOCK, WARNING_INVALID_VALUE, STRING_CONST("Ignoring symbol %.*s (%" PRIhash ")"), STRING_FORMAT(s), key);
+    #endif
+
     return _invalid_symbols->insert(invalid_symbol) != INVALID_KEY;
 }
 

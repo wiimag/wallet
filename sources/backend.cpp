@@ -215,7 +215,7 @@ FOUNDATION_STATIC void backend_establish_connection()
         bool use_notif = true;
         dispatcher_post_event(EVENT_CHECK_NEW_VERSIONS, &use_notif, sizeof(use_notif));
 
-        log_infof(HASH_BACKEND, STRING_CONST("Connected to backend"));
+        tr_info(HASH_BACKEND, "Connected to backend");
     });
 }
 

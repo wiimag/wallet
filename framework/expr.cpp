@@ -1122,6 +1122,8 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
         }
 
         expr_result_t r = expr_eval(&args->buf[1]);
+        if (r.is_set() && r.index == NO_INDEX)
+            r.index = r.element_count() - 1;
         array_push_memcpy(results, &r);
 
         // Restore global variables

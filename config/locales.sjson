@@ -3965,5 +3965,10 @@
 			en = "You can get an API key by registering at the link below. Make sure to get a ***ALL-IN-ONE*** Package API key. Please enter your API key below and press Continue."
 			fr = "Vous pouvez obtenir une cl\xc3\xa9 API en vous inscrivant au lien ci-dessous. Assurez-vous d'obtenir une cl\xc3\xa9 API ***ALL-IN-ONE*** Package. Veuillez entrer votre cl\xc3\xa9 API ci-dessous et appuyez sur Continuer."
 		}
+		{
+			hash = "7ab512c8e36535be"
+			en = "Connected to backend"
+			fr = "Connect\xc3\xa9 au backend"
+		}
 	]
 }
