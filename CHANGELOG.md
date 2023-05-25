@@ -1,12 +1,13 @@
 # Changelog
 
-## [0.25.7] - 2023-05-25
+## [0.25.8] - 2023-05-25
 
 - Add report dividend management window.
 - Add support to download logos from the new https://wallet.wiimag/img/logo/SYMBOL endpoint.
 - Fix `MAP(...)` to set the default comparison index to the last index of the array.
 - Fix initial usage of the "demo" key when lauching the application for the first time.
 - Improve connectivity state reporting.
+- Remove comments in console before evaluating the expression.
 
 ## [0.24.13] - 2023-05-22
 - Add `FETCH(...)` expression to fetch arbitrary data from the backend. (i.e. `COUNT(MAP(FETCH("exchange-symbol-list", "TO"), INDEX($1, 1)))`)

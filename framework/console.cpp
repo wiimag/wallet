@@ -398,16 +398,76 @@ FOUNDATION_STATIC void console_render_evaluator()
 
     if (evaluate)
     {
-        string_const_t expression_string = string_const(_console_module->expression_buffer, string_length(_console_module->expression_buffer));
-        if (!_console_module->saved_expressions.includes<string_const_t>(L2(string_equal_ignore_whitespace(STRING_ARGS(_1), STRING_ARGS(_2))), expression_string))
+        string_t expression_string = string_clone(_console_module->expression_buffer, string_length(_console_module->expression_buffer));
+        if (!_console_module->saved_expressions.includes<string_t>(L2(string_equal_ignore_whitespace(STRING_ARGS(_1), STRING_ARGS(_2))), expression_string))
             _console_module->saved_expressions.push(string_clone(STRING_ARGS(expression_string)));
 
-        session_set_string("console_expression", STRING_ARGS(expression_string));        
+        session_set_string("console_expression", STRING_ARGS(expression_string));
 
-        expr_result_t result = eval(expression_string);
+        // Remove all comments starting with # or // from the expression on each line
+        char* line_start = expression_string.str;
+        char* line_end = expression_string.str;
+        while (line_end)
+        {
+            size_t line_start_offset = line_start - expression_string.str;
+            size_t line_end_pos = string_find(STRING_ARGS(expression_string), '\n', line_start_offset);
+            if (line_end_pos != STRING_NPOS)
+            {
+                size_t comment_start_pos = string_find(STRING_ARGS(expression_string), '#', line_start_offset);
+                if (comment_start_pos == STRING_NPOS || comment_start_pos > line_start_offset)
+                    comment_start_pos = string_find_string(STRING_ARGS(expression_string), STRING_CONST("//"), line_start_offset);
+                if (comment_start_pos != STRING_NPOS && comment_start_pos < line_end_pos)
+                {
+                    memmove(expression_string.str + comment_start_pos, expression_string.str + line_end_pos, expression_string.length - line_end_pos);
+                    expression_string.length -= line_end_pos - comment_start_pos;
+                    line_end = expression_string.str + comment_start_pos;
+                }
+                else
+                {
+                    line_end = expression_string.str + line_end_pos;
+                }
+
+                line_start = line_end + 1;
+            }
+            else
+            {
+                line_end = 0;
+                expression_string.str[expression_string.length] = 0;
+            }
+        }
+
+        // Remove empty lines
+        line_start = expression_string.str;
+        line_end = expression_string.str;
+        while (line_end)
+        {
+            size_t line_start_offset = line_start - expression_string.str;
+            size_t line_end_pos = string_find(STRING_ARGS(expression_string), '\n', line_start_offset);
+            if (line_end_pos != STRING_NPOS)
+            {
+                if (line_end_pos == line_start_offset)
+                {
+                    memmove(expression_string.str + line_start_offset, expression_string.str + line_end_pos + 1, expression_string.length - line_end_pos);
+                    expression_string.length -= line_end_pos - line_start_offset + 1;
+                    line_end = expression_string.str + line_start_offset;
+                }
+                else
+                {
+                    line_end = expression_string.str + line_end_pos;
+                }
+                line_start = line_end + 1;
+            }
+            else
+            {
+                line_end = 0;
+                expression_string.str[expression_string.length] = 0;
+            }
+        }
+
+        expr_result_t result = eval(string_to_const(expression_string));
         if (EXPR_ERROR_CODE == 0)
         {
-            expr_log_evaluation_result(expression_string, result);
+            expr_log_evaluation_result(string_to_const(expression_string), result);
         }
         else if (EXPR_ERROR_CODE != 0)
         {
@@ -416,6 +476,8 @@ FOUNDATION_STATIC void console_render_evaluator()
         }
 
         focus_text_field = true;
+
+        string_deallocate(expression_string.str);
     }
 }
 
