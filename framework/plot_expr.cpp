@@ -21,10 +21,24 @@ struct plot_expr_graph_t
 struct plot_expr_t
 {
     string_t id{};
+    string_t* options{ nullptr };
     plot_expr_graph_t* graphs{ nullptr };
 };
 
 static plot_expr_t** _plot_exprs = nullptr;
+
+FOUNDATION_STATIC bool plot_expr_has_option(plot_expr_t* plot, const char* option_name)
+{
+    const size_t option_name_length = string_length(option_name);
+    for (unsigned i = 0, end = array_size(plot->options); i < end; ++i)
+    {
+        string_t option = plot->options[i];
+        if (string_equal_nocase(STRING_ARGS(option), option_name, option_name_length))
+            return true;
+    }
+
+    return false;
+}
 
 FOUNDATION_STATIC void plot_expr_render_window(window_handle_t win)
 {
@@ -37,6 +51,11 @@ FOUNDATION_STATIC void plot_expr_render_window(window_handle_t win)
 
     if (!ImPlot::BeginPlot(plot->id.str, ImGui::GetContentRegionAvail(), flags))
         return;
+
+    // Check if we have the option "xtime" to plot the x-axis as time scale
+    const bool xtime = plot_expr_has_option(plot, "xtime");
+    if (xtime)
+        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
 
     for (unsigned i = 0, end = array_size(plot->graphs); i < end; ++i)
     {
@@ -61,6 +80,7 @@ FOUNDATION_STATIC void plot_expr_deallocate(plot_expr_t* plot)
         array_deallocate(graph->yset);
     }
 
+    string_array_deallocate(plot->options);
     array_deallocate(plot->graphs);
     string_deallocate(plot->id);
     memory_deallocate(plot);
@@ -139,6 +159,14 @@ FOUNDATION_STATIC expr_result_t plot_expr_eval(const expr_func_t* f, vec_expr_t*
     else
     {
         array_push(plot->graphs, graph);
+    }
+
+    // Get the plotting options
+    for (int i = 3, end = (int)args->len; i < end; ++i)
+    {
+        string_const_t option_arg = expr_eval_get_string_arg(args, i, "Invalid plotting option");
+        string_t option = string_clone(option_arg.str, option_arg.length);
+        array_push(plot->options, option);
     }
 
     return expr_eval_pair(xset, yset);

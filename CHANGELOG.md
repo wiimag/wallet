@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.25.8] - 2023-05-25
+## [0.25.9] - 2023-05-26
 
+- Add `xtime` options to `PLOT(...)` to plot the x-axis on a time scale.
 - Add report dividend management window.
 - Add support to download logos from the new https://wallet.wiimag/img/logo/SYMBOL endpoint.
 - Fix `MAP(...)` to set the default comparison index to the last index of the array.

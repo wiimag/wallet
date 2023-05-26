@@ -2391,12 +2391,12 @@ FOUNDATION_STATIC void expr_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("MAP"), expr_eval_map, NULL, 0 })); // MAP([[a, 1], [b, 2], [c, 3]], INDEX($1, 1)) == [1, 2, 3]
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("FILTER"), expr_eval_filter, NULL, 0 })); // FILTER([1, 2, 3], EVAL($1 >= 3)) == [3]
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("EVAL"), expr_eval_inline, NULL, 0 })); // ADD(5, 5), EVAL($0 >= 10)
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REPEAT"), expr_eval_repeat, NULL, 0 }));
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REDUCE"), expr_eval_reduce, NULL, 0 }));
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SORT"), expr_eval_sort, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REPEAT"), expr_eval_repeat, NULL, 0 })); // REPEAT(RANDOM($i, $count), 5)
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REDUCE"), expr_eval_reduce, NULL, 0 })); // REDUCE([1, 2, 3], ADD(), 5) == 11
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SORT"), expr_eval_sort, NULL, 0 })); // SORT(R('300K', ps), DESC, 1)
 
     // Math functions
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ROUND"), expr_eval_round, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ROUND"), expr_eval_round, NULL, 0 })); // ROUND(1.5) == 2
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("CEIL"), expr_eval_ceil, NULL, 0 }));
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("FLOOR"), expr_eval_floor, NULL, 0 }));
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RANDOM"), expr_eval_random, NULL, 0 }));

@@ -784,9 +784,13 @@ FOUNDATION_STATIC expr_result_t report_eval_list_fields(const expr_func_t* f, ve
 FOUNDATION_STATIC void report_expr_initialize()
 {
     expr_register_function("S", report_expr_eval_stock);
+    expr_register_function("STOCK", report_expr_eval_stock);
+    expr_register_function("EOD", report_expr_eval_stock);
     expr_register_function("F", report_expr_eval_stock_fundamental);
+    expr_register_function("FUNDAMENTALS", report_expr_eval_stock_fundamental);
     expr_register_function("FETCH", report_expr_eval_api_fetch);
     expr_register_function("R", report_eval_report_field);
+    expr_register_function("REPORT", report_eval_report_field);
     expr_register_function("FIELDS", report_eval_list_fields);
 }
 
