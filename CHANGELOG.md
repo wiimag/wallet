@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.25.9] - 2023-05-26
+## [0.25.10] - 2023-05-26
 
+- Add `LPAD(...)` and `RPAD(...)` functions to pad a string with a given character.
 - Add `xtime` options to `PLOT(...)` to plot the x-axis on a time scale.
 - Add report dividend management window.
 - Add support to download logos from the new https://wallet.wiimag/img/logo/SYMBOL endpoint.

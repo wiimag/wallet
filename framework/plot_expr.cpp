@@ -179,6 +179,6 @@ void plot_expr_initialize()
 
 void plot_expr_shutdown()
 {
-
+    array_deallocate(_plot_exprs);
 }
 

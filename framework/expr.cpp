@@ -333,26 +333,44 @@ FOUNDATION_STATIC expr_result_t expr_eval_date_to_string(const expr_func_t* f, v
     return string_from_date(time);
 }
 
-FOUNDATION_STATIC expr_result_t expr_eval_year_from_date(const expr_func_t* f, vec_expr_t* args, void* c)
+FOUNDATION_STATIC tm expr_eval_tm_from_date(vec_expr_t* args)
 {
     if (args->len != 1)
-        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments: YEAR(<unix time stamp>|'2032-10-11')");
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid date argument");
 
     expr_result_t value = expr_eval(args->get(0));
 
-    tm ytm{};
+    tm datetm{};
     if (value.type == EXPR_RESULT_SYMBOL)
     {
         string_const_t datestr = value.as_string();
-        string_to_date(datestr.str, datestr.length, &ytm);
+        string_to_date(datestr.str, datestr.length, &datetm);
     }
     else
     {
         time_t time = (time_t)value.as_number(0);
-        time_to_local(time, &ytm);
+        time_to_local(time, &datetm);
     }
 
+    return datetm;
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_year_from_date(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    const tm ytm = expr_eval_tm_from_date(args);
     return (double)ytm.tm_year + 1900;
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_day_from_date(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    const tm dtm = expr_eval_tm_from_date(args);
+    return (double)dtm.tm_mday;
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_month_from_date(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    const tm mtm = expr_eval_tm_from_date(args);
+    return (double)mtm.tm_mon + 1;
 }
 
 FOUNDATION_STATIC expr_result_t expr_eval_create_date(const expr_func_t* f, vec_expr_t* args, void* c)
@@ -757,6 +775,84 @@ FOUNDATION_STATIC bool expr_set_global_var(const char* name, const expr_result_t
     expr_var_t* v = expr_get_or_create_global_var(name, string_length(name));
     v->value = value;
     return true;
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_string_lpad(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    string_const_t value = expr_eval_get_string_arg(args, 0, "Invalid value");
+
+    string_const_t padding = CTEXT(" ");
+    if (args->len > 1)
+        padding = expr_eval_get_string_arg(args, 1, "Invalid padding");
+
+    if (padding.length == 0)
+        return value;
+
+    size_t length = value.length + 1;
+    if (args->len > 2)
+        length = (size_t)expr_eval(args->get(2)).as_number(1);
+
+    if (length <= value.length)
+        return value;
+
+    const size_t capacity = length + 1;
+    string_t buffer = string_allocate(0, capacity);
+
+    // Repeat append the padding string until we've reached the desired length
+    while (buffer.length < length - value.length)
+    {
+        // Check if we can fit the padding string in the remaining space
+        if (buffer.length + padding.length > length - value.length)
+        {
+            // Append only the remaining space
+            buffer = string_append(STRING_ARGS(buffer), capacity, padding.str, length - value.length - buffer.length);
+            break;
+        }
+
+        buffer = string_append(STRING_ARGS(buffer), capacity, padding.str, padding.length);
+    }
+
+    buffer = string_append(STRING_ARGS(buffer), capacity, value.str, value.length);
+
+    expr_result_t padded = expr_result_t(string_to_const(buffer));
+    string_deallocate(buffer.str);
+
+    return padded;
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_string_rpad(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    string_const_t value = expr_eval_get_string_arg(args, 0, "Invalid value");
+
+    string_const_t padding = CTEXT("_");
+    if (args->len > 1)
+        padding = expr_eval_get_string_arg(args, 1, "Invalid padding");
+
+    if (padding.length == 0)
+        return expr_result_t(value);
+
+    size_t length = value.length + 1;
+    if (args->len > 2)
+        length = (size_t)expr_eval(args->get(2)).as_number(1);
+
+    if (length <= value.length)
+        return expr_result_t(value);
+
+    const size_t capacity = length + 1;
+    string_t buffer = string_allocate(0, capacity);
+
+    buffer = string_append(STRING_ARGS(buffer), capacity, value.str, value.length);
+
+    // Repeat append the padding string until we've reached the desired length
+    while (buffer.length < length)
+    {
+        buffer = string_append(STRING_ARGS(buffer), capacity, padding.str, padding.length);
+    }
+
+    expr_result_t padded = expr_result_t(string_to_const(buffer));
+    string_deallocate(buffer.str);
+
+    return padded;
 }
 
 FOUNDATION_STATIC expr_result_t expr_eval_string_ends_with(const expr_func_t* f, vec_expr_t* args, void* c)
@@ -2397,27 +2493,31 @@ FOUNDATION_STATIC void expr_initialize()
 
     // Math functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ROUND"), expr_eval_round, NULL, 0 })); // ROUND(1.5) == 2
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("CEIL"), expr_eval_ceil, NULL, 0 }));
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("FLOOR"), expr_eval_floor, NULL, 0 }));
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RANDOM"), expr_eval_random, NULL, 0 }));
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RAND"), expr_eval_random, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("CEIL"), expr_eval_ceil, NULL, 0 })); // CEIL(1.5) == 2
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("FLOOR"), expr_eval_floor, NULL, 0 })); // FLOOR(1.5) == 1
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RANDOM"), expr_eval_random, NULL, 0 })); // RANDOM(0, 10) == 5
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RAND"), expr_eval_random, NULL, 0 })); // RAND(1, 99) == 50
 
     // Flow functions
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("IF"), expr_eval_if, NULL, 0 }));
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("WHILE"), expr_eval_while, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("IF"), expr_eval_if, NULL, 0 })); // IF(1, 2, 3) == 2
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("WHILE"), expr_eval_while, NULL, 0 })); // WHILE(EVAL($0 < 10), ADD($0, 1), 0) == 10
 
     // Vectors and matrices functions
     expr_register_vec_mat_functions(_expr_user_funcs);
 
     // String functions
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ENDS_WITH"), expr_eval_string_ends_with, NULL, 0 }));
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("STARTS_WITH"), expr_eval_string_starts_with, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("LPAD"), expr_eval_string_lpad, NULL, 0 })); // LPAD($month, '0', 2) == '01'
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RPAD"), expr_eval_string_rpad, NULL, 0 })); // RPAD(19999, '0', 10) == '1999900000'
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ENDS_WITH"), expr_eval_string_ends_with, NULL, 0 })); // ENDS_WITH('abc', 'c') == true
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("STARTS_WITH"), expr_eval_string_starts_with, NULL, 0 })); // STARTS_WITH('abc', 'a') == true
 
     // Time functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("NOW"), expr_eval_time_now, NULL, 0 })); // // ELAPSED_DAYS(TO_DATE(F(SSE.V, General.UpdatedAt)), NOW())
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATE"), expr_eval_create_date, NULL, 0 }));
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATESTR"), expr_eval_date_to_string, NULL, 0 }));
-    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("YEAR"), expr_eval_year_from_date, NULL, 0 }));
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATE"), expr_eval_create_date, NULL, 0 })); // DATE(2019, 1, 1)
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DATESTR"), expr_eval_date_to_string, NULL, 0 })); // DATESTR(DATE(2019, 1, 1)) == '2019-01-01'
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("YEAR"), expr_eval_year_from_date, NULL, 0 })); // YEAR(DATE(2019, 1, 28)) == 2019
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("MONTH"), expr_eval_month_from_date, NULL, 0 })); // MONTH(DATE(2019, 1, 28)) == 1
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DAY"), expr_eval_day_from_date, NULL, 0 })); // DAY(DATE(2019, 1, 28)) == 28
     
     // Must always be last
     array_push(_expr_user_funcs, (expr_func_t{ NULL, 0, NULL, NULL, 0 }));
