@@ -8,6 +8,7 @@
 - Add support to download logos from the new https://wallet.wiimag/img/logo/SYMBOL endpoint.
 - Fix `MAP(...)` to set the default comparison index to the last index of the array.
 - Fix initial usage of the "demo" key when lauching the application for the first time.
+- Fix timeline total gain computation.
 - Improve connectivity state reporting.
 - Remove comments in console before evaluating the expression.
 

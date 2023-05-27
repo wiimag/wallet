@@ -344,7 +344,7 @@ FOUNDATION_STATIC void timeline_update_day(timeline_t& day, const timeline_trans
 
         day.total_gain += gain;
         day.total_fund += sell_total;
-        //day.total_investment += gain;
+        day.total_investment += gain;
 
         day.total_dividends -= cost_total * (1.0 - t->adjusted_factor);
     }
@@ -635,7 +635,6 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
     timeline_report_plot_day_bar_value(STRING_CONST("+Dividends"), report->days, L1(_1->total_dividends), 0, true);
 
     timeline_report_plot_day_value(STRING_CONST("+Funds"), report->days, L1(_1->total_value + _1->total_fund), 1.0f, true);
-    timeline_report_plot_day_value(STRING_CONST("+Dividends"), report->days, L1(_1->total_value + _1->total_dividends), 1.0f, true);
 
     ImPlot::SetAxis(ImAxis_Y1);
     timeline_report_graph_limit(STRING_CONST("Investments"), min_d, max_d, summary->total_investment - summary->total_dividends - summary->total_gain);
@@ -643,6 +642,8 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
 
     ImPlot::SetAxis(ImAxis_Y1);
     timeline_report_graph_limit(STRING_CONST("Total Value##5"), min_d, max_d, summary->total_value + summary->total_fund + summary->total_dividends);
+
+    //ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f, ImVec4(1, 0, 0, 1), 2);
     timeline_report_plot_day_value(STRING_CONST("Total Value##5"), report->days, L1(_1->total_value + _1->total_fund + _1->total_dividends), 4.0f);
 
     ImPlot::SetAxis(ImAxis_Y1);
@@ -665,7 +666,7 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
         ImPlot::TagX(y, ImColor::HSV(155 / 360.0f, 0.75f, 0.5f), "%d", 1900 + tm_year.tm_year);
     }
 
-    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_LeftAlt))
     {
         ImPlotPoint ppos = ImPlot::GetPlotMousePos(ImAxis_X1, ImAxis_Y1);
         time_t ppos_date = (time_t)ppos.x;
@@ -687,11 +688,15 @@ FOUNDATION_STATIC bool timeline_report_graph(timeline_report_t* report)
 
             if (t->type == TimelineTransactionType::BUY)
             {
-                ImPlot::Annotation(ppos.x, ppos.y, ImColor(ImU32(t->code_key | 0xFF000000)), offset, true, "+%s", t->code);
+                if (ImGui::IsKeyDown(ImGuiKey_LeftAlt))
+                {
+                    ImPlot::Annotation(ppos.x, ppos.y, ImColor(ImU32(t->code_key | 0xFF000000)), offset, true, "+%s", t->code);
+                }
             }
-            else
+            else if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
             {
-                ImPlot::Annotation(ppos.x, ppos.y, ImColor(ImU32(t->code_key | 0xAA110000)), offset, true, "-%s", t->code);
+                ImPlot::Annotation(ppos.x, ppos.y, ImColor(ImU32(t->code_key | 0xAA110000)), offset, true, "-%s (%.0lf * %.2lf $ = %.2lf $)", 
+                    t->code, t->qty, t->price, t->qty * t->price);
             }
         }
     }
