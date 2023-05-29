@@ -453,13 +453,13 @@ string_t localization_string_from_time(char* buffer, size_t capacity, tick_t tim
         struct tm* gtm = localtime_r(&ts, &tm);
     #endif
 
-    const char* day_name = "Monday";
-    if (tm.tm_wday == 1) day_name = "Tuesday";
-    else if (tm.tm_wday == 2) day_name = "Wednesday";
-    else if (tm.tm_wday == 3) day_name = "Thursday";
-    else if (tm.tm_wday == 4) day_name = "Friday";
-    else if (tm.tm_wday == 5) day_name = "Saturday";
-    else if (tm.tm_wday == 6) day_name = "Sunday";
+    const char* day_name = "Sunday";
+    if (tm.tm_wday == 1) day_name = "Monday";
+    else if (tm.tm_wday == 2) day_name = "Tuesday";
+    else if (tm.tm_wday == 3) day_name = "Wednesday";
+    else if (tm.tm_wday == 4) day_name = "Thursday";
+    else if (tm.tm_wday == 5) day_name = "Friday";
+    else if (tm.tm_wday == 6) day_name = "Saturday";
 
     const char* month_name = "January";
     if (tm.tm_mon == 1) month_name = "February";

@@ -1,12 +1,13 @@
 # Changelog
 
-## [0.25.12] - 2023-05-29
+## [0.25.13] - 2023-05-29
 
 - Add `LPAD(...)` and `RPAD(...)` functions to pad a string with a given character.
 - Add `xtime` options to `PLOT(...)` to plot the x-axis on a time scale.
 - Add report dividend management window.
 - Add support to download logos from the new https://wallet.wiimag/img/logo/SYMBOL endpoint.
 - Fix `MAP(...)` to set the default comparison index to the last index of the array.
+- Fix day name french translation.
 - Fix initial usage of the "demo" key when lauching the application for the first time.
 - Fix timeline total gain computation.
 - Improve connectivity state reporting.
