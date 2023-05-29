@@ -1657,13 +1657,13 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
 
     if (ImGui::MenuItem(tr("Re-index...")))
     {
-        string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s\")\nSEARCH_INDEX(\"%.*s\")"), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
+        string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s.BULK\")\nSEARCH_REMOVE_DOCUMENT(\"%.*s\")\nSEARCH_INDEX(\"%.*s\")"),  STRING_FORMAT(symbol), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
         eval(STRING_ARGS(expr));
     }
 
     if (ImGui::MenuItem(tr("Remove index...")))
     {
-        string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s\")"), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
+        string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s.BULK\")\nSEARCH_REMOVE_DOCUMENT(\"%.*s\")"), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
         eval(STRING_ARGS(expr));
         dispatcher_post_event(EVENT_SEARCH_DATABASE_LOADED);
     }
