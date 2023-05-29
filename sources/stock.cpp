@@ -276,6 +276,13 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     entry.exchange = string_table_encode(general["Exchange"].as_string());
     entry.isin = string_table_encode(general["ISIN"].as_string());
 
+    if (entry.url == 0)
+    {
+        string_const_t url = json["ETF_Data"]["Company_URL"].as_string();
+        if (!string_is_null(url))
+            entry.url = string_table_encode_unescape(url);
+    }
+
     string_const_t description = general["Description"].as_string();
     entry.description = string_table_encode_unescape(description);
 
@@ -321,6 +328,10 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
 
     // Get the stock market capitalization
     entry.market_cap = hightlights["MarketCapitalization"].as_number();
+    if (math_real_is_nan(entry.market_cap))
+    {
+        entry.market_cap = json["ETF_Data"]["Average_Mkt_Cap_Mil"].as_number() * 1e6;
+    }
 
     const json_object_t& valuation = json["Valuation"];
     entry.trailing_pe = valuation["TrailingPE"].as_number();
@@ -338,7 +349,7 @@ FOUNDATION_STATIC void stock_read_fundamentals_results(const json_object_t& json
     entry.dma_50 = Technicals["50DayMA"].as_number();
     entry.dma_200 = Technicals["200DayMA"].as_number();
     entry.short_ratio = Technicals["ShortRatio"].as_number();
-    entry.short_percent = Technicals["ShortPercent"].as_number();
+    entry.short_percent = Technicals["ShortPercent"].as_number() * 100.0;
 
     entry.mark_resolved(FetchLevel::FUNDAMENTALS);
 }

@@ -560,8 +560,9 @@ FOUNDATION_STATIC float pattern_render_planning(const pattern_t* pattern)
         updated_at = string_from_date(s->updated_at);
     }
 
-    const double updated_elapsed_time = time_elapsed_days(s->updated_at, time_now());
     pattern_render_planning_url(code, url, pattern, 1);
+
+    const double updated_elapsed_time = time_elapsed_days(s->updated_at, time_now());
     if (s->updated_at != 0 && updated_elapsed_time > 15)
         ImGui::PushStyleColor(ImGuiCol_Text, TEXT_WARN_COLOR);
     pattern_render_planning_line(updated_at, pattern, 2);
@@ -798,24 +799,45 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
                 pattern->yy_ratio.fetch(), pattern->years.fetch(), pattern->performance_ratio.fetch(), pattern->performance_ratio.fetch() - pattern->yy_ratio.fetch());
         }
 
-        pattern_render_stats_line(nullptr, CTEXT("Beta"),
-            pattern_format_percentage(s->beta * 100.0),
-            pattern_format_percentage(s->dma_200 / s->dma_50 * 100.0), true);
+        if (math_real_is_finite_nz(s->beta))
+        {
+            pattern_render_stats_line(nullptr, CTEXT("Beta"),
+                pattern_format_percentage(s->beta * 100.0),
+                pattern_format_percentage(s->dma_200 / s->dma_50 * 100.0), true);
+        }
+
+        if (math_real_is_finite_nz(s->short_percent))
+        {
+            if (s->short_percent > 2.0)
+                ImGui::PushStyleColor(ImGuiCol_Text, TEXT_WARN_COLOR);
+            pattern_render_stats_line(nullptr, CTEXT("Short Ratio / %"),
+            pattern_format_number(STRING_CONST("%.3lg"), s->short_ratio),
+            pattern_format_percentage(s->short_percent), true);
+            if (s->short_percent > 2.0)
+                ImGui::PopStyleColor();
+        }
 
         const double eps_diff = s->earning_trend_difference.fetch();
         const double eps_percent = s->earning_trend_percent.fetch();
-        ImGui::PushStyleColor(ImGuiCol_Text, eps_diff <= 0.1 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
-        pattern_render_stats_line(nullptr, CTEXT("Earnings / Share||EPS stands for earnings per share. "
-            "It is a financial metric that measures the amount of profit that a company has generated on a per-share basis over a "
-            "specific period, usually a quarter or a year. EPS is calculated by dividing a company's total earnings by the number of shares outstanding."),
-            pattern_format_currency(s->diluted_eps_ttm),
-            pattern_format_percentage(eps_percent), true);
-        ImGui::PopStyleColor();
-        if (ImGui::IsItemHovered())
-            ImGui::SetTooltip(tr(" Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n"
-                "           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "),
-                s->diluted_eps_ttm, s->earning_trend_actual.fetch(), s->earning_trend_estimate.fetch(), s->earning_trend_difference.fetch(), eps_percent,
-                s->diluted_eps_ttm / s->current.close * 100.0);
+        if (math_real_is_finite_nz(eps_percent) || math_real_is_finite_nz(s->diluted_eps_ttm))
+        {
+            ImGui::PushStyleColor(ImGuiCol_Text, eps_diff <= 0.1 ? TEXT_WARN_COLOR : TEXT_GOOD_COLOR);
+            pattern_render_stats_line(nullptr, CTEXT("Earnings / Share||EPS stands for earnings per share. "
+                "It is a financial metric that measures the amount of profit that a company has generated on a per-share basis over a "
+                "specific period, usually a quarter or a year. EPS is calculated by dividing a company's total earnings by the number of shares outstanding."),
+                pattern_format_currency(s->diluted_eps_ttm),
+                pattern_format_percentage(eps_percent), true);
+            ImGui::PopStyleColor();
+
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+            {
+                ImGui::SetTooltip(tr(
+                    " Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n"
+                    "           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "),
+                    s->diluted_eps_ttm, s->earning_trend_actual.fetch(), s->earning_trend_estimate.fetch(), s->earning_trend_difference.fetch(), eps_percent,
+                    s->diluted_eps_ttm / s->current.close * 100.0);
+            }
+        }
 
         if (math_real_is_finite(s->pe) || math_real_is_finite(s->peg))
         {
@@ -2606,69 +2628,65 @@ FOUNDATION_STATIC void pattern_render_dialogs(pattern_t* pattern)
     }
 }
 
+FOUNDATION_STATIC void pattern_render_stats_panel(pattern_t* pattern, const ImRect& rect)
+{
+    if (ImGui::BeginChild("Planning", ImVec2(-1, -ImGui::GetStyle().CellPadding.y), false, ImGuiWindowFlags_None))
+    {
+        string_const_t code = string_table_decode_const(pattern->code);
+
+        string_const_t stock_name = string_table_decode_const(pattern->stock->name);
+        if (stock_name.length)
+        {
+            const float logo_name_width = IM_SCALEF(16) + ImGui::CalcTextSize(STRING_RANGE(stock_name)).x;
+            if (logo_name_width < ImGui::GetContentRegionAvail().x - IM_SCALEF(6.0f))
+                ImGui::SetCursorPos(ImVec2(ImGui::GetContentRegionAvail().x - logo_name_width - IM_SCALEF(6.0f), 0.0f));
+
+            ImGui::BeginGroup();
+            ImVec2 logo_size(IM_SCALEF(16), IM_SCALEF(16));
+            if (logo_render_icon(STRING_ARGS(code), logo_size))
+                ImGui::Dummy(logo_size);
+            ImGui::SameLine();
+            ImGui::TextWrapped("%.*s", STRING_FORMAT(stock_name));
+            ImGui::EndGroup();
+        }
+
+        ImGui::SetWindowFontScale(0.9f);
+        float y_pos = pattern_render_planning(pattern);
+
+        ImGui::SetCursorPos(ImVec2(15, y_pos + 10.0f));
+        y_pos = pattern_render_stats(pattern);
+
+        if (!stock_is_index(pattern->stock))
+        {
+            ImGui::SetWindowFontScale(0.8f);
+            ImGui::SetCursorPos(ImVec2(0.0f, y_pos + 10.0f));
+            y_pos = pattern_render_decisions(pattern);
+        }
+
+        ImGui::SetWindowFontScale(1.0f);
+    } ImGui::EndChild();
+}
+
+FOUNDATION_STATIC void pattern_render_graph_panel(pattern_t* pattern, const ImRect& rect)
+{
+    pattern_render_graphs(pattern);
+}
+
 FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_flags_t render_flags = PatternRenderFlags::None)
 {
-    const ImGuiTableFlags flags =
-        ImGuiTableFlags_Resizable |
-        ImGuiTableFlags_Hideable |
-        ImGuiTableFlags_Reorderable |
-        ImGuiTableFlags_NoBordersInBodyUntilResize |
-        ImGuiTableFlags_SizingStretchProp | 
-        ImGuiTableFlags_NoHostExtendY |
-        ImGuiTableFlags_PadOuterX;
-
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
     string_const_t code = string_table_decode_const(pattern->code);
 
-    char pattern_id[64];
-    string_format(STRING_BUFFER(pattern_id), STRING_CONST("Pattern###%.*s_7"), STRING_FORMAT(code));
-    if (!ImGui::BeginTable(pattern_id, 2, flags, ImGui::GetContentRegionAvail()))
-        return;
-
     pattern_update(pattern);
-        
-    ImGui::TableSetupColumn(code.str, ImGuiTableColumnFlags_WidthFixed, 
-        IM_SCALEF(220), 0U, table_cell_right_aligned_column_label, nullptr);
 
-    string_const_t graph_column_title = CTEXT("Graph");
-    const stock_t* stock_data = pattern->stock;
-    bool show_graph_title = stock_data && stock_data->name;
-    if (show_graph_title)
-        graph_column_title = string_table_decode_const(stock_data->name);
-    ImGui::TableSetupColumn(graph_column_title.str, (show_graph_title ? 0 : ImGuiTableColumnFlags_NoHeaderLabel) | ImGuiTableColumnFlags_NoClip);
-
-    if (none(render_flags, PatternRenderFlags::HideTableHeaders))
-        ImGui::TableHeadersRow();
-
-    ImGui::TableNextRow();
-
-    if (ImGui::TableNextColumn())
-    {
-        if (ImGui::BeginChild("Planning", ImVec2(-1, -ImGui::GetStyle().CellPadding.y), false, ImGuiWindowFlags_None))
-        {
-            ImGui::SetWindowFontScale(0.9f);
-            float y_pos = pattern_render_planning(pattern);
-
-            ImGui::SetCursorPos(ImVec2(15, y_pos + 10.0f));
-            y_pos = pattern_render_stats(pattern);
-
-            if (!stock_is_index(pattern->stock))
-            {
-                ImGui::SetWindowFontScale(0.8f);
-                ImGui::SetCursorPos(ImVec2(0.0f, y_pos + 10.0f));
-                y_pos = pattern_render_decisions(pattern);
-            }
-
-            ImGui::SetWindowFontScale(1.0f);
-        } ImGui::EndChild();
-    }
-
-    if (ImGui::TableNextColumn())
-    {
-        pattern_render_graphs(pattern);
-    }
-
-    ImGui::EndTable();	
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
+    imgui_draw_splitter(code.str, 
+        LC1(pattern_render_stats_panel(pattern, _1)),
+        LC1(pattern_render_graph_panel(pattern, _1)), 
+        IMGUI_SPLITTER_HORIZONTAL, ImGuiWindowFlags_AlwaysUseWindowPadding, 0.2f);
+    ImGui::PopStyleVar(3);
 
     pattern_handle_shortcuts(pattern);
     pattern_render_dialogs(pattern);

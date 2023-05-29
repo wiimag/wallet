@@ -270,6 +270,15 @@ FOUNDATION_FORCEINLINE double math_ifneg(const double n, const double default_va
     return n;
 }
 
+/*! @brief Returns true if the real number is non zero and a finite number.
+ *  @param n The value to check.
+ *  @return True if the real number is non zero and a finite number.
+ */
+FOUNDATION_FORCEINLINE bool math_real_is_finite_nz(const double n)
+{
+    return !math_real_is_zero(n) && math_real_is_finite(n);
+}
+
 /*! @brief Returns the average of the given values.
  *  @param pn Pointer to the first value.
  *  @param count Number of values.

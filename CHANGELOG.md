@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.25.10] - 2023-05-26
+## [0.25.12] - 2023-05-29
 
 - Add `LPAD(...)` and `RPAD(...)` functions to pad a string with a given character.
 - Add `xtime` options to `PLOT(...)` to plot the x-axis on a time scale.
@@ -10,6 +10,7 @@
 - Fix initial usage of the "demo" key when lauching the application for the first time.
 - Fix timeline total gain computation.
 - Improve connectivity state reporting.
+- Improve pattern view for ETF stock.
 - Remove comments in console before evaluating the expression.
 
 ## [0.24.13] - 2023-05-22

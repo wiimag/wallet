@@ -3970,5 +3970,10 @@
 			en = "Connected to backend"
 			fr = "Connect\xc3\xa9 au backend"
 		}
+		{
+			hash = "9a82f1204444a88b"
+			en = "Short Ratio / %"
+			fr = "Vente à découvert"
+		}
 	]
 }

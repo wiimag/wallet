@@ -333,6 +333,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     string_const_t title_code = config_name(data);
     t->code_length = string_copy(STRING_BUFFER(t->code), STRING_ARGS(title_code)).length;
 
+    #if 0
     // Initiate to resolve the title stock right away in case it has never been done before.
     if (main_is_interactive_mode(true) && t->wallet && t->wallet->track_history)
     {
@@ -340,6 +341,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
         if (!t->stock)
             t->stock = stock_request(t->code, t->code_length, fetch_level);
     }
+    #endif
 
     int valid_dates = 0;
     double total_ask_price = 0;
