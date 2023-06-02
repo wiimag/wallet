@@ -496,7 +496,7 @@ bool system_notification_push(const char* title, size_t title_length, const char
     }
 
     // Remove the notification icon from the system tray
-    //Shell_NotifyIconA(NIM_DELETE, &nid);
+    Shell_NotifyIconA(NIM_DELETE, &nid);
 
     return success != 0;
 #else

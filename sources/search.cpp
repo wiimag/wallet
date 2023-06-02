@@ -598,7 +598,7 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     }
     
     // Index some news data
-    if (!eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", symbol.str, LC1(search_index_news_data(_1, doc)), 8 * 24 * 60 * 60ULL))
+    if (!eod_fetch("news", nullptr, FORMAT_JSON_CACHE, "s", symbol.str, "limit", "10", LC1(search_index_news_data(_1, doc)), 8 * 24 * 60 * 60ULL))
     {
         log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch news for symbol %*.s"), STRING_FORMAT(symbol));
     }
