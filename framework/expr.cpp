@@ -30,6 +30,17 @@ static thread_local const expr_result_t** _expr_lists = nullptr;
 static expr_func_t* _expr_user_funcs = nullptr;
 static string_t* _expr_user_funcs_names = nullptr;
 
+typedef struct {
+    string_argument_type_t type; 
+    union {
+        uint64_t u;
+        bool b;
+        double n;
+        char* s;
+        void* ptr;
+    };
+} expr_format_supported_value_t;
+
 static struct {
     const expr_string_t token;
     const expr_type_t op;
@@ -861,6 +872,127 @@ FOUNDATION_STATIC expr_result_t expr_eval_string_ends_with(const expr_func_t* f,
     string_const_t suffix = expr_eval_get_string_arg(args, 1, "Invalid suffix");
 
     return expr_result_t((bool)string_ends_with(value.str, value.length, suffix.str, suffix.length));
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_string_format(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: FORMAT("Hello {0}", "world", ...) => "Hello world"
+
+    if (args->len > 10)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Too many arguments");
+
+    int num_args = args->len - 1;
+    string_const_t format = expr_eval_get_string_arg(args, 0, "Invalid format string");
+
+    string_t tstr = {};
+    
+    if (num_args == 0) 
+    {
+        tstr = string_clone(STRING_ARGS(format));
+    } 
+    else 
+    {
+        expr_format_supported_value_t* results = nullptr;
+        for (int i = 0; i < num_args; ++i)
+        {
+            expr_result_t e = expr_eval(args->get(i + 1));
+            if (e.type == EXPR_RESULT_NULL)
+            {
+                expr_format_supported_value_t v{StringArgumentType::POINTER};
+                v.ptr = nullptr;
+                array_push(results, v);
+            }
+            else if (e.type == EXPR_RESULT_TRUE)
+                array_push(results, (expr_format_supported_value_t{StringArgumentType::BOOL, true}));
+            else if (e.type == EXPR_RESULT_FALSE)
+                array_push(results, (expr_format_supported_value_t{StringArgumentType::BOOL, false}));
+            else if (e.type == EXPR_RESULT_NUMBER)
+            {
+                expr_format_supported_value_t v{StringArgumentType::DOUBLE};
+                v.n = e.as_number();
+                array_push(results, v);
+            }
+            else
+            {
+                string_const_t s = e.as_string();
+                expr_format_supported_value_t v{StringArgumentType::CSTRING};
+                v.s = string_clone(STRING_ARGS(s)).str;
+                array_push(results, v);
+            }
+        }
+
+        num_args = (int)array_size(results);
+        if (num_args == 1)
+        {
+            tstr = string_format_allocate_template(STRING_ARGS(format), results[0].type, results[0].u);
+        }
+        else if (num_args == 2)
+        {
+            tstr = string_format_allocate_template(STRING_ARGS(format), 
+                results[0].type, results[0].u, results[1].type, results[1].u);
+        }
+        else if (num_args == 3)
+        {
+            tstr = string_format_allocate_template(STRING_ARGS(format), 
+                results[0].type, results[0].u, results[1].type, results[1].u, results[2].type, results[2].u);
+        }
+        else if (num_args == 4)
+        {
+            tstr = string_format_allocate_template(STRING_ARGS(format), 
+                results[0].type, results[0].u, results[1].type, results[1].u, 
+                results[2].type, results[2].u, results[3].type, results[3].u);
+        }
+        else if (num_args == 5)
+        {
+            tstr = string_format_allocate_template(STRING_ARGS(format), 
+                results[0].type, results[0].u, results[1].type, results[1].u, 
+                results[2].type, results[2].u, results[3].type, results[3].u, results[4].type, results[4].u);
+        }
+        else if (num_args == 6)
+        {
+            tstr = string_format_allocate_template(STRING_ARGS(format), 
+                results[0].type, results[0].u, results[1].type, results[1].u, 
+                results[2].type, results[2].u, results[3].type, results[3].u,
+                results[4].type, results[4].u, results[5].type, results[5].u);
+        }
+        else if (num_args == 7)
+        {
+            tstr = string_format_allocate_template(STRING_ARGS(format), 
+                results[0].type, results[0].u, results[1].type, results[1].u, 
+                results[2].type, results[2].u, results[3].type, results[3].u,
+                results[4].type, results[4].u, results[5].type, results[5].u,
+                results[6].type, results[6].u);
+        }
+        else if (num_args == 8)
+        {
+            tstr = string_format_allocate_template(STRING_ARGS(format), 
+                results[0].type, results[0].u, results[1].type, results[1].u, 
+                results[2].type, results[2].u, results[3].type, results[3].u,
+                results[4].type, results[4].u, results[5].type, results[5].u,
+                results[6].type, results[6].u, results[7].type, results[7].u);
+
+        }
+        else if (num_args == 9)
+        {
+            tstr = string_format_allocate_template(STRING_ARGS(format), 
+                results[0].type, results[0].u, results[1].type, results[1].u, 
+                results[2].type, results[2].u, results[3].type, results[3].u,
+                results[4].type, results[4].u, results[5].type, results[5].u,
+                results[6].type, results[6].u, results[7].type, results[7].u, 
+                results[8].type, results[8].u);
+        }
+
+        for (unsigned i = 0, end = array_size(results); i < end; ++i)
+        {
+            if (results[i].type == StringArgumentType::CSTRING)
+                string_deallocate(results[i].s);
+        }
+        array_deallocate(results);
+    }
+    
+    expr_result_t formatted(string_to_const(tstr));
+    string_deallocate(tstr.str);
+    return formatted;
 }
 
 FOUNDATION_STATIC expr_result_t expr_eval_string_starts_with(const expr_func_t* f, vec_expr_t* args, void* c)
@@ -2510,6 +2642,7 @@ FOUNDATION_STATIC void expr_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RPAD"), expr_eval_string_rpad, NULL, 0 })); // RPAD(19999, '0', 10) == '1999900000'
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ENDS_WITH"), expr_eval_string_ends_with, NULL, 0 })); // ENDS_WITH('abc', 'c') == true
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("STARTS_WITH"), expr_eval_string_starts_with, NULL, 0 })); // STARTS_WITH('abc', 'a') == true
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("FORMAT"), expr_eval_string_format, NULL, 0 })); // FORMAT('{0, date}: {1, currency}', NOW(), 1000) == '2019-01-01: 1 000.00 $'
 
     // Time functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("NOW"), expr_eval_time_now, NULL, 0 })); // // ELAPSED_DAYS(TO_DATE(F(SSE.V, General.UpdatedAt)), NOW())
@@ -2532,7 +2665,9 @@ FOUNDATION_STATIC void expr_initialize()
     expr_set_global_var("LOGN10", DBL_LOGN10);
     expr_set_global_var("EPSILON", DBL_EPSILON);
     expr_set_global_var("nan", DNAN);
+    expr_set_global_var("nil", expr_result_t(nullptr));
     expr_set_global_var("NIL", expr_result_t(nullptr));
+    expr_set_global_var("null", expr_result_t(nullptr));
     expr_set_global_var("true", expr_result_t(true));
     expr_set_global_var("false", expr_result_t(false));
 
