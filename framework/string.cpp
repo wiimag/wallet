@@ -2784,6 +2784,13 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
                 bufpos += string_from_int(buffer + bufpos, capacity - bufpos, array[j], t.precision, ' ').length;
             }
         }
+        else if (type == StringArgumentType::POINTER)
+        {
+            if (t.precision == 0)
+                bufpos += string_copy(buffer + bufpos, capacity - bufpos, "", 0).length;
+            else
+                bufpos += string_copy(buffer + bufpos, capacity - bufpos, STRING_CONST("null")).length;
+        }
         else
             FOUNDATION_ASSERT_FAIL("Invalid string argument type");
         
