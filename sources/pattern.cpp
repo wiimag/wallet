@@ -2119,6 +2119,9 @@ FOUNDATION_STATIC bool pattern_render_fundamental_field_tooltip(pattern_t* patte
 
 FOUNDATION_STATIC void pattern_render_fundamentals_object(pattern_t* pattern, config_handle_t obj, int level = 0)
 {
+    // Check if the current object has a currency_symbol field?
+    const bool has_currency_symbol = config_exists(obj, STRING_CONST("currency_symbol"));
+
     for (auto e : obj)
     {
         auto type = config_value_type(e);
@@ -2185,10 +2188,45 @@ FOUNDATION_STATIC void pattern_render_fundamentals_object(pattern_t* pattern, co
 
         ImGui::TextUnformatted(STRING_RANGE(cv_id));
         pattern_render_fundamental_field_tooltip(pattern, cv_id, cv_value);
-        ImGui::NextColumn();        
-        
-        ImGui::TextWrapped("%.*s", STRING_FORMAT(cv_value));
-        pattern_render_fundamental_field_tooltip(pattern, cv_id, cv_value);
+        ImGui::NextColumn();
+
+        // Check if we can convert to number
+        double n = DNAN;
+        if (string_try_convert_number(STRING_ARGS(cv_value), n))
+        {
+            if (has_currency_symbol && math_abs(n) > 9)
+            {
+                string_const_t curr = string_from_currency(n);
+                ImGui::TextUnformatted(STRING_RANGE(curr));
+            }
+            else if (n >= 1e9)
+                ImGui::Text("%.4lg B", n / 1e9);
+            else if (n >= 1e6)
+                ImGui::Text("%.4lg M", n / 1e6);
+            else if (n >= 1e3)
+                ImGui::Text("%.4lg K", n / 1e3);
+            else
+                ImGui::Text("%.4lg", n);
+        }
+        // Check if starts with http
+        else if (string_equal_nocase(cv_value.str, min(SIZE_C(4), cv_value.length), STRING_CONST("http")))
+        {
+            ImGui::TextURL(STRING_RANGE(cv_value), STRING_ARGS(cv_value));
+        }
+        else
+        {
+            ImGui::TextWrapped("%.*s", STRING_FORMAT(cv_value));
+        }
+
+        // Copy the value to the clipboard if the field is double clicked
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        {
+            char clipboard_buffer[2048];
+            string_format(STRING_BUFFER(clipboard_buffer), 
+                STRING_CONST("%.*s: %.*s"), STRING_FORMAT(cv_id), STRING_FORMAT(cv_value));
+            ImGui::SetClipboardText(clipboard_buffer);
+        }
+
         ImGui::NextColumn();
     }
 }
@@ -2619,7 +2657,7 @@ FOUNDATION_STATIC void pattern_render_dialogs(pattern_t* pattern)
     if (pattern->fundamentals_dialog_opened)
     {
         string_const_t name = string_table_decode_const(pattern->stock->name);
-        ImGui::SetNextWindowSize({ IM_SCALEF(500), IM_SCALEF(700) }, ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize({ IM_SCALEF(400), IM_SCALEF(500) }, ImGuiCond_FirstUseEver);
         if (ImGui::Begin(tr_format("{0} Fundamentals", name), &pattern->fundamentals_dialog_opened))
         {
             pattern_render_fundamentals(pattern);

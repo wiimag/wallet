@@ -3973,7 +3973,12 @@
 		{
 			hash = "9a82f1204444a88b"
 			en = "Short Ratio / %"
-			fr = "Vente à découvert"
+			fr = "Vente \xc3\xa0 d\xc3\xa9couvert"
+		}
+		{
+			hash = "ef0c7f7d2a0e355b"
+			en = "seconds"
+			fr = "secondes"
 		}
 	]
 }

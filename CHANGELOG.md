@@ -1,7 +1,9 @@
 # Changelog
 
-## [0.25.13] - 2023-05-29
+## [0.26.0] - 2023-06-02
+- Improve the pattern fundamentals dialog field value formatting.
 
+## [0.25.13] - 2023-05-29
 - Add `LPAD(...)` and `RPAD(...)` functions to pad a string with a given character.
 - Add `xtime` options to `PLOT(...)` to plot the x-axis on a time scale.
 - Add report dividend management window.
