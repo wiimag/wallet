@@ -33,7 +33,7 @@ FOUNDATION_STATIC void plot_render_graph_trend(const char* label, double x1, dou
     ImPlot::TagY(a + b * (context.flipped || context.x_axis_inverted ? x2 : x1), pc, "%s", tag);
     ImPlot::PlotLine(tag, range, trend, ARRAY_COUNT(trend), ImPlotLineFlags_NoClip);
 
-    if (context.show_equation)
+    if (context.show_trend_equation)
     {
         ImPlot::Annotation(context.x_axis_inverted ? x1 : x2, context.x_axis_inverted ? trend[0] : trend[1], ImVec4(0.3f, 0.3f, 0.5f, 1.0f),
             ImVec2(0, 10.0f * (b > 0 ? -1.0f : 1.0f)), true,

@@ -39,9 +39,9 @@ struct plot_context_t
     // TODO: Change with enum flags
     bool plotted { false };
     bool relative_dates{ false };
+    bool compacted{ false };
     bool show_trend_equation{ false };
     bool x_axis_inverted{ false };
-    bool show_equation{ false };
     bool flipped{ false };
 
     ImPlotPoint mouse_pos{};

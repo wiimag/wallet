@@ -995,6 +995,10 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
     if (!ImPlot::BeginPlot("Pattern Trends##1", graph_size, flags))
         return;
 
+    const float preview_font_scale = ImGui::GetCurrentWindow()->FontWindowScale;
+    if (graph.compact)
+        ImGui::SetWindowFontScale(0.75f);
+
     ImPlot::SetupLegend(ImPlotLocation_NorthWest);
 
     static time_t trend_date = /*1663606289*/ time_now();
@@ -1022,9 +1026,8 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
     ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_date_label, &graph);
 
-    ImPlotAxisFlags trend_axis_flags_y = ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch;
-    if (graph.compact)
-        trend_axis_flags_y |= ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_AutoFit;
+    ImPlotAxisFlags trend_axis_flags_y = ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite;
+    trend_axis_flags_y |= ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_AutoFit;
     ImPlot::SetupAxis(ImAxis_Y1, "##Values", trend_axis_flags_y);
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.4g");
 
@@ -1041,6 +1044,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
     {
         ImPlot::SetAxis(ImAxis_Y1);
         plot_context_t c{ trend_date, min(s->history_count, iteration_count), 1, s->history };
+        c.compacted = graph.compact;
         c.show_trend_equation = pattern->show_trend_equation;
         c.lx = 0.0;
         c.ly = (math_ifnan(s->beta, 0.5) + math_ifnan(s->short_ratio - 1.0, 0.0))
@@ -1049,6 +1053,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
             * math_ifzero(s->peg, math_ifzero(s->pe, 1.0));
         c.lz = s->diluted_eps_ttm * 2.0;
         c.acc = pattern->range;
+        c.flipped = true;
         c.x_axis_inverted = pattern->x_axis_inverted;
         ImPlot::PlotLineG("##Slopes", [](int idx, void* user_data)->ImPlotPoint
         {
@@ -1099,6 +1104,9 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
             trend_date = mktime(&tm_date);
     }
     pattern_render_graph_end(pattern, s, graph);
+
+    if (graph.compact)
+        ImGui::SetWindowFontScale(preview_font_scale);
 }
 
 FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
@@ -1808,7 +1816,14 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, max(graph.min_d, 1.0), graph.max_d);
 
-    ImPlot::SetupAxis(ImAxis_Y1, "##Currency", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite);
+
+    ImPlotAxisFlags price_axis_flags = ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite;
+    if (pattern->x_axis_inverted)
+    {
+        price_axis_flags |= ImPlotAxisFlags_Invert;
+        price_axis_flags &= ~ImPlotAxisFlags_Opposite;
+    }
+    ImPlot::SetupAxis(ImAxis_Y1, "##Currency", price_axis_flags);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0.0, INFINITY);
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2lf $");
 
