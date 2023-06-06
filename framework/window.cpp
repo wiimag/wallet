@@ -7,6 +7,7 @@
 
 #if BUILD_APPLICATION
 
+#include <framework/app.h>
 #include <framework/glfw.h>
 #include <framework/bgfx.h>
 #include <framework/imgui.h>
@@ -131,6 +132,8 @@ struct WindowContext
 static struct WINDOW_MODULE {
 
     window_t** windows{ nullptr };
+
+    window_handle_t current_window{ 0 };
 
     config_handle_t configs;
     
@@ -926,6 +929,7 @@ FOUNDATION_STATIC void window_render(window_t* win)
 
         win->render.invoke(win->handle);
 
+        app_dialogs_render();
 
     } ImGui::End();
 
@@ -952,6 +956,11 @@ bool window_valid(window_handle_t window_handle)
     return window_handle_lookup(window_handle) != nullptr;
 }
 
+window_handle_t window_current()
+{
+    return _window_module->current_window;
+}
+
 void window_update()
 {
     const unsigned window_count = array_size(_window_module->windows);
@@ -973,6 +982,8 @@ void window_update()
 
         window_prepare(win);
 
+        _window_module->current_window = win->handle;
+
         exception_try([](void* args)
         {
             window_t* win = (window_t*)args;
@@ -984,6 +995,8 @@ void window_update()
             log_errorf(HASH_WINDOW, ERROR_EXCEPTION, "Exception in window render: %.*s", (int)length, file);
             window_close(win->handle);
         }, STRING_CONST("window_dump"));
+
+        _window_module->current_window = 0;
         
         // Check if the window should be closed
         GLFWwindow* glfw_window = win->glfw_window;

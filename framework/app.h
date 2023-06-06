@@ -135,6 +135,9 @@ FOUNDATION_FORCEINLINE void app_open_dialog(
     }, width, height, can_resize, nullptr, nullptr);
 }
 
+/*! Render all active dialogs for the current window. */
+void app_dialogs_render();
+
 /*! Entry point to render application menus as IMGUI menus. */
 void app_menu_begin(GLFWwindow* window);
 

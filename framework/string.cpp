@@ -2671,6 +2671,8 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
                     bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgM"), string_format_round_number(value / 1e6, t)).length;
                 else if (absvalue > 1e3)
                     bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgK"), string_format_round_number(value / 1e3, t)).length;
+                else if (absvalue > 9)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lg"), string_format_round_number(value, t)).length;
                 else if (absvalue > 0.01)
                     bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.2lg"), string_format_round_number(value, t)).length;
                 else if (absvalue > 1e-3)

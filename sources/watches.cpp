@@ -244,7 +244,7 @@ FOUNDATION_STATIC table_cell_t watch_point_column_edit_expression(table_element_
         }
     }
 
-    return (double)point->expression.length;
+    return (double)point->record.type;
 }
 
 FOUNDATION_STATIC table_cell_t watch_point_column_value(table_element_ptr_t element, const table_column_t* column)

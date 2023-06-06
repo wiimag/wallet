@@ -1025,13 +1025,12 @@ FOUNDATION_STATIC void report_title_total_gain_p_alerts_formatter(table_element_
     if (current_gain_p >= title->wallet->profit_ask * 100.0)
     {
         style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
-        //style.text_color = ImColor::HSV(40 / 360.0f, 0.94f, 0.14f);
         if (title->elapsed_days < 30 && title->average_quantity > 0)
             style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.74f, 0.8f);
         else if (title->average_quantity > 0)
-            style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.94f, 0.8f); // hsv(176, 94%, 94%)
+            style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.94f, 0.8f);
         else
-            style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.94f, 0.5f); // hsv(176, 94%, 94%)
+            style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.94f, 0.5f);
         style.text_color = imgui_color_text_for_background(style.background_color);
     }
     else
@@ -1040,14 +1039,14 @@ FOUNDATION_STATIC void report_title_total_gain_p_alerts_formatter(table_element_
         {
             style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
             style.background_color = ImColor::HSV(350 / 360.0f, 0.94f, 0.88f,
-                (float)(math_abs(current_gain_p) / (title->wallet->main_target * 200.0))); // hsv(349, 94%, 88%)
+                (float)(math_abs(current_gain_p) / (title->wallet->main_target * 200.0)));
             style.text_color = imgui_color_text_for_background(style.background_color);
         }
         else
         {
             style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
-            style.background_color = ImColor::HSV(186 / 360.0f, 0.26f, 0.92f,
-                (float)(current_gain_p / (title->wallet->target_ask * 100.0))); // hsv(186, 26 %, 92 %)
+            style.background_color = ImColor::HSV(166 / 360.0f, 0.26f, 0.92f,
+                (float)(current_gain_p / (title->wallet->target_ask * 100.0)));
 
             if (current_gain_p >= title->wallet->target_ask * 60.0)
             {

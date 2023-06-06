@@ -21,6 +21,7 @@
 #include <framework/profiler.h>
 #include <framework/array.h>
 #include <framework/common.h>
+#include <framework/window.h>
 
 #include <foundation/memory.h>
 #include <foundation/version.h>
@@ -39,6 +40,7 @@ struct app_dialog_t
     app_dialog_handler_t handler{};
     app_dialog_close_handler_t close_handler{};
     void* user_data{ nullptr };
+    window_handle_t window{ 0 };
 };
 
 struct app_input_dialog_t
@@ -276,11 +278,15 @@ FOUNDATION_STATIC ImGuiKeyChord app_string_to_shortcut_key_coord(const char* str
     return key;
 }
 
-FOUNDATION_STATIC void app_dialogs_render()
+void app_dialogs_render()
 {
     for (unsigned i = 0, end = array_size(_dialogs); i < end; ++i)
     {
         app_dialog_t* dlg = _dialogs[i];
+
+        if (dlg->window != window_current())
+            continue;
+
         if (!dlg->window_opened_once)
         {
             const ImVec2 window_size = ImGui::GetWindowSize();
@@ -355,6 +361,7 @@ void app_open_dialog(const char* title, const app_dialog_handler_t& handler, uin
     dlg->handler = handler;
     dlg->close_handler = close_handler;
     dlg->user_data = user_data;
+    dlg->window = window_current();
     string_copy(STRING_BUFFER(dlg->title), title, string_length(title));
     array_push(_dialogs, dlg);
 }

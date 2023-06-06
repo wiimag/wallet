@@ -175,3 +175,12 @@ void window_update();
  *  @return              True if the window is valid, false otherwise.
  */
 bool window_valid(window_handle_t window_handle);
+
+/*! Returns the active window handle.
+ *
+ *  @note                The active window is the window that has focus.
+ *  @remark              If the window handle is null, you can assume that the main window is the active window.
+ *
+ *  @return              The active window handle.
+ */
+window_handle_t window_current();
