@@ -33,11 +33,14 @@ FOUNDATION_STATIC void plot_render_graph_trend(const char* label, double x1, dou
     ImPlot::TagY(a + b * (context.flipped || context.x_axis_inverted ? x2 : x1), pc, "%s", tag);
     ImPlot::PlotLine(tag, range, trend, ARRAY_COUNT(trend), ImPlotLineFlags_NoClip);
 
-    if (context.show_trend_equation)
+    if (context.show_equation)
     {
+        string_const_t annstr = string_template_static(
+            "{0}{5}{1, short} {2} {3, short}x (" ICON_MD_CHANGE_HISTORY "{4, short})", 
+            context.compacted ? "" : label, a, b < 0 ? "-" : "+", math_abs(b), y_diff, context.compacted ? "" : " = ");
         ImPlot::Annotation(context.x_axis_inverted ? x1 : x2, context.x_axis_inverted ? trend[0] : trend[1], ImVec4(0.3f, 0.3f, 0.5f, 1.0f),
             ImVec2(0, 10.0f * (b > 0 ? -1.0f : 1.0f)), true,
-            "%s = %.2g %s %.1gx (" ICON_MD_CHANGE_HISTORY  "%.2g)", label, a, b < 0 ? "-" : "+", math_abs(b), y_diff);
+            "%.*s", STRING_FORMAT(annstr));
     }
 }
 

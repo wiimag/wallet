@@ -94,7 +94,6 @@ struct pattern_t
     pattern_check_t checks[8] {};
     bool show_limits{ true };
     bool extra_charts{ false };
-    bool x_axis_inverted{ false };
     bool show_trend_equation{ false };
     pattern_limits_t price_limits;
 

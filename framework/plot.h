@@ -40,7 +40,7 @@ struct plot_context_t
     bool plotted { false };
     bool relative_dates{ false };
     bool compacted{ false };
-    bool show_trend_equation{ false };
+    bool show_equation{ false };
     bool x_axis_inverted{ false };
     bool flipped{ false };
 

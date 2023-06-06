@@ -115,6 +115,7 @@ struct pattern_graph_data_t
 
     bool refresh{ false };
     bool compact{ false };
+    bool show_equation{ false };
 };
 
 static pattern_t* _patterns = nullptr;
@@ -995,10 +996,6 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
     if (!ImPlot::BeginPlot("Pattern Trends##1", graph_size, flags))
         return;
 
-    const float preview_font_scale = ImGui::GetCurrentWindow()->FontWindowScale;
-    if (graph.compact)
-        ImGui::SetWindowFontScale(0.75f);
-
     ImPlot::SetupLegend(ImPlotLocation_NorthWest);
 
     static time_t trend_date = /*1663606289*/ time_now();
@@ -1006,7 +1003,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
     const double trend_min_d = max(graph.min_d, 1.0);
     const double trend_max_d = pattern->range + math_ceil(iteration_count / 4.3) * 2.0;
-    ImPlotAxisFlags trend_axis_flags = ImPlotAxisFlags_LockMin | ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight | (pattern->x_axis_inverted ? ImPlotAxisFlags_Invert : 0);
+    ImPlotAxisFlags trend_axis_flags = ImPlotAxisFlags_LockMin | ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight;
     if (graph.compact)
         trend_axis_flags |= ImPlotAxisFlags_NoLabel | ImPlotAxisFlags_NoTickLabels | ImPlotAxisFlags_AutoFit;
 
@@ -1045,7 +1042,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
         ImPlot::SetAxis(ImAxis_Y1);
         plot_context_t c{ trend_date, min(s->history_count, iteration_count), 1, s->history };
         c.compacted = graph.compact;
-        c.show_trend_equation = pattern->show_trend_equation;
+        c.show_equation = pattern->show_trend_equation || graph.show_equation;
         c.lx = 0.0;
         c.ly = (math_ifnan(s->beta, 0.5) + math_ifnan(s->short_ratio - 1.0, 0.0))
             * math_ifzero(max(max(math_ifnan(s->pe, 1.0), s->forward_pe), s->revenue_per_share_ttm), 1.0) 
@@ -1054,7 +1051,6 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
         c.lz = s->diluted_eps_ttm * 2.0;
         c.acc = pattern->range;
         c.flipped = true;
-        c.x_axis_inverted = pattern->x_axis_inverted;
         ImPlot::PlotLineG("##Slopes", [](int idx, void* user_data)->ImPlotPoint
         {
             plot_context_t* c = (plot_context_t*)user_data;
@@ -1104,9 +1100,6 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
             trend_date = mktime(&tm_date);
     }
     pattern_render_graph_end(pattern, s, graph);
-
-    if (graph.compact)
-        ImGui::SetWindowFontScale(preview_font_scale);
 }
 
 FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
@@ -1147,7 +1140,10 @@ FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
     {
         pattern_graph_data_t gd = pattern_render_build_graph_data(pattern);
         gd.compact = true;
+        gd.show_equation = true;
+        ImGui::SetWindowFontScale(0.7f);
         pattern_render_graph_trends(pattern, gd, { -ImGui::GetStyle().CellPadding.x, IM_SCALEF(100) });
+        ImGui::SetWindowFontScale(1.0f);
     }
 
     if (pattern_render_decision_mark(pattern, 2, 
@@ -1243,7 +1239,7 @@ FOUNDATION_STATIC void pattern_render_graph_change_high(pattern_t* pattern, cons
 {
     const size_t max_render_count = 1024;
     plot_context_t c{ pattern->date, s->history_count, (s->history_count / max_render_count) + 1, s->history };
-    c.show_trend_equation = pattern->show_trend_equation;
+    c.show_equation = pattern->show_trend_equation;
     ImPlot::PlotLineG("Flex H", [](int idx, void* user_data)->ImPlotPoint
     {
         plot_context_t* c = (plot_context_t*)user_data;
@@ -1261,7 +1257,7 @@ FOUNDATION_STATIC void pattern_render_graph_change(pattern_t* pattern, const sto
 {
     const size_t max_render_count = 1024;
     plot_context_t c{ pattern->date, s->history_count, (s->history_count / max_render_count) + 1, s->history };
-    c.show_trend_equation = pattern->show_trend_equation;
+    c.show_equation = pattern->show_trend_equation;
     ImPlot::PlotLineG("Flex L", [](int idx, void* context)->ImPlotPoint
     {
         plot_context_t* c = (plot_context_t*)context;
@@ -1279,7 +1275,7 @@ FOUNDATION_STATIC void pattern_render_graph_change_acc(pattern_t* pattern, const
 {
     ImPlot::HideNextItem(true, ImPlotCond_Once);
     plot_context_t c{ pattern->date, min(s->history_count, (size_t)pattern->range), 1, s->history, 0.0 };
-    c.show_trend_equation = pattern->show_trend_equation;
+    c.show_equation = pattern->show_trend_equation;
     ImPlot::PlotLineG("% Acc.", [](int idx, void* context)->ImPlotPoint
     {
         plot_context_t* c = (plot_context_t*)context;
@@ -1300,14 +1296,13 @@ FOUNDATION_STATIC void pattern_render_graph_change_acc(pattern_t* pattern, const
         ImPlot::Annotation(pattern->range, c.acc, ImVec4(1.0f, 0, 0, 1.0f), ImVec2(4, -4), true, true);
 }
 
-FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool x_axis_inverted, bool relative_dates = true)
+FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern_t* pattern, const stock_t* s, ImAxis y_axis, size_t offset, bool relative_dates = true)
 {
     plot_context_t c{ pattern->date, min((size_t)4096, s->history_count), offset, s->history };
-    c.show_trend_equation = pattern->show_trend_equation;
+    c.show_equation = pattern->show_trend_equation;
     c.acc = pattern->range;
     c.mouse_pos = ImPlot::GetPlotMousePos();
     c.relative_dates = relative_dates;
-    c.x_axis_inverted = pattern->x_axis_inverted;
 
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG(label, [](int idx, void* context)->ImPlotPoint
@@ -1337,15 +1332,15 @@ FOUNDATION_STATIC void pattern_render_graph_day_value(const char* label, pattern
     }
 }
 
-FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stock_t* s, ImAxis y_axis, bool x_axis_inverted)
+FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stock_t* s, ImAxis y_axis)
 {
     plot_context_t c{ pattern->date, min(size_t(8096), s->history_count), 1, s->history };
-    c.show_trend_equation = pattern->show_trend_equation;
+    c.show_equation = pattern->show_trend_equation;
     c.acc = pattern->range;
     c.cursor_xy1 = { DBL_MAX, DNAN };
     c.cursor_xy2 = { DNAN, DNAN };
     c.mouse_pos = ImPlot::GetPlotMousePos();
-    c.x_axis_inverted = pattern->x_axis_inverted;
+    c.x_axis_inverted = true;
 
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG(tr("Price"), [](int idx, void* context)->ImPlotPoint
@@ -1394,11 +1389,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
         const double x2 = c.cursor_xy2.x;
         const double y2 = c.cursor_xy2.y;
         const double x = c.mouse_pos.x;
-        double y = 0;
-        if (x_axis_inverted)
-            y = (y2 - y1) / (x2 - x1) * (x - x1) + y1;
-        else
-            y = (y1 - y2) / (x1 - x2) * (x - x2) + y2;
+        const double y = (y1 - y2) / (x1 - x2) * (x - x2) + y2;
 
         char date_buffer[16];
         const time_t then = pattern->date - (time_t)x * time_one_day();
@@ -1553,7 +1544,7 @@ FOUNDATION_STATIC void pattern_render_graph_flex(pattern_t* pattern, pattern_gra
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.3g %%");
 
     plot_context_t c{ pattern->date, array_size(pattern->flex), 1, pattern->flex};
-    c.show_trend_equation = pattern->show_trend_equation;
+    c.show_equation = pattern->show_trend_equation;
     ImPlot::PlotBarsG(tr("Flex"), [](int idx, void* user_data)->ImPlotPoint
     {
         const plot_context_t* c = (plot_context_t*)user_data;
@@ -1656,12 +1647,11 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2lf $");
 
     plot_context_t c{ pattern->date, intraday_count, 1, pattern->intradays };
-    c.show_trend_equation = pattern->show_trend_equation;
+    c.show_equation = pattern->show_trend_equation;
     c.acc = pattern->range;
     c.cursor_xy1 = { DBL_MAX, DNAN };
     c.cursor_xy2 = { DNAN, DNAN };
     c.mouse_pos = ImPlot::GetPlotMousePos();
-    c.x_axis_inverted = pattern->x_axis_inverted;
 
     ImPlot::PlotLineG(tr("Price"), [](int idx, void* user_data)->ImPlotPoint
     {
@@ -1727,9 +1717,9 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
     const stock_t* s = pattern->stock;
     if (s)
     {
-        pattern_render_graph_day_value("SMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, sma), false, false);
-        pattern_render_graph_day_value("EMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, ema), false, false);
-        pattern_render_graph_day_value("WMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, wma), false, false);
+        pattern_render_graph_day_value("SMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, sma), false);
+        pattern_render_graph_day_value("EMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, ema), false);
+        pattern_render_graph_day_value("WMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, wma), false);
 
         ImPlot::TagY(s->low_52, ImColor::HSV(29 / 360.0f, 0.63f, 1.0f), "Low 52");
         ImPlot::TagY(s->high_52, ImColor::HSV(149 / 360.0f, 0.63f, 1.0f), "High 52");
@@ -1808,21 +1798,14 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
     ImPlot::SetupLegend(ImPlotLocation_NorthWest, ImPlotLegendFlags_Horizontal);
 
     // The price graph is always shown inverted by default.
-    const bool x_axis_inverted = !pattern->x_axis_inverted;
-    ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight | (x_axis_inverted ? ImPlotAxisFlags_Invert : 0));
+    ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_Invert);
     ImPlot::SetupAxisFormat(ImAxis_X1, plot_value_format_elapsed_time_short, nullptr);
     ImPlot::SetupAxisTicks(ImAxis_X1, graph.x_data, pattern_label_max_range(graph), nullptr/*DAY_LABELS*/, false);
     ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_date_label, &graph);
     ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, max(graph.min_d, 1.0), graph.max_d);
 
-
     ImPlotAxisFlags price_axis_flags = ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite;
-    if (pattern->x_axis_inverted)
-    {
-        price_axis_flags |= ImPlotAxisFlags_Invert;
-        price_axis_flags &= ~ImPlotAxisFlags_Opposite;
-    }
     ImPlot::SetupAxis(ImAxis_Y1, "##Currency", price_axis_flags);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0.0, INFINITY);
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2lf $");
@@ -1831,29 +1814,29 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
 
     if (s->has_resolve(FetchLevel::TECHNICAL_SMA))
     {
-        pattern_render_graph_day_value("SMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, sma), x_axis_inverted);
+        pattern_render_graph_day_value("SMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, sma));
     }
 
     if (s->has_resolve(FetchLevel::TECHNICAL_EMA))
     {
         ImPlot::HideNextItem(true, ImPlotCond_Once);
-        pattern_render_graph_day_value("EMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, ema), x_axis_inverted);
+        pattern_render_graph_day_value("EMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, ema));
     }
 
     if (s->has_resolve(FetchLevel::TECHNICAL_WMA))
     {
         ImPlot::HideNextItem(true, ImPlotCond_Once);
-        pattern_render_graph_day_value("WMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, wma), x_axis_inverted);
+        pattern_render_graph_day_value("WMA", pattern, s, ImAxis_Y1, offsetof(day_result_t, wma));
     }
 
     if (pattern->extra_charts && s->has_resolve(FetchLevel::TECHNICAL_SAR))
     {
         ImPlot::HideNextItem(true, ImPlotCond_Once);
-        pattern_render_graph_day_value("SAR", pattern, s, ImAxis_Y1, offsetof(day_result_t, sar), x_axis_inverted);
+        pattern_render_graph_day_value("SAR", pattern, s, ImAxis_Y1, offsetof(day_result_t, sar));
     }
 
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.0f);
-    pattern_render_graph_price(pattern, s, ImAxis_Y1, x_axis_inverted);
+    pattern_render_graph_price(pattern, s, ImAxis_Y1);
 
     ImPlot::TagY(s->low_52, ImColor::HSV(29 / 360.0f, 0.63f, 1.0f), "Low 52");
     ImPlot::TagY(s->high_52, ImColor::HSV(149 / 360.0f, 0.63f, 1.0f), "High 52");
@@ -1907,7 +1890,7 @@ FOUNDATION_STATIC void pattern_render_graph_analysis(pattern_t* pattern, pattern
     double max_days = math_round((pattern->date - pattern->marks[ARRAY_COUNT(FIXED_MARKS) - 1].date) / (double)time_one_day());
     ImPlot::SetupLegend(ImPlotLocation_SouthWest);
 
-    pattern_render_graph_setup_days_axis(pattern, graph, pattern->x_axis_inverted);
+    pattern_render_graph_setup_days_axis(pattern, graph, false);
 
     ImPlot::SetupAxis(ImAxis_Y1, "##Pourcentage", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight);
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.3g %%");
@@ -2035,10 +2018,6 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
             {
                 ImGui::SameLine();
                 if (ImGui::Checkbox(tr("Extra Charts"), &pattern->extra_charts))
-                    graph.refresh = true;
-
-                ImGui::SameLine();
-                if (ImGui::Checkbox(tr("Invert Time"), &pattern->x_axis_inverted))
                     graph.refresh = true;
             }
         }
@@ -2346,9 +2325,9 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.3g");
 
     plot_context_t c{ pattern->date, min(365U, array_size(_activities)), 1, _activities };
-    c.show_trend_equation = pattern->show_trend_equation;
+    c.show_equation = pattern->show_trend_equation;
     c.acc = pattern->range;
-    c.x_axis_inverted = !pattern->x_axis_inverted;
+    c.x_axis_inverted = true;
 
     ImPlot::SetAxis(ImAxis_Y1);
     static int last_index = -1;
@@ -2385,7 +2364,7 @@ FOUNDATION_STATIC void pattern_render_activity(pattern_t* pattern, pattern_graph
     if (const day_result_t* history = pattern->stock->history)
     {
         plot_context_t c2{ pattern->date, min(1024U, array_size(history)), 1, history };
-        c2.show_trend_equation = pattern->show_trend_equation;
+        c2.show_equation = pattern->show_trend_equation;
         c2.acc = (double)min_d;
         c2.lx = (double)pattern->range;
         ImPlot::SetAxis(ImAxis_Y1);
@@ -3043,7 +3022,6 @@ FOUNDATION_STATIC void pattern_load(const config_handle_t& pattern_data, pattern
     pattern.opened = pattern_data["opened"].as_boolean();
     pattern.extra_charts = pattern_data["extra_charts"].as_boolean();
     pattern.show_limits = pattern_data["show_limits"].as_boolean();
-    pattern.x_axis_inverted = pattern_data["x_axis_inverted"].as_boolean();
     pattern.range = pattern_data["range_acc"].as_integer();
     pattern.type = pattern_data["graph_type"].as_integer();
     string_copy(STRING_BUFFER(pattern.notes), STRING_ARGS(pattern_data["notes"].as_string()));
@@ -3094,7 +3072,6 @@ FOUNDATION_STATIC void pattern_save(config_handle_t pattern_data, const pattern_
     config_set(pattern_data, STRING_CONST("opened"), pattern.opened);
     config_set(pattern_data, STRING_CONST("extra_charts"), pattern.extra_charts);
     config_set(pattern_data, STRING_CONST("show_limits"), pattern.show_limits);
-    config_set(pattern_data, STRING_CONST("x_axis_inverted"), pattern.x_axis_inverted);
     config_set(pattern_data, STRING_CONST("range_acc"), (double)pattern.range);
     config_set(pattern_data, STRING_CONST("graph_type"), (double)pattern.type);
     config_set(pattern_data, STRING_CONST("notes"), pattern.notes, string_length(pattern.notes));

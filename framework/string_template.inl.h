@@ -83,11 +83,18 @@ constexpr string_const_t TRANSLATE_OPTION = { STRING_CONST("translate") };
 /*! @def {i,abbreviate}
  *  @brief Abbreviate the string using the localization system.
  *  @see tr
- *  @note This option only works if the translations are available in locales.sjson
  *  @example string_template("{0,abbreviate}", "Hello") -> "H."
  *  @example string_template("{0,abbreviate}", 100e6) -> "100M"
  */
 constexpr string_const_t ABBREVIATE_OPTION = { STRING_CONST("abbreviate") };
+
+/*! @def {i,short}
+ *  @brief Print a number value using the short format (1.2k, 1.2M, 1.2G, 1.2T, etc.)
+ *  @remark This formatter is similar to the #abbreviate formatter
+ *  @example string_template("{0,short}", 256045.4) -> "256k"
+ *  @example string_template("{0,short}", 0.0045) -> "4.5m"
+ */
+constexpr string_const_t SHORT_OPTION = { STRING_CONST("short") };
 
 // TODO (ideas):
 // - {i,time} - Format as time
@@ -140,6 +147,7 @@ typedef enum class StringTokenOption
     Round = 1 << 11,
     Translate = 1 << 12,
     Abbreviate = 1 << 13,
+    Short = 1 << 14,
 
 } string_token_option_t;
 DEFINE_ENUM_FLAGS(StringTokenOption);

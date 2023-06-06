@@ -2467,6 +2467,8 @@ FOUNDATION_STATIC string_template_token_t* string_template_tokens(const char* fo
                             t.options |= StringTokenOption::Translate;
                         else if (string_equal(STRING_ARGS(opts), STRING_ARGS(ABBREVIATE_OPTION)))
                             t.options |= StringTokenOption::Abbreviate;
+                        else if (string_equal(STRING_ARGS(opts), STRING_ARGS(SHORT_OPTION)))
+                            t.options |= StringTokenOption::Short;
                         else if (colon == STRING_NPOS) // An options starting with : is valid and is used to provide a value description
                         {
                             FOUNDATION_ASSERT_FAILFORMAT("Invalid template argument options (%.*s)", STRING_FORMAT(opts));
@@ -2522,6 +2524,13 @@ FOUNDATION_FORCEINLINE bool string_template_argument_type_is_number(string_argum
     }
 
     return false;
+}
+
+FOUNDATION_FORCEINLINE double string_format_round_number(double value, const string_template_token_t& t)
+{
+    if (test(t.options, StringTokenOption::Abbreviate))
+        return (double)math_round(value);
+    return value;
 }
 
 FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capacity, const char* format, size_t format_length, string_argument_type_t t1, va_list args)
@@ -2641,7 +2650,7 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
 
             bufpos += string_from_currency(buffer + bufpos, capacity - bufpos, currency_value).length;
         }
-        else if (test(t.options, StringTokenOption::Abbreviate) && string_template_argument_type_is_number(type))
+        else if (any(t.options, StringTokenOption::Abbreviate | StringTokenOption::Short) && string_template_argument_type_is_number(type))
         {
             if ((type == StringArgumentType::DOUBLE || type == StringArgumentType::FLOAT) && !math_real_is_finite(values[t.index].f))
             {
@@ -2649,20 +2658,31 @@ FOUNDATION_STATIC string_t string_format_template_args(char* buffer, size_t capa
             }
             else
             {
-                int64_t value = math_round(values[t.index].f);
+                double value = values[t.index].f;
                 if (type == StringArgumentType::INT32 || type == StringArgumentType::INT64 || type == StringArgumentType::UINT32 || type == StringArgumentType::UINT64)
-                    value = values[t.index].i;
+                    value = (double)values[t.index].i;
 
-                if (value > 1e12)
-                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%lldT"), value / 1000000000000LL).length;
-                else if (value > 1e9)
-                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%lldG"), value / 1000000000LL).length;
-                else if (value > 1e6)
-                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%lldM"), value / 1000000LL).length;
-                else if (value > 1e3)
-                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%lldK"), value / 1000LL).length;
+                const double absvalue = math_abs(value);
+                if (absvalue > 1e12)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgT"), string_format_round_number(value / 1e12, t)).length;
+                else if (absvalue > 1e9)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgB"), string_format_round_number(value / 1e9, t)).length;
+                else if (absvalue > 1e6)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgM"), string_format_round_number(value / 1e6, t)).length;
+                else if (absvalue > 1e3)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgK"), string_format_round_number(value / 1e3, t)).length;
+                else if (absvalue > 0.01)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.2lg"), string_format_round_number(value, t)).length;
+                else if (absvalue > 1e-3)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgm"), value * 1e3).length;
+                else if (absvalue > 1e-6)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgu"), value * 1e6).length;
+                else if (absvalue > 1e-9)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgn"), value * 1e9).length;
+                else if (absvalue > 1e-12)
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgp"), value * 1e12).length;
                 else
-                    bufpos += string_from_int(buffer + bufpos, capacity - bufpos, value, t.precision, ' ').length;
+                    bufpos += string_format(buffer + bufpos, capacity - bufpos, STRING_CONST("%.3lgt"), value * 1e15).length;
             }
         }
         else if (test(t.options, StringTokenOption::StringTableSymbol) && type == StringArgumentType::INT32)
