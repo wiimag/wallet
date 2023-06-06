@@ -3,7 +3,7 @@
 ## [0.26.3] - 2023-06-06
 - [Add `FORMAT` expression to format expression strings using string templates](https://github.com/wiimag/wallet/pull/33)
 - Fix pattern graph trend line equation.
-- 
+- Fix short number formatting for very small values (see trend line equations).
 - Improve the pattern fundamentals dialog field value formatting.
 
 ## [0.25.13] - 2023-05-29
