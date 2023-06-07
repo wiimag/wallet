@@ -1652,6 +1652,7 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
     c.cursor_xy1 = { DBL_MAX, DNAN };
     c.cursor_xy2 = { DNAN, DNAN };
     c.mouse_pos = ImPlot::GetPlotMousePos();
+    c.flipped = true;
 
     ImPlot::PlotLineG(tr("Price"), [](int idx, void* user_data)->ImPlotPoint
     {

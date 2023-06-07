@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.26.4] - 2023-06-06
+## [0.26.5] - 2023-06-07
 - [Add `FORMAT` expression to format expression strings using string templates](https://github.com/wiimag/wallet/pull/33)
 - Add support to open dialog windows for the current active floating window (instead of always the main one).
+- Fix intraday trend tag annotation position.
 - Fix pattern graph trend line equation.
 - Fix short number formatting for very small values (see trend line equations).
 - Improve the pattern fundamentals dialog field value formatting.
