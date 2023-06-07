@@ -369,7 +369,7 @@ TEST_SUITE("Expressions")
         CHECK_EQ(eval("[true, false, false]").as_string(), CTEXT("[true, false, false]"));
         CHECK_EQ(eval("5+6").as_string(), CTEXT("11"));
         CHECK_EQ(eval("PI*2").as_string("%.2lf"), CTEXT("6.28"));
-        CHECK_EQ(eval("NIL").as_string(), CTEXT("nil"));
+        CHECK_EQ(eval("NIL").as_string(), CTEXT("NIL"));
 
         expr_register_function("ptr16u", [](const expr_func_t* f, vec_expr_t* args, void* c) ->expr_result_t 
         { 
@@ -393,7 +393,6 @@ TEST_SUITE("Expressions")
 
     TEST_CASE("as_number()")
     {
-        CHECK_EQ(test_expr("NIL", nullptr).as_number(0), 0);
         CHECK_EQ(eval("nil").as_number(), 0);
         CHECK_EQ(eval("null").as_number(), 0);
         CHECK_EQ(eval("invalid_should_return_default").as_number(42.0), 42.0);

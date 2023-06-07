@@ -20,6 +20,7 @@
 #include <framework/string_table.h>
 #include <framework/localization.h>
 
+typedef object_t window_handle_t;
 typedef struct GLFWwindow GLFWwindow;
 
 typedef function<void(void*)> app_event_handler_t;
@@ -134,6 +135,9 @@ FOUNDATION_FORCEINLINE void app_open_dialog(
         return true;
     }, width, height, can_resize, nullptr, nullptr);
 }
+
+/*! Close all dialogs owned by the specified window. */
+void app_close_dialogs(window_handle_t owner);
 
 /*! Render all active dialogs for the current window. */
 void app_dialogs_render();

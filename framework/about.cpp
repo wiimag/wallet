@@ -112,6 +112,8 @@ void about_initialize()
     static bool initialized = false;
     if (initialized)
         return;
+
+    #if BUILD_BACKEND
     
     #if FOUNDATION_PLATFORM_WINDOWS
     string_const_t versions_url = CTEXT(PRODUCT_VERSIONS_URL);
@@ -128,6 +130,8 @@ void about_initialize()
     app_register_menu(HASH_ABOUT, 
         STRING_CONST("Help/Web Site"), 
         nullptr, 0, AppMenuFlags::Append, L1(dispatcher_post_event(EVENT_ABOUT_OPEN_WEBSITE)));
+
+    #endif
 
     app_register_menu(HASH_ABOUT, 
         STRING_CONST("Help/About"), 

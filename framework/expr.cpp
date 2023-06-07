@@ -2666,7 +2666,7 @@ FOUNDATION_STATIC void expr_initialize()
     expr_set_global_var("EPSILON", DBL_EPSILON);
     expr_set_global_var("nan", DNAN);
     expr_set_global_var("nil", expr_result_t(nullptr));
-    expr_set_global_var("NIL", expr_result_t(nullptr));
+    //expr_set_global_var("NIL", expr_result_t(nullptr));
     expr_set_global_var("null", expr_result_t(nullptr));
     expr_set_global_var("true", expr_result_t(true));
     expr_set_global_var("false", expr_result_t(false));

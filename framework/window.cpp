@@ -254,6 +254,9 @@ FOUNDATION_STATIC void window_deallocate(window_t* win)
     // Let the user do anything before closing the window
     win->close.invoke(win->handle);
 
+    // Close application dialogs owned by this window
+    app_close_dialogs(win->handle);
+
     // Save the window settings
     window_save_settings(win);
 
@@ -1232,8 +1235,8 @@ void window_close(window_handle_t window_handle)
         dispatch([window_handle]()
         {
             window_t* window = window_handle_lookup(window_handle);
-			if (window->glfw_window)
-	            glfw_request_close_window(window->glfw_window);
+            if (window->glfw_window)
+                glfw_request_close_window(window->glfw_window);
         });
     }
 }
