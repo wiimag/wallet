@@ -219,6 +219,11 @@ FOUNDATION_STATIC void backend_establish_connection()
     });
 }
 
+FOUNDATION_STATIC void backend_open_feedback_page(void* user_data)
+{
+    system_execute_command("https://wallet.wiimag.com/feedback");
+}
+
 FOUNDATION_STATIC bool backend_open_web_site(const dispatcher_event_args_t& args)
 {
     return system_execute_command("https://wallet.wiimag.com");
@@ -331,6 +336,10 @@ FOUNDATION_STATIC void backend_initialize()
     backend_establish_connection();
 
     dispatcher_register_event_listener(EVENT_ABOUT_OPEN_WEBSITE, backend_open_web_site);
+
+    app_register_menu(HASH_BACKEND, 
+        STRING_CONST("Help/Feedback"), 
+        nullptr, 0, AppMenuFlags::Append, backend_open_feedback_page);
 }
 
 FOUNDATION_STATIC void backend_shutdown()

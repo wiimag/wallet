@@ -173,6 +173,15 @@ else()
     add_compile_options(-DBUILD_TESTS=0)
 endif()
 
+#
+# Define custom application build target
+#
+if (BUILD_ENABLE_BACKEND)
+    add_compile_options(-DBUILD_BACKEND=1)
+else()
+    add_compile_options(-DBUILD_BACKEND=0)
+endif()
+
 # Set compiler specific flags
 if(MSVC)
 

@@ -3980,5 +3980,10 @@
 			en = "seconds"
 			fr = "secondes"
 		}
+		{
+			hash = "dcf4689092941b4a"
+			en = "Feedback"
+			fr = "Envoyer des commentaires"
+		}
 	]
 }
