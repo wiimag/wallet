@@ -1010,7 +1010,7 @@ FOUNDATION_STATIC void report_title_total_gain_alerts_formatter(table_element_pt
     if (!math_real_is_nan(title->wallet->enhanced_earnings) && title->average_quantity > 0 && cell->number > title->wallet->enhanced_earnings)
     {
         style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
-        style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.974f, (float)(cell->number / title->wallet->enhanced_earnings / (title->wallet->target_ask * 100.0)));;
+        style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.974f, (float)(cell->number / title->wallet->enhanced_earnings / (title->wallet->target_ask * 100.0)));
         style.text_color = imgui_color_text_for_background(style.background_color);
     }
 }
@@ -1383,10 +1383,10 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     constexpr const char* pourcentage_fmt = "-9999.99 %";
     constexpr const char* integer_fmt = "-9 999 999  ";
 
-    report_render_summary_line(report, tr("Target"), report->wallet->target_ask * 100.0, pourcentage_fmt);
+    report_render_summary_line(report, tr("Target"), report->wallet->target_ask * 100.0, pourcentage_fmt, true);
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::TrTooltip("Adjusted target based on the report current performance.");
-    report_render_summary_line(report, tr("Profit"), report->wallet->profit_ask * 100.0, pourcentage_fmt);
+    report_render_summary_line(report, tr("Profit"), report->wallet->profit_ask * 100.0, pourcentage_fmt, true);
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::TrTooltip("Adjusted target based on the report overall performance and timelapse.");
 
@@ -1918,12 +1918,22 @@ void report_summary_update(report_t* report)
         if (stock_valid)
         {
             if (!title_is_sold)
+            {
                 total_value += title_get_total_value(t);
-            average_nq += s->current.change_p / 100.0;
-            average_nq_count++;
+                average_nq += s->current.change_p / 100.0;
+                average_nq_count++;
 
-            average_nq += title_get_yesterday_change(t, s) / 100.0;
-            average_nq_count++;
+                average_nq += title_get_yesterday_change(t, s) / 100.0;
+                average_nq_count++;
+            }
+
+            const day_result_t* ed = stock_get_EOD(s, -math_round(report->wallet->average_days), true);
+            if (ed)
+            {
+                double eod_change_p = math_change_p(t->stock->current.price, ed->adjusted_close);
+                average_nq += eod_change_p;
+                average_nq_count++;
+            }
 
             if (!math_real_is_nan(s->current.change))
                 total_day_gain += math_ifnan(title_get_day_change(t, s), 0);
@@ -1988,7 +1998,7 @@ void report_summary_update(report_t* report)
     report->wallet->target_ask = report->wallet->main_target + report->total_gain_p;
     report->wallet->profit_ask = 
         max(report->wallet->target_ask + 
-            min(total_sell_gain_if_kept_p, report->wallet->target_ask * total_title_sell_count) +
+            min(total_sell_gain_if_kept_p, max(report->wallet->target_ask * total_title_sell_count, 0.0)) +
             math_abs(average_nq), 0.03);
     report->wallet->enhanced_earnings = math_abs(report->wallet->sell_gain_average) * (1.0 + report->wallet->main_target);
     report->wallet->total_dividends = total_dividends;

@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.27.0] - 2023-06-08
+## [0.27.1] - 2023-06-09
 - Add feedback link under the help menu.
+- Update how the profit target ratio is computed in the report view.
 
 ## [0.26.6] - 2023-06-07
 - [Add `FORMAT` expression to format expression strings using string templates](https://github.com/wiimag/wallet/pull/33)
