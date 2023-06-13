@@ -668,6 +668,14 @@ FOUNDATION_STATIC bool symbols_fetch_market_symbols(const char* market, size_t m
             if (string_equal(STRING_ARGS(type), STRING_CONST("FUND")) || string_equal(STRING_ARGS(type), STRING_CONST("Currency")))
                 continue;
 
+            // Skip ETFs
+            if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("ETF")))
+                continue;
+
+            // Skip Preferred Stock
+            if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("Preferred Stock")))
+                continue;
+
             string_const_t code = e["Code"].as_string();   
             string_t ticker = string_allocate_format(STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), (int)market_length, market);
             array_push(symbols, ticker);

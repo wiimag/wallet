@@ -1,8 +1,9 @@
 # Changelog
 
-## [0.27.1] - 2023-06-09
+## [0.27.2] - 2023-06-13
 - Add feedback link under the help menu.
 - Update how the profit target ratio is computed in the report view.
+- Remove support to index ETF and Preferred stocks.
 
 ## [0.26.6] - 2023-06-07
 - [Add `FORMAT` expression to format expression strings using string templates](https://github.com/wiimag/wallet/pull/33)
