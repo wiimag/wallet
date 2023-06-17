@@ -1590,7 +1590,7 @@ If you like what you see, then you can press F11 to capture the plot and save it
 
 | | |
 | --- | --- |
-| Most of the examples that follow can be pasted directly in the application console. To open the console, press `F10` or click on the menu item `Window/Console`. Once you have pasted the expression, press `Eval` to execute it. <br/><br/>When you see code sections with <br/>`#---`<br/>`$VAR=value`<br/>`#---`<br/> it usually mean you can tweak these variables for your needs. | ![Console](/img/console.png) |
+| Most of the examples that follow can be pasted directly in the application console. To open the console, press `F10` or click on the menu item `Window/Console`. Once you have pasted the expression, press `Eval` to execute it. <br/><br/>When you see code sections with <br/>`#---`<br/>`$VAR=value`<br/>`#---`<br/> it usually mean you can tweak these variables for your needs. | ![Console](./img/console.png) |
 
 # Examples {#expr-examples}
 
