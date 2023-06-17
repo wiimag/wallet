@@ -584,6 +584,7 @@ template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const conf
     return config_set(v, key, N - 1, number); 
 }
 
+#if FOUNDATION_PLATFORM_MACOS
 /*! Sets or change the child config value to a time number value.
  *
  *  @param v     Config value handle.
@@ -596,6 +597,7 @@ template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const conf
 {
     return config_set(v, key, N - 1, (double)time);
 }
+#endif
 
 /*! Sets or change the child config value to a number value. 
  *
