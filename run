@@ -319,7 +319,7 @@ if [ ${#GENERATE[@]} -ge 1 ] && [ ${GENERATE[0]} -ge 1 ]; then
   # Copy second to last parameters to CMAKE_ARGS
   CMAKE_ARGS=("${GENERATE[@]:1}")
   
-  # Read build.settings and add all the name=value pairs to the CMAKE_ARGS array as -Dname=value
+  # Read build configs and add all the name=value pairs to the CMAKE_ARGS array as -Dname=value
   while IFS='=' read -r name value; do
     # Skip comments
     [[ $name == \#* ]] && continue
@@ -334,7 +334,7 @@ if [ ${#GENERATE[@]} -ge 1 ] && [ ${GENERATE[0]} -ge 1 ]; then
     [[ " ${GENERATE[@]} " =~ " -D$name" ]] && continue
 
     CMAKE_ARGS+=("-D$name=$value")
-  done < $CONFIG_DIR/build.settings
+  done < $CONFIG_DIR/build.config
 
   # Write to cmake.args file if verbose is enabled all the cmake arguments one per line
   echo "CMAKE_ARGS:" > cmake.args

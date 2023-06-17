@@ -15,6 +15,12 @@ CONFIG_DIR=$(cd $(dirname $0)/../config; pwd)
 # Load the scripts/common.sh file
 source $SCRIPT_DIR/common.sh
 
+# Only run on windows
+if [ $PLATFORM_WINDOWS = 0 ]; then
+  echo "This script can only be run on Windows"
+  exit 1
+fi
+
 # Load the project name
 SHORT_NAME=$(build_setting "PROJECT_ID")
 

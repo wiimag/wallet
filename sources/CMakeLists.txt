@@ -29,7 +29,12 @@ file(GLOB RESOURCES_SOURCES
     "${ROOT_DIR}/resources/*.ico"
     "${ROOT_DIR}/resources/*.manifest"
     "${ROOT_DIR}/config/locales.sjson"
-    "${ROOT_DIR}/config/build.settings"
+    "${ROOT_DIR}/config/build.config"
+    "${ROOT_DIR}/README.md"
+    "${ROOT_DIR}/CHANGELOG.md"
+    "${ROOT_DIR}/.gitignore"
+    "${ROOT_DIR}/.gitattributes"
+    "${ROOT_DIR}/run"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.rc"
 )
 source_group("resources" FILES ${RESOURCES_SOURCES})

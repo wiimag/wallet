@@ -46,7 +46,7 @@ include(${SHARED_MODULE_PATH})
 set(SHARED_OPTIONS_PATH ${CMAKE_SOURCE_DIR}/config/options.cmake CACHE PATH "Shared options path")
 include(${SHARED_OPTIONS_PATH})
 
-# Read the PROJECT_ID=... from the config/build.settings file
+# Read the PROJECT_ID=... from the build configs
 read_build_settings_property("PROJECT_ID" ProjectId)
 string(REPLACE " " "_" ProjectId ${ProjectId})
 

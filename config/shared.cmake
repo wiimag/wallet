@@ -7,6 +7,9 @@
 
 cmake_minimum_required (VERSION 3.0)
 
+# Define build config path
+set(BUILD_CONFIG_PATH ${ROOT_DIR}/config/build.config CACHE INTERNAL "Build config path")
+
 #
 # Define a function to make the first letter of a string uppercase
 # 
@@ -103,18 +106,18 @@ function(set_executable_framework_linker_flags CMAKE_EXE_LINKER_FLAGS CMAKE_EXE_
 
 endfunction()
 
-# Function used to read a NAME=value property from the config/build.settings file
+# Function used to read a NAME=value property from the build configs
 function(read_build_settings_property property_name property_value)
 
-    # Read the build.settings file
-    file(READ ${ROOT_DIR}/config/build.settings BUILD_SETTINGS_FILE)
+    # Read the build configs file
+    file(READ ${BUILD_CONFIG_PATH} BUILD_SETTINGS_FILE)
 
-    # Find the property in the build.settings file and read the entire line
+    # Find the property in the build configs and read the entire line
     string(REGEX MATCH "${property_name}=([^\n\r]*)" PROPERTY_LINE ${BUILD_SETTINGS_FILE})
 
     # Check if the property was found
     if("${PROPERTY_LINE}" STREQUAL "")
-        message(FATAL_ERROR "Property ${property_name} not found in ${CMAKE_CURRENT_SOURCE_DIR}/config/build.settings file")
+        message(FATAL_ERROR "Property ${property_name} not found in ${BUILD_CONFIG_PATH} file")
     endif()
 
     # Extract the property value
