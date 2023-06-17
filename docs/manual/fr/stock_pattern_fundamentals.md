@@ -1,5 +1,7 @@
-$theme: default
-$title: Fondamentaux des modèles boursiers
+---
+theme: default
+title: Fondamentaux des modèles boursiers
+---
 
 Fondamentaux des modèles boursiers
 ==================================

@@ -1,6 +1,8 @@
-$theme: default
-$title: Getting Started
-$section: table-of-contents
+---
+theme: default
+title: Getting Started
+section: table-of-contents
+---
 
 ## Table of Contents
 

@@ -1,5 +1,7 @@
-$theme: default
-$title: Stock Pattern Fundamentals
+---
+theme: default
+title: Stock Pattern Fundamentals
+---
 
 Stock Pattern Fundamentals
 ==========================

@@ -1,5 +1,7 @@
-$theme: default
-$title: Acheter des actions
+---
+theme: default
+title: Acheter des actions
+---
 
 Acheter des actions
 ===================

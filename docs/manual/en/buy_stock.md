@@ -1,5 +1,7 @@
-$theme: default
-$title: Buy Stock
+---
+theme: default
+title: Buy Stock
+---
 
 Buy Stock
 =========

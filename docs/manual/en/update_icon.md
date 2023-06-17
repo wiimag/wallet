@@ -1,5 +1,7 @@
-$theme: default
-$title: Update symbol icon and banner images
+---
+theme: default
+title: Update symbol icon and banner images
+---
 
 Update symbol icon and banner images
 ====================================

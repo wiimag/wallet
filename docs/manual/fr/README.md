@@ -1,5 +1,7 @@
-$theme: default
-$title: Mise en route
+---
+theme: default
+title: Mise en route
+---
 
 ## Table des matières
 

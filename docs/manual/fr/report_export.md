@@ -1,5 +1,5 @@
 ---
-thème : default
+theme : default
 title : Exportation de rapports
 ---
 

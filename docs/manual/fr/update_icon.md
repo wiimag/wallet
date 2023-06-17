@@ -1,5 +1,7 @@
-$theme: default
-$title: Mettre à jour les îcônes des symboles
+---
+theme: default
+title: Mettre à jour les îcônes des symboles
+---
 
 Mettre à jour les îcônes des symboles
 =====================================
