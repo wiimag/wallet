@@ -34,6 +34,7 @@ You can download the installation and portable packages at <https://wallet.wiima
 * [English](https://wallet.wiimag.com/manual/en/)
 * [Français](https://wallet.wiimag.com/manual/fr/)
 * [Expressions](https://wallet.wiimag.com/manual/en/expressions.md)
+* [Documentation](./docs/README.md#documentation)
 
 _Otherwise if you feel like it, you can also build the application from source. Instructions are below._
 
@@ -139,6 +140,14 @@ cmake --build ./projects/.build --config Release --target wallet -j 10
 
 ```
 ./run generate open workspace
+```
+
+### Build Distribution Package
+
+You can build an installation package on Windows using the `./scripts/build-package.sh` scripts or simply by running the following command:
+
+```bash
+./run package
 ```
 
 ### Batch it all!

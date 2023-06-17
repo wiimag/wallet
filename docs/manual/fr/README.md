@@ -92,23 +92,3 @@ Une fois que vous avez sélectionné l'action, vous pouvez cliquer sur le bouton
 Appuyez sur "Appliquer" pour enregistrer la transaction. Vous reviendrez ensuite à l'onglet rapport.
 
 ![Portfolio](./img/wallet_06.png)
-
-## Fonctionnalités
-
-- [Rapports](report.md)
-    - [Acheter des actions](buy_stock.md)
-    - [Exporter un rapport](report_export.md)
-    - [Importer un rapport](report_import.md)
-    - [Mettre à jour les îcônes des symboles](update_icon.md)
-- [Symboles](./symbols.md)
-    - [Extracteur en masse](./bulk_extractor.md)
-- [Modèles](pattern.md)
-    - [Fondamentaux des modèles boursiers](stock_pattern_fundamentals.md)
-- [Expressions](./expressions.md)
-    - [Basic expressions](./expressions.md#basic-functions)
-    - [Table expressions](./expressions.md#tabletitle-set-columns)
-    - [Plot expressions](./expressions.md#plottitle-x_set-y_set-options)
-    - [Stock expressions](./expressions.md#ssymbol-field-date-stock-or-eod)
-    - [Report expressions](./expressions.md#rreport-title-field)
-    - [Report column expressions](./expressions.md#column-expressions)
-    - [Examples](./expressions.md#examples-5)

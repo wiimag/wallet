@@ -129,23 +129,3 @@ Press `Apply` to save the transaction. Then you'll be back to the report tab.
 ![Portfolio](img/wallet_06.png)
 
 That's the gist of it. You can add as many stock as you want. You can also add as many reports as you want. You can create a report for your stock portfolio, another one for your crypto portfolio, another one for your watchlist, etc.
-
-## Features
-
-- [Reports](./report.md)
-    - [Buy Stock](buy_stock.md)
-    - [Export report](report_export.md)
-    - [Import report](report_import.md)
-    - [Update symbol icon and banner images](update_icon.md)
-- [Symbols](./symbols.md)
-    - [Bulk Extractor](./bulk_extractor.md)
-- [Patterns](./pattern.md)
-    - [Stock pattern fundamentals](stock_pattern_fundamentals.md)
-- [Expressions](./expressions.md)
-    - [Basic expressions](./expressions.md#basic-functions)
-    - [Table expressions](./expressions.md#tabletitle-set-columns)
-    - [Plot expressions](./expressions.md#plottitle-x_set-y_set-options)
-    - [Stock expressions](./expressions.md#ssymbol-field-date-stock-or-eod)
-    - [Report expressions](./expressions.md#rreport-title-field)
-    - [Report column expressions](./expressions.md#column-expressions)
-    - [Examples](./expressions.md#examples-5)
