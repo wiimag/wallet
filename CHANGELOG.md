@@ -1,7 +1,8 @@
 # Changelog
 
-## [0.27.2] - 2023-06-13
+## [0.27.3] - 2023-06-14
 - Add feedback link under the help menu.
+- Add stock fundamentals web link to contextual menu.
 - Update how the profit target ratio is computed in the report view.
 - Remove support to index ETF and Preferred stocks.
 

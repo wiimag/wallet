@@ -3275,6 +3275,10 @@ bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show
         backend_open_url(STRING_CONST("/eod/%.*s"), STRING_FORMAT(code));
 
     ImGui::AlignTextToFramePadding();
+    if (ImGui::Selectable(tr(ICON_MD_PUBLIC " Open Fundamental Page"), false, ImGuiSelectableFlags_AllowItemOverlap))
+        backend_open_url(STRING_CONST("/fundamentals/%.*s"), STRING_FORMAT(code));
+
+    ImGui::AlignTextToFramePadding();
     if (ImGui::Selectable(tr(ICON_MD_WATCH " Open Watch Context"), false, ImGuiSelectableFlags_AllowItemOverlap))
         pattern_open_watch_window(symbol, symbol_length);
     
