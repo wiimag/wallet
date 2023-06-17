@@ -51,7 +51,7 @@ struct SharedBuffer
 };
 
 template<size_t BUF_SIZE> thread_local size_t SharedBuffer<BUF_SIZE>::index = 0;
-template<size_t BUF_SIZE> thread_local char SharedBuffer<BUF_SIZE>::buffer[RING_COUNT][BUF_SIZE] = { "", "", "", "", "", "" };
+template<size_t BUF_SIZE> thread_local char SharedBuffer<BUF_SIZE>::buffer[RING_COUNT][BUF_SIZE] = {};
 
 /*! @def SHARED_BUFFER
  * @brief A macro to declare a thread local shared buffer.

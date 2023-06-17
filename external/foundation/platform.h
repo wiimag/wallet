@@ -674,6 +674,12 @@ thread local storage to ensure maximum portability across supported platforms */
 #define FOUNDATION_ARCH_THUMB 1
 #endif
 
+#ifdef __cplusplus
+#define FOUNDATION_CONSTEXPR constexpr
+#else
+#define FOUNDATION_CONSTEXPR
+#endif
+
 // Compilers
 
 #if defined(__clang__)
@@ -866,11 +872,6 @@ thread local storage to ensure maximum portability across supported platforms */
 #define FOUNDATION_FORCEINLINE __forceinline
 #define FOUNDATION_NOINLINE __declspec(noinline)
 #define FOUNDATION_PURECALL __declspec(noalias)
-#ifdef __cplusplus
-#define FOUNDATION_CONSTEXPR constexpr
-#else
-#define FOUNDATION_CONSTEXPR
-#endif
 #define FOUNDATION_CONSTCALL __declspec(noalias)
 #define FOUNDATION_PRINTFCALL(start, num)
 #define FOUNDATION_ALIGN(alignment) __declspec(align(alignment))

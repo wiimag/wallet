@@ -584,6 +584,19 @@ template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const conf
     return config_set(v, key, N - 1, number); 
 }
 
+/*! Sets or change the child config value to a time number value.
+ *
+ *  @param v     Config value handle.
+ *  @param key   Child field key name.
+ *  @param time Time value converted to double
+ *
+ *  @return Modified config value handle.
+ */
+template <size_t N> FOUNDATION_FORCEINLINE config_handle_t config_set(const config_handle_t& v, const char(&key)[N], time_t time)
+{
+    return config_set(v, key, N - 1, (double)time);
+}
+
 /*! Sets or change the child config value to a number value. 
  *
  *  @param v     Config value handle.

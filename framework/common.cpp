@@ -98,7 +98,7 @@ string_const_t url_encode(const char* str, size_t str_length)
     char* pbuf = buf.str;
     while (*pstr) {
         char c = *pstr;
-        if (c > 0 && isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+        if (c > 0 && (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~'))
             *pbuf++ = c;
         else if (c == ' ')
             *pbuf++ = '%', *pbuf++ = '2', * pbuf++ = '0';
