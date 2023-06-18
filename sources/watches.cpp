@@ -409,6 +409,27 @@ FOUNDATION_STATIC void watch_table_contextual_menu(table_element_ptr_const_t ele
     }
 }
 
+FOUNDATION_STATIC bool watch_table_sort_columns(table_t* table, table_column_t* column, int sort_direction)
+{
+    string_const_t tr_column_name = RTEXT("Name");
+    string_const_t column_name = string_table_decode_const(column->name);
+    if (string_equal(STRING_ARGS(column_name), STRING_ARGS(tr_column_name)))
+    {
+        array_sort(table->rows, [sort_direction](const table_row_t& a, const table_row_t& b)
+        {
+            const watch_point_t* wpa = (const watch_point_t*)a.element;
+            const watch_point_t* wpb = (const watch_point_t*)b.element;
+
+            int order = sort_direction == 2 ? -1 : 1;
+            return string_compare_skip_code_points(STRING_ARGS(wpa->name), STRING_ARGS(wpb->name)) * order;
+        });
+
+        return true;
+    }
+
+    return table_default_sorter(table, column, sort_direction);
+}
+
 FOUNDATION_STATIC table_t* watch_create_table(watch_context_t*)
 {
     table_t* table = table_allocate("WatchPoints", 
@@ -419,6 +440,7 @@ FOUNDATION_STATIC table_t* watch_create_table(watch_context_t*)
     table_add_column(table, watch_point_column_edit_expression, ICON_MD_FUNCTIONS "||Edit Expression", COLUMN_FORMAT_NUMBER, COLUMN_SORTABLE | COLUMN_CUSTOM_DRAWING | COLUMN_CENTER_ALIGN)
         .set_width(IM_SCALEF(20));
 
+    table->sort = watch_table_sort_columns;
     table->context_menu = watch_table_contextual_menu;
 
     return table;
@@ -439,7 +461,7 @@ FOUNDATION_STATIC bool watch_render_new_point(watch_context_t* context)
     FOUNDATION_ASSERT(context != nullptr);
     
     ImGui::ExpandNextItem(IM_SCALEF(24) * 2);
-    ImGui::InputTextWithHint("##Name", tr("Enter watch name..."), STRING_BUFFER(context->name_buffer), ImGuiInputTextFlags_None);
+    ImGui::InputTextWithHint("##Name", tr("Enter new watch name..."), STRING_BUFFER(context->name_buffer), ImGuiInputTextFlags_None);
 
     ImGui::SameLine();
     ImGui::BeginDisabled(_shared_context == nullptr || array_size(_shared_context->points) == 0);
@@ -448,12 +470,48 @@ FOUNDATION_STATIC bool watch_render_new_point(watch_context_t* context)
     else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::TrTooltip("Add Shared Watch");
 
-    if (ImGui::BeginPopup("##SharedWatch"))
+    if (ImGui::BeginPopup("##SharedWatch", ImGuiWindowFlags_AlwaysAutoResize))
     {
+        static float max_label_width = 100.0f;
+        const char* add_all_label = tr(ICON_MD_COPY_ALL " Add All");
+
+        if (ImGui::IsWindowAppearing())
+        {
+            // Sort shared watch points by name
+            array_sort(_shared_context->points, [](const watch_point_t& a, const watch_point_t& b)
+            {
+                return string_compare_skip_code_points(STRING_ARGS(a.name), STRING_ARGS(b.name));
+            });
+
+
+            // Calculate max label width
+            max_label_width = ImGui::CalcTextSize(add_all_label).x;
+            for (unsigned i = 0, end = array_size(_shared_context->points); i < end; ++i)
+            {
+                watch_point_t* wsp = _shared_context->points + i;
+                max_label_width = math_max(max_label_width, ImGui::CalcTextSize(wsp->name.str).x);
+            }
+        }
+
+        // Render "Add All" button
+        if (ImGui::Selectable(add_all_label, false, ImGuiSelectableFlags_AllowItemOverlap, {0, 0.0f}))
+        {
+            for (unsigned i = 0, end = array_size(_shared_context->points); i < end; ++i)
+            {
+                watch_point_t* wsp = _shared_context->points + i;
+                watch_point_add(context, 
+                    wsp->name.str, wsp->name.length, 
+                    wsp->expression.str, wsp->expression.length, 
+                    true, false);
+            }
+        }
+
+        ImGui::Separator();
+
         for (unsigned i = 0, end = array_size(_shared_context->points); i < end; ++i)
         {
             watch_point_t* wsp = _shared_context->points + i;
-            if (ImGui::Selectable(wsp->name.str, false, ImGuiSelectableFlags_AllowItemOverlap, IM_SCALEV(88, 0)))
+            if (ImGui::Selectable(wsp->name.str, false, ImGuiSelectableFlags_AllowItemOverlap, {max_label_width, 0.0f}))
             {
                 watch_point_add(context, 
                     wsp->name.str, wsp->name.length, 
@@ -466,7 +524,7 @@ FOUNDATION_STATIC bool watch_render_new_point(watch_context_t* context)
                 ImGui::SetTooltip("%.*s", STRING_FORMAT(wsp->expression));
             }
 
-            ImGui::SameLine(IM_SCALEF(100));
+            ImGui::SameLine(max_label_width + IM_SCALEF(12));
             ImGui::PushID(wsp);
             if (ImGui::SmallButton(ICON_MD_DELETE_FOREVER))
             {

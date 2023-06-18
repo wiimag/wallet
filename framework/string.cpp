@@ -2927,6 +2927,35 @@ version_t string_to_version_short(const char* str, size_t length)
     return v;
 }
 
+int string_compare_skip_code_points(STRING_PARAM(lhs), STRING_PARAM(rhs))
+{
+    // Skip UTF-8 icon code points
+    while (lhs && *lhs && lhs_length > 0)
+    {
+        if (*lhs > 0)
+            break;
+        // Get utf-8 character length
+        const int clength = string_glyph_length(lhs, lhs_length);
+        lhs += clength;
+        lhs_length -= clength;
+    }
+
+    while (rhs && *rhs && rhs_length > 0)
+    {
+        if (*rhs > 0)
+            break;
+        // Get utf-8 character length
+        const int clength = string_glyph_length(rhs, rhs_length);
+        rhs += clength;
+        rhs_length -= clength;
+    }
+
+    //string_const_t l = string_trim({ lhs, lhs_length });
+    //string_const_t r = string_trim({ rhs, rhs_length });
+
+    return string_compare(STRING_PARAM_ARGS(lhs), STRING_PARAM_ARGS(rhs));
+}
+
 string_t string_utf8_from_code_point(char* buffer, size_t capacity, const char* str, size_t length)
 {
     // Skip U+ if any

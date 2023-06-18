@@ -330,7 +330,7 @@ FOUNDATION_STATIC int table_qsort_cells(void* pcontext, void const* va, void con
     return strncmp(ca.text, cb.text, min(ca.length, cb.length)) * (sort_acsending ? 1 : -1);
 }
 
-FOUNDATION_STATIC bool table_default_sorter(table_t* table, table_column_t* sorting_column, int sort_direction)
+bool table_default_sorter(table_t* table, table_column_t* sorting_column, int sort_direction)
 {
     if (table == nullptr || sorting_column == nullptr)
         return true;

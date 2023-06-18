@@ -699,3 +699,11 @@ string_t string_utf8_from_code_point(char* buffer, size_t capacity, uint32_t cod
  * @return The UTF-8 string.
  */
 string_t string_utf8_from_code_point(char* buffer, size_t capacity, const char* code_point, size_t length);
+
+/*! Compare two strings, but skip any leading code points that are not letters or digits.
+ *
+ * @param lhs The left hand side string.
+ * @param rhs The right hand side string.
+ * @return The comparison result.
+ */
+int string_compare_skip_code_points(STRING_PARAM(lhs), STRING_PARAM(rhs));

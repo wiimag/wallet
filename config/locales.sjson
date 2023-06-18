@@ -3692,8 +3692,8 @@
 		}
 		{
 			hash = "b343db711a24be65"
-			en = "Enter watch name..."
-			fr = "Entrer le nom..."
+			en = "Enter new watch name..."
+			fr = "Saisir une nouvel espion..."
 		}
 		{
 			hash = "1057abafe548324d"
@@ -3989,6 +3989,11 @@
 			hash = "993614da80c31732"
 			en = "\xee\xa0\x8b Open Fundamental Page"
 			fr = "\xee\xa0\x8b Acc\xc3\xa9der \xc3\xa0 la page des donn\xc3\xa9es fondamentales  "
+		}
+		{
+			hash = "a21b919b9268581c"
+			en = "\xee\x8b\xac Add All"
+			fr = "\xee\x8b\xac Ajouter tout les espions"
 		}
 	]
 }

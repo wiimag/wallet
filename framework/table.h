@@ -662,3 +662,12 @@ void table_set_search_filter(table_t* table, const char* filter, size_t filter_l
  *  @return true if the file was successfully exported
  */
 bool table_export_csv(table_t* table, const char* path, size_t length);
+
+/*! Provide default table sorting function.
+ *
+ *  @param table            The table
+ *  @param sorting_column   The sorting column
+ *  @param sort_direction   The sort direction
+ *  @return true if the table was sorted
+ */
+bool table_default_sorter(table_t* table, table_column_t* sorting_column, int sort_direction);

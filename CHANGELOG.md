@@ -1,6 +1,7 @@
 # Changelog
 
 ## [0.27.4] - 2023-06-17
+- Improve watch window sorting and bulk point insertion.
 - Add feedback link under the help menu.
 - Add stock fundamentals web link to contextual menu.
 - Update how the profit target ratio is computed in the report view.
