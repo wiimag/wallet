@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.27.4] - 2023-06-17
+## [0.27.5] - 2023-06-20
+- Do not index stock with no valuation fundamentals.
 - Improve watch window sorting and bulk point insertion.
 - Add feedback link under the help menu.
 - Add stock fundamentals web link to contextual menu.

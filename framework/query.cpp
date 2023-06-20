@@ -881,6 +881,8 @@ stream_t* query_execute_download_file(const char* query)
         return nullptr;
 
     curl_easy_setopt(req, CURLOPT_URL, query);
+    curl_easy_setopt(req, CURLOPT_CONNECTTIMEOUT, 10L);
+    //curl_easy_setopt(req, CURLOPT_TIMEOUT, 30L);
     curl_easy_setopt(req, CURLOPT_WRITEDATA, download_stream);
     curl_easy_setopt(req, CURLOPT_WRITEFUNCTION, query_download_file_write_function);
 

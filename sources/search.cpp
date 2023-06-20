@@ -402,10 +402,26 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
     search_database_t* db = _search->db;
 
     const auto General = json["General"];
+    if (General.root == nullptr || General.root->child == 0)
+        return;
 
     string_const_t code = General["Code"].as_string();
     if (string_is_null(code))
         return (void)stock_ignore_symbol(STRING_ARGS(symbol));
+
+    const auto Technicals = json["Technicals"];
+    if (Technicals.root == nullptr || Technicals.root->child == 0)
+    {
+        return (void)stock_ignore_symbol(STRING_ARGS(symbol));
+        return;
+    }
+
+    const auto Valuation = json["Valuation"];
+    if (Valuation.root == nullptr || Valuation.root->child == 0)
+    {
+        return (void)stock_ignore_symbol(STRING_ARGS(symbol));
+        return;
+    }
         
     const bool is_delisted = General["IsDelisted"].as_boolean();
     if (is_delisted || json.token_count <= 1)
@@ -440,7 +456,12 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         return;
 
     string_const_t description = General["Description"].as_string();
-    if (string_is_null(description) || string_equal(STRING_ARGS(description), STRING_CONST("NA")))
+    if (string_is_null(description) || description.length < 32)
+        return (void)stock_ignore_symbol(STRING_ARGS(symbol));
+
+    // Ignore symbols with negative Beta
+    const double beta = Technicals["Beta"].as_number();
+    if (beta < 0)
         return (void)stock_ignore_symbol(STRING_ARGS(symbol));
 
     string_const_t name = General["Name"].as_string();
