@@ -430,6 +430,11 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const json_ob
         string_const_t s = json.as_string();
         if (string_equal_nocase(s.str, s.length, STRING_CONST("NA")))
             return NIL;
+
+        double n;
+        if (string_try_convert_number(s.str, s.length, n))
+            return expr_result_t(n);
+
         return expr_result_t(s);
     }
 
