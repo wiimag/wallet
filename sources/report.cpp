@@ -960,6 +960,36 @@ FOUNDATION_STATIC void report_title_live_price_tooltip(table_element_ptr_const_t
     realtime_render_graph(title->code, title->code_length, since, max(ImGui::GetContentRegionAvail().x, 900.0f), 300.0f);
 }
 
+FOUNDATION_STATIC void report_title_ps_formatter(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
+{
+    title_t* title = *(title_t**)element;
+    if (title == nullptr)
+        return;
+
+    const double target = title->wallet->target_ask;
+    const double profit = title->wallet->profit_ask;
+    const double ps_value = cell->number / 100.0;
+
+    if (-ps_value > profit)
+    {
+        style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
+        style.background_color = ImColor::HSV(10 / 360.0f, 0.54f, 0.974f, (float)((-ps_value - target) / profit));
+        style.text_color = imgui_color_text_for_background(style.background_color);
+    }
+    else if (-ps_value > target)
+    {
+        style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
+        style.background_color = ImColor::HSV(55 / 360.0f, 0.69f, 0.87f, 0.8f); // hsv(55, 69%, 97%)
+        style.text_color = imgui_color_text_for_background(style.background_color);
+    }
+    else if (ps_value > target)
+    {
+        style.types |= COLUMN_COLOR_BACKGROUND | COLUMN_COLOR_TEXT;
+        style.background_color = ImColor::HSV(130 / 360.0f, 0.94f, 0.94f); // hsv(176, 94%, 94%)
+        style.text_color = imgui_color_text_for_background(style.background_color);
+    }
+}
+
 FOUNDATION_STATIC void report_title_price_alerts_formatter(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell, cell_style_t& style)
 {
     title_t* title = *(title_t**)element;
@@ -1189,7 +1219,8 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
 
     table_add_column(table, STRING_CONST("PS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Prediction Sensor"),
         E32(report_column_get_value, _1, _2, REPORT_FORMULA_PS), COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_ROUND_NUMBER | COLUMN_DYNAMIC_VALUE)
-        .set_selected_callback(report_title_pattern_open);
+        .set_selected_callback(report_title_pattern_open)
+        .set_style_formatter(report_title_ps_formatter);
         
     table_add_column(table, STRING_CONST("EPS " ICON_MD_TRENDING_UP "||" ICON_MD_TRENDING_UP " Earning Trend"),
         report_column_earning_percent, COLUMN_FORMAT_PERCENTAGE, COLUMN_SORTABLE | COLUMN_HIDE_DEFAULT | COLUMN_DYNAMIC_VALUE | COLUMN_ZERO_USE_DASH);

@@ -139,39 +139,32 @@ FOUNDATION_STATIC bool title_fetch_ask_price(const title_t* t, double& value)
     const double average_days = t->wallet->average_days;
     const double target_ask = t->wallet->target_ask;
 
-    const double days_held = title_average_days_held(t);
+    const double days_held = math_max(90, title_average_days_held(t));
     const double average_fg = (t->average_price + s->current.adjusted_close) / 2.0;
-    if (days_held > 30)
+    unsigned samples = 0;
+    double sampling_average_fg = 0.0f;
+    unsigned max_samping_days = math_floor(days_held / 2.0f);
+    for (unsigned i = 2, end = array_size(s->history); i < end && samples < max_samping_days; ++i)
     {
-        unsigned samples = 0;
-        double sampling_average_fg = 0.0f;
-        unsigned max_samping_days = math_floor(days_held / 2.0f);
-        for (unsigned i = 2, end = array_size(s->history); i < end && samples < max_samping_days; ++i)
+        if (s->history[i].date > t->date_average)
         {
-            if (s->history[i].date > t->date_average)
-            {
-                sampling_average_fg += s->history[i].adjusted_close;
-                samples++;
-            }
+            sampling_average_fg += s->history[i].adjusted_close;
+            samples++;
         }
+    }
 
-        if (samples > 0)
-        {
-            sampling_average_fg /= samples;
-            sampling_average_fg = (t->average_price + s->current.adjusted_close + sampling_average_fg) / 3.0;
-        }
-        else
-        {
-            sampling_average_fg = max(t->average_price, average_fg);
-        }
-
-        value = sampling_average_fg * (1.0 + profit_ask - (days_held - average_days) / 20.0 / 100.0);
+    if (samples > 0)
+    {
+        sampling_average_fg /= samples;
+        sampling_average_fg = (t->average_price + s->current.adjusted_close + sampling_average_fg) / 3.0;
     }
     else
     {
-        value = max(t->average_price, average_fg) * max(1 + max(t->wallet->main_target, profit_ask), 1 + target_ask);
+        sampling_average_fg = max(t->average_price, average_fg);
     }
 
+    value = sampling_average_fg * (1.0 + profit_ask - (days_held - average_days) / 20.0 / 100.0);
+    
     return !math_real_is_nan(value);
 }
 

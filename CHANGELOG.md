@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.27.6] - 2023-06-20
+## [0.27.7] - 2023-06-22
+- Fix ask price when days held if lower than 30 days.
 - Add support to parse fundamentals values with `F(...)` as numbers even if they are JSON strings.
 - Do not index stock with no valuation fundamentals.
 - Improve watch window sorting and bulk point insertion.
