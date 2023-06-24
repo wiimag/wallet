@@ -2255,7 +2255,7 @@ string_t string_remove_line_returns(const char* str, size_t length)
 string_t string_random(char* buf, size_t capacity)
 {
     static const char* const strings[] = {
-        "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
+        " ", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
         "t", "u", "v", "w", "x", "y", "z", "0", "1", "2", "3", "4", "5", "6",
         "7", "8", "9", "!", "@", "#", "$", "%", "^", "&", "*", "(", ")",
         "-", "_", "+", "=", "[", "]", "{", "}", ";", ":", "'", "\"", ",", ".",

@@ -319,6 +319,7 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     t->average_quantity = 0;
     t->average_price_rated = 0;
 
+    t->total_gain = 0;
     t->total_dividends = 0;
     t->average_ask_price = 0;
     t->average_exchange_rate = 1;
@@ -452,6 +453,8 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
         {
             if (total_current_quantity > 0)
             {
+                t->total_gain += t->sell_total_price_rated - t->buy_total_price_rated;
+
                 // Reset buy and sell stats
                 t->buy_total_quantity = 0;
                 t->buy_total_price = 0;

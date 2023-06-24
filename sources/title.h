@@ -62,6 +62,7 @@ FOUNDATION_ALIGNED_STRUCT(title_t, 8)
     double average_quantity{ NAN };
     double average_price_rated{ NAN };
     
+    double total_gain{ NAN };
     double total_dividends{ NAN };
     double average_ask_price{ NAN };
     double average_exchange_rate{ 1 };

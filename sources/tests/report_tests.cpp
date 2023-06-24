@@ -136,17 +136,30 @@ TEST_SUITE("Report")
         report_deallocate(handle);
     }
 
-    TEST_CASE("TODO: NTR.TO")
+    TEST_CASE("Buy, Sell All, Re-buy")
     {
-        /*
-        "NTR.TO" = {
-		    orders = [
-			    { date = "2023-05-03" buy = true qty = 110.00 price = 93.54 split = 1.00 xcg = 1.00 }
-			    { date = "2023-06-21" sell = true qty = 110.00 price = 77.61 split = 1.00 xcg = 1.00 }
-			    { date = "2023-06-22" buy = true qty = 140.00 price = 76.76 split = 1.00 xcg = 1.00 }
-		    ]
-	    }
-        */
+        string_t name = string_random(SHARED_BUFFER(16));
+        report_handle_t handle = report_allocate(STRING_ARGS(name));
+        report_t* report = report_get(handle);
+        string_deallocate(report->wallet->preferred_currency.str);
+        report->wallet->preferred_currency = string_clone(STRING_CONST("CAD"));
+
+        title_t* title = report_add_title(report, STRING_CONST("NTR.TO"));
+        report_title_buy(report, title, string_to_date(STRING_CONST("2023-05-03")), 110.00, 93.54);
+        report_title_sell(report, title, string_to_date(STRING_CONST("2023-06-21")), 110.0, 77.61);
+        report_title_buy(report, title, string_to_date(STRING_CONST("2023-06-22")), 140.00, 76.76);
+
+        // Since we re-bought after selling all, we assume that the new buy orders do not affect the previous sell orders
+        // and therefore the average price shouldn't be affected by previous sell orders (just like if had never buy and sold a previous batch)
+        CHECK(report_sync_titles(report));
+        CHECK_NEAR_EQ(report->total_investment, 140 * 76.76);
+        CHECK_NEAR_EQ(title->average_price, 76.76);
+        CHECK_EQ(title->average_quantity, 140.0);
+
+        // The total gain should still consider the previous sell orders
+        CHECK_NEAR_EQ(title->total_gain, 110 * 77.61 - 110 * 93.54);
+
+        report_deallocate(handle);
      }
 }
 
