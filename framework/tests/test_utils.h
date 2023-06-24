@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 - All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2023 Wiimag Inc. All rights reserved.
  * 
  * Testing helpers. Most helpers are written in UPPERCASE in order to blend 
  * well with doctest MACROS.

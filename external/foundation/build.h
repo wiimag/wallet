@@ -155,11 +155,21 @@ and disabled in all other configurations.
     #define BUILD_RELEASE 0
 #endif
 
+// Define BUILD_DEVELOPMENT if not defined
 #ifndef BUILD_DEVELOPMENT
     #if BUILD_DEBUG || BUILD_RELEASE
         #define BUILD_DEVELOPMENT 1
     #else
         #define BUILD_DEVELOPMENT 0
+    #endif
+#endif
+
+// Define BUILD_TESTS if not defined
+#ifndef BUILD_TESTS
+    #if BUILD_DEVELOPMENT
+        #define BUILD_TESTS 1
+    #else
+        #define BUILD_TESTS 0
     #endif
 #endif
 

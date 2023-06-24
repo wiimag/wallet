@@ -2252,7 +2252,7 @@ string_t string_remove_line_returns(const char* str, size_t length)
     return result;
 }
 
-string_const_t random_string(char* buf, size_t capacity)
+string_t string_random(char* buf, size_t capacity)
 {
     static const char* const strings[] = {
         "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s",
@@ -2269,7 +2269,7 @@ string_const_t random_string(char* buf, size_t capacity)
         random_string = string_concat(buf, capacity,  STRING_ARGS(random_string), strings[string_index], string_length(strings[string_index]));
     }
     buf[num_chars] = '\0';
-    return { buf, num_chars };
+    return random_string;
 }
 
 void string_deallocate(string_t& str)

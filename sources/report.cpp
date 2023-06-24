@@ -94,6 +94,7 @@ FOUNDATION_STATIC title_t* report_title_add(report_t* report, string_const_t cod
     title = title_allocate(report->wallet, title_data);
     report->titles = array_insert(report->titles, report->active_titles, title);
     report->active_titles++;
+    report->dirty = true;
 
     return title;
 }
@@ -2429,6 +2430,64 @@ title_t* report_add_title(report_t* report, const char* code, size_t code_length
     return report_title_add(report, string_const(code, code_length));
 }
 
+void report_deallocate(report_t* report)
+{
+    table_deallocate(report->table);
+
+    foreach (title, report->titles)
+        title_deallocate(*title);
+    array_deallocate(report->titles);
+    array_deallocate(report->transactions);
+    wallet_deallocate(report->wallet);
+    config_deallocate(report->data);
+    array_deallocate(report->expression_columns);
+}
+
+void report_title_sell(report_t* report, title_t* title, time_t date, double qty, double price)
+{
+    FOUNDATION_ASSERT(report);
+    FOUNDATION_ASSERT(title);
+
+    config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
+    config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);
+
+    string_const_t date_str = string_from_date(date);
+    config_set(new_order, STRING_CONST("date"), STRING_ARGS(date_str));
+    config_set(new_order, STRING_CONST("sell"), true);
+    config_set(new_order, STRING_CONST("qty"), qty);
+    config_set(new_order, STRING_CONST("price"), price);
+
+    title_refresh(title);
+}
+
+void report_title_buy(report_t* report, title_t* title, time_t date, double qty, double price)
+{
+    FOUNDATION_ASSERT(report);
+    FOUNDATION_ASSERT(title);
+
+    config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
+    config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);
+
+    string_const_t date_str = string_from_date(date);
+    config_set(new_order, STRING_CONST("date"), STRING_ARGS(date_str));
+    config_set(new_order, STRING_CONST("buy"), true);
+    config_set(new_order, STRING_CONST("qty"), qty);
+    config_set(new_order, STRING_CONST("price"), price);
+
+    title_refresh(title);
+}
+
+void report_deallocate(report_handle_t handle)
+{
+    report_t* report = report_get(handle);
+    if (!report)
+        return;
+
+    report_delete(report);
+    report_deallocate(report);
+    array_remove_ptr(_reports, report);
+}
+
 void report_table_rebuild(report_t* report)
 {
     FOUNDATION_ASSERT(report);
@@ -2536,15 +2595,7 @@ FOUNDATION_STATIC void report_shutdown()
         if (r.save)
             report_save(&r);
 
-        table_deallocate(r.table);
-
-        foreach (title, r.titles)
-            title_deallocate(*title);
-        array_deallocate(r.titles);
-        array_deallocate(r.transactions);
-        wallet_deallocate(r.wallet);
-        config_deallocate(r.data);
-        array_deallocate(r.expression_columns);
+        report_deallocate(&r);
     }
     array_deallocate(_reports);
     _reports = nullptr;

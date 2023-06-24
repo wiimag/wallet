@@ -452,7 +452,7 @@ TEST_SUITE("Search")
         while (search_database_document_count(db) > 0)
         {
             char word_buffer[8 + 1];
-            string_const_t word = random_string(STRING_BUFFER(word_buffer));
+            string_t word = string_random(STRING_BUFFER(word_buffer));
 
             for (int d = 0; d < ARRAY_COUNT(docs) / 2; ++d)
                 search_database_index_word(db, docs[random32_range(0, ARRAY_COUNT(docs))], STRING_ARGS(word));

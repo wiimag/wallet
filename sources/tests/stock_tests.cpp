@@ -1,6 +1,6 @@
 /*
- * Copyright 2023 Wiimag Inc. All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2023 Wiimag Inc. All rights reserved.
  */
 
 #include <foundation/platform.h>

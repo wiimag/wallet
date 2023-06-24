@@ -9,6 +9,8 @@
 #include <framework/option.h>
 #include <framework/string_table.h>
 
+#include <foundation/uuid.h>
+
 #define HASH_REPORT static_hash_string("report", 6, 0xbaf4a5498a0604aaULL)
 
 struct title_t;
@@ -305,3 +307,29 @@ report_handle_t report_get_handle(const report_t* report_ptr);
  * @param report    The report to update the table for.
  */
 void report_table_rebuild(report_t* report);
+
+/*! Delete a report.
+ * 
+ * @param report    The report to delete.
+ */
+void report_deallocate(report_handle_t report);
+
+/*! Report a buy transaction.
+ * 
+ * @param report    The report to report the transaction to.
+ * @param title     The title of the transaction.
+ * @param date      The date of the transaction.
+ * @param qty       The quantity of the transaction.
+ * @param price     The price of the transaction.
+ */
+void report_title_buy(report_t* report, title_t* title, time_t date, double qty, double price);
+
+/*! Report a sell transaction.
+ * 
+ * @param report    The report to report the transaction to.
+ * @param title     The title of the transaction.
+ * @param date      The date of the transaction.
+ * @param qty       The quantity of the transaction.
+ * @param price     The price of the transaction.
+ */
+void report_title_sell(report_t* report, title_t* title, time_t date, double qty, double price);

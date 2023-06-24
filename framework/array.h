@@ -588,3 +588,29 @@ bool array_remove(T* arr, const U& value_to_remove)
     }
     return false;
 }
+
+/*! Remove the contained pointer from the array. 
+ *  
+ *  @template T             The type of the array elements.
+ *  @template U             The type of the pointer to remove.
+ *
+ *  @param arr              The dynamic array (@see <foundation/array.h>)
+ *  @param ptr              The pointer to remove.
+ *
+ *  @return True if the pointer was found and removed, false otherwise.
+ */
+ 
+template<typename T, typename U>
+bool array_remove_ptr(T* arr, const U* ptr)
+{
+    const uint32_t size = array_size(arr);
+    for (uint32_t i = 0; i < size; ++i)
+    {
+        if (&arr[i] == ptr)
+        {
+            array_erase_ordered_safe(arr, i);
+            return true;
+        }
+    }
+    return false;
+}

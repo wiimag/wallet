@@ -633,7 +633,7 @@ string_const_t string_join(const T* list, const Iter& iter,
  * @param capacity The capacity of the buffer.
  * @return The random string.
  */
-string_const_t random_string(char* buf, size_t capacity);
+string_t string_random(char* buf, size_t capacity);
 
 /*! Compute levenstein distance between two strings.
  *
