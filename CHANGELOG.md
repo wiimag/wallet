@@ -1,7 +1,9 @@
 # Changelog
 
-## [0.28.0] - 2023-06-24
+## [0.28.1] - 2023-06-24
+- Update license <https://wiimag.com/LICENSE>
 - Fix average cost when the stock got sold and we bought it again.
+- Fix average days held computation when the stock got sold and we bought it again.
 
 ## [0.27.7] - 2023-06-22
 - Fix ask price when days held if lower than 30 days.

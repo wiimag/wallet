@@ -1,6 +1,6 @@
 /*
  * Copyright 2022-2023 - All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * License: https://wiimag.com/LICENSE
  * 
  * This module provides a set of function to translate strings and to manage the
  * localization of the application.

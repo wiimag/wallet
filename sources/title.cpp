@@ -1,6 +1,6 @@
 /*
+ * License: https://wiimag.com/LICENSE
  * Copyright 2022-2023 Wiimag Inc. All rights reserved.
- * License: https://wallet.wiimag.com/LICENSE
  */
  
 #include "title.h"
@@ -342,12 +342,29 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     double total_buy_limit_price = 0;
     double total_exchange_rate = 0;
     double total_exchange_rate_count = 0;
-    double total_current_quantity = 0;
     
     const stock_t* s = title_is_resolved(t) ? t->stock : nullptr;
     string_t preferred_currency = t->wallet->preferred_currency;
     string_const_t stock_currency = s ? string_table_decode_const(s->currency) : string_null();
     const double dividends_yield = s ? math_ifnan(s->dividends_yield.fetch(), 0) : 0.0;
+
+    // Check if the title has been fully sold
+    double total_current_quantity = 0;
+    for (auto order : data["orders"])
+    {
+        const double qty = order[TITLE_QTY].as_number();
+        const bool buy = order[TITLE_BUY].as_boolean();
+        const bool sell = order[TITLE_SELL].as_boolean();
+
+        if (buy)
+        {
+            total_current_quantity += qty;
+        }
+        else if (sell)
+        {
+            total_current_quantity -= qty;
+        }
+    }
 
     for (auto order : data["orders"])
     {
@@ -417,7 +434,6 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
             t->buy_total_price += qty * price;
             t->buy_total_price_rated += qty * price * order_exchange_rate;
             t->average_quantity += split_quantity;
-            total_current_quantity += qty;
         }
         else if (sell)
         {
@@ -426,11 +442,25 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
             t->sell_total_price += qty * price;
             t->sell_total_price_rated += qty * price * order_exchange_rate;
             t->average_quantity -= split_quantity;
-            total_current_quantity -= qty;
         }
         else
         {
             FOUNDATION_ASSERT_FAIL("Invalid order type");
+        }
+
+        if (math_real_is_zero(t->average_quantity))
+        {
+            if (total_current_quantity > 0)
+            {
+                // Reset buy and sell stats
+                t->buy_total_quantity = 0;
+                t->buy_total_price = 0;
+                t->buy_total_price_rated = 0;
+
+                t->sell_total_quantity = 0;
+                t->sell_total_price = 0;
+                t->sell_total_price_rated = 0;
+            }
         }
     }
 
@@ -673,18 +703,33 @@ double title_average_days_held(const title_t* title)
 
     // Compute in average how many days the title is help.
     // We weight each transaction total price by the title total transaction price.
+    double current_quantity = 0;
     for (auto e : orders)
     {
-        if (!e["buy"].as_boolean())
-            continue;
-
-        const time_t order_date = e["date"].as_time();
+        const bool buy = e["buy"].as_boolean();
+        const bool sell = e["sell"].as_boolean();
         const double qty = e["qty"].as_number();
-        const double price = e["price"].as_number();
-        const double total_price = qty * price;
 
-        const double ratio = total_price / buy_total_price;
-        average_days_held += order_date * ratio;
+        if (buy)
+        {
+            const time_t order_date = e["date"].as_time();
+            const double price = e["price"].as_number();
+            const double total_price = qty * price;
+
+            const double ratio = total_price / buy_total_price;
+            average_days_held += order_date * ratio;
+
+            current_quantity += qty;
+        }
+        else if (sell)
+        {
+            current_quantity -= qty;
+        }
+
+        if (current_quantity == 0 && title->average_quantity > 0)
+        {
+            average_days_held = 0;
+        }
     }
 
     title->average_days_held = time_elapsed_days(average_days_held, time_now());

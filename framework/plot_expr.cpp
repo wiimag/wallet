@@ -1,6 +1,6 @@
 /*
  * Copyright 2023 Wiimag Inc. All rights reserved.
- * License: https://wallet.wiimag.com/LICENSE
+ * License: https://wiimag.com/LICENSE
  *
  * Examples:
  *     PLOT('Graph', [0, 1, 2, 3], [100, 200, 300, 400], options...)

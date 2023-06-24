@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 - All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * License: https://wiimag.com/LICENSE
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  */
 
 #if BUILD_APPLICATION

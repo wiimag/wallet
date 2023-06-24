@@ -1,6 +1,6 @@
 #
 # Copyright 2023 Wiimag Inc. All rights reserved.
-# License: https://equals-forty-two.com/LICENSE
+# License: https://wiimag.com/LICENSE
 #
 # Installer executable project.
 #

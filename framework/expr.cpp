@@ -1,6 +1,6 @@
 /*
  * Copyright 2022-2023 - All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * License: https://wiimag.com/LICENSE
  * 
  * This module uses code from https://github.com/zserge/expr
  */

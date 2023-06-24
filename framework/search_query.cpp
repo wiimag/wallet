@@ -1,6 +1,6 @@
 /*
  * Copyright 2023 equals-forty-two.com All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * License: https://wiimag.com/LICENSE
  * 
  * Query language is a simple boolean expression of words, with optional
  * grouping and negation. The query is parsed into a tree of nodes, where

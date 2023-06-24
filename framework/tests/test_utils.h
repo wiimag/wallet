@@ -1,6 +1,6 @@
 /*
  * Copyright 2022-2023 - All rights reserved.
- * License: https://equals-forty-two.com/LICENSE
+ * License: https://wiimag.com/LICENSE
  * 
  * Testing helpers. Most helpers are written in UPPERCASE in order to blend 
  * well with doctest MACROS.

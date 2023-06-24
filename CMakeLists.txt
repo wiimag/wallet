@@ -1,6 +1,6 @@
 #
+# License: https://wiimag.com/LICENSE
 # Copyright 2022-2023 - All rights reserved.
-# License: https://equals-forty-two.com/LICENSE
 #
 # CMake entry point to build the project solutions
 #

@@ -1,6 +1,6 @@
 /*
  * Copyright 2023 Wiimag Inc. All rights reserved.
- * License: https://wallet.wiimag.com/LICENSE
+ * License: https://wiimag.com/LICENSE
  *
  * The watches module is responsible for managing watch points.
  * A watch point is an expression that is evaluated to provide additional
