@@ -644,16 +644,7 @@ void report_open_buy_lot_dialog(report_t* report, title_t* title)
         ImGui::SameLine();
         if (ImGui::Button(tr("Apply"), { IM_SCALEF(75.0f), IM_SCALEF(24.0f) }))
         {
-            config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
-            config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);
-
-            string_const_t date_str = string_from_date(tm_date);
-            config_set(new_order, STRING_CONST("date"), STRING_ARGS(date_str));
-            config_set(new_order, STRING_CONST("buy"), true);
-            config_set(new_order, STRING_CONST("qty"), quantity);
-            config_set(new_order, STRING_CONST("price"), price);
-
-            title_refresh(title);
+            report_title_buy(report, title, mktime(&tm_date), quantity, price);
             report_trigger_update(report);
 
             return false;
@@ -731,16 +722,7 @@ void report_open_sell_lot_dialog(report_t* report, title_t* title)
         ImGui::MoveCursor(0, -5);
         if (ImGui::Button(tr("Apply"), { IM_SCALEF(75.0f) , IM_SCALEF(24.0f) }))
         {
-            config_handle_t orders = config_set_array(title->data, STRING_CONST("orders"));
-            config_handle_t new_order = config_array_push(orders, CONFIG_VALUE_OBJECT);
-
-            string_const_t date_str = string_from_date(tm_date);
-            config_set(new_order, STRING_CONST("date"), STRING_ARGS(date_str));
-            config_set(new_order, STRING_CONST("sell"), true);
-            config_set(new_order, STRING_CONST("qty"), quantity);
-            config_set(new_order, STRING_CONST("price"), price);
-
-            title_refresh(title);
+            report_title_sell(report, title, mktime(&tm_date), quantity, price);
             report_trigger_update(report);
 
             return false;

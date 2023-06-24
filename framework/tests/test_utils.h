@@ -182,4 +182,9 @@ void TEST_CLEAR_FRAME();
 
 void REQUIRE_WAIT(bool* watch_var, double timeout_seconds = 5.0);
 
+FOUNDATION_FORCEINLINE void CHECK_NEAR_EQ(double a, double b, double epsilon = 0.0001)
+{
+    CHECK_LE(std::abs(a - b), epsilon);
+}
+
 #endif

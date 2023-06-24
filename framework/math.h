@@ -305,9 +305,14 @@ FOUNDATION_FORCEINLINE double math_change_p(double from, double to, double defau
     return !math_real_is_zero(from) ? (to - from) / from : default_value;
 }
 
-FOUNDATION_FORCEINLINE int math_round(double value, int at)
+/*! Round the given value to the nearest multiple of the given number.
+ *  @param value The value to round.
+ *  @param at The number to round to.
+ *  @return The given value rounded to the nearest multiple of the given number.
+ */
+FOUNDATION_FORCEINLINE int math_round(double value, double at)
 {
-    return math_round(value / at) * at;
+    return (int)(math_round(value / at) * at);
 }
 
 // ## Scalar helpers
