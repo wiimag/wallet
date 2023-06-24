@@ -455,8 +455,17 @@ void title_init(title_t* t, wallet_t* wallet, const config_handle_t& data)
     
     // Update the average price
     t->average_exchange_rate = total_exchange_rate_count > 0 ? total_exchange_rate / total_exchange_rate_count : 0;
-    t->average_price = math_ifnan((t->buy_total_price / t->buy_total_quantity), 0.0);
-    t->average_price_rated = (t->buy_total_price_rated / t->buy_total_quantity);
+
+    if (t->average_quantity > 0)
+    {
+        t->average_price = math_ifnan((t->buy_total_price - t->sell_total_price) / t->average_quantity, 0.0);
+        t->average_price_rated = math_ifnan((t->buy_total_price_rated - t->sell_total_price_rated) / t->average_quantity, 0.0);
+    }
+    else
+    {
+        t->average_price = 0;
+        t->average_price_rated = 0;
+    }
     
     if (valid_dates > 0)
     {

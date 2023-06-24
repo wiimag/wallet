@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.28.0] - 2023-06-24
+- Fix average cost when the stock got sold and we bought it again.
+
 ## [0.27.7] - 2023-06-22
 - Fix ask price when days held if lower than 30 days.
 - Add support to parse fundamentals values with `F(...)` as numbers even if they are JSON strings.
@@ -61,7 +64,6 @@
 - Add support for `YEAR(...)` to get the year of a date. This was useful to plot annual earnings using `PLOT(...)`.
 - Add support to automatically update wallet tracking history on a daily basis.
 - Add support to ignore invalid symbols from the search index.
-- Fix average buy cost when the stock got sold and we bought it again.
 - Fix day gain summary taking into account index changes.
 - Fix EOD data with erronous closing prices from the data source (i.e. Berkshire Hathaway Inc. (`BRK.A`))
 - Fix loading reports overflow of the report directory string.
