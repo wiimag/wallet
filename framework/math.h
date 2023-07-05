@@ -325,6 +325,13 @@ FOUNDATION_FORCEINLINE int math_round(double value, double at)
 */
 FOUNDATION_FORCEINLINE float clamp(float _v, float _min, float _max) { return _v < _min ? _min : _v > _max ? _max : _v; }
 
+/*! Compare two embedding vectors using cosine similarity.
+ *  @param em1 The first embedding vector.
+ *  @param em2 The second embedding vector.
+ *  @return The cosine similarity between the two embedding vectors [0, 1]
+ */
+float math_cosine_similarity(const float* em1, const float* em2);
+
 // ## Vector 2D helpers
 
 FOUNDATION_FORCEINLINE vec2 add(const vec2& _a, const vec2& _b) { return vec2(_a.x + _b.x, _a.y + _b.y); }

@@ -75,6 +75,22 @@ bool system_open_file_dialog(
     const char* current_file_path,
     const function<bool(string_const_t)>& selected_file_callback);
 
+/*! Open a native dialog window to select a directory.
+ * 
+ * @param dialog_title              Dialog window title label
+ * @param current_directory_path   Current directory path to open the dialog window at.
+ * @param selected_directory_callback    Callback invoked when a directory is selected (#bool(string_const_t)).
+ * 
+ * @return Returns true if the dialog window opened successfully.
+ *
+ * @example
+ *  system_select_directory_dialog("Select project directory...", nullptr, report_import_dialog_callback);
+ */
+bool system_select_directory_dialog(
+    const char* dialog_title,
+    const char* current_directory_path,
+    const function<bool(string_const_t)>& selected_directory_callback);
+
 /*! Open a system save file dialog window. 
  * 
  * @param dialog_title          Dialog window title label

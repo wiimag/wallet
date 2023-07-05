@@ -1,6 +1,6 @@
 /*
- * Copyright 2023 - All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2023 Wiimag inc. All rights reserved.
  */
  
 #pragma once

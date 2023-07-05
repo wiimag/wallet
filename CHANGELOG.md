@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.28.1] - 2023-06-24
+## [0.28.2] - 2023-07-05
+- Update framework <https://github.com/wiimag/framework/pull/4>
 - Update license <https://wiimag.com/LICENSE>
 - Fix average cost when the stock got sold and we bought it again.
 - Fix average days held computation when the stock got sold and we bought it again.

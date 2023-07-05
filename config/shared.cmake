@@ -41,9 +41,9 @@ function(generate_version_git_header root_dir)
 
     # Execute batch script to generate the version.h file for each supported platform
     if (MSVC)
-        execute_process(COMMAND ${root_dir}/scripts/generate_git_build_info.bat ${root_dir})
+        execute_process(COMMAND ${root_dir}/scripts/generate-git-build-info.bat ${root_dir})
     else()
-        execute_process(COMMAND ${root_dir}/scripts/generate_git_build_info.sh ${root_dir})
+        execute_process(COMMAND ${root_dir}/scripts/generate-git-build-info.sh ${root_dir})
     endif()
 
     # Print the artifacts/version.git.h file

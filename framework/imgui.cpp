@@ -583,7 +583,7 @@ ImFont* imgui_load_main_font(float xscale /*= 1.0f*/)
     #if FOUNDATION_PLATFORM_WINDOWS
         return imgui_load_font(IDR_MAIN_FONT, MAKEINTRESOURCEA(8), 16.0f * xscale);
     #elif FOUNDATION_PLATFORM_MACOS
-        return imgui_load_font(0, "../Resources/JetBrainsMono-ExtraLight.ttf", 16.0f * xscale);
+        return imgui_load_font(0, "../Resources/fonts/JetBrainsMono-ExtraLight.ttf", 16.0f * xscale);
     #else
         #error not supported
         return false;
@@ -598,7 +598,7 @@ ImFont* imgui_load_material_design_font(float xscale /*= 1.0f*/)
     #if FOUNDATION_PLATFORM_WINDOWS
         return imgui_load_font(IDR_MD_FONT, MAKEINTRESOURCEA(10), 14.0f * xscale, &icons_config, icons_ranges);
     #elif FOUNDATION_PLATFORM_MACOS
-        return imgui_load_font(0, "../Resources/MaterialIcons-Regular.ttf", 14.0f * xscale, &icons_config, icons_ranges);
+        return imgui_load_font(0, "../Resources/fonts/MaterialIcons-Regular.ttf", 14.0f * xscale, &icons_config, icons_ranges);
     #else
         return false;
     #endif

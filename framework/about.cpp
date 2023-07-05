@@ -135,7 +135,7 @@ void about_initialize()
 
     app_register_menu(HASH_ABOUT, 
         STRING_CONST("Help/About"), 
-        STRING_CONST("F1"), AppMenuFlags::Append, about_menu_open_dialog);
+        STRING_CONST("F1"), AppMenu::Append, about_menu_open_dialog);
     
     initialized = true;
 }

@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 - All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  */
 
 #include <foundation/platform.h>
@@ -14,6 +14,8 @@
 #include <framework/string.h>
 
 #include <foundation/path.h>
+#include <foundation/stream.h>
+#include <foundation/bufferstream.h>
 
 TEST_SUITE("Configuration")
 {
@@ -1131,6 +1133,168 @@ TEST_SUITE("Configuration")
         CHECK_EQ(cv[2U]["a"].as_integer(), 2);
         
         config_deallocate(cv);
+    }
+}
+
+TEST_SUITE("YAML")
+{
+
+    TEST_CASE("m_Name:")
+    {
+        string_const_t yaml = CTEXT(R"(
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &7
+MonoBehaviour:
+  m_ObjectHideFlags: 52
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_EditorHideFlags: 1
+  m_Script: {fileID: 12011, guid: 0000000000000000e000000000000000, type: 0}
+  m_Name:
+  m_Enabled: 1
+  m_EditorClassIdentifier:
+  m_Children: []
+  m_Position:
+    serializedVersion: 2
+    x: 0
+    y: 0
+    width: 2560
+    height: 30
+  m_MinSize: {x: 0, y: 0}
+  m_MaxSize: {x: 0, y: 0}
+  m_LastLoadedLayoutName:
+--- !u!114 &8
+MonoBehaviour:
+  m_ObjectHideFlags: 52
+)");
+
+        stream_t* stream = buffer_stream_allocate((void*)yaml.str, STREAM_IN, yaml.length, yaml.length + 1, false, false);
+        CHECK_NE(stream, nullptr);
+
+        config_handle_t cv = config_parse_yaml(stream);
+        CHECK(cv);
+
+        auto sjson = config_sjson(cv, CONFIG_OPTION_NONE);
+        string_const_t text = config_sjson_to_string(sjson);
+        log_infof(0, STRING_CONST("%.*s"), STRING_FORMAT(text));
+        config_sjson_deallocate(sjson);
+
+        CHECK_EQ(cv["7"]["#type"].as_string(), CTEXT("MonoBehaviour"));
+        CHECK_EQ(config_value_type(cv["7"]["m_Name"]), CONFIG_VALUE_NIL);
+        CHECK_EQ(cv["7"]["m_Enabled"].as_number(), 1.0);
+
+        config_deallocate(cv);
+        stream_deallocate(stream);
+    }
+
+    TEST_CASE("m_TexEnvs")
+    {
+        string_const_t yaml = CTEXT(R"(
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  m_Name: Default_Material
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 2, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 3}
+        m_Offset: {x: 0, y: 0}
+)");
+
+        stream_t* stream = buffer_stream_allocate((void*)yaml.str, STREAM_IN, yaml.length, yaml.length + 1, false, false);
+        CHECK_NE(stream, nullptr);
+
+        config_handle_t cv = config_parse_yaml(stream);
+        CHECK(cv);
+
+        auto sjson = config_sjson(cv, CONFIG_OPTION_NONE);
+        string_const_t text = config_sjson_to_string(sjson);
+        log_infof(0, STRING_CONST("%.*s"), STRING_FORMAT(text));
+        config_sjson_deallocate(sjson);
+
+        CHECK_EQ(cv["2100000"]["#type"].as_string(), CTEXT("Material"));
+        CHECK_EQ(config_size(cv["2100000"]["m_SavedProperties"]["m_TexEnvs"]), 2);
+        CHECK_EQ(cv["2100000"]["m_TexEnvs"][0U]["_BaseMap"]["m_Scale"]["x"].as_number(), 2.0);
+        CHECK_EQ(cv["2100000"]["m_TexEnvs"][0U]["_BumpMap"]["m_Scale"]["y"].as_number(), 3.0);
+
+        config_deallocate(cv);
+        stream_deallocate(stream);
+    }
+
+    TEST_CASE("Default_Material.mat")
+    {
+        string_const_t yaml = CTEXT(R"(
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-45820535484175795
+MonoBehaviour:
+  m_ObjectHideFlags: 11
+  m_PrefabAsset: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Name: 
+  m_EditorClassIdentifier: 
+  version: 6
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_Name: Default_Material
+  m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords:
+  - _ENVIRONMENTREFLECTIONS_OFF
+  - _SPECULARHIGHLIGHTS_OFF
+  m_InvalidKeywords:
+  - _GLOSSYREFLECTIONS_OFF
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    RenderType: Opaque
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+)");
+
+        stream_t* stream = buffer_stream_allocate((void*)yaml.str, STREAM_IN, yaml.length, yaml.length + 1, false, false);
+        CHECK_NE(stream, nullptr);
+
+        config_handle_t cv = config_parse_yaml(stream);
+        CHECK(cv);
+
+        auto sjson = config_sjson(cv, CONFIG_OPTION_NONE);
+        string_const_t text = config_sjson_to_string(sjson);
+        log_infof(0, STRING_CONST("%.*s"), STRING_FORMAT(text));
+        config_sjson_deallocate(sjson);
+
+        CHECK_EQ(config_size(cv["#headers"]), 2);
+        CHECK_EQ(config_size(cv["2100000"]["m_ValidKeywords"]), 2);
+        CHECK_EQ(config_size(cv["2100000"]["m_SavedProperties"]["m_TexEnvs"]), 2);
+
+        CHECK_EQ(cv["2100000"]["#type"].as_string(), CTEXT("Material"));
+        CHECK_EQ(cv["2100000"]["stringTagMap"]["RenderType"].as_string(), CTEXT("Opaque"));
+        CHECK_FALSE(config_exists(cv["2100000"], STRING_CONST("disabledShaderPasses")));
+
+        config_deallocate(cv);
+        stream_deallocate(stream);
+
     }
 }
 

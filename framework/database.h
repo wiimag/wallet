@@ -1,6 +1,6 @@
 /*
- * Copyright 2023 equals-forty-two.com All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2023 Wiimag inc. All rights reserved.
  */
  
 #pragma once
@@ -89,7 +89,7 @@ struct database
         return key;
     }
     
-    constexpr hash_t update(const T& value)
+    hash_t update(const T& value)
     {
         const hash_t key = HASHER(value);
 
@@ -119,7 +119,7 @@ struct database
         return key;
     }
 
-    constexpr hash_t put(const T& value)
+    hash_t put(const T& value)
     {
         const hash_t key = HASHER(value);
         const uint64_t index = hashtable64_get(hashes, key);
@@ -193,7 +193,7 @@ struct database
         }
     };
 
-    constexpr AutoLock lock(hash_t key)
+    AutoLock lock(hash_t key)
     {          
         AutoLock locked_value(&mutex);
         
@@ -233,7 +233,7 @@ struct database
         }
     }
 
-    constexpr bool contains(hash_t key) const
+    bool contains(hash_t key) const
     {
         return hashtable64_get(hashes, key) != 0;
     }
@@ -244,7 +244,7 @@ struct database
         return contains(key);
     }
 
-    /*constexpr*/ const T& get(hash_t key) const
+    const T& get(hash_t key) const
     {
         const uint64_t index = hashtable64_get(hashes, key);
         if (index == 0)
@@ -389,12 +389,12 @@ struct database
         return size() == 0;
     }
     
-    constexpr AutoLock operator[](hash_t key)
+    AutoLock operator[](hash_t key)
     {
         return lock(key);
     }
 
-    constexpr const T& operator[](hash_t key) const
+    const T& operator[](hash_t key) const
     {
         return get(key);
     }

@@ -1,6 +1,6 @@
 /*
- * Copyright 2023 equals-forty-two.com All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2023 Wiimag inc. All rights reserved.
  */
 
 #pragma once
@@ -59,7 +59,7 @@ template<size_t BUF_SIZE> thread_local char SharedBuffer<BUF_SIZE>::buffer[RING_
  * @param capacity The capacity of the buffer. The capacity will be capped to the next power of 2.
  */
 #define SHARED_BUFFER(capacity) \
-    SharedBuffer<CPOW2(capacity)>::buffer[(SharedBuffer<CPOW2(capacity)>::index++) % SharedBuffer<CPOW2(capacity)>::RING_COUNT], CPOW2(capacity)
+    SharedBuffer<CPOW2(capacity)>::buffer[(SharedBuffer<CPOW2(capacity)>::index++) % SharedBuffer<CPOW2(capacity)>::RING_COUNT], ((size_t)CPOW2(capacity))
 
 /*! Count the occurrences of a character in a string.
  *
@@ -707,3 +707,94 @@ string_t string_utf8_from_code_point(char* buffer, size_t capacity, const char* 
  * @return The comparison result.
  */
 int string_compare_skip_code_points(STRING_PARAM(lhs), STRING_PARAM(rhs));
+
+/*! Remove the beginning of a string if matching the given begin string.
+ *
+ * @param str The string.
+ * @param length The length of the string.
+ * @param begin The characters to strip.
+ * @param begin_length The length of the strip_chars string.
+ * @return The stripped string.
+ */
+string_const_t string_strip_begin(const char* str, size_t length, const char* begin, size_t begin_length);
+
+/*! Remove the ends of a string if matching the given end string.
+ *
+ * @param str The string.
+ * @param length The length of the string.
+ * @param end The characters to strip.
+ * @param end_length The length of the strip_chars string.
+ * @return The stripped string.
+ */
+string_const_t string_strip_end(const char* str, size_t length, const char* end, size_t end_length);
+
+/*! Checks if the character is uppercase.
+ *
+ * @param c The character.
+ * @return True if the character is uppercase, false if not.
+ */
+FOUNDATION_FORCEINLINE bool string_char_is_uppercase(char c)
+{
+    return (c >= 'A' && c <= 'Z');
+}
+
+/*! Checks if the character is lowercase.
+ *
+ * @param c The character.
+ * @return True if the character is lowercase, false if not.
+ */
+FOUNDATION_FORCEINLINE bool string_char_is_lowercase(char c)
+{
+    return (c >= 'a' && c <= 'z');
+}
+
+/*! Checks if the character is a letter.
+ *
+ * @param c The character.
+ * @return True if the character is a letter, false if not.
+ */
+FOUNDATION_FORCEINLINE bool string_char_is_letter(char c)
+{
+    return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'));
+}
+
+/*! Checks if the character is a digit.
+ *
+ * @param c The character.
+ * @return True if the character is a digit, false if not.
+ */
+FOUNDATION_FORCEINLINE bool string_char_is_digit(char c)
+{
+    return (c >= '0' && c <= '9');
+}
+
+/*! Checks if the character is a letter or digit.
+ *
+ * @param c The character.
+ * @return True if the character is a letter or digit, false if not.
+ */
+FOUNDATION_FORCEINLINE bool string_char_is_alphanumeric(char c)
+{
+    return ((c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9'));
+}
+
+/*! Checks if the character is a whitespace.
+ *
+ * @param c The character.
+ * @return True if the character is a whitespace, false if not.
+ */
+FOUNDATION_FORCEINLINE bool string_char_is_whitespace(char c)
+{
+    return (c == ' ' || c == '\t' || c == '\n' || c == '\r');
+}
+
+/*! Transform a CamelCase string into a string with spaces between words.
+ *
+ * @param str The string.
+ * @param length The length of the string.
+ * @param capacity The capacity of the buffer.
+ * @param split The string to insert between words.
+ * @param split_length The length of the split string.
+ * @return The transformed string.
+ */
+string_t string_camel_case_add_space(char* str, size_t length, size_t capacity, const char* split = " ", size_t split_length = 1);

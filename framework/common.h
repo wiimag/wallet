@@ -200,6 +200,18 @@ FOUNDATION_FORCEINLINE bool fs_is_file(string_const_t file_path)
     return fs_is_file(STRING_ARGS(file_path));
 }
 
+/*! Opens a file stream.
+ * 
+ *  @param path Path to file
+ *  @param mode Mode to open file in
+ * 
+ *  @return File stream
+ */
+FOUNDATION_FORCEINLINE stream_t* fs_open_file(string_const_t path, unsigned int mode)
+{
+    return fs_open_file(STRING_ARGS(path), mode);
+}
+
 /*! Checks if the file path is a file.
  * 
  *  @param file_path Path to file
@@ -210,6 +222,45 @@ FOUNDATION_FORCEINLINE bool fs_is_file(string_t file_path)
 {
     return fs_is_file(STRING_ARGS(file_path));
 }
+
+////////////////////////////////////////////////////////////////////////////
+// ## Streaming functions
+
+/*! Consume a stream until we reach a specific character.
+ * 
+ *  @param stream Stream to consume
+ *  @param c Character to consume until
+ * 
+ *  @return Consumed string
+ */
+string_t stream_read_consume_until(stream_t* stream, char c);
+
+/*! Read and skip a stream until we reach a specific character.
+ * 
+ *  @param stream Stream to skip
+ *  @param c Character to skip until
+ * 
+ *  @return Number of characters skipped
+ */
+size_t stream_skip_consume_until(stream_t* stream, char c);
+
+/*! Read the next bytes in a stream and seek back to the previous position.
+ * 
+ *  @param stream Stream to peek
+ *  @param buf Buffer to read into
+ *  @param capacity Capacity of buffer
+ * 
+ *  @return Number of bytes read
+ */
+size_t stream_peek(stream_t* stream, char* buf, size_t capacity);
+
+/*! Read the next byte in a stream and seek back to the previous position.
+ * 
+ *  @param stream Stream to peek
+ * 
+ *  @return Next byte in stream
+ */
+char stream_peek(stream_t* stream);
 
 ////////////////////////////////////////////////////////////////////////////
 // ## Time functions

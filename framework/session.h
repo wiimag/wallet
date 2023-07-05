@@ -43,6 +43,14 @@ string_const_t session_get_file_path();
  */
 string_const_t session_get_user_dir();
 
+/*! Returns a sub directory of the user root directory where settings can be saved on disk. 
+ * 
+ *  @param subdir The sub directory to retrieve.
+ * 
+ *  @return The user root directory.
+ */
+string_const_t session_get_user_dir(STRING_PARAM(subdir));
+
 /*! Returns the full path of a user configuration file. 
  * 
  *  @param filename         The name of the file to retrieve.

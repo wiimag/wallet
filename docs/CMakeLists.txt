@@ -1,6 +1,6 @@
 #
-# Copyright 2022-2023 - All rights reserved.
 # License: https://wiimag.com/LICENSE
+# Copyright 2022-2023 - All rights reserved.
 #
 # Project to host all the markdown files
 #

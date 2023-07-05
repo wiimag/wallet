@@ -147,7 +147,8 @@ static struct {
     { EVAL_STOCK_FIELD(short_ratio) },
     { EVAL_STOCK_FIELD(short_percent) },
     { EVAL_STOCK_FIELD(profit_margin) },
-    { EVAL_STOCK_FIELD(diluted_eps_ttm) }
+    { EVAL_STOCK_FIELD(diluted_eps_ttm) },
+    { EVAL_STOCK_FIELD(market_cap) }
 };
 
 static struct {

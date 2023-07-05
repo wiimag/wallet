@@ -42,8 +42,8 @@ source_group("resources" FILES ${RESOURCES_SOURCES})
 # Load distribution files
 file(GLOB BUNDLE_FILES
     "${ROOT_DIR}/resources/*.png"
-    "${ROOT_DIR}/resources/*.ttf"
     "${ROOT_DIR}/resources/*.plist"
+    "${ROOT_DIR}/resources/fonts/*.ttf"
 )
 source_group("bundle" FILES ${BUNDLE_FILES})
 

@@ -614,3 +614,13 @@ bool array_remove_ptr(T* arr, const U* ptr)
     }
     return false;
 }
+
+template<typename T>
+void array_reverse(T* arr)
+{
+    const uint32_t size = array_size(arr);
+    for (uint32_t i = 0; i < size / 2; ++i)
+    {
+        array_swap_memcpy(arr, i, size - i - 1);
+    }
+}

@@ -131,6 +131,45 @@ const char* system_platform_name(platform_t platform)
 }
 
 #if FOUNDATION_PLATFORM_WINDOWS
+
+bool system_select_directory_dialog(
+    const char* dialog_title,
+    const char* current_directory_path,
+    const function<bool(string_const_t)>& selected_directory_callback)
+{
+    static char directory_path_buffer[BUILD_MAX_PATHLEN] = "";
+    string_t directory_path = {directory_path_buffer, 0};
+
+    if (current_directory_path != nullptr)
+    {
+        directory_path = string_copy(STRING_BUFFER(directory_path_buffer), STRING_LENGTH(current_directory_path));
+        directory_path = path_clean(STRING_ARGS(directory_path), sizeof(directory_path_buffer));
+        directory_path = string_replace(STRING_ARGS(directory_path), sizeof(directory_path_buffer), STRING_CONST("/"), STRING_CONST("\\"), true);
+    }
+
+    BROWSEINFOA bi = {0};
+    bi.hwndOwner = (HWND)system_main_window_handle();
+    bi.lpszTitle = dialog_title;
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_USENEWUI | BIF_NONEWFOLDERBUTTON;
+    bi.lpfn = nullptr;
+    bi.lParam = 0;
+    bi.iImage = 0;
+    bi.pszDisplayName = directory_path_buffer;
+
+    LPITEMIDLIST pidl = SHBrowseForFolderA(&bi);
+    if (pidl != nullptr)
+    {
+        if (SHGetPathFromIDListA(pidl, directory_path_buffer))
+        {
+            directory_path = path_clean(STRING_LENGTH(directory_path_buffer), sizeof(directory_path_buffer));
+            if (selected_directory_callback)
+                return selected_directory_callback(string_to_const(directory_path));
+        }
+    }
+
+    return false;
+}
+
 bool system_open_file_dialog(const char* dialog_title, const char* extension, const char* current_file_path, const function<bool(string_const_t)>& selected_file_callback)
 {
     string_t file_path_buffer = string_static_buffer(1024, true);

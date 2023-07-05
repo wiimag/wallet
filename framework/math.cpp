@@ -42,3 +42,18 @@ double math_median_average(double* values, double& median, double& average)
     return (median + average) / 2.0;
 }
 
+float math_cosine_similarity(const float* em1, const float* em2)
+{
+    FOUNDATION_ASSERT(array_size(em1) == array_size(em2));
+    float dot = 0.0f;
+    float mag1 = 0.0f;
+    float mag2 = 0.0f;
+    for (unsigned i = 0, count = array_size(em1); i < count; ++i)
+    {
+        dot += em1[i] * em2[i];
+        mag1 += em1[i] * em1[i];
+        mag2 += em2[i] * em2[i];
+    }
+
+    return dot / (sqrtf(mag1) * sqrtf(mag2));
+}

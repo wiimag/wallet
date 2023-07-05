@@ -1,6 +1,6 @@
 ﻿/*
- * Copyright 2022-2023 - All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  */
 
 #include "config.h"
@@ -13,6 +13,7 @@
 #include <foundation/fs.h>
 #include <foundation/array.h>
 #include <foundation/stream.h>
+#include <foundation/path.h>
 
 #include <stdexcept>
 #include <algorithm>
@@ -116,6 +117,12 @@ string_const_t config_handle_t::as_string(const char* default_string /*= nullptr
     if (!string_is_null(string_data))
         return string_data;
     return string_const(default_string, default_string_length);
+}
+
+string_t config_handle_t::as_string_clone(const char* default_string /*= nullptr*/, size_t default_string_length /*= 0*/, const char* fmt /*= nullptr*/) const
+{
+    string_const_t str = as_string(default_string, default_string_length, fmt);
+    return string_clone(str.str, str.length);
 }
 
 time_t config_handle_t::as_time(time_t default_value /*= 0*/) const
@@ -1599,12 +1606,12 @@ FOUNDATION_STATIC string_t config_parse_identifier(string_const_t json, int& ind
     char* s = nullptr;
     array_reserve(s, 32);
 
-    while (true)
+    while (index < json.length)
     {
         char c = config_parse_next(json, index);
         if (c == ' ' || c == '\t' || c == '\n' || c == '=' || c == ':')
             break;
-        s = array_push(s, c);
+        array_push(s, c);
         ++index;
     }
 
@@ -1683,7 +1690,28 @@ config_handle_t config_parse_number(string_const_t json, int& index, config_hand
     int length = end - index;
     config_handle_t res;
     if (string_find_last_of(json.str + index, length, STRING_CONST("abcdef"), STRING_NPOS) != STRING_NPOS)
-        res = config_set(value, (const void*)string_to_size(json.str + index, length, true));
+    {
+        if (length < 32)
+        {
+            double d = 0;
+            if (string_try_convert_number(json.str + index, length, d))
+            {
+                res = config_set(value, d);
+            }
+            else if (length == 8 || length == 16)
+            {
+                res = config_set(value, (const void*)string_to_size(json.str + index, length, true));
+            }
+            else
+            {
+                res = config_set(value, json.str + index, length);
+            }
+        }
+        else
+        {
+            res = config_set(value, json.str + index, length);
+        }
+    }
     else 
         res = config_set(value, string_to_real(json.str + index, length));
     index = end;
@@ -1845,4 +1873,352 @@ bool config_write_file(
 
     config_deallocate(data);
     return success;
+}
+
+FOUNDATION_STATIC void config_parse_yaml_simple_object(stream_t* stream, config_handle_t obj)
+{
+    size_t read = stream_skip_consume_until(stream, '{');
+    FOUNDATION_ASSERT(read > 0);
+
+    string_t content = stream_read_consume_until(stream, '}');
+
+    // Assume content is valid sjson
+    config_handle_t sjson = config_parse(STRING_ARGS(content));
+    FOUNDATION_ASSERT(config_value_type(sjson) == CONFIG_VALUE_OBJECT);
+
+    string_deallocate(content.str);
+
+    for (auto e : sjson)
+    {
+        auto type = config_value_type(e);
+
+        string_const_t key = config_name(e);
+        if (type == CONFIG_VALUE_NIL)
+        {
+            // Skip
+        }
+        else if (type == CONFIG_VALUE_STRING)
+        {
+            config_set(obj, STRING_ARGS(key), e.as_string());
+        }
+        else if (type == CONFIG_VALUE_NUMBER)
+        {
+            config_set(obj, STRING_ARGS(key), e.as_number());
+        }
+        else if (type == CONFIG_VALUE_TRUE)
+        {
+            config_set(obj, STRING_ARGS(key), true);
+        }
+        else if (type == CONFIG_VALUE_FALSE)
+        {
+            config_set(obj, STRING_ARGS(key), false);
+        }
+        else
+        {
+            string_const_t v = config_value_as_string(e);
+            FOUNDATION_ASSERT_FAIL("Unhandled type");
+        }
+    }
+
+    config_deallocate(sjson);
+}
+
+FOUNDATION_STATIC config_handle_t config_parse_yaml_object(stream_t* stream, config_handle_t obj, int level)
+{
+    // Read remaining lines until we hit a line that starts with --- or the end of the stream
+    while (!stream_eos(stream))
+    {
+        const size_t pos = stream_tell(stream);
+
+        // Check level
+        const size_t field_level = stream_skip_whitespace(stream);
+        if (field_level > level)
+            return obj;
+
+        FOUNDATION_ASSERT(field_level <= level);
+
+        if (field_level > 0 && stream_peek(stream) == '-')
+        {
+            stream_seek(stream, pos, STREAM_SEEK_BEGIN);
+            return obj; // New array element at same level}
+        }
+
+        if (field_level > 0 && field_level < level)
+        {
+            // End of object, set stream position back to start of line
+            stream_seek(stream, pos, STREAM_SEEK_BEGIN);
+            return obj;
+        }
+
+        char line_buffer[8096];
+        string_t line = stream_read_line_buffer(stream, STRING_BUFFER(line_buffer), '\n');
+        FOUNDATION_ASSERT(line.length < 8096);
+
+        if (line.length == 0)
+            continue;
+
+        if (string_starts_with(STRING_ARGS(line), STRING_CONST("---")))
+        {
+            // End of object, set stream position back to start of line
+            stream_seek(stream, pos, STREAM_SEEK_BEGIN);
+            break;
+        }
+
+        if (line.length > 0 && line.str[0] == '{')
+        {
+            // Simple object value
+            stream_seek(stream, pos, STREAM_SEEK_BEGIN);
+            config_parse_yaml_simple_object(stream, obj);
+            const size_t read = stream_skip_consume_until(stream, '\n');
+            FOUNDATION_ASSERT(read > 0);
+            return obj;
+        }
+
+        const size_t dcolon = string_find(STRING_ARGS(line), ':', 0);
+        if (dcolon != STRING_NPOS)
+        {
+            // Key and value
+            string_const_t key = string_strip(line.str, dcolon, STRING_CONST(" \t\r\n"));
+            string_const_t value = string_strip(line.str + dcolon + 1, line.length - dcolon - 1, STRING_CONST("\r\n"));
+
+            if (value.length == 1 && value.str[0] == ' ')
+            {
+                // Empty string, skip
+                continue;
+            }
+
+            value = string_trim(value);
+            if (value.length > 0)
+            {
+                if (string_equal(STRING_ARGS(value), STRING_CONST("[]")))
+                {
+                    // Do nothing, empty array
+                }
+                else if (string_equal(STRING_ARGS(value), STRING_CONST("{}")))
+                {
+                    // Do nothing, empty object
+                }
+                else if (value.str[0] == '{')
+                {
+                    // Simple object value
+                    stream_seek(stream, pos, STREAM_SEEK_BEGIN);
+                    config_handle_t nested_object = config_set_object(obj, STRING_ARGS(key));
+                    config_parse_yaml_simple_object(stream, nested_object);
+
+                    const size_t read = stream_skip_consume_until(stream, '\n');
+                    FOUNDATION_ASSERT(read > 0);
+                }
+                else if (value.str[0] == '[')
+                {
+                    // Array value
+                    log_warnf(0, WARNING_SUSPICIOUS, 
+                        STRING_CONST("Array value not supported: %.*s -> %.*s"), STRING_FORMAT(key), STRING_FORMAT(value));
+                }
+                else
+                {
+                    // Primitive value
+                    double n = DNAN;
+                    if (string_try_convert_number(STRING_ARGS(value), n))
+                    {
+                        config_set(obj, STRING_ARGS(key), n);
+                    }
+                    else
+                    {
+                        config_set(obj, STRING_ARGS(key), STRING_ARGS(value));
+                    }
+                }
+            }
+            else
+            {
+                // Object value
+                config_parse_yaml_object(stream, obj, key, level);
+            }
+        }
+        else
+        {
+            // Assume primitive value
+            double n = DNAN;
+            string_const_t value = string_strip(line.str, line.length, STRING_CONST(" \t\r\n"));
+            if (string_try_convert_number(STRING_ARGS(value), n))
+            {
+                config_set(obj, n);
+            }
+            else
+            {
+                config_set(obj, STRING_ARGS(value));
+            }
+
+            return obj;
+        }
+    }
+
+    return obj;
+}
+
+config_handle_t config_parse_yaml_object(stream_t* stream, config_handle_t root, string_const_t id, int level)
+{
+    if (level == 0)
+    {
+        // Read the first line to get the object type
+        string_t line = stream_read_line(stream, '\n');
+        FOUNDATION_ASSERT(line.length > 0 && line.str[0] != ' ');
+
+        string_const_t type = string_strip(STRING_ARGS(line), STRING_CONST(": \t\r\n"));
+
+        config_handle_t obj = config_set_object(root, STRING_ARGS(id));
+        config_set(obj, "#type", STRING_ARGS(type));
+        string_deallocate(line.str);
+
+        const size_t level_pos = stream_tell(stream);
+        level = (int)stream_skip_whitespace(stream);
+        stream_seek(stream, level_pos, STREAM_SEEK_BEGIN);
+
+        // Parse the root object
+        return config_parse_yaml_object(stream, obj, level);
+    }
+
+    // Check if we are still parsing the same object are if we have reached the end
+    int indent = to_int(stream_skip_whitespace(stream));
+    if (stream_eos(stream) || indent < level)
+        return config_set_null(root, STRING_ARGS(id));
+
+    // Handle non root objects
+    FOUNDATION_ASSERT(indent >= level);
+    if (indent == level)
+    {
+        // Check if we have an array
+        char array_token = stream_peek(stream);
+        if (array_token == '-')
+        {
+            // Skip array token and whitespace until we reach the element data.
+            stream_seek(stream, 1, STREAM_SEEK_CURRENT);
+            indent = to_int(stream_skip_whitespace(stream));
+            level += 1 + indent;
+
+            config_handle_t arr = config_set_array(root, STRING_ARGS(id));
+            while (true)
+            {
+                config_handle_t element = config_array_push(arr, CONFIG_VALUE_OBJECT);
+                element = config_parse_yaml_object(stream, element, level);
+
+                // Lets check if we have another array element upcoming?
+                const size_t pp = stream_tell(stream);
+                indent = to_int(stream_skip_whitespace(stream));
+                if (stream_peek(stream) != '-')
+                {
+                    stream_seek(stream, pp, STREAM_SEEK_BEGIN);
+                    break;
+                }
+
+                stream_seek(stream, 1, STREAM_SEEK_CURRENT);
+                if (stream_peek(stream) == '-')
+                {
+                    // We probably reached a new root object.
+                    stream_seek(stream, pp, STREAM_SEEK_BEGIN);
+                    break;
+                }
+                
+                // Place ourself for the next element.
+                indent = to_int(stream_skip_whitespace(stream));
+            }
+
+            return arr;
+        }
+        else
+        {
+            // Probably reached a new root object.
+            return config_set_null(root, STRING_ARGS(id));
+        }
+    }
+    else
+    {
+        level = (int)indent;
+        config_handle_t obj = config_set_object(root, STRING_ARGS(id));
+        return config_parse_yaml_object(stream, obj, level);
+    }
+
+    return config_null();
+}
+
+config_handle_t config_parse_yaml(stream_t* stream)
+{
+    // Check if we have any headers.
+    char token = stream_peek(stream);
+    if (token != '%')
+    {
+        // Otherwise check if we are parsing a meta file.
+        string_const_t path = stream_path(stream);
+        string_const_t extension = path_file_extension(path.str, path.length);
+        if (!string_equal_nocase(STRING_ARGS(extension), STRING_CONST("meta")) &&
+            !string_equal_nocase(STRING_ARGS(extension), STRING_CONST("asset")))
+        {
+            return config_null();
+        }
+    }
+
+    config_handle_t root = config_allocate(CONFIG_VALUE_OBJECT, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
+
+    // Parse headers
+    while (token == '%')
+    {
+        config_handle_t headers = config_set_array(root, "#headers");
+
+        string_t line = stream_read_line(stream, '\n');
+        string_const_t header = string_strip(STRING_ARGS(line), STRING_CONST("% \t\r\n"));
+        if (header.length)
+            config_array_push(headers, STRING_ARGS(header));
+
+        string_deallocate(line.str);
+        token = stream_peek(stream);
+    }
+
+    // Check if header line is present (starts with ---)
+    char objdelim[3];
+    while (stream_peek(stream, STRING_BUFFER(objdelim)) && string_equal(STRING_BUFFER(objdelim), STRING_CONST("---")))
+    {
+        string_t line = stream_read_line(stream, '\n');
+        string_const_t ref = string_strip(STRING_ARGS(line), STRING_CONST("- \t\r\n"));
+
+        string_const_t key = string_strip_begin(ref.str, ref.length, STRING_CONST("!u!"));
+        const uint64_t class_id = string_to_uint64(key.str, key.length, false);
+
+        size_t file_id_pos = string_find(ref.str, ref.length, '&', 0);
+        if (file_id_pos != STRING_NPOS)
+        {
+            string_const_t file_id = {ref.str + file_id_pos + 1, ref.length - file_id_pos - 1};
+            config_handle_t entity = config_parse_yaml_object(stream, root, file_id, 0);
+            if (entity)
+            {
+                config_set(entity, "#file_id", file_id);
+                config_set(entity, "#class_id", (double)class_id);
+            }
+            else
+            {
+                log_errorf(0, ERROR_INVALID_VALUE, 
+                    STRING_CONST("Failed to parse YAML object: %.*s"), STRING_FORMAT(line));
+            }
+        }
+
+        string_deallocate(line.str);
+    }
+
+    return root;
+}
+
+config_handle_t config_parse_yaml(const char* _path, size_t length)
+{
+    string_const_t path = string_const(_path, length);
+
+    if (!fs_is_file(path))
+        return config_null();
+
+    stream_t* stream = fs_open_file(path, STREAM_IN);
+    if (!stream)
+        return config_null();
+
+    config_handle_t root = config_parse_yaml(stream);
+
+    stream_deallocate(stream);
+
+    return root;
 }

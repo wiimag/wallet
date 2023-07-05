@@ -63,7 +63,7 @@ struct app_menu_t
     char shortcut[16]{ 0 };
     string_t* paths{ nullptr };
 
-    app_menu_flags_t flags{ AppMenuFlags::None };
+    app_menu_flags_t flags{ AppMenu::None };
 
     /*! Shortcut key for the menu item */
     ImGuiKeyChord shortcut_key{ 0 };
@@ -145,12 +145,17 @@ FOUNDATION_STATIC void app_menu(bool appended)
         {
             const string_t& path = menu->paths[i];
            
-           const char* path_tr = tr(STRING_ARGS(path), false).str;
-            if (i == end - 1)
+            const bool is_last = i == end - 1;
+            const bool should_translate = !is_last || none(menu->flags, AppMenu::DynamicName);
+            const char* path_tr = should_translate ? tr(STRING_ARGS(path), false).str : path.str;
+            if (is_last)
             {
                 const char* shortcut = menu->shortcut[0] ? menu->shortcut : nullptr;
                 if (ImGui::MenuItem(path_tr, shortcut, false, true))
                     menu->handler(menu->user_data);
+
+                if (test(menu->flags, AppMenu::Separator))
+                    ImGui::Separator();
             }
             else
             {
@@ -398,13 +403,13 @@ void app_register_menu(
     menu.handler = std::move(handler);
     menu.flags = flags;
     menu.user_data = user_data;
-    menu.append_menu = test(flags, AppMenuFlags::Append);
+    menu.append_menu = test(flags, AppMenu::Append);
     string_t full_path = string_copy(STRING_BUFFER(menu.path), STRING_PARAM_ARGS(path));
     string_t shortcutstr = string_copy(STRING_BUFFER(menu.shortcut), STRING_PARAM_ARGS(shortcut));
 
     menu.shortcut_key = app_string_to_shortcut_key_coord(STRING_ARGS(shortcutstr));
     if (menu.shortcut_key != 0)
-        menu.flags |= AppMenuFlags::Shortcut;
+        menu.flags |= AppMenu::Shortcut;
 
     #if FOUNDATION_PLATFORM_MACOS
     shortcutstr = string_replace(STRING_ARGS(shortcutstr), sizeof(menu.shortcut),

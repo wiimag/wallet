@@ -1,6 +1,6 @@
 /*
- * Copyright 2023 equals-forty-two.com All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2023 Wiimag inc. All rights reserved.
  */
 
 #include "string.h"
@@ -2927,6 +2927,24 @@ version_t string_to_version_short(const char* str, size_t length)
     return v;
 }
 
+string_const_t string_strip_begin(const char* str, size_t length, const char* begin, size_t begin_length)
+{
+    // Check if str begins with #begin
+    if (length >= begin_length && string_equal_nocase(str, begin_length, begin, begin_length))
+        return { str + begin_length, length - begin_length };
+
+    return { str, length };
+}
+
+string_const_t string_strip_end(const char* str, size_t length, const char* end, size_t end_length)
+{
+    // Check if str ends with #end
+    if (length >= end_length && string_equal_nocase(str + length - end_length, end_length, end, end_length))
+        return { str, length - end_length };
+
+    return { str, length };
+}
+
 int string_compare_skip_code_points(STRING_PARAM(lhs), STRING_PARAM(rhs))
 {
     // Skip UTF-8 icon code points
@@ -3042,3 +3060,46 @@ string_t string_utf8_from_code_point(char* buffer, size_t capacity, uint32_t cod
 
     return { buffer, 0 };
 }
+
+string_t string_camel_case_add_space(char* str, size_t length, size_t capacity, const char* split /*= " "*/, size_t split_length /*= 1*/)
+{
+    if (!str || !length || !capacity)
+        return {};
+
+    size_t split_count = 0;
+    for (size_t i = 1; i < length; ++i)
+    {
+        if (string_char_is_uppercase(str[i]))
+            ++split_count;
+    }
+
+    if (!split_count || split_count >= length - 1)
+        return {str, length};
+
+    size_t new_length = length + split_count * split_length;
+    if (new_length >= capacity)
+        return {};
+
+    for (size_t i = 1; i < length; ++i)
+    {
+        if (string_char_is_uppercase(str[i]))
+        {
+            // Check if the next character is also uppercase
+            if (str[i - 1] != ' ' && str[i - 1] != '\t' && str[i - 1] != '\n' && str[i - 1] != '\r' && (i + 1 < length && !string_char_is_uppercase(str[i + 1])))
+            {
+                memmove(str + i + split_length, str + i, length - i + 1);
+                memcpy(str + i, split, split_length);
+
+                i += split_length;
+                length += split_length;
+            }
+
+            split_count--;
+            if (!split_count)
+                break;
+        }
+    }
+
+    return {str, length};
+}
+

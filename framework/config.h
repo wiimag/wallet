@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 - All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  *
  * Config value module.
  * 
@@ -179,6 +179,9 @@ struct config_handle_t
 
     /*! Converts the config value to a string, or the JSON string value if anything else than a primitive. */
     string_const_t as_string(const char* default_string = nullptr, size_t default_string_length = 0, const char* fmt = nullptr) const;
+
+    /*! Creates a copy of the config value string, or the JSON string value if anything else than a primitive. */
+    string_t as_string_clone(const char* default_string = nullptr, size_t default_string_length = 0, const char* fmt = nullptr) const;
 
     /*! Converts the config value to a integer value if possible. */
     template<typename T = int> FOUNDATION_FORCEINLINE T as_integer(int default_value = 0) const 
@@ -1042,3 +1045,35 @@ string_const_t config_sjson_to_string(config_sjson_const_t sjson);
  *  @param sjson String content.
  */
 void config_sjson_deallocate(config_sjson_const_t sjson);
+
+/*! Parse a YAML text file as a config value.
+ *
+ *  @remark The config value needs to be deallocated with #config_deallocate by the caller.
+ *
+ *  @param path   File path.
+ *  @param length File path length.
+ *
+ *  @return Config value handle.
+ */
+config_handle_t config_parse_yaml(const char* path, size_t length);
+
+/*! Parse YAML text from a stream as a config value.
+ *
+ *  @remark The config value needs to be deallocated with #config_deallocate by the caller.
+ *
+ *  @param stream Stream to read from.
+ *
+ *  @return Config value handle.
+ */
+config_handle_t config_parse_yaml(stream_t* stream);
+
+/*! Parse a single YAML object. The object will be added as a child to the root object.
+ *
+ *  @param stream Stream to read from.
+ *  @param root   Root object to add the parsed object to.
+ *  @param id     Object id.
+ *  @param level  Current level of indentation.
+ *
+ *  @return Config value handle.
+ */
+config_handle_t config_parse_yaml_object(stream_t* stream, config_handle_t root, string_const_t id, int level = 0);

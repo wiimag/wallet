@@ -290,7 +290,7 @@ process_spawn(process_t* proc) {
 		//           STRING_FORMAT(proc->path), STRING_FORMAT(cmdline));
 
 		if (!CreateProcessW(0, wcmdline, 0, 0, inherit_handles,
-		                    (proc->flags & PROCESS_CONSOLE) ? CREATE_NEW_CONSOLE | HIGH_PRIORITY_CLASS : 0, 0, wwd, &si, &pi)) {
+		                    (proc->flags & PROCESS_CONSOLE) ? CREATE_NEW_CONSOLE | HIGH_PRIORITY_CLASS : CREATE_NO_WINDOW, 0, wwd, &si, &pi)) {
 			string_const_t errstr = system_error_message(0);
 			log_warnf(0, WARNING_SYSTEM_CALL_FAIL,
 			          STRING_CONST("Unable to spawn process (CreateProcess) for executable '%.*s': %.*s"),

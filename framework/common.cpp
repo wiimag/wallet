@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 equals-forty-two.com All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2022-2023 Wiimag inc. All rights reserved.
  */
 
 #include "common.h"
@@ -447,4 +447,83 @@ string_const_t environment_get_build_path()
         #error Not implemented
 
     #endif
+}
+
+char stream_peek(stream_t* stream)
+{
+    const size_t skipped = stream_skip_whitespace(stream);
+    const size_t abytes = stream_available_read(stream);
+    if (abytes == 0)
+        return 0;
+
+    const size_t pos = stream_tell(stream);
+    char token = 0;
+    const ssize_t rb = stream_read(stream, &token, 1);
+    stream_seek(stream, -rb, STREAM_SEEK_CURRENT);
+
+    return token;
+}
+
+size_t stream_peek(stream_t* stream, char* buf, size_t capacity)
+{
+    const size_t skipped = stream_skip_whitespace(stream);
+    const size_t abytes = stream_available_read(stream);
+    if (abytes < capacity)
+        return 0;
+
+    const size_t pos = stream_tell(stream);
+    const ssize_t rb = stream_read(stream, buf, capacity);
+    stream_seek(stream, -rb, STREAM_SEEK_CURRENT);
+
+    return rb;
+}
+
+size_t stream_skip_consume_until(stream_t* stream, char c)
+{
+    // Read stream until we find the character
+    size_t read = 0;
+    while (stream_available_read(stream) > 0)
+    {
+        char token = 0;
+        const ssize_t rb = stream_read(stream, &token, 1);
+        if (rb == 0)
+            break;
+
+        ++read;
+        if (token == c)
+            break;
+    }
+
+    return read;
+}
+
+string_t stream_read_consume_until(stream_t* stream, char c)
+{
+    size_t read = 0;
+    size_t capacity = 32;
+    string_t content = string_allocate(0, capacity);
+
+    // Read stream until we find the character
+    while (stream_available_read(stream) > 0)
+    {
+        char token = 0;
+        const ssize_t rb = stream_read(stream, &token, 1);
+        if (rb == 0)
+            break;
+
+        ++read;
+        if (token == c)
+            break;
+
+        if (content.length >= capacity)
+        {
+            size_t new_capacity = capacity * 2;
+            content.str = (char*)memory_reallocate(content.str, new_capacity, 0, capacity, 0);
+            capacity = new_capacity;
+        }
+
+        content.str[content.length++] = token;
+    }
+
+    return content;
 }

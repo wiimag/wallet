@@ -7,8 +7,8 @@ The following gives an example of how most header and module cpp files should be
 
 ```cpp
 /*
- * Copyright 2023 equals-forty-two.com. All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2023 Wiimag inc. All rights reserved.
  */
 
 #pragma once
@@ -81,8 +81,8 @@ bool tic_tac_toe_open_window(const char* title, int width, int height, GLFWwindo
 
 ```cpp
 /*
- * Copyright 2022-2023 - All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2022-2023 - All rights reserved.
  * 
  * DESCRIPTION OF THE MODULE, i.e. Render pad to test rendering code.
  */

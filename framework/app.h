@@ -31,7 +31,7 @@ typedef function<void(GLFWwindow* window)> app_update_handler_t;
 typedef function<void(GLFWwindow* window, int frame_width, int frame_height)> app_render_handler_t;
 
 /*! Set of flags used to customize the registration of a new menu item. */
-typedef enum class AppMenuFlags
+typedef enum class AppMenu
 {
     None = 0,
 
@@ -40,8 +40,15 @@ typedef enum class AppMenuFlags
 
     /*! Menu item defines a shortcut */
     Shortcut = 1 << 1,
+
+    /*! Append a separator after the menu item. */
+    Separator = 1 << 2,
+
+    /*! The menu item name is dynamic and won't be translated. */
+    DynamicName = 1 << 3,
 } app_menu_flags_t;
-DEFINE_ENUM_FLAGS(AppMenuFlags);
+typedef AppMenu AppMenuFlags;
+DEFINE_ENUM_FLAGS(AppMenu);
 
 #if defined(FRAMEWORK_APP_IMPLEMENTATION)
 

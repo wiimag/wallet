@@ -209,9 +209,21 @@ string_const_t session_get_user_dir()
         user_dir = string_concat(STRING_BUFFER(user_dir_buffer), STRING_ARGS(user_dir), STRING_CONST("_"));
         user_dir = string_concat(STRING_BUFFER(user_dir_buffer), STRING_ARGS(user_dir), STRING_ARGS(profile_name));
     }
+
     user_dir = path_clean(STRING_ARGS(user_dir), BUILD_MAX_PATHLEN);
 
     return string_to_const(user_dir);
+}
+
+string_const_t session_get_user_dir(STRING_PARAM(subdir))
+{
+    static thread_local char user_subdir_buffer[BUILD_MAX_PATHLEN] = { '\0' };
+
+    string_const_t user_dir = session_get_user_dir();
+    string_t user_subdir = string_copy(STRING_BUFFER(user_subdir_buffer), STRING_ARGS(user_dir));
+    user_subdir = path_append(STRING_ARGS(user_subdir), BUILD_MAX_PATHLEN, subdir, subdir_length);
+    user_subdir = path_clean(STRING_ARGS(user_subdir), BUILD_MAX_PATHLEN);
+    return string_to_const(user_subdir);
 }
 
 string_t session_get_user_file_path(

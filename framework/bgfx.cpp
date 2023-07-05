@@ -93,6 +93,7 @@ struct BgfxCallbackHandler : bgfx::CallbackI
 
     virtual void traceVargs(const char* _filePath, uint16_t _line, const char* _format, va_list _argList) override
     {
+        #if BUILD_DEVELOPMENT
         if (ignore_logs)
             return;
         static thread_local char trace_buffer[4096];
@@ -100,7 +101,8 @@ struct BgfxCallbackHandler : bgfx::CallbackI
         string_t trace_msg = string_vformat(STRING_BUFFER(trace_buffer), _format, fmt_length, _argList);
         if (trace_msg.length > 0 && trace_msg.str[trace_msg.length - 1] == '\n')
             --trace_msg.length;
-        log_info(HASH_BGFX, STRING_ARGS(trace_msg));
+        log_debug(HASH_BGFX, STRING_ARGS(trace_msg));
+        #endif
     }
 
     virtual void profilerBegin(const char* _name, uint32_t _abgr, const char* _filePath, uint16_t _line) override

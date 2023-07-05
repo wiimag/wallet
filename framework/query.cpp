@@ -436,12 +436,12 @@ bool query_execute_json(const char* query, string_t* headers, config_handle_t da
 
     if (post_query)
     {
-        log_infof(HASH_QUERY, STRING_CONST("Post query %s"), query);
+        log_debugf(HASH_QUERY, STRING_CONST("Post query %s"), query);
         query_success = req.post(query, data);
     }
     else
     {
-        log_infof(HASH_QUERY, STRING_CONST("Executing query %s"), query);
+        log_debugf(HASH_QUERY, STRING_CONST("Executing query %s"), query);
         query_success = req.execute(query);
     } 
 

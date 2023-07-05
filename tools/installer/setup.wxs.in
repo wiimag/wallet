@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <!-- 
-  Copyright 2023 Wiimag Inc. All rights reserved.
   License: https://wiimag.com/LICENSE
+  Copyright 2023 Wiimag Inc. All rights reserved.
 -->
 
 <!-- Build: /c/Tools/wix311-binaries/candle.exe tools/installer/setup.wxs -out artifacts/installer/wallet.wixobj -->

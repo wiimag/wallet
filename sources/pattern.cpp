@@ -2015,7 +2015,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
             if (ImGui::Checkbox(tr("Limits"), &pattern->show_limits))
                 graph.refresh = true;
 
-            if (pattern->type != PATTERN_GRAPH_YOY && pattern->type != PATTERN_GRAPH_INTRADAY)
+            if (pattern->type != PATTERN_GRAPH_YOY)
             {
                 ImGui::SameLine();
                 if (ImGui::Checkbox(tr("Extra Charts"), &pattern->extra_charts))

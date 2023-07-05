@@ -1,6 +1,6 @@
 /*
- * Copyright 2023 equals-forty-two.com All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2023 Wiimag inc. All rights reserved.
  *
  * Declare the string template variadics
  */
@@ -178,8 +178,8 @@ struct string_template_arg_value_t
 };
 
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(bool t) { return StringArgumentType::BOOL; }
-FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(int t, std::true_type) { return StringArgumentType::INT32; }
-FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(unsigned int t, std::true_type) { return StringArgumentType::UINT32; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(int32_t t, std::true_type) { return StringArgumentType::INT32; }
+FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(uint32_t t, std::true_type) { return StringArgumentType::UINT32; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(int64_t t, std::true_type) { return StringArgumentType::INT64; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(uint64_t t, std::true_type) { return StringArgumentType::UINT64; }
 FOUNDATION_FORCEINLINE string_argument_type_t string_template_type(float t, std::true_type) { return StringArgumentType::FLOAT; }

@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 equals-forty-two.com All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2022-2023 Wiimag inc. All rights reserved.
  */
 
 #include "table.h"
@@ -952,11 +952,21 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             ImGui::Dummy(ImVec2(0, 0));
             ImGui::EndPopup();
         }
-        else if (table->context_menu && ImGui::BeginPopupContextItem(cell_id.str))
+        else
         {
-            table->context_menu(element, &column, &cell);
-            ImGui::Dummy(ImVec2(0, 0));
-            ImGui::EndPopup();
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, IM_SCALEV(8,4));
+            if (table->context_menu && ImGui::BeginPopupContextItem(cell_id.str))
+            {
+                ImGui::AlignTextToFramePadding();
+                ImGui::BeginGroup();
+                ImGui::Dummy(ImVec2(0, 0));
+                table->context_menu(element, &column, &cell);
+                ImGui::EndGroup();
+
+                ImGui::Spacing();
+                ImGui::EndPopup();
+            }
+            ImGui::PopStyleVar(1);
         }
 
         #if ENABLE_ROW_HEIGHT_MIDDLE
