@@ -5,7 +5,7 @@
 
 #include <framework/tests/test_utils.h>
 
-#if 1 //BUILD_TESTS
+#if BUILD_TESTS
 
 #include <title.h>
 #include <report.h>
