@@ -674,7 +674,7 @@ bool query_execute_json(const char* query, query_format_t format, string_t body,
 
     if (!warning_logged)
     {
-        log_infof(HASH_QUERY, STRING_CONST("Executing query %s"), query);
+        log_debugf(HASH_QUERY, STRING_CONST("Executing query %s"), query);
     }
     if ((has_body_content ? req.post(query, body) : req.execute(query)) || format == FORMAT_JSON_WITH_ERROR)
     {

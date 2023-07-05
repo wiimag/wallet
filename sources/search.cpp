@@ -801,7 +801,7 @@ FOUNDATION_STATIC void* search_indexing_thread_fn(void* data)
     }
 
     // Remove old documents so that we don't keep growing the database with invalidated data.
-    search_database_remove_old_documents(_search->db, time_add_days(time_now(), -25), 5.0);
+    search_database_remove_old_documents(_search->db, time_add_days(time_now(), -25), 7.0);
 
     if (thread_try_wait(0))
         return 0;

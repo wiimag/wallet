@@ -1628,6 +1628,14 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
     if (intraday_count <= 1)
         return ImGui::TextUnformatted("No data");
 
+    
+    if (!pattern->autofit)
+    {
+        ImPlot::SetNextAxesToFit();
+        pattern->autofit = true;
+        graph.refresh = false;
+    }
+
     const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
     if (!ImPlot::BeginPlot("Pattern Intraday##1", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
         return;
@@ -1637,13 +1645,17 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
     const double time_end = array_last(pattern->intradays)->ts;
     const double time_start = array_first(pattern->intradays)->ts;
 
+    const double price_end = array_last(pattern->intradays)->adjusted_close;
+    const double price_start = array_first(pattern->intradays)->adjusted_close;
+
     // The price graph is always shown inverted by default.
     ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, time_start, time_end);
     ImPlot::SetupAxisFormat(ImAxis_X1, plot_value_format_date, nullptr);
 
     ImPlot::SetupAxis(ImAxis_Y1, "##Currency", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite);
-    ImPlot::SetupAxisLimitsConstraints(ImAxis_Y1, 0.0, INFINITY);
+    //ImPlot::SetupAxisZoomConstraints(ImAxis_Y1, 0.0, INFINITY);
+    //ImPlot::SetupAxisZoomConstraints(ImAxis_Y1, min(price_start, price_end), max(price_start, price_end));
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2lf $");
 
     plot_context_t c{ pattern->date, intraday_count, 1, pattern->intradays };
@@ -1735,7 +1747,6 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
     plot_render_trend(tr("Trend"), c);
 
     ImPlot::EndPlot();
-    pattern_render_graph_end(pattern, s, graph);
 }
 
 FOUNDATION_STATIC void pattern_render_graph_yoy(pattern_t* pattern, pattern_graph_data_t& graph)

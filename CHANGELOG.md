@@ -1,6 +1,7 @@
 # Changelog
 
 ## [0.28.2] - 2023-07-05
+- Fix pattern intraday plot auto fitting.
 - Update framework <https://github.com/wiimag/framework/pull/4>
 - Update license <https://wiimag.com/LICENSE>
 - Fix average cost when the stock got sold and we bought it again.
