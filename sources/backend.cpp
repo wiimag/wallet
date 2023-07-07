@@ -53,7 +53,7 @@ FOUNDATION_STATIC const char* backend_platform_name_for_package()
     #endif
 }
 
-FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res, bool use_notif)
+FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res, bool use_notif, bool ignore_if_latest)
 {
     if (!res.resolved())
     {
@@ -173,7 +173,7 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res,
         }
     }
 
-    if (!use_notif && !skip_no_update_check)
+    if (!use_notif && !skip_no_update_check && !ignore_if_latest)
     {
         char msg_buffer[1024];
         string_const_t titletr = tr(STRING_CONST("No update available"), true);
@@ -185,7 +185,7 @@ FOUNDATION_STATIC void backend_fetch_versions_callback(const json_object_t& res,
 
 FOUNDATION_STATIC bool backend_check_new_version_event(const dispatcher_event_args_t& args)
 {
-    backend_check_new_version(args.size > 0 ? true : false);
+    backend_check_new_version(args.size > 0 ? true : false, false);
     return true;
 }
 
@@ -212,12 +212,8 @@ FOUNDATION_STATIC void backend_establish_connection()
         dispatcher_post_event(EVENT_BACKEND_CONNECTED);
         dispatcher_register_event_listener(EVENT_CHECK_NEW_VERSIONS, backend_check_new_version_event);
 
-        bool use_notif = true;
-        dispatcher_post_event(EVENT_CHECK_NEW_VERSIONS, &use_notif, sizeof(use_notif));
-
+        backend_check_new_version(false, true);
         tr_info(HASH_BACKEND, "Connected to backend");
-
-        backend_check_new_version(false);
     });
 }
 
@@ -293,10 +289,10 @@ string_t backend_translate_text(const char* id, size_t id_length, const char* te
     return translation;
 }
 
-void backend_check_new_version(bool use_notif)
+void backend_check_new_version(bool use_notif, bool ignore_if_latest)
 {
     // Use PRODUCT_VERSIONS_URL to check if a new version is available.
-    query_execute_async_json(PRODUCT_VERSIONS_URL, FORMAT_JSON_WITH_ERROR, LC1(backend_fetch_versions_callback(_1, use_notif)));
+    query_execute_async_json(PRODUCT_VERSIONS_URL, FORMAT_JSON_WITH_ERROR, LC1(backend_fetch_versions_callback(_1, use_notif, ignore_if_latest)));
 }
 
 bool backend_is_connected()

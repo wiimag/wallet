@@ -23,7 +23,7 @@ string_const_t backend_url();
 
 bool backend_execute_news_search_query(const char* symbol, size_t symbol_length, const query_callback_t& callback);
 
-void backend_check_new_version(bool use_notif = false);
+void backend_check_new_version(bool use_notif = false, bool ignore_if_latest = false);
 
 string_t backend_translate_text(const char* id, size_t id_length, const char* text, size_t text_length, const char* lang, size_t lang_length);
 

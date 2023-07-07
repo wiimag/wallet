@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.28.4] - 2023-07-07
+## [0.28.5] - 2023-07-07
 - Prompt user at startup when there is a new version available.
 - Throttle EOD requests in order to avoid hitting the rate limit.
 - Fix pattern intraday plot auto fitting.
