@@ -100,6 +100,12 @@ if [[ "$*" == *-build* ]]; then
   else
     ./run build generate  ${BUILD_OPTIONS[@]}
   fi  
+
+  # Check if the build was successful
+  if [ $? -ne 0 ]; then
+    echo "The project failed to build"
+    exit 1
+  fi
 fi
 
 # Set the project exe path
@@ -173,6 +179,9 @@ VERSIONS_JSON_PATH="releases/versions.json"
 
 # Get last commit message
 LAST_COMMIT_MESSAGE=$(git log -1 --pretty=%B)
+
+# Replace " with \"
+LAST_COMMIT_MESSAGE="${LAST_COMMIT_MESSAGE//\"/\\\"}"
 
 # Create versions.json if it does not exist
 echo "Creating versions.json file"

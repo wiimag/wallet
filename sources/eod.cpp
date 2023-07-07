@@ -53,6 +53,8 @@ static struct EOD_MODULE {
     volatile tick_t UPDATE_TICK = 0;
 
     bool PROMPT_EOD_API_KEY = false;
+
+    tick_t LAST_EXECUTE_TICK = 0;
     
 } *EOD;
 
@@ -324,6 +326,23 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
     return eod_fetch_async(api, ticker, format, param1, value1, nullptr, nullptr, json_callback, invalid_cache_query_after_seconds);
 }
 
+bool eod_throttle_fetch_query()
+{
+    FOUNDATION_ASSERT(EOD);
+    if (!EOD)
+        return false;
+
+    // Make sure we wait at least MINIMUM_QUERY_INTERVAL ms between queries
+    constexpr double MINIMUM_QUERY_INTERVAL = 0.01;
+    const double elapsed = time_elapsed(EOD->LAST_EXECUTE_TICK);
+    const bool throttle = (elapsed < MINIMUM_QUERY_INTERVAL);
+    if (throttle)
+        thread_sleep(MINIMUM_QUERY_INTERVAL - elapsed);
+    EOD->LAST_EXECUTE_TICK = time_current();
+
+    return throttle;
+}
+
 bool eod_fetch(const char* api, const char* ticker, query_format_t format, const char* param1, const char* value1, const char* param2, const char* value2, const query_callback_t& json_callback, uint64_t invalid_cache_query_after_seconds /*= 15ULL * 60ULL*/)
 {
     string_const_t url = eod_build_url(api, ticker, format, param1, value1, param2, value2);
@@ -331,6 +350,7 @@ bool eod_fetch(const char* api, const char* ticker, query_format_t format, const
     if (!eod_connected() && format != FORMAT_JSON_WITH_ERROR)
         log_warnf(HASH_EOD, WARNING_NETWORK, STRING_CONST("Query to %.*s might fail as we are not connected to EOD services."), STRING_FORMAT(url));
 
+    eod_throttle_fetch_query();
     return query_execute_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
 }
 
@@ -384,6 +404,7 @@ bool eod_fetch_async(const char* api, const char* ticker, query_format_t format,
     if (!eod_connected() && format != FORMAT_JSON_WITH_ERROR)
         log_warnf(HASH_EOD, WARNING_NETWORK, STRING_CONST("Query to %.*s might fail as we are not connected to EOD services."), STRING_FORMAT(url));
 
+    eod_throttle_fetch_query();
     return query_execute_async_json(url.str, format, json_callback, eod_fix_invalid_cache_query_after_seconds(invalid_cache_query_after_seconds));
 }
 

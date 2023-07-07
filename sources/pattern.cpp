@@ -1636,7 +1636,9 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
         graph.refresh = false;
     }
 
+    const char* code = SYMBOL_CSTR(pattern->code);
     const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
+    string_t plot_title = string_format(SHARED_BUFFER(64), STRING_CONST("Pattern Intraday - %s"), code);
     if (!ImPlot::BeginPlot("Pattern Intraday##1", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
         return;
 
@@ -1654,9 +1656,9 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
     ImPlot::SetupAxisFormat(ImAxis_X1, plot_value_format_date, nullptr);
 
     ImPlot::SetupAxis(ImAxis_Y1, "##Currency", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite);
-    //ImPlot::SetupAxisZoomConstraints(ImAxis_Y1, 0.0, INFINITY);
-    //ImPlot::SetupAxisZoomConstraints(ImAxis_Y1, min(price_start, price_end), max(price_start, price_end));
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2lf $");
+
+    ImPlot::SetupAxesLimits(time_start, time_end, min(price_start, price_end), max(price_start, price_end), ImGuiCond_Once);
 
     plot_context_t c{ pattern->date, intraday_count, 1, pattern->intradays };
     c.show_equation = pattern->show_trend_equation;

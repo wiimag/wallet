@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.28.2] - 2023-07-05
+## [0.28.3] - 2023-07-07
+- Throttle EOD requests in order to avoid hitting the rate limit.
 - Fix pattern intraday plot auto fitting.
 - Update framework <https://github.com/wiimag/framework/pull/4>
 - Update license <https://wiimag.com/LICENSE>
