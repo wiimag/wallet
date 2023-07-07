@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.28.3] - 2023-07-07
+## [0.28.4] - 2023-07-07
+- Prompt user at startup when there is a new version available.
 - Throttle EOD requests in order to avoid hitting the rate limit.
 - Fix pattern intraday plot auto fitting.
 - Update framework <https://github.com/wiimag/framework/pull/4>

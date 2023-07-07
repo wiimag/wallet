@@ -216,6 +216,8 @@ FOUNDATION_STATIC void backend_establish_connection()
         dispatcher_post_event(EVENT_CHECK_NEW_VERSIONS, &use_notif, sizeof(use_notif));
 
         tr_info(HASH_BACKEND, "Connected to backend");
+
+        backend_check_new_version(false);
     });
 }
 
