@@ -64,30 +64,9 @@ void settings_draw()
     }
     #endif
 
-    // Service EOD URL
-    string_const_t eod_web_site_url = ::eod_web_site_url();
-    {
-        #if BUILD_ENABLE_LOCALIZATION
-        ImGui::NextColumn();
-        #endif
-        #if BUILD_DEVELOPMENT
-        ImGui::AlignTextToFramePadding();
-        ImGui::TextURL(tr("EOD API Service URL"), nullptr, STRING_CONST("https://eodhistoricaldata.com/r/?ref=PF9TZC2T"));
-
-        char* eod_api_url = eod_api_url_buffer();
-        size_t eod_api_url_capacity = eod_api_url_buffer_capacity();
-
-        ImGui::NextColumn();
-        ImGui::ExpandNextItem();
-
-        const char* eod_api_url_hint = string_format_static_const("%.*s/api", STRING_FORMAT(eod_web_site_url));
-        if (ImGui::InputTextWithHint("##EODUrl", eod_api_url_hint, eod_api_url, eod_api_url_capacity))
-            eod_save_api_url(eod_api_url);
-        ImGui::NextColumn();
-    }
-
     // EOD API KEY
     {
+        #if BUILD_ENABLE_LOCALIZATION
         ImGui::NextColumn();
         #endif
         string_t eod_key = eod_get_key();

@@ -21,13 +21,9 @@
 #include <foundation/stream.h>
 #include <foundation/version.h>
 
-#define HASH_EOD static_hash_string("eod", 3, 0x35f39422e491f3e1ULL)
-
-#if BUILD_BACKEND
-#define EOD_URL "https://wallet.wiimag.com"
-#else
 #define EOD_URL "https://eodhistoricaldata.com"
-#endif
+
+#define HASH_EOD static_hash_string("eod", 3, 0x35f39422e491f3e1ULL)
 
 constexpr const char EOD_API_URL_KEY[] = "eod_api_url";
 
@@ -72,7 +68,7 @@ FOUNDATION_STATIC const char* eod_ensure_key_loaded()
     // Load the EOD user API url and ensure it ends with /
     string_t eod_url{};
     string_const_t eod_url_command_line{};
-    if (environment_argument("backend", &eod_url_command_line))
+    if (environment_argument("eod-api-url", &eod_url_command_line))
     {
         eod_url = string_copy(STRING_BUFFER(EOD->API_URL), STRING_ARGS(eod_url_command_line));
 

@@ -159,23 +159,6 @@ FOUNDATION_STATIC bool openai_execute_query(const char* query, config_handle_t d
     return query_execute_json(query, nullptr, data, callback);
 }
 
-FOUNDATION_STATIC void openai_check_connectivity()
-{
-    query_execute_async_json(openai_build_url("models"), nullptr, [](const json_object_t& res)
-    {
-        _openai_module->connected = res.is_valid();
-        if (_openai_module->connected)
-        {
-            tr_info(HASH_OPENAI, "OpenAI connectivity check succeeded ({0},{1})", (int)res.error_code, (int)res.status_code);
-        }
-        else
-        {
-            log_warnf(HASH_OPENAI, WARNING_NETWORK, STRING_CONST("OpenAI connectivity check failed (%d,%d): %.*s"),
-                res.error_code, res.status_code, STRING_FORMAT(res.to_string()));
-        }
-    });
-}
-
 FOUNDATION_STATIC void openai_handle_prompt_completions(const json_object_t& res, openai_window_t* window, openai_completions_t& completions)
 {
     if (!res.resolved())
@@ -580,9 +563,7 @@ FOUNDATION_STATIC void openai_generate_json_object_prompt(string_builder_t* sb, 
 
 FOUNDATION_STATIC bool openai_backend_connected_event(const dispatcher_event_args_t& args)
 {
-    // Check connectivity to OpenAI
-    openai_check_connectivity();
-    return true;
+    return (_openai_module->connected = true);
 }
 
 //

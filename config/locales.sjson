@@ -2181,11 +2181,6 @@
 			fr = "Cr\xc3\xa9er un rapport##1"
 		}
 		{
-			hash = "11ecbfd243830613"
-			en = "Copyright (C) 2022-2023 - wallet.wiimag.com - All rights reserved"
-			fr = "Copyright (C) 2022-2023 - wallet.wiimag.com - Tous droits r\xc3\xa9serv\xc3\xa9s"
-		}
-		{
 			hash = "e1b419bf51ff80b3"
 			en = " %s Price: %.2lf $ (%d) "
 			fr = " %s Prix: %.2lf $ (%d) "
@@ -2499,11 +2494,6 @@
 			hash = "cc7c35f4345415e"
 			en = "Manage your stock and finance"
 			fr = "G\xc3\xa9rez vos actions et finances"
-		}
-		{
-			hash = "d505e0004f3ebff1"
-			en = "Copyright (C) 2022-2023 - https://wallet.wiimag.com - All rights reserved"
-			fr = "Copyright (C) 2022-2023 - https://wallet.wiimag.com - Tous droits r\xc3\xa9serv\xc3\xa9s"
 		}
 		{
 			hash = "7b85af3d09cd39b9"
