@@ -826,7 +826,7 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
             pattern_render_stats_line(nullptr, CTEXT("Earnings / Share||EPS stands for earnings per share. "
                 "It is a financial metric that measures the amount of profit that a company has generated on a per-share basis over a "
                 "specific period, usually a quarter or a year. EPS is calculated by dividing a company's total earnings by the number of shares outstanding."),
-                pattern_format_currency(s->diluted_eps_ttm),
+                pattern_format_currency(s->earning_trend_actual.fetch()),
                 pattern_format_percentage(eps_percent), true);
             ImGui::PopStyleColor();
 

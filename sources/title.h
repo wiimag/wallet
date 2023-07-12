@@ -314,10 +314,11 @@ double title_get_bought_price(const title_t* title);
 /*! Compute the gain when selling the title. 
  *
  *  @param t The title to compute the gain for.
+ *  @param only_if_completly_sold True if we only compute the gain if the title is completely sold, false otherwise.
  *
  *  @return The gain.
  */
-double title_get_sell_gain_rated(const title_t* title);
+double title_get_sell_gain_rated(const title_t* title, bool only_if_completly_sold);
 
 /*! Compute the price target to sell the title. 
  *

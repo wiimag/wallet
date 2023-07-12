@@ -306,8 +306,6 @@ FOUNDATION_STATIC void search_index_news_data(const json_object_t& json, search_
         if (!string_try_convert_date(date_string.str, min(to_size(10), date_string.length), date))
             continue;
 
-        search_database_index_property(db, doc, STRING_CONST("news"), (double)date);
-
         for (auto t : n["tags"])
         {
             string_const_t tag = t.as_string();
@@ -636,9 +634,9 @@ FOUNDATION_STATIC void search_index_fundamental_data(const json_object_t& json, 
         {
             log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch time range for symbol %*.s"), STRING_FORMAT(symbol));
         }
-    }
 
-    search_database_document_update_timestamp(db, doc);
+        search_database_document_update_timestamp(db, doc);
+    }
 }
 
 FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, const char* market, size_t market_length, bool* stop_indexing)
@@ -729,7 +727,7 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
 
         // Fetch symbol fundamental data
         if (!eod_fetch("fundamentals", symbol.str, FORMAT_JSON_CACHE, 
-            LC1(search_index_fundamental_data(_1, string_to_const(symbol))), 31 * 24 * 60 * 60ULL))
+            LC1(search_index_fundamental_data(_1, string_to_const(symbol))), 25 * 24 * 60 * 60ULL))
         {
             log_warnf(HASH_SEARCH, WARNING_RESOURCE, STRING_CONST("Failed to fetch %.*s fundamental"), STRING_FORMAT(symbol));
         }

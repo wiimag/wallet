@@ -52,6 +52,7 @@ struct wallet_t
     double sell_average{ NAN };
     double sell_gain_average{ NAN };
     double sell_total_gain{ NAN };
+    double sell_total_projected_gain{ NAN };
     double enhanced_earnings{ NAN };
     double total_dividends{ 0 };
 

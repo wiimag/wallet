@@ -658,9 +658,12 @@ double title_get_bought_price(const title_t* t)
     return math_ifzero(t->buy_total_price / t->buy_total_quantity, t->average_price);
 }
 
-double title_get_sell_gain_rated(const title_t* t)
+double title_get_sell_gain_rated(const title_t* t, bool only_if_completly_sold)
 {
     if (t->sell_total_quantity <= 0)
+        return 0.0;
+
+    if (only_if_completly_sold && t->average_quantity > 0) 
         return 0.0;
 
     const double buy_average_price = t->buy_total_price_rated / t->buy_total_quantity;

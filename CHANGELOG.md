@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.28.7] - 2023-07-12
+## [0.28.8] - 2023-07-12
+- Fix report cash balance computation when some stock gets sold but not all of it.
 - Improve pattern AI analysis.
 - Use https://eodhistoricaldata.com by default for EOD queries
 - Prompt user at startup when there is a new version available.

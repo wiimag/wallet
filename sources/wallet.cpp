@@ -34,7 +34,7 @@ FOUNDATION_STATIC void wallet_history_update_entry(report_t* report, wallet_t* w
     entry->funds = wallet_total_funds(wallet);
     entry->investments = report->total_investment;
     entry->total_value = report->total_value;
-    entry->gain = report->wallet->sell_total_gain + report->wallet->total_dividends;
+    entry->gain = report->wallet->sell_total_projected_gain + report->wallet->total_dividends;
             
     report->dirty = true;
 }

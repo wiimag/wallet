@@ -1459,7 +1459,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
         ImGui::Separator();
 
         report_render_summary_line(report, tr("Sell Count"), report->wallet->total_title_sell_count, integer_fmt);
-        report_render_summary_line(report, tr("Sell Total"), report->wallet->sell_total_gain, currency_fmt, true);
+        report_render_summary_line(report, tr("Sell Total"), report->wallet->sell_total_projected_gain, currency_fmt, true);
         report_render_summary_line(report, tr("Sell Average"), report->wallet->sell_gain_average, currency_fmt, true);
 
         report_render_summary_line(report, tr("Enhanced earnings"), report->wallet->enhanced_earnings, currency_fmt);
@@ -1915,6 +1915,7 @@ void report_summary_update(report_t* report)
     double total_title_sell_count = 0;
     double total_sell_rated = 0;
     double total_sell_gain_rated = 0;
+    double total_projected_sell_loses = 0;
     double total_buy_rated = 0;
     double average_nq = 0;
     double average_nq_count = 0;
@@ -1993,7 +1994,8 @@ void report_summary_update(report_t* report)
                 total_sell_gain_if_kept_p += sell_p;
                 total_sell_gain_if_kept += sell_gain_if_kept;
                 total_title_sell_count++;
-                total_sell_gain_rated += title_get_sell_gain_rated(t);
+                total_sell_gain_rated += title_get_sell_gain_rated(t, true);
+                total_projected_sell_loses += title_get_sell_gain_rated(t, false);
             }
         }
     }
@@ -2025,6 +2027,7 @@ void report_summary_update(report_t* report)
     // Update historical values
     report->wallet->sell_average = total_sell_rated / total_title_sell_count;
     report->wallet->sell_total_gain = total_sell_gain_rated;
+    report->wallet->sell_total_projected_gain = total_projected_sell_loses;
     report->wallet->sell_gain_average = total_sell_gain_rated / total_title_sell_count;
     report->wallet->total_sell_gain_if_kept_p = total_sell_gain_if_kept_p;
     report->wallet->target_ask = report->wallet->main_target + report->total_gain_p;
