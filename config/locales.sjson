@@ -3985,5 +3985,10 @@
 			en = "\xee\x8b\xac Add All"
 			fr = "\xee\x8b\xac Ajouter tout les espions"
 		}
+		{
+			hash = "981f0f8bebb3174b"
+			en = "You are a financial stock enthusiat expert"
+			fr = "Vous \xc3\xaates un expert en bourse"
+		}
 	]
 }

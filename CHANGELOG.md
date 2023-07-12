@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.28.6] - 2023-07-09
+## [0.28.7] - 2023-07-12
+- Improve pattern AI analysis.
 - Use https://eodhistoricaldata.com by default for EOD queries
 - Prompt user at startup when there is a new version available.
 - Throttle EOD requests in order to avoid hitting the rate limit.

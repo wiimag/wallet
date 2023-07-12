@@ -220,79 +220,6 @@ FOUNDATION_STATIC void openai_handle_prompt_completions(const json_object_t& res
     }
 }
 
-FOUNDATION_STATIC openai_completions_t openai_window_execute_prompt(openai_window_t* window, const char* prompt, size_t prompt_length)
-{
-    config_handle_t data = config_allocate();
-    config_set(data, "model", STRING_ARGS(window->selected_model->id));
-    config_set(data, "temperature", 0.7);
-    config_set(data, "n", 1.0);
-
-    {
-        config_handle_t cvmessages = config_set_array(data, STRING_CONST("messages"));
-
-        // Retrieve the context from the last messages
-        foreach(h, window->messages)
-        {
-            if (h->role == MessageRole::User)
-            {
-                config_handle_t history = config_array_push(cvmessages, CONFIG_VALUE_OBJECT);
-                config_set(history, "role", STRING_CONST("user"));
-                config_set(history, "content", STRING_ARGS(h->text));
-            }
-            else if (h->role == MessageRole::Assistant)
-            {
-                config_handle_t history = config_array_push(cvmessages, CONFIG_VALUE_OBJECT);
-                config_set(history, "role", STRING_CONST("assistant"));
-                config_set(history, "content", STRING_ARGS(h->text));
-            }
-        }
-
-        // Add the new prompt message
-        config_handle_t cvmessage = config_array_push(cvmessages, CONFIG_VALUE_OBJECT);
-        config_set(cvmessage, "role", STRING_CONST("user"));
-        config_set(cvmessage, "content", prompt, prompt_length);
-    }
-
-    openai_completions_t completions;
-    const char* prompt_query = openai_build_url("chat", "completions");
-    if (!openai_execute_query(prompt_query, data, [window, &completions](const auto& _1) { openai_handle_prompt_completions(_1, window, completions); }))
-    {
-        log_warnf(HASH_OPENAI, WARNING_NETWORK, STRING_CONST("OpenAI prompt completion failed: %s"), prompt_query);
-    }
-
-    config_deallocate(data);
-
-    return completions;
-}
-
-FOUNDATION_STATIC void openai_window_render_messages(openai_window_t* window)
-{
-    const float table_height = ImGui::GetContentRegionAvail().y - IM_SCALEF(100);
-    if (!ImGui::BeginTable("##Messages", 1, ImGuiTableFlags_Hideable | ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY, ImVec2(0, table_height)))
-        return;
-
-    ImGui::TableSetupColumn("Messages", ImGuiTableColumnFlags_WidthStretch);
-    ImGui::TableHeadersRow();
-
-    foreach(msg, window->messages)
-    {
-        ImGui::TableNextRow();
-        ImGui::TableNextColumn();
-        if (msg->role == MessageRole::User)
-            ImGui::BulletTextWrapped("%.*s", STRING_FORMAT(msg->text));
-        else if (msg->role == MessageRole::Assistant)
-            ImGui::TextWrapped(STRING_RANGE(msg->text));
-        else if (msg->role == MessageRole::Error)
-        {
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-            ImGui::TextWrapped(STRING_RANGE(msg->text));
-            ImGui::PopStyleColor();
-        }
-    }
-
-    ImGui::EndTable();
-}
-
 FOUNDATION_STATIC void openai_dispose_completions(openai_completions_t& completions)
 {
     string_deallocate(completions.id);
@@ -304,167 +231,6 @@ FOUNDATION_STATIC void openai_dispose_completions(openai_completions_t& completi
         string_deallocate(choice->role);
     }
     array_deallocate(completions.choices);
-}
-
-FOUNDATION_STATIC bool openai_window_log_completions(openai_window_t* window, const char* prompt, size_t prompt_length, openai_completions_t& completions)
-{
-    const size_t num_choices = array_size(completions.choices);
-    if (!num_choices)
-        return false;
-    if (num_choices)
-    {
-        // Add prompt as a message
-        openai_message_t msg;
-        msg.role = MessageRole::User;
-        msg.text = string_clone(prompt, prompt_length);
-        array_push_memcpy(window->messages, &msg);
-
-        // Select a completion choice
-        const openai_choice_t* choice = completions.choices + 0;
-        msg.role = MessageRole::Assistant;
-        msg.text = string_clone(STRING_ARGS(choice->content));
-        array_push_memcpy(window->messages, &msg);
-    }
-
-    // Dispose of the completions data
-    openai_dispose_completions(completions);
-
-    return true;
-}
-
-FOUNDATION_STATIC void openai_window_render(openai_window_t* window)
-{
-    FOUNDATION_ASSERT(window);
-
-    ImGui::TrTextUnformatted("Models");
-    ImGui::SameLine();
-    ImGui::ExpandNextItem();
-    if (ImGui::BeginCombo("##Models", window->selected_model ? (const char*)window->selected_model->id.str : tr("None")))
-    {
-        foreach (m, window->models)
-        {
-            bool selected = window->selected_model == m;
-            if (ImGui::Selectable(m->id.str, selected))
-            {
-                window->selected_model = m;
-            }
-            if (selected)
-                ImGui::SetItemDefaultFocus();
-
-            if ((m->permissions & Permission::FineTuning) != 0)
-            {
-                ImGui::SameLine();
-                ImGui::TextUnformatted(tr("(Fine-tuning)"));
-            }
-
-            string_const_t created_string = string_from_time_static(m->created * 1000ULL, true);
-            ImGui::SameLine(IM_SCALEF(400));
-            ImGui::TextUnformatted(created_string.str);
-        }
-
-        ImGui::EndCombo();
-    }
-
-    if (window->selected_model == nullptr)
-        return;
-
-    openai_window_render_messages(window);
-
-    static bool set_focus = true;
-    ImGui::ExpandNextItem();
-    if (set_focus)
-    {
-        ImGui::SetKeyboardFocusHere();
-        set_focus = false;
-    }
-    if (ImGui::InputTextMultiline("##Prompt", STRING_BUFFER(window->prompt), ImVec2(-1, ImGui::GetContentRegionAvail().y),
-        ImGuiInputTextFlags_CtrlEnterForNewLine | ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_EnterReturnsTrue))
-    {
-        const size_t prompt_length = string_length(window->prompt);
-        if (prompt_length)
-        {
-            auto completions = openai_window_execute_prompt(window, window->prompt, prompt_length);
-
-            if (openai_window_log_completions(window, window->prompt, prompt_length, completions))
-            {
-                window->prompt[0] = 0;
-                set_focus = true;
-            }
-        }
-    }
-}
-
-FOUNDATION_STATIC void openai_window_load_models(openai_window_t* window)
-{
-    FOUNDATION_ASSERT(window);
-
-    const char* query = openai_build_url("models");
-    openai_execute_query(query, [window](const json_object_t& json)
-    {
-        openai_model_t* models = nullptr;
-        for (auto cvm : json["data"])
-        {
-            string_const_t id = cvm["id"].as_string();
-            if (string_is_null(id))
-                continue;
-
-            openai_model_t m{};
-            m.id = string_clone(STRING_ARGS(id));
-            m.permissions = Permission::None;
-            m.created = cvm["created"].as_time();
-
-            auto cvpermissions = cvm["permission"].get(to_size(0));
-            if (cvpermissions["allow_create_engine"].as_boolean()) m.permissions |= Permission::CreateEngine;
-            if (cvpermissions["allow_sampling"].as_boolean()) m.permissions |= Permission::Sampling;
-            if (cvpermissions["allow_logprobs"].as_boolean()) m.permissions |= Permission::Logprobs;
-            if (cvpermissions["allow_search_indices"].as_boolean()) m.permissions |= Permission::SearchIndices;
-            if (cvpermissions["allow_view"].as_boolean()) m.permissions |= Permission::View;
-            if (cvpermissions["allow_fine_tuning"].as_boolean()) m.permissions |= Permission::FineTuning;
-            if (cvpermissions["is_blocking"].as_boolean()) m.permissions |= Permission::Blocking;
-
-            array_push_memcpy(models, &m);
-        }
-
-        array_sort(models, LC2(_2.created - _1.created));
-        window->models = models;
-    });
-}
-
-FOUNDATION_STATIC void openai_window_render_handle(window_handle_t handle)
-{
-    openai_window_t* window = (openai_window_t*)window_get_user_data(handle);
-    openai_window_render(window);
-}
-
-FOUNDATION_STATIC void openai_window_close(window_handle_t handle)
-{
-    openai_window_t* window = (openai_window_t*)window_get_user_data(handle);
-    FOUNDATION_ASSERT(window);
-
-    foreach(m, window->models)
-        string_deallocate(m->id.str);
-    array_deallocate(window->models);
-
-    foreach(msg, window->messages)
-        string_deallocate(msg->text);
-    array_deallocate(window->models);
-
-    MEM_DELETE(window);
-}
-
-FOUNDATION_STATIC openai_window_t* openai_window_allocate()
-{
-    openai_window_t* window = MEM_NEW(HASH_OPENAI, openai_window_t);
-    openai_window_load_models(window);
-    return window;
-}
-
-FOUNDATION_STATIC void openai_run_tests(void* user_data)
-{
-    window_open(HASH_OPENAI, STRING_CONST("OpenAI"), 
-        openai_window_render_handle, 
-        openai_window_close, 
-        openai_window_allocate(), WindowFlags::Singleton);
 }
 
 FOUNDATION_STATIC string_const_t openai_camel_case_to_lowercase_phrase(const char* expression, size_t expression_length)
@@ -705,22 +471,6 @@ const openai_response_t* openai_generate_news_sentiment(
     time_t news_date, const char* news_url, size_t news_url_length,
     const openai_completion_options_t& options)
 {
-    /*
-    curl https://api.openai.com/v1/completions \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer $OPENAI_API_KEY" \
-      -d '{
-      "model": "text-davinci-003",
-      "prompt": "...",
-      "temperature": 0.7,
-      "max_tokens": 3533,
-      "top_p": 0.75,
-      "frequency_penalty": 1.51,
-      "presence_penalty": 0.7,
-      "stop": ["---"]
-    }'
-    */
-
     // Allocate the response and provide a default notice.
     openai_response_t* response = (openai_response_t*)memory_allocate(HASH_OPENAI, sizeof(openai_response_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
 
@@ -892,23 +642,6 @@ string_t* openai_generate_summary_sentiment(
     const char* user_prompt, size_t user_prompt_length,
     const openai_completion_options_t& options)
 {
-    /*
-    curl https://api.openai.com/v1/completions \
-      -H "Content-Type: application/json" \
-      -H "Authorization: Bearer $OPENAI_API_KEY" \
-      -d '{
-      "model": "text-davinci-003",
-      "prompt": "...",
-      "temperature": 0.7,
-      "max_tokens": 2568,
-      "top_p": 0.45,
-      "best_of": 3,
-      "frequency_penalty": 0.48,
-      "presence_penalty": 1.56,
-      "stop": ["---"]
-    }'
-    */
-
     // Allocate the response and provide a default notice.
     string_const_t loading_string = tr(STRING_CONST("Loading..."), true);
     string_t* response = (string_t*)memory_allocate(HASH_OPENAI, sizeof(string_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
@@ -917,20 +650,26 @@ string_t* openai_generate_summary_sentiment(
     // Start a job to fetch the data
     job_execute([symbol, symbol_length, response, options, user_prompt, user_prompt_length](void* context)
     {
-        const char* query_url = openai_build_url("completions");
+        const char* query_url = openai_build_url("chat/completions");
         string_const_t prompt = openai_generate_summary_prompt(symbol, symbol_length, user_prompt, user_prompt_length);
 
         config_handle_t data = config_allocate(CONFIG_VALUE_OBJECT, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
-        config_set(data, "model", STRING_CONST("text-davinci-003"));
-        config_set(data, "temperature", options.temperature);
-        config_set(data, "max_tokens", (double)options.max_tokens);
-        config_set(data, "top_p", options.top_p);
-        config_set(data, "best_of", (double)options.best_of);
-        config_set(data, "presence_penalty", options.presence_penalty);
-        config_set(data, "frequency_penalty", options.frequency_penalty);
-        config_set(data, "stop", STRING_CONST("---\n"));
 
-        config_set(data, "prompt", STRING_ARGS(prompt));
+        config_set(data, "model", STRING_CONST("gpt-4"));
+        //config_set(data, "temperature", options.temperature);
+        //config_set(data, "max_tokens", (double)options.max_tokens);
+        //config_set(data, "top_p", options.top_p);
+        //config_set(data, "best_of", (double)options.best_of);
+        //config_set(data, "presence_penalty", options.presence_penalty);
+        //config_set(data, "frequency_penalty", options.frequency_penalty);
+        //config_set(data, "stop", STRING_CONST("---\n"));
+        config_handle_t messages = config_set_array(data, "messages");
+        config_handle_t system = config_array_push(messages, CONFIG_VALUE_OBJECT);
+        config_set(system, "role", STRING_CONST("system"));
+        config_set(system, "content", RTEXT("You are a financial stock enthusiat expert"));
+        config_handle_t user = config_array_push(messages, CONFIG_VALUE_OBJECT);
+        config_set(user, "role", STRING_CONST("user"));
+        config_set(user, "content", STRING_ARGS(prompt));
 
         if (!openai_execute_query(query_url, data, [&response](const auto& res)
         {
@@ -952,7 +691,7 @@ string_t* openai_generate_summary_sentiment(
             string_const_t payload = res.to_string();
             log_debugf(HASH_OPENAI, STRING_CONST("Response: %.*s"), STRING_FORMAT(payload));
 
-            string_const_t first_choice = res["choices"].get(0ULL)["text"].as_string();
+            string_const_t first_choice = res["choices"].get(0ULL)["message"]["content"].as_string();
             
             // Skip the first \\n if any
             if (string_starts_with(STRING_ARGS(first_choice), STRING_CONST("\\n")))
@@ -993,11 +732,6 @@ FOUNDATION_STATIC void openai_initialize()
     log_infof(HASH_OPENAI, STRING_CONST("OpenAI module initialized"));
 
     dispatcher_register_event_listener(EVENT_BACKEND_CONNECTED, openai_backend_connected_event);
-
-    #if 0
-    app_register_menu(HASH_OPENAI, STRING_CONST("Modules/" ICON_MD_PSYCHOLOGY " OpenAI"), 
-        STRING_CONST("Alt+F1"), AppMenuFlags::Append, openai_run_tests, nullptr);
-    #endif
 }
 
 FOUNDATION_STATIC void openai_shutdown()
