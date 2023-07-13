@@ -295,6 +295,17 @@ double math_average(const double* pn, size_t count, size_t stride = sizeof(doubl
 */
 double math_median_average(double* values, double& median, double& average);
 
+/*! Computes the y = ax + b linear regression of the given values.
+ *  @param x Pointer to the first x value.
+ *  @param y Pointer to the first y value.
+ *  @param count Number of values.
+ *  @param stride Stride between values.
+ *  @param b Pointer to the offset of the regression.
+ *  @param a Pointer to the slope of the regression.
+ *  @return The correlation coefficient of the regression.
+ */
+double math_trend(double* x, double* y, size_t count, size_t stride, double* b, double *a);
+
 /*! Compute the relative change between two values.
  *  @param from The original value.
  *  @param to The new value.

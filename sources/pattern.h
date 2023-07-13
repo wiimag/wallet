@@ -20,6 +20,7 @@
 
 struct bulk_t;
 struct watch_context_t;
+struct pattern_earnings_result_t;
 
 /*! Pattern handle. */
 typedef int pattern_handle_t;
@@ -115,6 +116,12 @@ struct pattern_t
 
     // Intraday view data
     day_result_t* intradays{ nullptr };
+
+    // Earnings view data
+    double_option_t earnings_trend{ DNAN };
+    double_option_t earnings_growth{ DNAN };
+    double_option_t earnings_surprise_avg{ DNAN };
+    pattern_earnings_result_t* earnings{ nullptr };
 
     // Watch points
     watch_context_t* watch_context{ nullptr };
