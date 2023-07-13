@@ -1,7 +1,7 @@
 # Changelog
 
 ## [0.29.0] - 2023-07-13
-- [Add pattern earnings view]()
+- [Add pattern earnings view](https://github.com/wiimag/wallet/pull/34)
 
 ## [0.28.8] - 2023-07-12
 - Fix average cost when the stock got sold and we bought it again.
