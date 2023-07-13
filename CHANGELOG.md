@@ -1,16 +1,19 @@
 # Changelog
 
+## [0.29.0] - 2023-07-13
+- [Add pattern earnings view]()
+
 ## [0.28.8] - 2023-07-12
-- Fix report cash balance computation when some stock gets sold but not all of it.
-- Improve pattern AI analysis.
-- Use https://eodhistoricaldata.com by default for EOD queries
-- Prompt user at startup when there is a new version available.
-- Throttle EOD requests in order to avoid hitting the rate limit.
-- Fix pattern intraday plot auto fitting.
-- Update framework <https://github.com/wiimag/framework/pull/4>
-- Update license <https://wiimag.com/LICENSE>
 - Fix average cost when the stock got sold and we bought it again.
 - Fix average days held computation when the stock got sold and we bought it again.
+- Fix pattern intraday plot auto fitting.
+- Fix report cash balance computation when some stock gets sold but not all of it.
+- Improve pattern AI analysis.
+- Prompt user at startup when there is a new version available.
+- Throttle EOD requests in order to avoid hitting the rate limit.
+- Update framework <https://github.com/wiimag/framework/pull/4>
+- Update license <https://wiimag.com/LICENSE>
+- Use https://eodhistoricaldata.com by default for EOD queries
 
 ## [0.27.7] - 2023-06-22
 - Fix ask price when days held if lower than 30 days.

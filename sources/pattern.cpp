@@ -63,6 +63,7 @@ enum PatternType : int {
     PATTERN_GRAPH_TRENDS,
     PATTERN_GRAPH_YOY,
     PATTERN_GRAPH_INTRADAY,
+    PATTERN_GRAPH_EARNINGS,
     PATTERN_GRAPH_END,
 
     PATTERN_SIMULATION_BEGIN,
@@ -79,6 +80,7 @@ constexpr const char* GRAPH_TYPES[PATTERN_ALL_END] = {
     "Trends",
     "Y/Y",
     "Intraday",
+    "Earnings",
     nullptr,
     nullptr,
     "Activity"
@@ -116,6 +118,18 @@ struct pattern_graph_data_t
     bool refresh{ false };
     bool compact{ false };
     bool show_equation{ false };
+};
+
+struct pattern_earnings_result_t {
+    
+    double date{ 0 };
+    double actual { NAN };
+    double estimate { NAN };
+    double difference { NAN };
+    double surprise_p { NAN };
+
+    double trend { NAN };
+    double growth_p { NAN };
 };
 
 static pattern_t* _patterns = nullptr;
@@ -658,6 +672,12 @@ FOUNDATION_STATIC const stock_t* pattern_refresh(pattern_t* pattern, FetchLevel 
         while (!pattern->stock->has_resolve(minimal_required_levels) && time_elapsed(timeout) < 10)
             dispatcher_wait_for_wakeup_main_thread();
     }
+
+    if (array_size(pattern->earnings) > 0)
+        array_deallocate(pattern->earnings);
+
+    if (array_size(pattern->intradays) > 0)
+        array_deallocate(pattern->intradays);
 
     return pattern->stock;
 }
@@ -1569,6 +1589,224 @@ FOUNDATION_STATIC void pattern_render_graph_flex(pattern_t* pattern, pattern_gra
     pattern_render_graph_end(pattern, nullptr, graph);
 }
 
+FOUNDATION_STATIC void pattern_render_graph_earnings(pattern_t* pattern, pattern_graph_data_t& graph)
+{
+    if (pattern->earnings == nullptr)
+    {
+        array_reserve(pattern->earnings, 1);
+        const char* code = SYMBOL_CSTR(pattern->code);
+        pattern_handle_t pattern_handle = pattern - _patterns;
+        eod_fetch_async("fundamentals", code, FORMAT_JSON_CACHE, "filter", "Highlights,Earnings::History", [pattern_handle](const auto& json)
+        {
+            double* surprises = nullptr;
+            ImPlotPoint* estimates = nullptr;
+            pattern_earnings_result_t* results = nullptr;
+
+            double eps_current = DNAN;
+
+            auto History = json["Earnings::History"];
+            for (auto e : History)
+            {
+                pattern_earnings_result_t result;
+                result.date = (double)e["reportDate"].as_time();
+                result.actual = e["epsActual"].as_number();
+                result.estimate = e["epsEstimate"].as_number();
+
+                if (math_real_is_nan(result.estimate))
+                    continue;
+
+                result.difference = e["epsDifference"].as_number();
+                result.surprise_p = e["surprisePercent"].as_number();
+
+                if (math_real_is_nan(eps_current) && math_real_is_finite(result.actual))
+                    eps_current = result.actual;
+
+                if (math_real_is_finite(result.surprise_p))
+                    array_push(surprises, result.surprise_p);
+
+                if (math_real_is_finite(result.actual))
+                {
+                    ImPlotPoint p(result.date, result.actual);
+                    array_push(estimates, p);
+                }
+                else if (math_real_is_finite(result.estimate))
+                {
+                    ImPlotPoint p(result.date, result.estimate);
+                    array_push(estimates, p);
+                }
+
+                if (math_real_is_finite(result.actual) ||
+                    math_real_is_finite(result.estimate) ||
+                    math_real_is_finite(result.difference) ||
+                    math_real_is_finite(result.surprise_p))
+                {
+                    array_push_memcpy(results, &result);
+                }
+            }
+
+            array_sort(estimates, ARRAY_COMPARE_EXPRESSION(a.x - b.x));
+            array_sort(results, ARRAY_COMPARE_EXPRESSION(a.date - b.date));
+
+            double earnings_growth = DNAN;
+            double earnings_surprise_avg = DNAN;
+            double earnings_surprise_med = DNAN;
+            double earnings_surprise_medavg = math_median_average(surprises, earnings_surprise_med, earnings_surprise_avg);
+
+            double earnings_trend = json["Highlights"]["EPSEstimateNextQuarter"].as_number();
+            if (array_size(estimates) > 0)// && (math_real_is_zero(earnings_trend) || math_real_is_nan(earnings_trend)))
+            {
+                double a, b;
+                double coeff = math_trend(
+                    (double*)estimates + offsetof(ImPlotPoint, x), 
+                    (double*)((uint8_t*)estimates + offsetof(ImPlotPoint, y)),
+                    array_size(estimates), sizeof(ImPlotPoint), &b, &a);
+                earnings_trend = a * (double)time_now() + b;
+            }
+
+            double eps_current_quarter = json["Highlights"]["EPSEstimateCurrentQuarter"].as_number(eps_current);
+            if (math_real_is_zero(eps_current_quarter))
+                eps_current_quarter = eps_current;
+            const double eps_trend_surprise = earnings_trend * earnings_surprise_medavg / 100.0;
+            earnings_growth = eps_current_quarter + eps_trend_surprise;
+
+            array_deallocate(estimates);
+            array_deallocate(surprises);
+
+            pattern_t* pattern = pattern_get(pattern_handle);
+
+            pattern_earnings_result_t* old = pattern->earnings;
+            pattern->earnings_growth = earnings_growth;
+            pattern->earnings_trend = earnings_trend;
+            pattern->earnings_surprise_avg = earnings_surprise_med;
+            pattern->earnings = results;
+            array_deallocate(old);
+
+            if (pattern)
+                pattern->autofit = false;
+
+        }, 7 * 60 * 60 * 24ULL);
+    }
+
+    const size_t earnings_count = array_size(pattern->earnings);
+    if (earnings_count <= 1)
+        return ImGui::TextUnformatted("No data");
+
+    if (!pattern->autofit)
+    {
+        ImPlot::SetNextAxesToFit();
+        pattern->autofit = true;
+        graph.refresh = false;
+    }
+
+    const char* code = SYMBOL_CSTR(pattern->code);
+    const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
+    string_t plot_title = string_format(SHARED_BUFFER(64), STRING_CONST("Pattern Earnings - %s"), code);
+    if (!ImPlot::BeginPlot("Pattern Earnings##1", graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
+        return;
+
+    ImPlot::SetupLegend(ImPlotLocation_NorthWest, ImPlotLegendFlags_Horizontal);
+
+    double time_end = array_last(pattern->earnings)->date;
+    const double time_start = array_first(pattern->earnings)->date;
+
+    // Check if we have any estimates.
+    bool has_estimates = false;
+    double last_estimate_date = DNAN;
+    double last_estimate_value = DNAN;
+    for (int i = to_int(array_size(pattern->earnings)) -1; i >= 0; --i)
+    {
+        const pattern_earnings_result_t& result = pattern->earnings[i];
+        if (math_real_is_finite(result.estimate))
+        {
+            time_end = last_estimate_date = result.date;
+            last_estimate_value = result.estimate;
+            has_estimates = true;
+            break;
+        }
+    }
+
+    // The price graph is always shown inverted by default.
+    ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, time_start, time_end);
+    ImPlot::SetupAxisFormat(ImAxis_X1, plot_value_format_date, nullptr);
+
+    ImPlot::SetupAxis(ImAxis_Y1, "##Currency", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, "%.2lf $");
+
+    plot_context_t c{ pattern->date, earnings_count, 1, pattern->earnings };
+    c.show_equation = pattern->show_trend_equation;
+    c.acc = pattern->range;
+    c.cursor_xy1 = { DBL_MAX, DNAN };
+    c.cursor_xy2 = { DNAN, DNAN };
+    c.mouse_pos = ImPlot::GetPlotMousePos();
+    c.flipped = true;
+
+    ImPlot::HideNextItem(false, ImPlotCond_Once);
+    ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f, ImVec4(1, 0, 0, 1), 2);
+    ImPlot::PlotStairsG(tr("Actual"), [](int idx, void* user_data)->ImPlotPoint
+    {
+        plot_context_t* c = (plot_context_t*)user_data;
+        const pattern_earnings_result_t* history = (const pattern_earnings_result_t*)c->user_data;
+        const pattern_earnings_result_t& ed = history[idx];
+
+        const double x = (double)ed.date;
+        const double y = ed.actual;
+
+        plot_build_trend(*c, x, y);
+
+        return ImPlotPoint(x, y);
+    }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+
+    if (has_estimates)
+    {
+        // Add last projected estimate.
+        plot_build_trend(c, last_estimate_date, last_estimate_value);
+
+        ImPlot::HideNextItem(true, ImPlotCond_Once);
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f, ImVec4(1, 0, 0, 1), 2);
+        ImPlot::PlotLineG(tr("Estimate"), [](int idx, void* user_data)->ImPlotPoint
+        {
+            plot_context_t* c = (plot_context_t*)user_data;
+            const pattern_earnings_result_t* history = (const pattern_earnings_result_t*)c->user_data;
+            const pattern_earnings_result_t& ed = history[idx];
+            return ImPlotPoint((double)ed.date, ed.estimate);
+        }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+
+        ImPlot::PlotErrorBars("EPS", 
+            &pattern->earnings->date, 
+            &pattern->earnings->actual, 
+            &pattern->earnings->difference, 
+            &pattern->earnings->difference, to_int(earnings_count), ImPlotErrorBarsFlags_None, 0, sizeof(pattern_earnings_result_t));
+
+        pattern_earnings_result_t* last = array_last(pattern->earnings);
+        ImPlot::TagY(last->estimate, ImPlot::GetLastItemColor(), tr("Estimate %.2lf $\nGrowth %.3lg %%"), last->estimate, last->estimate / pattern->stock->current.price * 100.0);
+    }
+
+    plot_compute_trend(c);
+    plot_render_trend(tr("EPS"), c);
+
+    if (pattern->earnings_trend)
+    {
+        const double trend = pattern->earnings_trend.fetch();
+        plot_render_limit(tr("Trend##Limit"), time_start, time_end, trend);
+        const ImColor tag_color = ImPlot::GetLastItemColor();
+        ImPlot::TagY(trend, tag_color, tr("Trend %.2lf $\nGrowth %.3lg %%"), trend, trend / pattern->stock->current.price * 100.0);
+    }
+
+    if (pattern->earnings_growth)
+    {
+        const double growth = pattern->earnings_growth.fetch();
+        plot_render_limit(tr("FLEX##Limit"), time_start, time_end, growth);
+        const ImColor tag_color = ImPlot::GetLastItemColor();
+        ImPlot::TagY(growth, tag_color, tr("FLEX %.2lf $\nGrowth %.3lg %%"), growth, growth / pattern->stock->current.price * 100.0);
+    }
+
+    const ImColor today_color = IM_COL32(255, 0, 0, 255);
+    ImPlot::TagX((double)time_now(), today_color, tr("Today"));
+
+    ImPlot::EndPlot();
+}
+
 FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     if (pattern->intradays == nullptr)
@@ -1628,7 +1866,6 @@ FOUNDATION_STATIC void pattern_render_graph_intraday(pattern_t* pattern, pattern
     if (intraday_count <= 1)
         return ImGui::TextUnformatted("No data");
 
-    
     if (!pattern->autofit)
     {
         ImPlot::SetNextAxesToFit();
@@ -1973,7 +2210,8 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('3') || shortcut_executed('F')) pattern->type = PATTERN_GRAPH_FLEX;
     if (shortcut_executed('4') || shortcut_executed('T')) pattern->type = PATTERN_GRAPH_TRENDS;
     if (shortcut_executed('5') || shortcut_executed('Y')) pattern->type = PATTERN_GRAPH_YOY;
-    if (shortcut_executed('6') || shortcut_executed('Y')) pattern->type = PATTERN_GRAPH_INTRADAY;
+    if (shortcut_executed('6') || shortcut_executed('I')) pattern->type = PATTERN_GRAPH_INTRADAY;
+//    if (shortcut_executed('7') || shortcut_executed('E')) pattern->type = PATTERN_GRAPH_EARNINGS;
     if (shortcut_executed('7') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
 
     ImGui::SetNextItemWidth(IM_SCALEF(120));
@@ -2003,7 +2241,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
         pattern->autofit = false;
     }
 
-    if (pattern->type != PATTERN_GRAPH_INTRADAY)
+    if (pattern->type != PATTERN_GRAPH_INTRADAY && pattern->type != PATTERN_GRAPH_EARNINGS)
     {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
@@ -2462,6 +2700,10 @@ FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
 
         case PATTERN_GRAPH_INTRADAY:
             pattern_render_graph_intraday(pattern, graph_data);
+            break;
+
+        case PATTERN_GRAPH_EARNINGS:
+            pattern_render_graph_earnings(pattern, graph_data);
             break;
 
         case PATTERN_ACTIVITY:
@@ -3295,6 +3537,7 @@ FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
         pattern->analysis_summary = nullptr;
     }
 
+    array_deallocate(pattern->earnings);
     array_deallocate(pattern->intradays);
     config_deallocate(pattern->fundamentals);
     watch_destroy(pattern->watch_context);

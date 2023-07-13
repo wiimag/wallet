@@ -22,6 +22,43 @@ double math_average(const double* pn, size_t count, size_t stride /*= sizeof(dou
     return total / count;
 }
 
+double math_trend(double* x, double* y, size_t count, size_t stride, double* b, double *a)
+{
+    double sum_x = 0.0;
+    double sum_y = 0.0;
+    double sum_xx = 0.0;
+    double sum_xy = 0.0;
+    double sum_yy = 0.0;
+
+    for (size_t i = 0; i < count; ++i)
+    {
+        const double xi = *x;
+        const double yi = *y;
+        sum_x += xi;
+        sum_y += yi;
+        sum_xx += xi * xi;
+        sum_xy += xi * yi;
+        sum_yy += yi * yi;
+        x = (double*)(((uint8_t*)x) + stride);
+        y = (double*)(((uint8_t*)y) + stride);
+    }
+
+    const double n = (double)count;
+    const double det = n * sum_xx - sum_x * sum_x;
+    if (det == 0.0)
+    {
+        *b = 0.0;
+        *a = 0.0;
+        return 0.0;
+    }
+
+    *b = (sum_xx * sum_y - sum_x * sum_xy) / det;
+    *a = (n * sum_xy - sum_x * sum_y) / det;
+
+    const double r = (n * sum_xy - sum_x * sum_y) / sqrt((n * sum_xx - sum_x * sum_x) * (n * sum_yy - sum_y * sum_y));
+    return r;
+}
+
 double math_median_average(double* values, double& median, double& average)
 {
     const size_t count = array_size(values);
