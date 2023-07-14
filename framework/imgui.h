@@ -559,4 +559,13 @@ namespace ImGui
     {
         return ImGui::GetIO().WantTextInput;
     }
+
+    /*! Get the current content region available width. 
+     * 
+     *  @return The current content region available width.
+     */
+    FOUNDATION_FORCEINLINE float GetContentRegionAvailWidth()
+    {
+        return ImGui::GetContentRegionAvail().x;
+    }
 }

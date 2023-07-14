@@ -608,6 +608,8 @@ struct expr_result_t
             return false;
         if (type == EXPR_RESULT_NUMBER && math_real_is_zero(value))
             return false;
+        if (type == EXPR_RESULT_SYMBOL && value == 0.0)
+            return false;
         return !is_null();
     }
 
