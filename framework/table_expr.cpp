@@ -137,7 +137,12 @@ FOUNDATION_STATIC table_cell_t table_expr_cell_value(const table_expr_record_val
         return table_cell_t(false);
 
     if (v->type == DYNAMIC_TABLE_VALUE_TEXT)
+    {
+        if (format == COLUMN_FORMAT_DATE)
+            return string_to_date(STRING_ARGS(v->text));
+
         return table_cell_t(string_to_const(v->text));
+    }
 
     if (v->type == DYNAMIC_TABLE_VALUE_NUMBER)
     {

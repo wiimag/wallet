@@ -10,7 +10,7 @@ $(next_report,
     $t = $1
     $e = F($t, "Earnings.History")
     $e = IF($e, MAP($e, [INDEX($2, 'reportDate'), INDEX($2, 'epsActual'), INDEX($2, 'epsEstimate')]), [nil, nill, nill])
-    $e = FILTER($e, IF($3, true, false) && IF($2, false, true))
+    $e = FILTER($e, IF($3, true, false) && $2 == nil)
     $e = IF($e, INDEX($e, -1), [])
 )
 

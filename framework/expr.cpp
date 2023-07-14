@@ -1028,7 +1028,26 @@ FOUNDATION_STATIC expr_result_t expr_eval_if(const expr_func_t* f, vec_expr_t* a
     if (args->len < 2 || args->len > 3)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
 
-    expr_result_t condition = expr_eval(args->get(0));
+    expr_t* condarg = args->get(0);
+
+    // Check if the variable got resolved?
+    if (condarg->type == OP_VAR && condarg->token.length > 0)
+    {
+        if (condarg->param.var.value == nullptr)
+            return NIL;
+        if (condarg->param.var.value->type == EXPR_RESULT_SYMBOL)
+        {
+            string_const_t symstr = condarg->param.var.value->as_string();
+            if (string_equal(STRING_ARGS(condarg->token), STRING_ARGS(symstr)))
+            {
+                if (args->len == 2)
+                    return NIL;
+                return expr_eval(args->get(2));
+            }
+        }
+    }
+
+    expr_result_t condition = expr_eval(condarg);
     if (condition)
         return expr_eval(args->get(1));
 

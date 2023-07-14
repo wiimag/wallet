@@ -608,6 +608,8 @@ struct expr_result_t
             return false;
         if (type == EXPR_RESULT_NUMBER && math_real_is_zero(value))
             return false;
+        if (type == EXPR_RESULT_SYMBOL && value == 0.0)
+            return false;
         return !is_null();
     }
 
@@ -898,6 +900,9 @@ struct expr_result_t
             return rhs.as_number(0) == 0;
 
         if (type == EXPR_RESULT_NULL)
+            return false;
+
+        if (type == EXPR_RESULT_TRUE && rhs.type == EXPR_RESULT_NULL)
             return false;
 
         if (type == EXPR_RESULT_TRUE && rhs.type == EXPR_RESULT_TRUE)

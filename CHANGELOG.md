@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.30.0] - 2023-07-14
+- [Add support to register and execute script expressions](https://github.com/wiimag/wallet/pull/35)
+
 ## [0.29.1] - 2023-07-13
 - [Add pattern earnings view](https://github.com/wiimag/wallet/pull/34)
 
