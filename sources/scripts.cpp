@@ -31,6 +31,38 @@ FOUNDATION_STATIC string_const_t scripts_config_path()
     return session_get_user_file_path(STRING_CONST("scripts.json"));
 }
 
+FOUNDATION_STATIC bool script_evaluate(script_t* script)
+{
+    if (script->show_console)
+        console_show();
+
+    string_const_t name = string_const(script->name, string_length(script->name));
+    if (name.length >= 6 && name.str[0] == '\\' && name.str[1] == 'u')
+        name = string_const(name.str + 6, name.length - 6);
+
+    // Set global variables
+    expr_set_global_var(STRING_CONST("$SCRIPT_NAME"), STRING_LENGTH(script->name));
+
+    char formatted_name_buffer[256];
+    string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
+    expr_set_global_var(STRING_CONST("$SCRIPT_NAME_FULL"), STRING_ARGS(formatted_name));
+
+    // TODO: Guard against system exceptions.
+
+    auto result = eval(STRING_LENGTH(script->text));
+    if (EXPR_ERROR_CODE != EXPR_ERROR_NONE)
+    {
+        char formatted_name_buffer[256];
+        string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
+        log_errorf(HASH_SCRIPTS, ERROR_SCRIPT, STRING_CONST("Failed to evaluate script '%.*s': %s"),
+            STRING_FORMAT(formatted_name), EXPR_ERROR_MSG);
+        console_show();
+    }
+    script->last_executed = time_now();
+    array_sort(_->scripts, ARRAY_COMPARE_EXPRESSION(b.last_executed - a.last_executed));
+    return result.as_boolean();
+}
+
 FOUNDATION_STATIC script_t* scripts_load()
 {
     script_t* scripts = nullptr;
@@ -59,6 +91,9 @@ FOUNDATION_STATIC script_t* scripts_load()
 
         script.show_console = e["show_console"].as_boolean(false);
         script.load_on_startup = e["load_on_startup"].as_boolean(false);
+
+        if (script.load_on_startup)
+            script_evaluate(&script);
 
         array_push_memcpy(scripts, &script);
     }
@@ -91,22 +126,6 @@ FOUNDATION_STATIC void scripts_save(script_t* scripts)
     string_const_t scripts_config_file_path = scripts_config_path();
     config_write_file(scripts_config_file_path, data, CONFIG_OPTION_WRITE_NO_SAVE_ON_DATA_EQUAL);
     config_deallocate(data);
-}
-
-FOUNDATION_STATIC bool script_evaluate(script_t* script)
-{
-    auto result = eval(STRING_LENGTH(script->text));
-    if (EXPR_ERROR_CODE != EXPR_ERROR_NONE)
-    {
-        char formatted_name_buffer[256];
-        string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
-        log_errorf(HASH_SCRIPTS, ERROR_SCRIPT, STRING_CONST("Failed to evaluate script '%.*s': %s"),
-            STRING_FORMAT(formatted_name), EXPR_ERROR_MSG);
-        console_show();
-    }
-    script->last_executed = time_now();
-    array_sort(_->scripts, ARRAY_COMPARE_EXPRESSION(b.last_executed - a.last_executed));
-    return result.as_boolean();
 }
 
 FOUNDATION_STATIC void script_render_window(window_handle_t win)
@@ -262,9 +281,11 @@ FOUNDATION_STATIC void scripts_menu()
         
         if (ImGui::SmallButton(ICON_MD_EDIT))
         {
-            char formatted_name_buffer[256];
-            string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
-            string_t title = tr_format(SHARED_BUFFER(256), "{0} [Script]", formatted_name);
+            string_const_t name = string_const(script->name, string_length(script->name));
+            if (name.length >= 6 && name.str[0] == '\\' && name.str[1] == 'u')
+                name = string_const(name.str + 6, name.length - 6);
+
+            string_t title = tr_format(SHARED_BUFFER(256), "{0} [Script]", name);
             window_open(HASH_SCRIPTS, STRING_ARGS(title), script_render_window, nullptr, script);
             ImGui::CloseCurrentPopup();
         }
