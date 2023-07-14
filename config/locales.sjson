@@ -3990,5 +3990,55 @@
 			en = "You are a financial stock enthusiat expert"
 			fr = "Vous \xc3\xaates un expert en bourse"
 		}
+		{
+			hash = "5f062fe204be0fb3"
+			en = "Actual"
+			fr = "R\xc3\xa9el"
+		}
+		{
+			hash = "2fed8a5494d3bd79"
+			en = "Estimate"
+			fr = "Estimation"
+		}
+		{
+			hash = "40c1474db54ea72a"
+			en = "Estimate %.2lf $\nGrowth %.3lg %%"
+			fr = "Estimation %.2lf $\nCroissance %.3lg %%"
+		}
+		{
+			hash = "9c6f3a145c0c978c"
+			en = "EPS"
+			fr = "EPS"
+		}
+		{
+			hash = "4bbdcf9fe5e9b58c"
+			en = "Trend##Limit"
+			fr = "Tendance##Limite"
+		}
+		{
+			hash = "648958dda05cce3e"
+			en = "Trend %.2lf $\nGrowth %.3lg %%"
+			fr = "Tendance %.2lf $\nCroissance %.3lg %%"
+		}
+		{
+			hash = "62c386a1f7dedade"
+			en = "FLEX##Limit"
+			fr = "FLEX##Limite"
+		}
+		{
+			hash = "36228b5af0455a"
+			en = "FLEX %.2lf $\nGrowth %.3lg %%"
+			fr = "FLEX %.2lf $\nCroissance %.3lg %%"
+		}
+		{
+			hash = "b85d23b9b0aa664d"
+			en = "Estimate {0, currency}\nGrowth {1, 3} %\n\xee\xa1\xab {2, 3}"
+			fr = "Estimation {0, currency}\nCroissance {1, 3} %\n\xee\xa1\xab {2, 3}"
+		}
+		{
+			hash = "331973a339964c95"
+			en = "\xee\xa1\xab {2, 3} ({1, 3} %)"
+			fr = "\xee\xa1\xab {2, 3} ({1, 3} %)"
+		}
 	]
 }

@@ -1012,7 +1012,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
     ImPlotFlags flags = ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle;
     if (graph.compact)
-        flags = ImPlotFlags_CanvasOnly;
+        flags = ImPlotFlags_CanvasOnly | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText;
     if (!ImPlot::BeginPlot("Pattern Trends##1", graph_size, flags))
         return;
 
@@ -1049,7 +1049,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
     ImPlot::SetupAxisFormat(ImAxis_Y1, "%.4g");
 
     // Render limits
-    if (pattern->show_limits)
+    if (pattern->show_limits && !graph.compact)
     {
         ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.0f);
         pattern_render_graph_limit(tr("Zero"), graph, 0);
@@ -1111,7 +1111,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
     ImPlot::EndPlot();
 
-    if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+    if (!graph.compact && ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
     {
         ImGui::SetCursorScreenPos(ImVec2(plot_screen_pos.x + 350, plot_screen_pos.y + 20));
         ImGui::SetNextItemWidth(250.0f);
@@ -1589,98 +1589,126 @@ FOUNDATION_STATIC void pattern_render_graph_flex(pattern_t* pattern, pattern_gra
     pattern_render_graph_end(pattern, nullptr, graph);
 }
 
+FOUNDATION_STATIC string_const_t pattern_primary_ticker_code(pattern_t* pattern)
+{
+    string_const_t code = string_table_decode_const(pattern->code);
+
+    if (string_ends_with(STRING_ARGS(code), STRING_CONST(".NEO")))
+    {
+        string_t primary_code = string_format(SHARED_BUFFER(32), STRING_CONST("%.*s.US"), to_int(code.length) - 4, code.str);
+        return string_to_const(primary_code);
+    }
+
+    return code;
+}
+
+FOUNDATION_STATIC void pattern_read_fundamentals_earnings_data(pattern_handle_t pattern_handle, const json_object_t& json)
+{
+    double* surprises = nullptr;
+    ImPlotPoint* estimates = nullptr;
+    pattern_earnings_result_t* results = nullptr;
+
+    double eps_current = DNAN;
+
+    auto History = json["Earnings::History"];
+    for (auto e : History)
+    {
+        pattern_earnings_result_t result;
+        result.date = (double)e["reportDate"].as_time();
+        result.actual = e["epsActual"].as_number();
+        result.estimate = e["epsEstimate"].as_number();
+
+        if (math_real_is_nan(result.estimate))
+            continue;
+
+        result.difference = e["epsDifference"].as_number();
+        result.surprise_p = e["surprisePercent"].as_number();
+
+        if (math_real_is_nan(eps_current) && math_real_is_finite(result.actual))
+            eps_current = result.actual;
+
+        if (math_real_is_finite(result.surprise_p))
+            array_push(surprises, result.surprise_p);
+
+        if (math_real_is_finite(result.actual))
+        {
+            ImPlotPoint p(result.date, result.actual);
+            array_push(estimates, p);
+        }
+        else if (math_real_is_finite(result.estimate))
+        {
+            ImPlotPoint p(result.date, result.estimate);
+            array_push(estimates, p);
+        }
+
+        if (math_real_is_finite(result.actual) ||
+            math_real_is_finite(result.estimate) ||
+            math_real_is_finite(result.difference) ||
+            math_real_is_finite(result.surprise_p))
+        {
+            array_push_memcpy(results, &result);
+        }
+    }
+
+    if (array_size(results) == 0)
+        return;
+
+    array_sort(estimates, ARRAY_COMPARE_EXPRESSION(a.x - b.x));
+    array_sort(results, ARRAY_COMPARE_EXPRESSION(a.date - b.date));
+
+    double earnings_growth = DNAN;
+    double earnings_surprise_avg = DNAN;
+    double earnings_surprise_med = DNAN;
+    double earnings_surprise_medavg = math_median_average(surprises, earnings_surprise_med, earnings_surprise_avg);
+
+    double earnings_trend = json["Highlights"]["EPSEstimateNextQuarter"].as_number();
+    if (array_size(estimates) > 0)
+    {
+        double a = DNAN, b = DNAN;
+        double coeff = math_trend(
+            (double*)estimates + offsetof(ImPlotPoint, x),
+            (double*)((uint8_t*)estimates + offsetof(ImPlotPoint, y)),
+            array_size(estimates), sizeof(ImPlotPoint), &b, &a);
+        if (math_real_is_finite(a) && math_real_is_finite(b) && (coeff > 0.5 || !math_real_is_finite_nz(earnings_trend)))
+            earnings_trend = a * (double)time_now() + b;
+    }
+
+    double eps_current_quarter = json["Highlights"]["EPSEstimateCurrentQuarter"].as_number(eps_current);
+    if (math_real_is_zero(eps_current_quarter))
+        eps_current_quarter = eps_current;
+    const double eps_trend_surprise = earnings_trend * earnings_surprise_medavg / 100.0;
+    earnings_growth = eps_current_quarter + eps_trend_surprise;
+
+    array_deallocate(estimates);
+    array_deallocate(surprises);
+
+    pattern_t* pattern = pattern_get(pattern_handle);
+    if (pattern)
+    {
+        pattern_earnings_result_t* old = pattern->earnings;
+        pattern->earnings_growth = earnings_growth;
+        pattern->earnings_trend = earnings_trend;
+        pattern->earnings_surprise_avg = earnings_surprise_med;
+        pattern->earnings = results;
+        array_deallocate(old);
+    } 
+    else
+    {
+        array_deallocate(results);
+    }
+}
+
 FOUNDATION_STATIC void pattern_render_graph_earnings(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     if (pattern->earnings == nullptr)
     {
         array_reserve(pattern->earnings, 1);
-        const char* code = SYMBOL_CSTR(pattern->code);
         pattern_handle_t pattern_handle = pattern - _patterns;
+        const char* code = pattern_primary_ticker_code(pattern).str;
         eod_fetch_async("fundamentals", code, FORMAT_JSON_CACHE, "filter", "Highlights,Earnings::History", [pattern_handle](const auto& json)
         {
-            double* surprises = nullptr;
-            ImPlotPoint* estimates = nullptr;
-            pattern_earnings_result_t* results = nullptr;
-
-            double eps_current = DNAN;
-
-            auto History = json["Earnings::History"];
-            for (auto e : History)
-            {
-                pattern_earnings_result_t result;
-                result.date = (double)e["reportDate"].as_time();
-                result.actual = e["epsActual"].as_number();
-                result.estimate = e["epsEstimate"].as_number();
-
-                if (math_real_is_nan(result.estimate))
-                    continue;
-
-                result.difference = e["epsDifference"].as_number();
-                result.surprise_p = e["surprisePercent"].as_number();
-
-                if (math_real_is_nan(eps_current) && math_real_is_finite(result.actual))
-                    eps_current = result.actual;
-
-                if (math_real_is_finite(result.surprise_p))
-                    array_push(surprises, result.surprise_p);
-
-                if (math_real_is_finite(result.actual))
-                {
-                    ImPlotPoint p(result.date, result.actual);
-                    array_push(estimates, p);
-                }
-                else if (math_real_is_finite(result.estimate))
-                {
-                    ImPlotPoint p(result.date, result.estimate);
-                    array_push(estimates, p);
-                }
-
-                if (math_real_is_finite(result.actual) ||
-                    math_real_is_finite(result.estimate) ||
-                    math_real_is_finite(result.difference) ||
-                    math_real_is_finite(result.surprise_p))
-                {
-                    array_push_memcpy(results, &result);
-                }
-            }
-
-            array_sort(estimates, ARRAY_COMPARE_EXPRESSION(a.x - b.x));
-            array_sort(results, ARRAY_COMPARE_EXPRESSION(a.date - b.date));
-
-            double earnings_growth = DNAN;
-            double earnings_surprise_avg = DNAN;
-            double earnings_surprise_med = DNAN;
-            double earnings_surprise_medavg = math_median_average(surprises, earnings_surprise_med, earnings_surprise_avg);
-
-            double earnings_trend = json["Highlights"]["EPSEstimateNextQuarter"].as_number();
-            if (array_size(estimates) > 0)// && (math_real_is_zero(earnings_trend) || math_real_is_nan(earnings_trend)))
-            {
-                double a, b;
-                double coeff = math_trend(
-                    (double*)estimates + offsetof(ImPlotPoint, x), 
-                    (double*)((uint8_t*)estimates + offsetof(ImPlotPoint, y)),
-                    array_size(estimates), sizeof(ImPlotPoint), &b, &a);
-                earnings_trend = a * (double)time_now() + b;
-            }
-
-            double eps_current_quarter = json["Highlights"]["EPSEstimateCurrentQuarter"].as_number(eps_current);
-            if (math_real_is_zero(eps_current_quarter))
-                eps_current_quarter = eps_current;
-            const double eps_trend_surprise = earnings_trend * earnings_surprise_medavg / 100.0;
-            earnings_growth = eps_current_quarter + eps_trend_surprise;
-
-            array_deallocate(estimates);
-            array_deallocate(surprises);
-
+            pattern_read_fundamentals_earnings_data(pattern_handle, json);
             pattern_t* pattern = pattern_get(pattern_handle);
-
-            pattern_earnings_result_t* old = pattern->earnings;
-            pattern->earnings_growth = earnings_growth;
-            pattern->earnings_trend = earnings_trend;
-            pattern->earnings_surprise_avg = earnings_surprise_med;
-            pattern->earnings = results;
-            array_deallocate(old);
-
             if (pattern)
                 pattern->autofit = false;
 
@@ -1752,7 +1780,8 @@ FOUNDATION_STATIC void pattern_render_graph_earnings(pattern_t* pattern, pattern
         const double x = (double)ed.date;
         const double y = ed.actual;
 
-        plot_build_trend(*c, x, y);
+        if (math_real_is_finite(y))
+            plot_build_trend(*c, x, y);
 
         return ImPlotPoint(x, y);
     }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
@@ -1762,16 +1791,7 @@ FOUNDATION_STATIC void pattern_render_graph_earnings(pattern_t* pattern, pattern
         // Add last projected estimate.
         plot_build_trend(c, last_estimate_date, last_estimate_value);
 
-        ImPlot::HideNextItem(true, ImPlotCond_Once);
-        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f, ImVec4(1, 0, 0, 1), 2);
-        ImPlot::PlotLineG(tr("Estimate"), [](int idx, void* user_data)->ImPlotPoint
-        {
-            plot_context_t* c = (plot_context_t*)user_data;
-            const pattern_earnings_result_t* history = (const pattern_earnings_result_t*)c->user_data;
-            const pattern_earnings_result_t& ed = history[idx];
-            return ImPlotPoint((double)ed.date, ed.estimate);
-        }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
-
+        ImPlot::SetNextErrorBarStyle(ImColor(200.9, 160.7, 120.2, 100), 16.0, 4.0);
         ImPlot::PlotErrorBars("EPS", 
             &pattern->earnings->date, 
             &pattern->earnings->actual, 
@@ -1779,26 +1799,51 @@ FOUNDATION_STATIC void pattern_render_graph_earnings(pattern_t* pattern, pattern
             &pattern->earnings->difference, to_int(earnings_count), ImPlotErrorBarsFlags_None, 0, sizeof(pattern_earnings_result_t));
 
         pattern_earnings_result_t* last = array_last(pattern->earnings);
-        ImPlot::TagY(last->estimate, ImPlot::GetLastItemColor(), tr("Estimate %.2lf $\nGrowth %.3lg %%"), last->estimate, last->estimate / pattern->stock->current.price * 100.0);
-    }
 
-    plot_compute_trend(c);
-    plot_render_trend(tr("EPS"), c);
+        plot_compute_trend(c);
+
+        const double trend[]{ c.a + c.b * c.x_min, c.a + c.b * c.x_max};
+        const double y_diff = trend[1] - trend[0];
+
+        string_t tag_label = tr_format(SHARED_BUFFER(64), ICON_MD_CHANGE_HISTORY " {2, 3} ({1, 3} %)", 
+            last->estimate, last->estimate / pattern->stock->current.price * 100.0, y_diff);
+        plot_render_trend(tag_label.str, c);
+
+        ImPlot::HideNextItem(false, ImPlotCond_Once);
+        ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 6.0f, ImVec4(1, 0, 0, 0.5), 2);
+        ImPlot::PlotScatterG(tr("Estimate"), [](int idx, void* user_data)->ImPlotPoint
+        {
+            plot_context_t* c = (plot_context_t*)user_data;
+            const pattern_earnings_result_t* history = (const pattern_earnings_result_t*)c->user_data;
+            const pattern_earnings_result_t& ed = history[idx];
+            return ImPlotPoint((double)ed.date, ed.estimate);
+        }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+    }
+    else
+    {
+        plot_compute_trend(c);
+        plot_render_trend(tr("EPS"), c);
+    }
 
     if (pattern->earnings_trend)
     {
         const double trend = pattern->earnings_trend.fetch();
-        plot_render_limit(tr("Trend##Limit"), time_start, time_end, trend);
-        const ImColor tag_color = ImPlot::GetLastItemColor();
-        ImPlot::TagY(trend, tag_color, tr("Trend %.2lf $\nGrowth %.3lg %%"), trend, trend / pattern->stock->current.price * 100.0);
+        const char* limit_label = tr("Trend##Limit");
+        if (plot_render_limit(limit_label, time_start, time_end, trend))
+        {
+            const ImColor tag_color = ImPlot::GetLastItemColor();
+            ImPlot::TagY(trend, tag_color, tr("Trend %.2lf $\nGrowth %.3lg %%"), trend, trend / pattern->stock->current.price * 100.0);
+        }
     }
 
     if (pattern->earnings_growth)
     {
         const double growth = pattern->earnings_growth.fetch();
-        plot_render_limit(tr("FLEX##Limit"), time_start, time_end, growth);
-        const ImColor tag_color = ImPlot::GetLastItemColor();
-        ImPlot::TagY(growth, tag_color, tr("FLEX %.2lf $\nGrowth %.3lg %%"), growth, growth / pattern->stock->current.price * 100.0);
+        if (plot_render_limit(tr("FLEX##Limit"), time_start, time_end, growth))
+        {
+            const ImColor tag_color = ImPlot::GetLastItemColor();
+            ImPlot::TagY(growth, tag_color, tr("FLEX %.2lf $\nGrowth %.3lg %%"), growth, growth / pattern->stock->current.price * 100.0);
+        }
     }
 
     const ImColor today_color = IM_COL32(255, 0, 0, 255);
@@ -2209,10 +2254,10 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('2')) pattern->type = PATTERN_GRAPH_ANALYSIS;
     if (shortcut_executed('3') || shortcut_executed('F')) pattern->type = PATTERN_GRAPH_FLEX;
     if (shortcut_executed('4') || shortcut_executed('T')) pattern->type = PATTERN_GRAPH_TRENDS;
-    if (shortcut_executed('5') || shortcut_executed('Y')) pattern->type = PATTERN_GRAPH_YOY;
-    if (shortcut_executed('6') || shortcut_executed('I')) pattern->type = PATTERN_GRAPH_INTRADAY;
-//    if (shortcut_executed('7') || shortcut_executed('E')) pattern->type = PATTERN_GRAPH_EARNINGS;
-    if (shortcut_executed('7') || shortcut_executed('A')) pattern->type = PATTERN_ACTIVITY;
+    if (shortcut_executed('5')) pattern->type = PATTERN_GRAPH_YOY;
+    if (shortcut_executed('6')) pattern->type = PATTERN_GRAPH_INTRADAY;
+    if (shortcut_executed('7')) pattern->type = PATTERN_GRAPH_EARNINGS;
+    if (shortcut_executed('8')) pattern->type = PATTERN_ACTIVITY;
 
     ImGui::SetNextItemWidth(IM_SCALEF(120));
     string_const_t graph_type_label_preview = string_to_const(GRAPH_TYPES[min(pattern->type, (int)ARRAY_COUNT(GRAPH_TYPES)-1)]);

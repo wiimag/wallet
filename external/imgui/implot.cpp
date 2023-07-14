@@ -674,6 +674,15 @@ bool ShowLegendEntries(ImPlotItemGroup& items, const ImRect& legend_bb, bool hov
 
         DrawList.AddRectFilled(icon_bb.Min, icon_bb.Max, col_icon);
         const char* text_display_end = ImGui::FindRenderedTextEnd(label, NULL);
+
+        // End display text at first line return
+        for (const char* s = label; s < text_display_end; ++s) {
+            if (*s == '\r' || *s == '\n') {
+                text_display_end = s;
+                break;
+            }
+        }
+
         if (label != text_display_end)
             DrawList.AddText(top_left + ImVec2(icon_size, 0), item->Show ? col_txt_hl  : col_txt_dis, label, text_display_end);
     }
@@ -4660,7 +4669,7 @@ void MapInputDefault(ImPlotInputMap* dst) {
     map.PanMod          = ImGuiMod_None;
     map.Fit             = ImGuiMouseButton_Left;
     map.Menu            = ImGuiMouseButton_Right;
-    map.Select          = ImGuiMouseButton_Right;
+    map.Select          = ImGuiMouseButton_Middle;
     map.SelectMod       = ImGuiMod_None;
     map.SelectCancel    = ImGuiMouseButton_Left;
     map.SelectHorzMod   = ImGuiMod_Alt;
@@ -4676,7 +4685,7 @@ void MapInputReverse(ImPlotInputMap* dst) {
     map.PanMod          = ImGuiMod_None;
     map.Fit             = ImGuiMouseButton_Left;
     map.Menu            = ImGuiMouseButton_Right;
-    map.Select          = ImGuiMouseButton_Left;
+    map.Select          = ImGuiMouseButton_Middle;
     map.SelectMod       = ImGuiMod_None;
     map.SelectCancel    = ImGuiMouseButton_Right;
     map.SelectHorzMod   = ImGuiMod_Alt;

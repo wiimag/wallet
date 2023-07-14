@@ -69,7 +69,7 @@ bool plot_build_trend(plot_context_t& c, double x, double y);
 
 void plot_render_trend(const char* label, const plot_context_t& c);
 
-void plot_render_limit(const char* label, double min, double max, double value);
+bool plot_render_limit(const char* label, double min, double max, double value);
 
 void plot_render_line_with_trend(plot_context_t& context, PlotGetter getter);
 

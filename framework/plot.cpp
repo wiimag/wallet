@@ -5,6 +5,8 @@
 
 #include "plot.h"
 
+#include <imgui/implot_internal.h>
+
 //
 // PRIVATE
 //
@@ -30,17 +32,20 @@ FOUNDATION_STATIC void plot_render_graph_trend(const char* label, double x1, dou
     }
 
     const char* tag = string_format_static_const("%s %s", label, (!context.flipped && !context.x_axis_inverted ? b < 0 : b > 0) ? ICON_MD_TRENDING_UP : ICON_MD_TRENDING_DOWN);
-    ImPlot::TagY(a + b * (context.flipped || context.x_axis_inverted ? x2 : x1), pc, "%s", tag);
     ImPlot::PlotLine(tag, range, trend, ARRAY_COUNT(trend), ImPlotLineFlags_NoClip);
-
-    if (context.show_equation)
+    if (ImPlot::GetItem(tag)->Show)
     {
-        string_const_t annstr = string_template_static(
-            "{0}{5}{1, short} {2} {3, short}x (" ICON_MD_CHANGE_HISTORY "{4, short})", 
-            context.compacted ? "" : label, a, b < 0 ? "-" : "+", math_abs(b), y_diff, context.compacted ? "" : " = ");
-        ImPlot::Annotation(context.x_axis_inverted ? x1 : x2, context.x_axis_inverted ? trend[0] : trend[1], ImVec4(0.3f, 0.3f, 0.5f, 1.0f),
-            ImVec2(0, 10.0f * (b > 0 ? -1.0f : 1.0f)), true,
-            "%.*s", STRING_FORMAT(annstr));
+        ImPlot::TagY(a + b * (context.flipped || context.x_axis_inverted ? x2 : x1), pc, "%s", tag);
+
+        if (context.show_equation)
+        {
+            string_const_t annstr = string_template_static(
+                "{0}{5}{1, short} {2} {3, short}x (" ICON_MD_CHANGE_HISTORY "{4, short})",
+                context.compacted ? "" : label, a, b < 0 ? "-" : "+", math_abs(b), y_diff, context.compacted ? "" : " = ");
+            ImPlot::Annotation(context.x_axis_inverted ? x1 : x2, context.x_axis_inverted ? trend[0] : trend[1], ImVec4(0.3f, 0.3f, 0.5f, 1.0f),
+                ImVec2(0, 10.0f * (b > 0 ? -1.0f : 1.0f)), true,
+                "%.*s", STRING_FORMAT(annstr));
+        }
     }
 }
 
@@ -129,11 +134,13 @@ int plot_value_format_elapsed_time_short(double value, char* buff, int size, voi
     return (int)tr_format(buff, to_size(size), "{0,round}D", value).length;
 }
 
-void plot_render_limit(const char* label, double min, double max, double value)
+bool plot_render_limit(const char* label, double min, double max, double value)
 {
     const double range[]{ min, max };
     const double limit[]{ value, value };
     ImPlot::PlotLine(label, range, limit, ARRAY_COUNT(limit), ImPlotLineFlags_NoClip);
+
+    return ImPlot::GetItem(label)->Show;
 }
 
 int plot_value_format_currency_short(double value, char* buff, int size, void* user_data)

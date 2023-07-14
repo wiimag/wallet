@@ -1,0 +1,30 @@
+#
+# Report in a table next earnings report dates for unsold titles
+#
+#---
+$REPORT=IF($REPORT, $REPORT, '300K')
+#---
+
+# Define function to get next report data for a given title
+$(next_report, 
+    $t = $1
+    $e = F($t, "Earnings.History")
+    $e = IF($e, MAP($e, [INDEX($2, 'reportDate'), INDEX($2, 'epsActual'), INDEX($2, 'epsEstimate')]), [nil, nill, nill])
+    $e = FILTER($e, IF($3, true, false) && IF($2, false, true))
+    $e = IF($e, INDEX($e, -1), [])
+)
+
+# Grab active titles (i.e. exclude indexes and sold titles)
+$titles=R($REPORT, [active])
+$titles=FILTER($titles, $2)
+$titles=MAP($titles, [$1, next_report($1)])
+$titles=FILTER($titles, $2)
+$titles=MAP($titles, [$1, INDEX($2, 0), INDEX($2, 2)])
+
+# Report in a table
+TABLE('Earnings Report (' + $REPORT + ')', $titles,
+	['Symbol', $1, "symbol"],
+	['Report', $2, "date"],
+	['EPS||Estimate', $3, "currency"]
+)
+

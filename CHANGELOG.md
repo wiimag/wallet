@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.29.0] - 2023-07-13
+## [0.29.1] - 2023-07-13
 - [Add pattern earnings view](https://github.com/wiimag/wallet/pull/34)
 
 ## [0.28.8] - 2023-07-12
