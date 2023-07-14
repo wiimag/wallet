@@ -33,7 +33,7 @@ FOUNDATION_STATIC string_const_t scripts_config_path()
 
 FOUNDATION_STATIC bool script_evaluate(script_t* script)
 {
-    if (script->show_console)
+    if (!script->load_on_startup && script->show_console)
         console_show();
 
     string_const_t name = string_const(script->name, string_length(script->name));
@@ -58,8 +58,11 @@ FOUNDATION_STATIC bool script_evaluate(script_t* script)
             STRING_FORMAT(formatted_name), EXPR_ERROR_MSG);
         console_show();
     }
-    script->last_executed = time_now();
-    array_sort(_->scripts, ARRAY_COMPARE_EXPRESSION(b.last_executed - a.last_executed));
+    if (!script->load_on_startup)
+    {
+        script->last_executed = time_now();
+        array_sort(_->scripts, ARRAY_COMPARE_EXPRESSION(b.last_executed - a.last_executed));
+    }
     return result.as_boolean();
 }
 
@@ -144,15 +147,18 @@ FOUNDATION_STATIC void script_render_window(window_handle_t win)
     }
 
     ImGui::SameLine();
-    if (ImGui::Checkbox("Show console", &script->show_console))
+    if (ImGui::Checkbox("Run on startup", &script->load_on_startup))
     {
         script->last_modified = time_now();
     }
 
-    ImGui::SameLine();
-    if (ImGui::Checkbox("Run on startup", &script->load_on_startup))
+    if (!script->load_on_startup)
     {
-        script->last_modified = time_now();
+        ImGui::SameLine();
+        if (ImGui::Checkbox("Show console", &script->show_console))
+        {
+            script->last_modified = time_now();
+        }
     }
 
     ImGui::BeginDisabled(string_length(script->name) == 0 || string_length(script->text) == 0);
@@ -268,6 +274,7 @@ FOUNDATION_STATIC void scripts_menu()
 
         ImGui::PushID(script);
         ImGui::BeginGroup();
+        ImGui::BeginDisabled(script->load_on_startup);
         if (ImGui::Selectable(menu_name.str, false, ImGuiSelectableFlags_AllowItemOverlap, {max_label_width, 0.0f}))
         {
             script_evaluate(script);
@@ -276,6 +283,7 @@ FOUNDATION_STATIC void scripts_menu()
         {
             ImGui::SetTooltip("%s", script->text);
         }
+        ImGui::EndDisabled();
 
         ImGui::SameLine(max_label_width + IM_SCALEF(12));
         

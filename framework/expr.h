@@ -902,6 +902,9 @@ struct expr_result_t
         if (type == EXPR_RESULT_NULL)
             return false;
 
+        if (type == EXPR_RESULT_TRUE && rhs.type == EXPR_RESULT_NULL)
+            return false;
+
         if (type == EXPR_RESULT_TRUE && rhs.type == EXPR_RESULT_TRUE)
             return true;
         if (type == EXPR_RESULT_FALSE && rhs.type == EXPR_RESULT_FALSE)
