@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.30.0] - 2023-07-14
+## [0.30.1] - 2023-07-17
+- Add support to copy AI analysis to clipboard.
 - [Add support to register and execute script expressions](https://github.com/wiimag/wallet/pull/35)
 
 ## [0.29.1] - 2023-07-13

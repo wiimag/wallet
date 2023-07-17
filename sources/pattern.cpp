@@ -855,8 +855,15 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
                 ImGui::SetTooltip(tr(
                     " Earnings:  1 Year /  Actual /  Estimate /  Diff.  / Surprise /   Gain \n"
                     "           %5.2lf $ / %5.2lf $ /   %5.2lf $ / %5.2lf $ /   %.3lg %% / %.3lg %% "),
-                    s->diluted_eps_ttm, s->earning_trend_actual.fetch(), s->earning_trend_estimate.fetch(), s->earning_trend_difference.fetch(), eps_percent,
+                    s->diluted_eps_ttm, s->earning_current_quarter.get_or_default(s->earning_trend_actual.fetch()), s->earning_next_quarter.get_or_default(s->earning_trend_estimate.fetch()), s->earning_trend_difference.fetch(), eps_percent,
                     s->diluted_eps_ttm / s->current.close * 100.0);
+
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                if (ImGui::IsItemClicked())
+                {
+                    string_const_t code = SYMBOL_CONST(pattern->code);
+                    backend_open_url(STRING_CONST("/fundamentals/%.*s#history"), STRING_FORMAT(code));
+                }
             }
         }
 
@@ -2883,6 +2890,7 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
     {
         if (!used_tree_node)
             ImGui::SameLine();
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() * 0.6f);
         if (ImGui::BeginCombo("##Options", tr("Analysis (AI)")/*, ImGuiComboFlags_NoPreview*/))
         {
             float top_p_100 = options.top_p * 100.0f;
@@ -2908,7 +2916,7 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
         }
 
         ImGui::SameLine();
-        if (ImGui::Button(tr("Generate"), { -10, 0 }))
+        if (ImGui::Button(tr("Generate"), { IM_SCALEF(-60), 0}))
         {
             if (pattern->analysis_summary)
             {
@@ -2921,12 +2929,25 @@ FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, boo
             pattern->analysis_summary = openai_generate_summary_sentiment(STRING_ARGS(code), STRING_LENGTH(pattern->notes), options);
         }
 
+        if (pattern->analysis_summary && pattern->analysis_summary->length)
+        {
+            ImGui::SameLine();
+            if (ImGui::Button(tr("Copy"), { IM_SCALEF(-5), 0}))
+            {
+                ImGui::SetClipboardText(pattern->analysis_summary->str);
+            }
+        }
+
         ImGui::Separator();
         if (ImGui::BeginChild("##Summary", ImGui::GetContentRegionAvail()))
         {
             ImGui::AlignTextToFramePadding();
             if (pattern->analysis_summary && pattern->analysis_summary->length)
+            {
+                ImGui::SetWindowFontScale(0.8f);
                 ImGui::TextWrapped("%.*s", STRING_FORMAT(*pattern->analysis_summary));
+                ImGui::SetWindowFontScale(1.0f);
+            }
             else
                 ImGui::TextWrapped(tr("No analysis available"));
         } ImGui::EndChild();
@@ -2939,7 +2960,7 @@ FOUNDATION_STATIC void pattern_render_dialogs(pattern_t* pattern)
     {
         string_const_t code = string_table_decode_const(pattern->code);
         const char* title = string_format_static_const("%.*s Notes", STRING_FORMAT(code));
-        ImGui::SetNextWindowSize({IM_SCALEF(400), IM_SCALEF(500)}, ImGuiCond_Appearing);
+        ImGui::SetNextWindowSize({IM_SCALEF(400), IM_SCALEF(500)}, ImGuiCond_FirstUseEver);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(6), IM_SCALEF(2)));
         if (ImGui::Begin(title, &pattern->notes_opened, 0))
         {

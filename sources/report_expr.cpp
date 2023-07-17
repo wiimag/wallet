@@ -117,10 +117,12 @@ static struct {
     { "cci",    SC2(_2->current.cci), nullptr, FetchLevel::TECHNICAL_CCI },
 
     { "dividends",  SC2(_2->dividends_yield.fetch()), nullptr, FetchLevel::FUNDAMENTALS },
-    { "earning_trend_actual",  SC2(_2->earning_trend_actual.fetch()), nullptr, FetchLevel::NONE },
-    { "earning_trend_estimate",  SC2(_2->earning_trend_estimate.fetch()), nullptr, FetchLevel::NONE },
-    { "earning_trend_difference",  SC2(_2->earning_trend_difference.fetch()), nullptr, FetchLevel::NONE },
-    { "earning_trend_percent",  SC2(_2->earning_trend_percent.fetch()), nullptr, FetchLevel::NONE },
+    { "earning_next_quarter",  SC2(_2->earning_next_quarter.wait_fetch(5.0)), nullptr, FetchLevel::NONE },
+    { "earning_current_quarter",  SC2(_2->earning_current_quarter.wait_fetch(5.0)), nullptr, FetchLevel::NONE },
+    { "earning_trend_actual",  SC2(_2->earning_trend_actual.wait_fetch(5.0)), nullptr, FetchLevel::NONE },
+    { "earning_trend_estimate",  SC2(_2->earning_trend_estimate.wait_fetch(5.0)), nullptr, FetchLevel::NONE },
+    { "earning_trend_difference",  SC2(_2->earning_trend_difference.wait_fetch(5.0)), nullptr, FetchLevel::NONE },
+    { "earning_trend_percent",  SC2(_2->earning_trend_percent.wait_fetch(5.0)), nullptr, FetchLevel::NONE },
 
     { "name",           SC2(string_table_decode(_2->name)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
     { "description",    SC2(string_table_decode(_2->description.fetch())), nullptr, FetchLevel::FUNDAMENTALS },

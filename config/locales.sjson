@@ -4048,7 +4048,7 @@
 		{
 			hash = "77e0141c43cf00f3"
 			en = "Create..."
-			fr = "Créer..."
+			fr = "Cr\xc3\xa9er..."
 		}
 		{
 			hash = "62e82732e1d7a2df"
@@ -4074,6 +4074,11 @@
 			hash = "998597d88f40dc40"
 			en = "Delete script %s?"
 			fr = "Supprimer le script %s?"
+		}
+		{
+			hash = "768e7c2465f42b21"
+			en = "Copy"
+			fr = "Copier"
 		}
 	]
 }

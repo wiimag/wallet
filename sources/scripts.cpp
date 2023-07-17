@@ -355,4 +355,4 @@ FOUNDATION_STATIC void scripts_shutdown()
     MEM_DELETE(_);
 }
 
-DEFINE_MODULE(SCRIPTS, scripts_init, scripts_shutdown, MODULE_PRIORITY_MODULE);
+DEFINE_MODULE(SCRIPTS, scripts_init, scripts_shutdown, MODULE_PRIORITY_LOW);

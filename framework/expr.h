@@ -718,6 +718,9 @@ struct expr_result_t
             return expr_result_t(expr_eval_list(elements));
         }
 
+        if (type == EXPR_RESULT_SYMBOL)
+            return rhs;
+
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
     }

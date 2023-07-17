@@ -21,6 +21,7 @@
 #include <framework/localization.h>
 #include <framework/database.h>
 #include <framework/session.h>
+#include <framework/math.h>
 
 #include <foundation/path.h>
 #include <foundation/hashtable.h>
@@ -85,23 +86,25 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
 
     SHARED_READ_LOCK(_db_lock);
     const stock_t* s = &_db_stocks[stock_index];
-    if (s == nullptr || !s->has_resolve(FetchLevel::FUNDAMENTALS))
+    if (s == nullptr)
         return false;
 
     value = DNAN;
         
     const char* ticker = string_table_decode(s->code);
-    time_t since_last_year = time_add_days(time_now(), -465);
-    string_const_t date_str = string_from_date(since_last_year);
-    const char* url = eod_build_url("calendar", "earnings", FORMAT_JSON, "symbols", ticker, "from", date_str.str).str;
+    const char* url = eod_build_url("fundamentals", ticker, FORMAT_JSON_CACHE, "filter", "Highlights,Earnings::History").str;
     return query_execute_async_json(url, FORMAT_JSON_CACHE, [stock_index, field](const json_object_t& json)
     {
         if (json.root == nullptr)
             return;
 
+        const double EPSEstimateNextQuarter = json["Highlights"]["EPSEstimateNextQuarter"].as_number(0);
+        const double EPSEstimateCurrentQuarter = json["Highlights"]["EPSEstimateCurrentQuarter"].as_number(0);
+
+        double first_value = DNAN;
         double value_total = 0;
         double value_count = 0;
-        auto earnings = json["earnings"];
+        auto earnings = json["Earnings::History"];
         for (auto e : earnings)
         {
             const double v = e[field].as_number();
@@ -109,7 +112,15 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
             {
                 value_total += v;
                 value_count++;
+
+                if (math_real_is_nan(first_value))
+                {
+                    first_value = v;
+                }
             }
+
+            if (value_count >= 4)
+                break;
         }
 
         const double value_avg = value_count > 0 ? value_total / value_count : 0;
@@ -117,15 +128,40 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
         SHARED_READ_LOCK(_db_lock);
         stock_t* s = &_db_stocks[stock_index];
 
-        if (string_equal(field, field_length-1, STRING_CONST("actual")))
-            s->earning_trend_actual = value_avg;
-        else if (string_equal(field, field_length-1, STRING_CONST("estimate")))
-            s->earning_trend_estimate = value_avg;
-        else if (string_equal(field, field_length-1, STRING_CONST("difference")))
+        s->earning_next_quarter = EPSEstimateNextQuarter;
+        s->earning_current_quarter = EPSEstimateCurrentQuarter;
+        if (string_equal(field, field_length-1, STRING_CONST("epsActual")))
+        {
+            if (math_real_is_finite_nz(value_avg))
+            {
+                s->earning_trend_actual = value_avg;
+            }
+            else
+            {
+                s->earning_trend_actual = EPSEstimateCurrentQuarter;
+            }
+        }
+        else if (string_equal(field, field_length-1, STRING_CONST("epsEstimate")))
+        {
+            if (math_real_is_finite_nz(value_avg))
+            {
+                s->earning_trend_estimate = value_avg;
+            }
+            else
+            {
+                s->earning_trend_actual = EPSEstimateNextQuarter;
+            }
+
+            if (!math_real_is_finite_nz(s->earning_next_quarter))
+            {
+                s->earning_next_quarter = first_value;
+            }
+        }
+        else if (string_equal(field, field_length-1, STRING_CONST("epsDifference")))
             s->earning_trend_difference = value_avg;
-        else if (string_equal(field, field_length-1, STRING_CONST("percent")))
+        else if (string_equal(field, field_length-1, STRING_CONST("surprisePercent")))
             s->earning_trend_percent = value_avg;
-    }, 15 * 24 * 3600ULL);
+    }, 7 * 24 * 3600ULL);
 }
 
 FOUNDATION_STATIC bool stock_fetch_short_name(stock_index_t stock_index, string_table_symbol_t& value)
@@ -785,10 +821,12 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         // Initialize stock entries
         entry->id = handle.id;
         entry->code = handle.code;
-        entry->earning_trend_actual.reset(LR1(stock_fetch_earnings_trend(index, "actual", _1)));
-        entry->earning_trend_estimate.reset(LR1(stock_fetch_earnings_trend(index, "estimate", _1)));
-        entry->earning_trend_difference.reset(LR1(stock_fetch_earnings_trend(index, "difference", _1)));
-        entry->earning_trend_percent.reset(LR1(stock_fetch_earnings_trend(index, "percent", _1)));
+        entry->earning_current_quarter.reset(LR1(stock_fetch_earnings_trend(index, "epsActual", _1)));
+        entry->earning_next_quarter.reset(LR1(stock_fetch_earnings_trend(index, "epsEstimate", _1)));
+        entry->earning_trend_actual.reset(LR1(stock_fetch_earnings_trend(index, "epsActual", _1)));
+        entry->earning_trend_estimate.reset(LR1(stock_fetch_earnings_trend(index, "epsEstimate", _1)));
+        entry->earning_trend_difference.reset(LR1(stock_fetch_earnings_trend(index, "epsDifference", _1)));
+        entry->earning_trend_percent.reset(LR1(stock_fetch_earnings_trend(index, "surprisePercent", _1)));
         entry->description.reset(LR1(stock_fetch_description(index, _1)));
         entry->short_name.reset(LR1(stock_fetch_short_name(index, _1)));
 

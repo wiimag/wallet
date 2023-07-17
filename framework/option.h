@@ -8,6 +8,9 @@
 #include "function.h"
 #include "string_table.h"
 
+#include <foundation/time.h>
+#include <foundation/thread.h>
+
 #include <new>
 
 template<typename T, T DEFAULT_VALUE = T{}>
@@ -222,6 +225,30 @@ struct double_option_t
 
         if (!fetcher(value))
             return DOUBLE_OPTION_DEFAULT_VALUE;
+
+        initialized = true;
+        return value;
+    }
+
+    T wait_fetch(double timeout_seconds) const
+    {
+        if (initialized)
+            return value;
+
+        if (!fetcher)
+            return get_or_default(value);
+
+        const bool fetch_triggered = fetcher(value);
+        if (!fetch_triggered)
+            return DOUBLE_OPTION_DEFAULT_VALUE;
+
+        tick_t t = time_current();
+        while (!initialized)
+        {
+            if (time_elapsed(t) > timeout_seconds)
+                return DOUBLE_OPTION_DEFAULT_VALUE;
+            thread_sleep(timeout_seconds * 10);
+        }
 
         initialized = true;
         return value;
