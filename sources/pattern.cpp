@@ -193,6 +193,17 @@ FOUNDATION_STATIC string_const_t pattern_format_percentage(double value, double 
     return pattern_format_number(STRING_CONST("%.3g %%"), value, default_value);
 }
 
+FOUNDATION_STATIC string_const_t pattern_format_ratio(double value, double default_value = DNAN)
+{
+    if (value > 1)
+        return pattern_format_number(STRING_CONST("%.0lf : 1"), value, default_value);
+
+    if (value < -1)
+        return pattern_format_number(STRING_CONST("1 : %.0lf"), 1.0 / value, default_value);
+
+    return pattern_format_percentage(value, default_value);
+}
+
 FOUNDATION_STATIC int pattern_format_date_label(double value, char* buff, int size, void* user_data)
 {
     pattern_graph_data_t& graph = *(pattern_graph_data_t*)user_data;
@@ -869,6 +880,7 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
 
         if (math_real_is_finite(s->pe) || math_real_is_finite(s->peg))
         {
+            ImGui::PushStyleColor(ImGuiCol_Text, s->pe > 35 ? TEXT_WARN_COLOR : (s->pe >= 1 && s->pe < 10 ? TEXT_GOOD_COLOR : TEXT_COLOR_LIGHT));
             pattern_render_stats_line(nullptr, CTEXT("Price Earnings||Price Earnings / To Growth\n\n"
                 "The P/E ratio, or price-to-earnings ratio, compares a company's current stock price to its earnings per share (EPS). "
                 "It is calculated by dividing the stock price by the EPS. The P/E ratio provides a snapshot of how much investors are "
@@ -877,8 +889,9 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
                 "The PEG ratio is calculated by dividing the P/E ratio by the expected earnings growth rate for the company. "
                 "The PEG ratio is a more comprehensive measure of a company's valuation compared to the P/E ratio, "
                 "because it considers both the company's current earnings and its expected future growth potential."),
-                pattern_format_percentage(s->pe),
+                pattern_format_ratio(s->pe),
                 pattern_format_percentage(s->peg), true);
+            ImGui::PopStyleColor();
         }
 
         double flex_low_p = pattern->flex_low.fetch();
