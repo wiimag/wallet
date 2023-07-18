@@ -1555,16 +1555,11 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
 
     ImGui::Separator();
 
-    if (ImGui::MenuItem(tr("Read News")))
-        news_open_window(STRING_ARGS(symbol));
-
-    #if BUILD_DEVELOPMENT
-    if (ImGui::MenuItem(tr("Browse News")))
-        system_execute_command(eod_build_url("news", nullptr, FORMAT_JSON, "s", symbol.str).str);
-
-    if (ImGui::MenuItem(tr("Browse Fundamentals")))
-        system_execute_command(eod_build_url("fundamentals", symbol.str, FORMAT_JSON).str);
-    #endif
+    if (ImGui::MenuItem(tr(ICON_MD_NEWSPAPER " Read News")))
+    {
+        string_const_t lang = localization_current_language();
+        backend_open_url(STRING_CONST("/news/%.*s?lang=%.*s&summary=true&limit=5"), STRING_FORMAT(symbol), STRING_FORMAT(lang));
+    }
 
     ImGui::Separator();
 

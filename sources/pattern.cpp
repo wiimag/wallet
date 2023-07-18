@@ -3085,7 +3085,10 @@ FOUNDATION_STATIC void pattern_main_menu(pattern_handle_t handle)
     string_const_t code = string_table_decode_const(pattern->code);
 
     if (ImGui::TrMenuItem(ICON_MD_NEWSPAPER " Read News"))
-        news_open_window(STRING_ARGS(code));
+    {
+        string_const_t lang = localization_current_language();
+        backend_open_url(STRING_CONST("/news/%.*s?lang=%.*s&summary=true&limit=5"), STRING_FORMAT(code), STRING_FORMAT(lang));
+    }
 
     if (ImGui::TrMenuItem(ICON_MD_ANALYTICS " Show Financials"))
         financials_open_window(STRING_ARGS(code));
