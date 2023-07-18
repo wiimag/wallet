@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.30.1] - 2023-07-17
+## [0.30.2] - 2023-07-18
+- Compute day gain based on the previous day closing price.
 - Add support to copy AI analysis to clipboard.
 - [Add support to register and execute script expressions](https://github.com/wiimag/wallet/pull/35)
 

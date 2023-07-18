@@ -416,6 +416,11 @@ FOUNDATION_STATIC table_cell_t report_column_get_value(table_element_ptr_t eleme
         case REPORT_FORMULA_DAY_CHANGE:
             if (t->average_quantity == 0 && column->flags & COLUMN_COMPUTE_SUMMARY)
                 return 0;
+            if (math_real_is_finite_nz(stock_data->current.previous_close))
+            {
+                return math_change_p(stock_data->current.previous_close, stock_data->current.price) * 100.0;
+            }
+
             return stock_data->current.change_p;
 
         case REPORT_FORMULA_TOTAL_GAIN:

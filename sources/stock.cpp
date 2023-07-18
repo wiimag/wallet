@@ -244,6 +244,13 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
     d.open = json_read_number(json, STRING_CONST("open"));
     d.close = d.adjusted_close = json_read_number(json, STRING_CONST("close"));
     d.previous_close = json_read_number(json, STRING_CONST("previousClose"));
+    if (d.previous_close < 0.05)
+    {
+        SHARED_READ_LOCK(_db_lock);
+        stock_t* entry = &_db_stocks[index];
+        if (entry->history_count > 0)
+            d.previous_close = entry->history[0].close;
+    }
     d.low = json_read_number(json, STRING_CONST("low"));
     d.high = json_read_number(json, STRING_CONST("high"));
     d.change = json_read_number(json, STRING_CONST("change"));
@@ -663,6 +670,10 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
 
         if (math_real_is_nan(entry.current.price_factor) && !math_real_is_nan(first_price_factor))
             entry.current.price_factor = first_price_factor;
+
+        if (entry.history_count > 0) {
+            entry.current.previous_close = entry.history[0].adjusted_close;
+        }
 
         entry.mark_resolved(FetchLevel::EOD);
 

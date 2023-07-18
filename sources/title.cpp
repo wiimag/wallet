@@ -250,7 +250,12 @@ double title_get_day_change(const title_t* t, const stock_t* s)
 {
     if (t->average_quantity == 0)
         return DNAN;
-    return s->current.change * t->average_quantity * t->today_exchange_rate.fetch();
+
+    double change = s->current.change;
+    if (math_real_is_finite_nz(s->current.previous_close))
+        change = s->current.price - s->current.previous_close;
+
+    return change * t->average_quantity * t->today_exchange_rate.fetch();
 }
 
 config_handle_t title_get_fundamental_config_value(title_t* title, const char* filter_name, size_t filter_name_length)
