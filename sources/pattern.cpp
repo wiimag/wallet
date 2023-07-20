@@ -3084,12 +3084,6 @@ FOUNDATION_STATIC void pattern_main_menu(pattern_handle_t handle)
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
     string_const_t code = string_table_decode_const(pattern->code);
 
-    if (ImGui::TrMenuItem(ICON_MD_NEWSPAPER " Read News"))
-    {
-        string_const_t lang = localization_current_language();
-        backend_open_url(STRING_CONST("/news/%.*s?lang=%.*s&summary=true&limit=5"), STRING_FORMAT(code), STRING_FORMAT(lang));
-    }
-
     if (ImGui::TrMenuItem(ICON_MD_ANALYTICS " Show Financials"))
         financials_open_window(STRING_ARGS(code));
 
@@ -3488,6 +3482,12 @@ bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show
     ImGui::BeginGroup();
 
     string_const_t code = string_const(symbol, symbol_length);
+
+    if (ImGui::TrMenuItem(ICON_MD_NEWSPAPER " Read News"))
+    {
+        string_const_t lang = localization_current_language();
+        backend_open_url(STRING_CONST("/news/%.*s?lang=%.*s"), STRING_FORMAT(code), STRING_FORMAT(lang));
+    }
 
     bool item_executed = false;
     if (show_all)

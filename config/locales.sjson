@@ -4080,5 +4080,30 @@
 			en = "Copy"
 			fr = "Copier"
 		}
+		{
+			hash = "1285548cb30ddb61"
+			en = "Cleanup search database"
+			fr = "Nettoyer l'index de recherche"
+		}
+		{
+			hash = "247b88e20d558934"
+			en = "Cleanup search database?"
+			fr = "Nettoyer la base de donn\xc3\xa9es de recherche?"
+		}
+		{
+			hash = "a479fec6b32da0d"
+			en = "This will remove all search results older than 90 days. This operation can take several minutes to complete."
+			fr = "Ceci supprimera tous les r\xc3\xa9sultats de recherche datant de plus de 90 jours. Cette op\xc3\xa9ration peut prendre plusieurs minutes pour s'achever."
+		}
+		{
+			hash = "314fa830fc5e8269"
+			en = "Cleanup"
+			fr = "Nettoyer"
+		}
+		{
+			hash = "dab1cd005c127fd"
+			en = "Ceci supprimera tous les r\xc3\xa9sultats de recherche datant de plus de 90 jours. Cette op\xc3\xa9ration peut prendre plusieurs minutes pour s'achever."
+			fr = "@TODO"
+		}
 	]
 }

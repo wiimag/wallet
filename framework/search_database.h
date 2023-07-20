@@ -136,3 +136,11 @@ void search_database_print_stats(search_database_t* database);
  *  @return True if any documents were removed and the timeout was not reached, false otherwise.
  */
 bool search_database_remove_old_documents(search_database_t* database, time_t reference, double timeout_seconds = 0.0);
+
+/*! Remove dangling documents from the database.
+ *
+ *  @param database The search database to remove dangling documents from.
+ *
+ *  @return True if any documents were removed, false otherwise.
+ */
+void search_database_cleanup_up(search_database_t* database);

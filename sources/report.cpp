@@ -521,12 +521,6 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
 
         ImGui::Separator();
 
-        if (ImGui::TrMenuItem(ICON_MD_NEWSPAPER " Read News"))
-        {
-            string_const_t lang = localization_current_language();
-            backend_open_url(STRING_CONST("/news/%.*s?lang=%.*s&summary=true&limit=5"), (int)title->code_length, title->code, STRING_FORMAT(lang));
-        }
-
         if (ImGui::TrMenuItem(ICON_MD_ACCOUNT_BALANCE_WALLET " Show Financials"))
             financials_open_window(title->code, title->code_length);
 

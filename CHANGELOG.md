@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.30.4] - 2023-07-18
+## [0.30.5] - 2023-07-19
+- Add setting to cleanup the search index database.
 - Read stock news on <https://wallet.wiimag.com/news/SYMBOL>
 - Fix P/E display ratio in the pattern view (now using 19 : 1 format instead of an erroneous percentage).
 - Compute day gain based on the previous day closing price.

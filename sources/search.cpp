@@ -1555,14 +1555,6 @@ FOUNDATION_STATIC void search_table_contextual_menu(table_element_ptr_const_t el
 
     ImGui::Separator();
 
-    if (ImGui::MenuItem(tr(ICON_MD_NEWSPAPER " Read News")))
-    {
-        string_const_t lang = localization_current_language();
-        backend_open_url(STRING_CONST("/news/%.*s?lang=%.*s&summary=true&limit=5"), STRING_FORMAT(symbol), STRING_FORMAT(lang));
-    }
-
-    ImGui::Separator();
-
     if (ImGui::MenuItem(tr("Re-index...")))
     {
         string_const_t expr = string_format_static(STRING_CONST("SEARCH_REMOVE_DOCUMENT(\"%.*s\")\nSEARCH_INDEX(\"%.*s\")"),  STRING_FORMAT(symbol), STRING_FORMAT(symbol), STRING_FORMAT(symbol));
@@ -2013,6 +2005,12 @@ FOUNDATION_STATIC bool search_stop_indexing(bool save_db)
     return true;
 }
 
+FOUNDATION_STATIC void search_cleanup_database()
+{
+    search_database_remove_old_documents(_search->db, time_add_days(time_now(), -90));
+    search_database_cleanup_up(_search->db);
+}
+
 //
 // # PUBLIC API
 //
@@ -2064,8 +2062,34 @@ bool search_render_settings()
                 updated = true;
             }
         }
-
     }
+
+    if (ImGui::ButtonRightAligned(tr("Cleanup search database")))
+        ImGui::OpenPopup(tr("Cleanup search database?"));
+    ImGui::SetNextWindowSize(IM_SCALEV(350, 150));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
+    if (ImGui::BeginPopupModal(tr("Cleanup search database?"), nullptr, ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        ImGui::TrTextWrapped(tr("This will remove all search results older than 90 days. "
+                   "This operation can take several minutes to complete."));
+
+        if (ImGui::Button(tr("Cancel"), { ImGui::GetContentRegionAvailWidth() * 0.5f, 0.0f }))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SameLine();
+
+        if (ImGui::Button(tr("Cleanup"), { ImGui::GetContentRegionAvailWidth(), 0.0f }))
+        {
+            search_cleanup_database();
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleVar(2);
 
     ImGui::NextColumn();
     ImGui::TrTextWrapped("Changing that setting will restart the indexing process but if will not delete already indexed stock from removed exchanges. "

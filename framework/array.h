@@ -624,3 +624,21 @@ void array_reverse(T* arr)
         array_swap_memcpy(arr, i, size - i - 1);
     }
 }
+
+template<typename T>
+void array_uniq(T* arr)
+{
+    uint32_t size = array_size(arr);
+    for (uint32_t i = 0; i < size; ++i)
+    {
+        for (uint32_t j = i + 1; j < size; ++j)
+        {
+            if (memcmp(&arr[i], &arr[j], sizeof(T)) == 0)
+            {
+                array_erase_ordered_safe(arr, j);
+                --j;
+                --size;
+            }
+        }
+    }   
+}
