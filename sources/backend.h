@@ -28,3 +28,5 @@ void backend_check_new_version(bool use_notif = false, bool ignore_if_latest = f
 string_t backend_translate_text(const char* id, size_t id_length, const char* text, size_t text_length, const char* lang, size_t lang_length);
 
 bool backend_open_url(const char* url, size_t url_length, ...);
+
+bool backend_analytic(const char* type, size_t type_length, const char* info = nullptr, size_t info_length = 0, const char* tag = nullptr, size_t tag_length = 0, const char* _user = nullptr, size_t user_length = 0);

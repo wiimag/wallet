@@ -3457,6 +3457,8 @@ pattern_handle_t pattern_open(const char* code, size_t code_length)
     {
         pattern->save = true;
         pattern->opened = true;
+
+        backend_analytic(STRING_CONST("pattern"), code, code_length, STRING_CONST("open_in_new"));
     }
 
     return handle;

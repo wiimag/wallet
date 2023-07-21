@@ -2020,6 +2020,11 @@ bool search_available()
     return _search && _search->db;
 }
 
+bool search_database_loaded()
+{
+    return search_available() && search_database_document_count(_search->db) > 0;
+}
+
 const string_t* search_stock_exchanges()
 {
     FOUNDATION_ASSERT(_search);
@@ -2064,6 +2069,7 @@ bool search_render_settings()
         }
     }
 
+    ImGui::BeginDisabled(!search_database_loaded());
     if (ImGui::ButtonRightAligned(tr("Cleanup search database")))
         ImGui::OpenPopup(tr("Cleanup search database?"));
     ImGui::SetNextWindowSize(IM_SCALEV(350, 150));
@@ -2090,6 +2096,7 @@ bool search_render_settings()
         ImGui::EndPopup();
     }
     ImGui::PopStyleVar(2);
+    ImGui::EndDisabled();
 
     ImGui::NextColumn();
     ImGui::TrTextWrapped("Changing that setting will restart the indexing process but if will not delete already indexed stock from removed exchanges. "

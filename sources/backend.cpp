@@ -323,6 +323,25 @@ bool backend_execute_news_search_query(const char* symbol, size_t symbol_length,
     return query_execute_async_json(google_search_query_escaped, FORMAT_JSON, callback);
 }
 
+bool backend_analytic(const char* _type, size_t type_length, const char* _info, size_t info_length, const char* _tag, size_t tag_length, const char* _user, size_t user_length) 
+{
+    char type_buffer[256], info_buffer[256], tag_buffer[256], user_buffer[256];
+    string_t type = string_escape_url(STRING_BUFFER(type_buffer), _type, type_length);
+    string_t info = string_escape_url(STRING_BUFFER(info_buffer), _info, info_length);
+    string_t tag = string_escape_url(STRING_BUFFER(tag_buffer), _tag, tag_length);
+    string_t user = string_escape_url(STRING_BUFFER(user_buffer), _user, user_length);
+
+    char url[2048];
+    string_format(STRING_BUFFER(url), STRING_CONST("%.*s/log?type=%.*s&name=%.*s&value=%.*s&tag=%.*s"),
+        STRING_FORMAT(_backend_module->url), STRING_FORMAT(type), STRING_FORMAT(info), STRING_FORMAT(user), STRING_FORMAT(tag));
+
+    return query_execute_async_json(url, FORMAT_JSON, [](const json_object_t& res)
+    {
+        string_const_t id = res["id"].as_string();
+        log_debugf(HASH_BACKEND, STRING_CONST("Backend event logged: %.*s"), STRING_FORMAT(id));
+    });
+}
+
 //
 // ## MODULE
 //

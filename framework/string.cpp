@@ -2339,29 +2339,30 @@ string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_
 
     bool parsing_params = false;
 
-    for (size_t i = 0; i < capacity && pstr < end; ++i)
+    size_t length = 0;
+    for (length = 0; length < capacity && pstr < end; ++length)
     {
         const char c = *pstr++;
         if (c == ' ')
         {
-            buffer[i] = '+';
+            buffer[length] = '+';
         }
         else if (c == '?' && !parsing_params)
         {
-            buffer[i] = c;
+            buffer[length] = c;
             parsing_params = true;
         }
         else if (c == '&' && parsing_params)
         {
-            buffer[i] = c;
+            buffer[length] = c;
         }
         else if (c == '=' && parsing_params)
         {
-            buffer[i] = c;
+            buffer[length] = c;
         }
         else if ((c > 0 && isalnum(c)) || c == '-' || c == '_' || c == '.' || c == '~' || c == '/' || c == ':')
         {
-            buffer[i] = c;
+            buffer[length] = c;
         }
         else if (c == '\0')
         {
@@ -2369,18 +2370,16 @@ string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_
         }
         else
         {
-            if (i + 2 >= capacity)
+            if (length + 2 >= capacity)
                 break;
-            buffer[i] = '%';
-            buffer[++i] = hex_digit(c >> 4);
-            buffer[++i] = hex_digit(c & 0xf);
+            buffer[length] = '%';
+            buffer[++length] = hex_digit(c >> 4);
+            buffer[++length] = hex_digit(c & 0xf);
         }
     }
 
-    const size_t size = pstr - url;
-    buffer[size] = '\0';
-
-    return { buffer, size };
+    buffer[length] = '\0';
+    return { buffer, length };
 }
 
 FOUNDATION_STATIC string_template_token_t* string_template_tokens(const char* format, size_t format_length, size_t offset, size_t capacity, bool& escaped_braces)

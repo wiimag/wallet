@@ -578,7 +578,7 @@ search_document_handle_t search_database_add_document(search_database_t* db, con
     for (unsigned doc_index = 1, end = array_size(db->documents); doc_index < end; ++doc_index)
     {
         search_document_t& doc = db->documents[doc_index];
-        if (doc.type == SearchDocumentType::Removed)
+        if (doc.type == SearchDocumentType::Removed || doc.type == SearchDocumentType::Unused)
         {
             doc = document;
             db->dirty = true;
@@ -1232,7 +1232,16 @@ bool search_database_load(search_database_t* db, stream_t* stream)
     search_database_deallocate_documents(db);
     db->dirty = false;
     db->documents = documents;
-    db->document_count = document_count - 1; /* -1 to exclude the root document */
+
+    // Count the number of non removed documents
+    uint32_t non_removed_document_count = 0;
+    for (uint32_t i = 1, end = array_size(documents); i < end; ++i)
+    {
+        const search_document_t& doc = db->documents[i];
+        if (doc.type != SearchDocumentType::Removed)
+            ++non_removed_document_count;
+    }
+    db->document_count = non_removed_document_count;
 
     search_database_deallocate_indexes(db);
     db->indexes = indexes;
@@ -1329,7 +1338,15 @@ FOUNDATION_STATIC bool search_database_remove_document_indexes_nolock(search_dat
         search_index_t& index = db->indexes[i];
 
         // Remove document from index
-        if (index.document_count <= ARRAY_COUNT(index.docs))
+        if (index.document_count == 1)
+        {
+            if (index.doc == document)
+            {
+                index.document_count = 0;
+                document_removed = true;
+            }
+        }
+        else if (index.document_count <= ARRAY_COUNT(index.docs))
         {
             for (unsigned j = 0, endj = ARRAY_COUNT(index.docs); j < endj; ++j)
             {
@@ -1418,37 +1435,138 @@ bool search_database_remove_document(search_database_t* db, search_document_hand
     return search_database_remove_document_nolock(db, document);
 }
 
+void search_document_move_index_nolock(search_database_t* db, search_document_handle_t from, search_document_handle_t to)
+{
+    for (unsigned i = 0, endi = array_size(db->indexes); i < endi; ++i)
+    {
+        search_index_t& index = db->indexes[i];
+        if (index.document_count == 0)
+            continue;
+
+        if (index.document_count <= ARRAY_COUNT(index.docs))
+        {
+            for (unsigned j = 0, endj = ARRAY_COUNT(index.docs); j < endj; ++j)
+            {
+                if (index.docs[j] == from)
+                {
+                    index.docs[j] = to;
+                    break;
+                }
+            }
+        }
+        else
+        {
+            for (unsigned j = 0, endj = array_size(index.docs_list); j < endj; ++j)
+            {
+                if (index.docs_list[j] == from)
+                {
+                    index.docs_list[j] = to;
+                    break;
+                }
+            }
+        }
+    }
+}
+
+FOUNDATION_STATIC bool search_database_document_used(const search_document_t& doc)
+{
+    return (doc.type != SearchDocumentType::Removed && doc.type != SearchDocumentType::Unused);
+}
+
+bool search_database_document_used(search_database_t* db, search_document_handle_t index)
+{
+    FOUNDATION_ASSERT(db);
+    FOUNDATION_ASSERT(index < array_size(db->documents));
+
+    SHARED_READ_LOCK(db->mutex);
+    return search_database_document_used(db->documents[index]);
+}
+
+void search_database_cleanup_trailing_removed_documents(search_database_t* db)
+{
+    // Remove all documents that are marked as removed at the end of the array 
+    // as they're referenced by the indexes anymore
+    {
+        SHARED_WRITE_LOCK(db->mutex);
+        for (unsigned i = array_size(db->documents) - 1; i > 0; --i)
+        {
+            search_document_t& doc = db->documents[i];
+            if (!search_database_document_used(doc))
+            {
+                array_erase_ordered_safe(db->documents, i);
+                db->document_count--;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Count the number of non removed documents
+        uint32_t used_document_count = 0;
+        for (uint32_t i = 1, end = array_size(db->documents); i < end; ++i)
+        {
+            const search_document_t& doc = db->documents[i];
+            if (search_database_document_used(doc))
+                ++used_document_count;
+        }
+        db->document_count = used_document_count;
+        db->dirty = true;
+    }
+}
+
 void search_database_cleanup_up(search_database_t* db)
 {
-    // Get all documents marked as removed
-    search_document_handle_t* doclist = nullptr;
+    FOUNDATION_ASSERT(db);
+
+    search_database_cleanup_trailing_removed_documents(db);
+
+    // Reallocate document indexes for removed slots
     {
-        SHARED_READ_LOCK(db->mutex);
+        SHARED_WRITE_LOCK(db->mutex);
         for (unsigned i = 1, end = array_size(db->documents); i < end; ++i)
         {
             search_document_t& doc = db->documents[i];
-            if (doc.type == SearchDocumentType::Removed)
+            if (doc.type == SearchDocumentType::Removed || doc.type == SearchDocumentType::Unused)
             {
-                array_push(doclist, i);
+                search_database_remove_document_indexes_nolock(db, i);
+
+                // Find next non-removed document
+                unsigned j = end - 1;
+                for (; j > i; --j)
+                {
+                    search_document_t& nextdoc = db->documents[j];
+                    if (search_database_document_used(nextdoc))
+                    {
+                        // Move document to removed slot
+                        search_document_move_index_nolock(db, j, i);
+                        
+                        doc.name = nextdoc.name;
+                        doc.timestamp = nextdoc.timestamp;
+                        doc.type = SearchDocumentType::Default;
+                        
+                        nextdoc.name = {};
+                        nextdoc.timestamp = 0;
+                        nextdoc.type = SearchDocumentType::Unused;
+
+                        end = j;
+                        break;
+                    }
+                }
+
+                if (j == i)
+                {
+                    // Nothing else to do
+                    break;
+                }
             }
         }
     }
 
-    array_uniq(doclist);
-
-    // Remove document from indexes
-    {
-        SHARED_WRITE_LOCK(db->mutex);
-        for (unsigned i = 0, end = array_size(doclist); i < end; ++i)
-        {
-            search_document_handle_t document = doclist[i];
-            search_database_remove_document_indexes_nolock(db, document);
-        }
-    }
-
-    array_deallocate(doclist);
+    search_database_cleanup_trailing_removed_documents(db);
 
     // Get all document from existing indexes
+    search_document_handle_t* doclist = nullptr;
     {
         SHARED_READ_LOCK(db->mutex);
         for (unsigned i = 0, end = array_size(db->indexes); i < end; ++i)
@@ -1457,35 +1575,39 @@ void search_database_cleanup_up(search_database_t* db)
             for (unsigned j = 0, endj = index.document_count; j < endj; ++j)
             {
                 search_document_handle_t document = index.document_count <= ARRAY_COUNT(index.docs) ? index.docs[j] : index.docs_list[j];
-                array_push(doclist, document);
+
+                int fidx = array_binary_search(doclist, document);
+                if (fidx < 0)
+                    array_insert_safe(doclist, ~fidx, document);
             }
         }
     }
-
-    array_uniq(doclist);
 
     // Find all non removed documents that are referred.
     search_document_handle_t* docnoindexes = nullptr;
     {
         SHARED_READ_LOCK(db->mutex);
-        for (unsigned i = 0, end = array_size(doclist); i < end; ++i)
+        if (array_size(doclist) < db->document_count)
         {
-            search_document_handle_t document = doclist[i];
-            search_document_t& doc = db->documents[document];
-            if (doc.type != SearchDocumentType::Removed)
+            for (unsigned i = 0, end = array_size(doclist); i < end; ++i)
             {
-                bool found = false;
-                for (unsigned j = 0, endj = array_size(doclist); j < endj; ++j)
+                search_document_handle_t document = doclist[i];
+                search_document_t& doc = db->documents[document];
+                if (doc.type != SearchDocumentType::Removed)
                 {
-                    if (doclist[j] == document)
+                    bool found = false;
+                    for (unsigned j = 0, endj = array_size(doclist); j < endj; ++j)
                     {
-                        found = true;
-                        break;
+                        if (doclist[j] == document)
+                        {
+                            found = true;
+                            break;
+                        }
                     }
-                }
 
-                if (!found)
-                    array_push(docnoindexes, document);
+                    if (!found)
+                        array_push(docnoindexes, document);
+                }
             }
         }
     }
@@ -1503,6 +1625,9 @@ void search_database_cleanup_up(search_database_t* db)
     }
 
     array_deallocate(docnoindexes);
+
+    search_database_cleanup_trailing_removed_documents(db);
+    db->dirty = true;
 }
 
 bool search_database_remove_old_documents(search_database_t* db, time_t reference, double timeout_seconds)
@@ -1515,7 +1640,7 @@ bool search_database_remove_old_documents(search_database_t* db, time_t referenc
         for (unsigned i = 1, end = array_size(db->documents); i < end; ++i)
         {
             search_document_t& doc = db->documents[i];
-            if (doc.type == SearchDocumentType::Removed)
+            if (!search_database_document_used(doc))
                 continue;
 
             if (doc.timestamp < reference)
@@ -1539,7 +1664,7 @@ bool search_database_remove_old_documents(search_database_t* db, time_t referenc
             const time_t timestamp = db->documents[document].timestamp;
             const double days_old = time_elapsed_days(timestamp, time_now());
             log_debugf(0, STRING_CONST("Removing %.0lf days old document: %.*s"), days_old, STRING_FORMAT(name));
-            if (search_database_remove_document_nolock(db, timestamp))
+            if (search_database_remove_document_nolock(db, document))
             {
                 // Start the timer
                 if (time == 0)

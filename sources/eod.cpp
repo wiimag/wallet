@@ -516,6 +516,8 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
         string_copy(STRING_BUFFER(EOD->USER_NAME), STRING_ARGS(name));
         string_copy(STRING_BUFFER(EOD->USER_EMAIL), STRING_ARGS(email));
         string_copy(STRING_BUFFER(EOD->SUBSCRIPTION_TYPE), STRING_ARGS(subtype));
+
+        backend_analytic(STRING_CONST("status"), STRING_ARGS(name), STRING_CONST("person"), STRING_ARGS(email));
     }
 
     string_const_t fmttr = RTEXT("Name: %.*s\nEmail: %.*s\nSubscription: %.*s\nRequest: %lg/%lg");
@@ -625,7 +627,6 @@ FOUNDATION_STATIC void eod_initialize()
 
     if (main_is_interactive_mode())
         module_register_menu_status(HASH_EOD, eod_main_menu_status);
-
 
     eod_update_window_title();
 }

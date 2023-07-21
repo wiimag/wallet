@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.31.0] - 2023-07-21
+- Add backend analytics support to improve application based on user patterns.
+
 ## [0.30.5] - 2023-07-19
 - Add setting to cleanup the search index database.
 - Read stock news on <https://wallet.wiimag.com/news/SYMBOL>
