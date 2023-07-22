@@ -946,20 +946,17 @@ FOUNDATION_STATIC void search_fetch_search_api_results_callback(hash_t query_has
     if (!json.resolved())
         return;
 
-    for (auto e : json)
+    for (auto e : json["results"])
     {
         search_window_t* sw = (search_window_t*)window_get_user_data(window_handle);
         if (sw == nullptr)
             break;
 
-        string_const_t code = e["Code"].as_string();
-        string_const_t exchange = e["Exchange"].as_string();
-
-        string_t symbol = string_format(SHARED_BUFFER(16), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
+        string_const_t symbol = e["ticker"].as_string();
         if (!stock_valid(symbol.str, symbol.length))
             continue;
 
-        search_insert_symbol_result(window_handle, query_hash, string_to_const(symbol));
+        search_insert_symbol_result(window_handle, query_hash, symbol);
     }        
 }
 
@@ -979,7 +976,6 @@ FOUNDATION_STATIC void search_window_clear_results(search_window_t* sw)
     }
 }
 
-
 FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const char* search_text, size_t search_text_length)
 {
     FOUNDATION_ASSERT(sw);
@@ -997,6 +993,8 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
         // Start with a query to EOD /api/search
         window_handle_t sw_handle = sw->handle;
 
+        backend_log(STRING_CONST("search"), search_text, search_text_length, STRING_CONST("screen_search_desktop"));
+
         // Run simple EOD API query if the search text does not contain any special characters
         if (search_text_length > 1 &&
             string_find(search_text, search_text_length, ':', 1) == STRING_NPOS &&
@@ -1006,8 +1004,9 @@ FOUNDATION_STATIC void search_window_execute_query(search_window_t* sw, const ch
             string_find(search_text, search_text_length, '>', 1) == STRING_NPOS)
         {
             hash_t search_query_hash = string_hash(search_text, search_text_length);
-            eod_fetch_async("search", search_text, FORMAT_JSON, "limit", "5",
-                LC1(search_fetch_search_api_results_callback(search_query_hash, sw_handle, _1)));
+            string_t search_text_encoded = string_encode_uri_component(SHARED_BUFFER(1024), search_text, search_text_length);
+            backend_fetch_async(FORMAT_JSON_WITH_ERROR, LC1(search_fetch_search_api_results_callback(search_query_hash, sw_handle, _1)),
+                STRING_CONST("/api/xsearch?best=5&q=%.*s"), STRING_FORMAT(search_text_encoded));
 
             // If the search text looks like a symbol, i.e. GFL.TO, then lets query the real-time value to see if it resolves.
             if (search_text_length > 3 && search_text_length < 16 && 
@@ -1782,6 +1781,8 @@ FOUNDATION_STATIC expr_result_t search_expr_eval(const expr_func_t* f, vec_expr_
 
     _search->startup_signal.signal();
 
+    backend_log(STRING_CONST("search"), STRING_ARGS(search_expression), STRING_CONST("search"));
+
     // Run simple EOD API query if the search text does not contain any special characters
     if (search_expression.length > 1 &&
         string_find(STRING_ARGS(search_expression), ':', 1) == STRING_NPOS &&
@@ -1789,26 +1790,23 @@ FOUNDATION_STATIC expr_result_t search_expr_eval(const expr_func_t* f, vec_expr_
         string_find(STRING_ARGS(search_expression), '!', 1) == STRING_NPOS &&
         string_find(STRING_ARGS(search_expression), '<', 1) == STRING_NPOS &&
         string_find(STRING_ARGS(search_expression), '>', 1) == STRING_NPOS)
-    {
-        eod_fetch("search", search_expression.str, FORMAT_JSON, "limit", "5", [&results](const json_object_t& json)
+    {   
+        string_t search_text_encoded = string_encode_uri_component(SHARED_BUFFER(1024), STRING_ARGS(search_expression));
+        backend_fetch_sync(FORMAT_JSON_WITH_ERROR, [&results](const json_object_t& json)
         {
             if (!json.resolved())
                 return;
 
-            for (auto e : json)
+            for (auto e : json["results"])
             {
-                string_const_t code = e["Code"].as_string();
-                string_const_t exchange = e["Exchange"].as_string();
-
-                string_t symbol = string_format(SHARED_BUFFER(16), STRING_CONST("%.*s.%.*s"), STRING_FORMAT(code), STRING_FORMAT(exchange));
-
+                string_const_t symbol = e["ticker"].as_string();
                 if (!stock_valid(symbol.str, symbol.length))
                     return;
 
-                expr_result_t result(string_to_const(symbol));
+                expr_result_t result(symbol);
                 array_push(results, result);
             }   
-        });
+        }, STRING_CONST("/api/xsearch?best=5&q=%.*s"), STRING_FORMAT(search_text_encoded));
 
         // If the search text looks like a symbol, i.e. GFL.TO, then lets query the real-time value to see if it resolves.
         if (search_expression.length > 3 && search_expression.length < 16 && search_expression.str[0] != '.' &&

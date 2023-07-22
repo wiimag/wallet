@@ -227,26 +227,70 @@ FOUNDATION_STATIC bool backend_open_web_site(const dispatcher_event_args_t& args
     return system_execute_command("https://wallet.wiimag.com");
 }
 
+FOUNDATION_STATIC string_t backend_url(char* buffer, size_t capacity, const char* uri, size_t length, va_list args)
+{
+    if (*uri && length > 0 && uri[0] == '/')
+    {
+        ++uri;
+        --length;
+    }
+
+    char uri_format_buffer[2048];
+    string_t uri_format = string_vformat(STRING_BUFFER(uri_format_buffer), uri, length, args);
+    return string_format(buffer, capacity, STRING_CONST("%.*s/%.*s"), STRING_FORMAT(_backend_module->url), STRING_FORMAT(uri_format));
+}
+
+FOUNDATION_STATIC string_t backend_url(char* buffer, size_t capacity, const char* uri, size_t length, ...)
+{
+    va_list args;
+    va_start(args, length);
+
+    char url[2048];
+    string_t result = backend_url(STRING_BUFFER(url), uri, length, args);
+
+    va_end(args);
+
+    return result;
+}
+
 //
 // ## PUBLIC
 //
 
-bool backend_open_url(const char* url, size_t url_length, ...)
+bool backend_fetch_sync(query_format_t format, const query_callback_t& json_callback, const char* uri, size_t length, ...)
 {
-    // Remove leading slash
-    if (url_length > 0 && url[0] == '/')
-    {
-        ++url;
-        --url_length;
-    }
-
     va_list args;
-    va_start(args, url_length);
-    string_t uri = string_vformat(SHARED_BUFFER(256), url, url_length, args);
+    va_start(args, length);
+
+    char url[2048];
+    backend_url(STRING_BUFFER(url), uri, length, args);
+
     va_end(args);
 
-    string_t urlstr = string_format(SHARED_BUFFER(2048), 
-        STRING_CONST("%.*s/%.*s"), STRING_FORMAT(_backend_module->url), STRING_FORMAT(uri));
+    return query_execute_json(url, format, json_callback);
+}
+
+bool backend_fetch_async(query_format_t format, const query_callback_t& json_callback, const char* uri, size_t length, ...)
+{
+    va_list args;
+    va_start(args, length);
+
+    char url[2048];
+    backend_url(STRING_BUFFER(url), uri, length, args);
+
+    va_end(args);
+
+    return query_execute_async_json(url, format, json_callback);
+}
+
+bool backend_open_url(const char* url, size_t url_length, ...)
+{
+    va_list args;
+    va_start(args, url_length);
+
+    string_t urlstr = backend_url(SHARED_BUFFER(2048), url, url_length, args);
+
+    va_end(args);
 
     return system_execute_command(STRING_ARGS(urlstr));
 }
@@ -319,17 +363,49 @@ bool backend_execute_news_search_query(const char* symbol, size_t symbol_length,
         STRING_FORMAT(_backend_module->url), STRING_FORMAT(name));
 
     char google_search_query_escaped[2048];
-    string_escape_url(STRING_BUFFER(google_search_query_escaped), STRING_ARGS(google_search_query));
+    string_encode_uri_component(STRING_BUFFER(google_search_query_escaped), STRING_ARGS(google_search_query));
     return query_execute_async_json(google_search_query_escaped, FORMAT_JSON, callback);
 }
 
-bool backend_analytic(const char* _type, size_t type_length, const char* _info, size_t info_length, const char* _tag, size_t tag_length, const char* _user, size_t user_length) 
+FOUNDATION_STATIC string_const_t backend_log_type_string(backend_log_type_t type)
+{
+    switch (type)
+    {
+        case BACKEND_LOG_INFO: return CTEXT("info");
+        case BACKEND_LOG_DEBUG: return CTEXT("debug");
+        case BACKEND_LOG_WARNING: return CTEXT("warning");
+        case BACKEND_LOG_ERROR: return CTEXT("error");
+        case BACKEND_LOG_FATAL: return CTEXT("fatal");
+
+        default: 
+            return CTEXT("wallet");
+    }
+}
+
+bool backend_log(backend_log_type_t type, const char* msg, size_t msg_length, const char* tag, size_t tag_length)
+{
+    if (!backend_is_connected())
+        return false;
+
+    char info_buffer[256], tag_buffer[256];
+    string_const_t typestr = backend_log_type_string(type);
+    string_t tagstr = string_encode_uri_component(STRING_BUFFER(tag_buffer), tag, tag_length);
+    string_t msgstr = string_encode_uri_component(STRING_BUFFER(info_buffer), msg, msg_length);
+
+    char url[2048];
+    backend_url(STRING_BUFFER(url), STRING_CONST("log?type=%.*s&name=%.*s&tag=%.*s"),
+        STRING_FORMAT(typestr), STRING_FORMAT(msgstr), STRING_FORMAT(tagstr));
+
+    return query_execute_async_json(url, FORMAT_JSON, [](const json_object_t& res){});
+}
+
+bool backend_log(const char* _type, size_t type_length, const char* _info, size_t info_length, const char* _tag, size_t tag_length, const char* _user, size_t user_length) 
 {
     char type_buffer[256], info_buffer[256], tag_buffer[256], user_buffer[256];
-    string_t type = string_escape_url(STRING_BUFFER(type_buffer), _type, type_length);
-    string_t info = string_escape_url(STRING_BUFFER(info_buffer), _info, info_length);
-    string_t tag = string_escape_url(STRING_BUFFER(tag_buffer), _tag, tag_length);
-    string_t user = string_escape_url(STRING_BUFFER(user_buffer), _user, user_length);
+    string_t type = string_encode_uri_component(STRING_BUFFER(type_buffer), _type, type_length);
+    string_t info = string_encode_uri_component(STRING_BUFFER(info_buffer), _info, info_length);
+    string_t tag = string_encode_uri_component(STRING_BUFFER(tag_buffer), _tag, tag_length);
+    string_t user = string_encode_uri_component(STRING_BUFFER(user_buffer), _user, user_length);
 
     char url[2048];
     string_format(STRING_BUFFER(url), STRING_CONST("%.*s/log?type=%.*s&name=%.*s&value=%.*s&tag=%.*s"),

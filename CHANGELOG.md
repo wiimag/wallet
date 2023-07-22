@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.31.0] - 2023-07-21
+## [0.31.1] - 2023-07-22
+- Add support for new intelligent search backend <https://wallet.wiimag.com/xsearch?q=best+mobile+game+engine>
 - Add backend analytics support to improve application based on user patterns.
 
 ## [0.30.5] - 2023-07-19

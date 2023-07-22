@@ -670,7 +670,7 @@ string_const_t string_remove_trailing_whitespaces(const char* str, size_t length
  * @param url_length The length of the url.
  * @return The escaped url.
  */
-string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_t url_length);
+string_t string_encode_uri_component(char* buffer, size_t capacity, const char* url, size_t url_length);
     
 /*! Parse version string with the format 0.0.0[.0] into a version_t struct.
  *

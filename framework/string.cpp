@@ -2332,7 +2332,7 @@ string_const_t string_remove_trailing_whitespaces(const char* str, size_t length
     return { str, length };
 }
 
-string_t string_escape_url(char* buffer, size_t capacity, const char* url, size_t url_length)
+string_t string_encode_uri_component(char* buffer, size_t capacity, const char* url, size_t url_length)
 {
     const char* pstr = url;
     const char* const end = url + url_length;

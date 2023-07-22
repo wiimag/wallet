@@ -517,7 +517,7 @@ FOUNDATION_STATIC void eod_update_status(const json_object_t& json)
         string_copy(STRING_BUFFER(EOD->USER_EMAIL), STRING_ARGS(email));
         string_copy(STRING_BUFFER(EOD->SUBSCRIPTION_TYPE), STRING_ARGS(subtype));
 
-        backend_analytic(STRING_CONST("status"), STRING_ARGS(name), STRING_CONST("person"), STRING_ARGS(email));
+        backend_log(STRING_CONST("status"), STRING_ARGS(name), STRING_CONST("person"), STRING_ARGS(email));
     }
 
     string_const_t fmttr = RTEXT("Name: %.*s\nEmail: %.*s\nSubscription: %.*s\nRequest: %lg/%lg");
