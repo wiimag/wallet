@@ -2037,8 +2037,8 @@ const string_t* search_stock_exchanges()
     }
     else
     {
-        array_push(_search->exchanges, string_clone(STRING_CONST("TO")));
-        array_push(_search->exchanges, string_clone(STRING_CONST("US")));
+        //array_push(_search->exchanges, string_clone(STRING_CONST("TO")));
+        //array_push(_search->exchanges, string_clone(STRING_CONST("US")));
     }
 
     return _search->exchanges;

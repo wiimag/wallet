@@ -656,13 +656,6 @@ string_t* openai_generate_summary_sentiment(
         config_handle_t data = config_allocate(CONFIG_VALUE_OBJECT, CONFIG_OPTION_PRESERVE_INSERTION_ORDER);
 
         config_set(data, "model", STRING_CONST("gpt-4"));
-        //config_set(data, "temperature", options.temperature);
-        //config_set(data, "max_tokens", (double)options.max_tokens);
-        //config_set(data, "top_p", options.top_p);
-        //config_set(data, "best_of", (double)options.best_of);
-        //config_set(data, "presence_penalty", options.presence_penalty);
-        //config_set(data, "frequency_penalty", options.frequency_penalty);
-        //config_set(data, "stop", STRING_CONST("---\n"));
         config_handle_t messages = config_set_array(data, "messages");
         config_handle_t system = config_array_push(messages, CONFIG_VALUE_OBJECT);
         config_set(system, "role", STRING_CONST("system"));

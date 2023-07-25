@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.31.1] - 2023-07-22
+## [0.31.2] - 2023-07-25
+- Disable search indexing by default. You can enable it in the settings for the desired markets.
 - Add support for new intelligent search backend <https://wallet.wiimag.com/xsearch?q=best+mobile+game+engine>
 - Add backend analytics support to improve application based on user patterns.
 

@@ -771,26 +771,27 @@ FOUNDATION_STATIC void symbols_render_menus()
             symbols_open_market_window(tr("Indexes"), STRING_CONST("INDX"), false);
 
         ImGui::Separator();
-        #if BUILD_DEVELOPMENT
-        if (ImGui::MenuItem(tr("IPOs"), nullptr, nullptr, true))
-            system_execute_command(eod_build_url("calendar", "ipos", FORMAT_JSON).str);
-
-        if (ImGui::MenuItem("La Presse", nullptr, nullptr, true))
-            system_execute_command("https://www.google.com/search?q=bourse+site:lapresse.ca&tbas=0&source=lnt&tbs=qdr:w&sa=X&biw=1920&bih=902&dpr=2");
-        #endif
-
         const string_t* exchanges = search_stock_exchanges();
-        for (unsigned i = 0, end = array_size(exchanges); i < end; ++i)
-        {
-            const string_t& exchange = exchanges[i];
-            const char* label = tr_format("{0} Symbols", exchange);
-            if (ImGui::MenuItem(label))
-                symbols_open_market_window(label, STRING_ARGS(exchange));
-        }
         
-        ImGui::Separator();
-        if (ImGui::TrMenuItem("Random"))
-            dispatch_fire(symbols_open_random_stock_pattern);
+        if (exchanges) 
+        {
+            for (unsigned i = 0, end = array_size(exchanges); i < end; ++i)
+            {
+                const string_t& exchange = exchanges[i];
+                const char* label = tr_format("{0} Symbols", exchange);
+                if (ImGui::MenuItem(label))
+                    symbols_open_market_window(label, STRING_ARGS(exchange));
+            }
+
+            ImGui::Separator();
+            if (ImGui::TrMenuItem("Random"))
+                dispatch_fire(symbols_open_random_stock_pattern);
+        }
+        else
+        {
+            if (ImGui::TrMenuItem("US Symbols"))
+                symbols_open_market_window(tr("US Symbols"), STRING_CONST("US"));
+        }
 
         ImGui::EndMenu();
     }
