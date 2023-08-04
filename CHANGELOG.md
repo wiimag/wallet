@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.31.2] - 2023-07-25
+## [0.31.3] - 2023-08-04
+- Add stop limit proposed sell price based on the FLEX ratio as a tooltip in the pattern view.
 - Disable search indexing by default. You can enable it in the settings for the desired markets.
 - Add support for new intelligent search backend <https://wallet.wiimag.com/xsearch?q=best+mobile+game+engine>
 - Add backend analytics support to improve application based on user patterns.

@@ -1,6 +1,6 @@
 /*
- * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  * License: https://wiimag.com/LICENSE
+ * Copyright 2022-2023 Wiimag Inc. All rights reserved.
  */
  
 #include "pattern.h"
@@ -920,6 +920,11 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
         pattern_render_stats_line(s, CTEXT("Sell Limit"), 
             pattern_format_percentage(sell_limit_p),
             pattern_format_currency(flex_price_high), true);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+        {
+            const double stopLimitPrice = s->current.price * (1.0 - math_abs(flex_high_p - flex_low_p));
+            ImGui::SetTooltip(tr("Stop Sell Limit: %.2lf $"), stopLimitPrice);
+        }
 
         const double profit_price = s->dma_50;
         const double profit_percentage = (profit_price / flex_price_high - 1) * 100.0;

@@ -4105,5 +4105,10 @@
 			en = "This will remove all search results older than 90 days. This operation can take several minutes to complete."
 			fr = "Ceci supprimera tous les r\xc3\xa9sultats de recherche datant de plus de 90 jours. Cette op\xc3\xa9ration peut prendre plusieurs minutes pour s'achever."
 		}
+		{
+			hash = "7e1822d649bde0a6"
+			en = "Stop Sell Limit: %.2lf $"
+			fr = "Prix de vente limite: %.2lf $"
+		}
 	]
 }
