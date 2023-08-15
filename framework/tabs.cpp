@@ -94,7 +94,15 @@ void tab_draw(
             if (render_tab_callback != nullptr)
             {   
                 if (ImGui::BeginChild(label))
+                {
+                    if (ImGui::IsWindowAppearing())
+                    {
+                        ImGuiWindow* current_window = ImGui::GetCurrentWindow();
+                        ImGui::FocusWindow(current_window);
+                    }
+
                     render_tab_callback();
+                }
                 ImGui::EndChild();
             }
             else

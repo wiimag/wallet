@@ -2683,25 +2683,25 @@ void SetupFinish() {
             DrawList.AddText(label_pos, ax.ColorTxt, label);
         }
         if (ax.HasTickLabels()) {
-			// BEGIN PATCH 2023-01-24 - Prevent text label overlapping
+            // BEGIN PATCH 2023-01-24 - Prevent text label overlapping
             const bool inverted = ax.IsInverted();
             float text_end_pos_limit = inverted ? FLT_MAX : -FLT_MAX;
-			// END PATH 2023-01-24
+            // END PATH 2023-01-24
             for (int j = 0; j < tkr.TickCount(); ++j) {
                 const ImPlotTick& tk = tkr.Ticks[j];
                 const float datum = ax.Datum1 + (opp ? (-gp.Style.LabelPadding.y -txt_height -tk.Level * (txt_height + gp.Style.LabelPadding.y))
                                                      : gp.Style.LabelPadding.y + tk.Level * (txt_height + gp.Style.LabelPadding.y));
                 if (tk.ShowLabel && tk.PixelPos >= plot.PlotRect.Min.x - 1 && tk.PixelPos <= plot.PlotRect.Max.x + 1) {
                     ImVec2 start(tk.PixelPos - 0.5f * tk.LabelSize.x, datum);
-					// BEGIN PATCH 2023-01-24 - Prevent text label overlapping
-                    if (inverted ? (start.x < text_end_pos_limit) : (start.x > text_end_pos_limit))
+                    // BEGIN PATCH 2023-01-24 - Prevent text label overlapping
+                    if (tk.Level > 0 || inverted ? (start.x < text_end_pos_limit) : (start.x > text_end_pos_limit))
                     {
                         const char* label_text = tkr.GetText(j);
                         const float label_text_width = ImGui::CalcTextSize(label_text).x + gp.Style.LabelPadding.x * 2;
                         DrawList.AddText(start, ax.ColorTxt, label_text);
                         text_end_pos_limit = start.x + label_text_width;
                     }
-					// END PATH 2023-01-24
+                    // END PATH 2023-01-24
                 }
             }
         }
@@ -4182,7 +4182,7 @@ bool BeginDragDropTargetLegend() {
 
 void EndDragDropTarget() {
     SetupLock();
-	ImGui::EndDragDropTarget();
+    ImGui::EndDragDropTarget();
 }
 
 bool BeginDragDropSourcePlot(ImGuiDragDropFlags flags) {

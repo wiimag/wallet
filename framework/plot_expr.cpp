@@ -10,6 +10,8 @@
 
 #include <framework/expr.h>
 #include <framework/window.h>
+#include <framework/math.h>
+#include <framework/plot.h>
 
 struct plot_expr_graph_t
 {
@@ -23,6 +25,9 @@ struct plot_expr_t
     string_t id{};
     string_t* options{ nullptr };
     plot_expr_graph_t* graphs{ nullptr };
+
+    double xmin{ 0.0 };
+    double xmax{ 0.0 };
 };
 
 static plot_expr_t** _plot_exprs = nullptr;
@@ -55,13 +60,58 @@ FOUNDATION_STATIC void plot_expr_render_window(window_handle_t win)
     // Check if we have the option "xtime" to plot the x-axis as time scale
     const bool xtime = plot_expr_has_option(plot, "xtime");
     if (xtime)
+    {
         ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Time);
+        ImPlot::SetupAxis(ImAxis_X1, nullptr, ImPlotAxisFlags_PanStretch);
+
+        ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, plot->xmin, plot->xmax);
+    }
+
+    // Check if the y-axis is formatted as percentage
+    const bool ypercent = plot_expr_has_option(plot, "ypercent");
+    if (ypercent)
+    {
+        //ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_Opposite);
+        ImPlot::SetupAxisFormat(ImAxis_Y1, "%.3lg %%");
+    }
+
+    const bool trend = plot_expr_has_option(plot, "trend");
 
     for (unsigned i = 0, end = array_size(plot->graphs); i < end; ++i)
     {
         const plot_expr_graph_t* graph = plot->graphs + i;
         ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f, ImVec4(1, 0, 0, 1), 2);
-        ImPlot::PlotLine(graph->title.str, graph->xset, graph->yset, array_size(graph->xset));
+
+        if (!trend)
+        {
+            ImPlot::PlotLine(graph->title.str, graph->xset, graph->yset, array_size(graph->xset));
+        }
+        else
+        {
+            plot_context_t c{ time_now(), array_size(graph->xset), 1, graph};
+            c.show_equation = true;
+            c.x_time = xtime;
+            c.lx = ImPlot::GetPlotLimits().X.Min;
+            c.ly = ImPlot::GetPlotLimits().X.Max;
+            
+            ImPlot::PlotLineG(graph->title.str, [](int idx, void* user_data)->ImPlotPoint
+            {
+                plot_context_t* c = (plot_context_t*)user_data;
+                const plot_expr_graph_t* graph = (const plot_expr_graph_t*)c->user_data;
+
+                const double x = graph->xset[idx];
+                const double y = graph->yset[idx];
+
+                if (x >= c->lx && x <= c->ly && !plot_build_trend(*c, x, y))
+                    return ImPlotPoint(DNAN, DNAN);
+
+                return ImPlotPoint(x, y);
+            }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+            
+            c.flipped = true;
+            plot_compute_trend(c);
+            plot_render_trend(tr("Trend"), c);
+        }
     }
 
     ImPlot::EndPlot();
@@ -155,6 +205,10 @@ FOUNDATION_STATIC expr_result_t plot_expr_eval(const expr_func_t* f, vec_expr_t*
             plot_expr_deallocate(plot);
             throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Failed to open plot window");
         }
+
+        const double* xdata = plot->graphs[0].xset;
+        plot->xmin = math_array_min(xdata, array_size(xdata));
+        plot->xmax = math_array_max(xdata, array_size(xdata));
     }
     else
     {

@@ -43,6 +43,7 @@ struct plot_context_t
     bool show_equation{ false };
     bool x_axis_inverted{ false };
     bool flipped{ false };
+    bool x_time{ false };
 
     ImPlotPoint mouse_pos{};
     ImPlotPoint cursor_xy1{};

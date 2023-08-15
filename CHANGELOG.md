@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.31.4] - 2023-08-15
+## [0.31.5] - 2023-08-15
+- Add support to plot trend lines using `PLOT($title, $xset, $yset, ..., trend, ...)` expression.
 - Add $PATTERN variable when evaluating expressions in the pattern view.
 - Add stop limit proposed sell price based on the FLEX ratio as a tooltip in the pattern view.
 - Disable search indexing by default. You can enable it in the settings for the desired markets.

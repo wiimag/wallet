@@ -398,6 +398,10 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock(const expr_func_t* f, vec
                         return se.handler(s, d);
                 }
 
+                // Use the last date in the history if we didn't find a match
+                if (d)
+                    return se.handler(s, d);
+
                 throw ExprError(EXPR_ERROR_EVALUATION_TIMEOUT, "Failed to resolve date %ull for %s", time, SYMBOL_CSTR(stock_handle->code));
             }
         }

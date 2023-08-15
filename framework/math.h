@@ -343,6 +343,20 @@ FOUNDATION_FORCEINLINE float clamp(float _v, float _min, float _max) { return _v
  */
 float math_cosine_similarity(const float* em1, const float* em2);
 
+/*! Retrieve the minimum value from the given array.
+ *  @param values Pointer to the first value.
+ *  @param count Number of values.
+ *  @return The minimum value from the given array.
+ */
+double math_array_min(const double* values, size_t count);
+
+/*! Retrieve the maximum value from the given array.
+ *  @param values Pointer to the first value.
+ *  @param count Number of values.
+ *  @return The maximum value from the given array.
+ */
+double math_array_max(const double* values, size_t count);
+
 // ## Vector 2D helpers
 
 FOUNDATION_FORCEINLINE vec2 add(const vec2& _a, const vec2& _b) { return vec2(_a.x + _b.x, _a.y + _b.y); }

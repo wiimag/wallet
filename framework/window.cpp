@@ -748,7 +748,7 @@ FOUNDATION_STATIC void window_capture_framebuffer_to_png(window_t* win)
     const int height = win->frame_height;
 
     char name_buffer[BUILD_MAX_PATHLEN];
-    string_t name = path_normalize_name(STRING_BUFFER(name_buffer), STRING_ARGS(win->id));
+    string_t name = path_normalize_name(STRING_BUFFER(name_buffer), STRING_ARGS(win->title));
 
     // Append the current date
     string_const_t today_string = string_from_date(time_now());

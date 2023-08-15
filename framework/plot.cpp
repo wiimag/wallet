@@ -39,6 +39,11 @@ FOUNDATION_STATIC void plot_render_graph_trend(const char* label, double x1, dou
 
         if (context.show_equation)
         {
+            if (context.x_time)
+            {
+                b *= 3600.0 * 24.0;
+            }
+
             string_const_t annstr = string_template_static(
                 "{0}{5}{1, short} {2} {3, short}x (" ICON_MD_CHANGE_HISTORY "{4, short})",
                 context.compacted ? "" : label, a, b < 0 ? "-" : "+", math_abs(b), y_diff, context.compacted ? "" : " = ");

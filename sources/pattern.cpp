@@ -1016,9 +1016,9 @@ FOUNDATION_STATIC void pattern_render_graph_end(pattern_t* pattern, const stock_
 
     if ((graph.refresh || !pattern->autofit) && (s == nullptr || s->has_resolve(FETCH_ALL)))
     {
-        ImPlot::SetNextAxesToFit();
-        pattern->autofit = true;
-        graph.refresh = false;
+        //ImPlot::SetNextAxesToFit();
+        //pattern->autofit = true;
+        //graph.refresh = false;
     }
 }
 
@@ -2111,6 +2111,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
         pattern->autofit = true;
         ImPlotRect limits_rect = *(const ImPlotRect*)&pattern->price_limits;
         ImPlot::SetNextAxesLimits(pattern->price_limits.xmin, pattern->price_limits.xmax, pattern->price_limits.ymin, pattern->price_limits.ymax, ImGuiCond_Once);
+        ImPlot::SetNextAxesToFit();
     }
 
     const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
@@ -2176,11 +2177,8 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
 
     ImPlot::TagY(s->current.adjusted_close, ImColor::HSV(239 / 360.0f, 0.63f, 1.0f), "Current");
 
-    if (pattern->autofit)
-    {
-        const ImPlotRect limits = ImPlot::GetPlotLimits();
-        pattern->price_limits = *(const pattern_limits_t*)&limits;
-    }
+    const ImPlotRect limits = ImPlot::GetPlotLimits();
+    pattern->price_limits = *(const pattern_limits_t*)&limits;
 
     // Render limits
     if (pattern->show_limits)
@@ -3064,18 +3062,18 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     pattern_handle_shortcuts(pattern);
     pattern_render_dialogs(pattern);
 
-    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
-    {
-        expr_set_global_var(STRING_CONST("$TITLE"), STRING_ARGS(code));
-        expr_set_global_var(STRING_CONST("$PATTERN"), STRING_ARGS(code));
-    }
-
     if (ImGui::IsWindowAppearing())
     {
         dispatch([pattern]()
         {
             pattern_refresh(pattern);
         }, 250);
+    }
+
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+    {
+        expr_set_global_var(STRING_CONST("$TITLE"), STRING_ARGS(code));
+        expr_set_global_var(STRING_CONST("$PATTERN"), STRING_ARGS(code));
     }
 }
 

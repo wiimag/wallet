@@ -94,3 +94,25 @@ float math_cosine_similarity(const float* em1, const float* em2)
 
     return dot / (sqrtf(mag1) * sqrtf(mag2));
 }
+
+double math_array_min(const double* values, size_t count)
+{
+    double min = values[0];
+    for (size_t i = 1; i < count; ++i)
+    {
+        min = math_min(min, values[i]);
+    }
+
+    return min;
+}
+
+double math_array_max(const double* values, size_t count)
+{
+    double max = values[0];
+    for (size_t i = 1; i < count; ++i)
+    {
+        max = math_max(max, values[i]);
+    }
+
+    return max;
+}
