@@ -33,6 +33,7 @@
 #include <framework/system.h>
 #include <framework/shared_ptr.h>
 #include <framework/plot.h>
+#include <framework/expr.h>
 
 #include <algorithm>
 
@@ -3062,6 +3063,12 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
 
     pattern_handle_shortcuts(pattern);
     pattern_render_dialogs(pattern);
+
+    if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
+    {
+        expr_set_global_var(STRING_CONST("$TITLE"), STRING_ARGS(code));
+        expr_set_global_var(STRING_CONST("$PATTERN"), STRING_ARGS(code));
+    }
 
     if (ImGui::IsWindowAppearing())
     {

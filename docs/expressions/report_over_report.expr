@@ -1,0 +1,35 @@
+#
+# Compute the price change report after reports for a given title
+#
+#---
+$TITLE='ARE.TO'
+#---
+
+# Get primary ticker
+$t=IF(ENDS_WITH($TITLE, "NEO"), F($TITLE, "General.Code") + '.US', $TITLE)
+
+# Get all earnings report dates
+$report_dates = MAP(F($t, "Earnings.History"), INDEX($2, 'reportDate'))
+
+# Filter out report date in the future
+$report_dates = FILTER($report_dates, DATE($1) < NOW())
+
+# Get price at each report dates
+$prices = MAP($report_dates, [$1, S($t, 'high', $1)])
+
+# Get the price difference for each entry
+$count = COUNT(MAP($prices, $1))
+$e = REPEAT([INDEX($prices, $i, 0), INDEX($prices, $i+1, 1), INDEX($prices, $i, 1), INDEX($prices, $i, 1) - INDEX($prices, $i+1, 1)], $count-1)
+
+# Compute the relative diff
+$count = COUNT(MAP($e, $1))
+$e = REPEAT([INDEX($e, $i, 0), INDEX($e, $i, 1), INDEX($e, $i, 2), INDEX($e, $i, 3), INDEX($e, $i, 3) / INDEX($e, $i, 1) * 100], $count)
+
+# Compute the average RoR
+$ror = AVG(MAP($e, $5))
+
+PLOT('RoR', MAP($e, DATE($1)), MAP($e, $4), "xtime", "trend")
+
+$result = [$ror, $e]
+
+$result
