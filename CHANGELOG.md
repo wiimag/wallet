@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.31.5] - 2023-08-15
+## [0.31.6] - 2023-08-25
+- Reduce the stock fundamentals cache expiring to 1 day in most cases.
 - Add support to plot trend lines using `PLOT($title, $xset, $yset, ..., trend, ...)` expression.
 - Add $PATTERN variable when evaluating expressions in the pattern view.
 - Add stop limit proposed sell price based on the FLEX ratio as a tooltip in the pattern view.

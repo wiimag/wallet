@@ -90,7 +90,7 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
         return false;
 
     value = DNAN;
-        
+
     const char* ticker = string_table_decode(s->code);
     const char* url = eod_build_url("fundamentals", ticker, FORMAT_JSON_CACHE, "filter", "Highlights,Earnings::History").str;
     return query_execute_async_json(url, FORMAT_JSON_CACHE, [stock_index, field](const json_object_t& json)
@@ -161,7 +161,7 @@ FOUNDATION_STATIC bool stock_fetch_earnings_trend(stock_index_t stock_index, con
             s->earning_trend_difference = value_avg;
         else if (string_equal(field, field_length-1, STRING_CONST("surprisePercent")))
             s->earning_trend_percent = value_avg;
-    }, 7 * 24 * 3600ULL);
+    }, 1 * 24 * 3600ULL);
 }
 
 FOUNDATION_STATIC bool stock_fetch_short_name(stock_index_t stock_index, string_table_symbol_t& value)
@@ -880,7 +880,7 @@ status_t stock_resolve(stock_handle_t& handle, fetch_level_t fetch_levels)
         
     if ((fetch_levels & FetchLevel::FUNDAMENTALS) && ((entry->fetch_level | entry->resolved_level) & FetchLevel::FUNDAMENTALS) == 0)
     {
-        if (eod_fetch_async("fundamentals", ticker, FORMAT_JSON_WITH_ERROR, LC1(stock_read_fundamentals_results(_1, index)), 14 * 24ULL * 3600ULL))
+        if (eod_fetch_async("fundamentals", ticker, FORMAT_JSON_WITH_ERROR, LC1(stock_read_fundamentals_results(_1, index)), 1 * 24ULL * 3600ULL))
         {
             entry->mark_fetched(FetchLevel::FUNDAMENTALS);
             status = STATUS_RESOLVING;

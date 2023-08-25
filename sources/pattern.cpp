@@ -1738,7 +1738,7 @@ FOUNDATION_STATIC void pattern_render_graph_earnings(pattern_t* pattern, pattern
             if (pattern)
                 pattern->autofit = false;
 
-        }, 7 * 60 * 60 * 24ULL);
+        }, 3 * 60 * 60 * 24ULL);
     }
 
     const size_t earnings_count = array_size(pattern->earnings);

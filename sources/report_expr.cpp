@@ -528,7 +528,7 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const expr_fu
         json_object_t field_data = json.find(STRING_ARGS(field_name), true);
         if (field_data.is_valid())
             value = report_expr_eval_stock_fundamental(field_data);
-    }, 5 * 24 * 60ULL * 60ULL);
+    }, 1 * 24 * 60ULL * 60ULL);
 
     return value;
 }
