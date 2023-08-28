@@ -357,6 +357,33 @@ double math_array_min(const double* values, size_t count);
  */
 double math_array_max(const double* values, size_t count);
 
+/*! Solve a linear system of equations.
+ *
+ *  Solving y = c0 + c1 * x + c2 * x^2 + ... + cn * x^n
+ *
+ *  @param A Pointer to the first element of the matrix A.
+ *  @param b Pointer to the first element of the vector b.
+ *  @param n The degree of the equation.
+ *  @param coeffs Pointer to the first element of the vector x, the solution to the linear system.
+ *  @remark The caller is responsible for freeing the memory allocated for the solution.
+ *
+ *  @note A and b are modified during the solution process.
+ */
+void math_solve_linear_system(double* A, double* b, unsigned n, double*& coeffs);
+
+/*! Fit a polynomial curve to the given data.
+ *
+ *  Solving y = c0 + c1 * x + c2 * x^2 + ... + cn * x^n
+ *
+ *  @param x Pointer to the first element of the vector x.
+ *  @param y Pointer to the first element of the vector y.
+ *  @param count Number of elements in the vectors x and y.
+ *  @param degree The degree of the polynomial to fit.
+ *  @param coeffs Pointer to the first element of the vector x, the solution to the linear system.
+ *  @remark The caller is responsible for freeing the memory allocated for the solution.
+ */
+void math_polynomial_fit(const double* x, const double* y, unsigned count, unsigned degree, double*& coeffs);
+
 // ## Vector 2D helpers
 
 FOUNDATION_FORCEINLINE vec2 add(const vec2& _a, const vec2& _b) { return vec2(_a.x + _b.x, _a.y + _b.y); }

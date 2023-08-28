@@ -83,3 +83,5 @@ int plot_value_format_elapsed_time_short(double value, char* buff, int size, voi
 int plot_value_format_currency_short(double value, char* buff, int size, void* user_data);
 
 int plot_value_format_date_monthly(double value, char* buff, int size, void* user_data);
+
+ImPlotPoint* plot_smooth_curves(ImPlotGetter getter, unsigned count, unsigned degree, void* user_data);

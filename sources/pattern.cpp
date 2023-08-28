@@ -65,6 +65,7 @@ enum PatternType : int {
     PATTERN_GRAPH_YOY,
     PATTERN_GRAPH_INTRADAY,
     PATTERN_GRAPH_EARNINGS,
+    PATTERN_GRAPH_REVENUES,
     PATTERN_GRAPH_END,
 
     PATTERN_SIMULATION_BEGIN,
@@ -82,6 +83,7 @@ constexpr const char* GRAPH_TYPES[PATTERN_ALL_END] = {
     "Y/Y",
     "Intraday",
     "Earnings",
+    "Revenues",
     nullptr,
     nullptr,
     "Activity"
@@ -131,6 +133,17 @@ struct pattern_earnings_result_t {
 
     double trend { NAN };
     double growth_p { NAN };
+};
+
+struct pattern_revenue_t {
+    double date{ 0 };
+    time_t timestamp{ 0 };
+
+    double actual{ NAN };
+    double actual_sma{ NAN };
+
+    double profit{ NAN };
+    double profit_sma{ NAN };
 };
 
 static pattern_t* _patterns = nullptr;
@@ -687,6 +700,9 @@ FOUNDATION_STATIC const stock_t* pattern_refresh(pattern_t* pattern, FetchLevel 
 
     if (array_size(pattern->earnings) > 0)
         array_deallocate(pattern->earnings);
+
+    if (array_size(pattern->revenues) > 0)
+        array_deallocate(pattern->revenues);
 
     if (array_size(pattern->intradays) > 0)
         array_deallocate(pattern->intradays);
@@ -1724,6 +1740,174 @@ FOUNDATION_STATIC void pattern_read_fundamentals_earnings_data(pattern_handle_t 
     }
 }
 
+FOUNDATION_STATIC void pattern_render_graph_revenues(pattern_t* pattern, pattern_graph_data_t& graph)
+{
+    if (pattern->revenues == nullptr)
+    {
+        array_reserve(pattern->revenues, 1);
+        pattern_handle_t pattern_handle = pattern - _patterns;
+        const char* code = pattern_primary_ticker_code(pattern).str;
+        eod_fetch_async("fundamentals", code, FORMAT_JSON_CACHE, [pattern_handle](const auto& json)
+        {
+            const auto statement = json["Financials"]["Income_Statement"]["yearly"];
+            if (!statement.is_valid())
+                return;
+
+            pattern_revenue_t* revenues = nullptr;
+            for (auto e : statement)
+            {
+                pattern_revenue_t revenue;
+                string_const_t date_string = e["date"].as_string();
+                if (!string_try_convert_date(STRING_ARGS(date_string), revenue.timestamp))
+                    continue;
+
+                revenue.date = (double)revenue.timestamp;
+                revenue.actual = e["totalRevenue"].as_number();
+                revenue.profit = e["grossProfit"].as_number();
+
+                if (math_real_is_finite(revenue.actual) && math_real_is_finite(revenue.profit))
+                    array_push_memcpy(revenues, &revenue);
+            }
+
+            // Compute revenues and profit SMA
+            const unsigned entry_count = array_size(revenues);
+            ImPlotPoint* revenues_sma = plot_smooth_curves([](int idx, void* user_data)
+            {
+                pattern_revenue_t* revenues = (pattern_revenue_t*)user_data;
+                return ImPlotPoint{revenues[idx].date, revenues[idx].actual};
+            }, entry_count, 4, revenues);
+
+            ImPlotPoint* profit_sma = plot_smooth_curves([](int idx, void* user_data)
+            {
+                pattern_revenue_t* revenues = (pattern_revenue_t*)user_data;
+                return ImPlotPoint{revenues[idx].date, revenues[idx].profit};
+            }, entry_count, 3, revenues);
+
+            for (unsigned i = 0; i < entry_count; ++i)
+            {
+                revenues[i].actual_sma = revenues_sma[i].y;
+                revenues[i].profit_sma = profit_sma[i].y;
+            }
+
+            array_deallocate(revenues_sma);
+            array_deallocate(profit_sma);
+
+            pattern_t* pattern = pattern_get(pattern_handle);
+            array_reverse(revenues);
+
+            pattern_revenue_t* old = pattern->revenues;
+            pattern->revenues = revenues;
+
+            array_deallocate(old);
+            pattern->autofit = false;
+
+        }, 3 * 60 * 60 * 24ULL);
+    }
+
+    const size_t revenues_count = array_size(pattern->revenues);
+    if (revenues_count <= 1)
+        return ImGui::TextUnformatted("No data");
+
+    if (!pattern->autofit)
+    {
+        ImPlot::SetNextAxesToFit();
+        pattern->autofit = true;
+        graph.refresh = false;
+    }
+
+    const char* code = SYMBOL_CSTR(pattern->code);
+    const ImVec2 graph_offset = ImVec2(-ImGui::GetStyle().CellPadding.x, -ImGui::GetStyle().CellPadding.y);
+    string_t plot_title = string_format(SHARED_BUFFER(64), STRING_CONST("Pattern Revenues - %s"), code);
+    if (!ImPlot::BeginPlot(plot_title.str, graph_offset, ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
+        return;
+
+    ImPlot::SetupLegend(ImPlotLocation_NorthWest, ImPlotLegendFlags_Horizontal);
+
+    double time_end = array_last(pattern->revenues)->date;
+    const double time_start = array_first(pattern->revenues)->date;
+
+    // The price graph is always shown inverted by default.
+    ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
+    ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, time_start, time_end);
+    ImPlot::SetupAxisFormat(ImAxis_X1, plot_value_format_date, nullptr);
+
+    ImPlot::SetupAxis(ImAxis_Y1, "##Currency", ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite);
+    ImPlot::SetupAxisFormat(ImAxis_Y1, [](double value, char* buff, int size, void* user_data)
+    {
+        double abs_value = math_abs(value);
+        if (abs_value >= 1e12)
+            return (int)string_format(buff, size, STRING_CONST("%.2gT $"), value / 1e12).length;
+        if (abs_value >= 1e9)
+            return (int)string_format(buff, size, STRING_CONST("%.3gB $"), value / 1e9).length;
+        else if (abs_value >= 1e6)
+            return (int)string_format(buff, size, STRING_CONST("%.3gM $"), value / 1e6).length;
+        else if (abs_value >= 1e3)
+            return (int)string_format(buff, size, STRING_CONST("%.3gK $"), value / 1e3).length;
+
+        return (int)string_format(buff, size, STRING_CONST("%.2lf $"), value).length;
+    }, nullptr);
+
+    plot_context_t c{ pattern->date, revenues_count, 1, pattern->revenues };
+    c.show_equation = pattern->show_trend_equation;
+    c.acc = pattern->range;
+    c.cursor_xy1 = { DBL_MAX, DNAN };
+    c.cursor_xy2 = { DNAN, DNAN };
+    c.mouse_pos = ImPlot::GetPlotMousePos();
+    c.flipped = true;
+
+    ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f, ImVec4(1, 0, 0, 1), 2);
+    ImPlot::PlotLineG(tr("Revenues"), [](int idx, void* user_data)->ImPlotPoint
+    {
+        plot_context_t* c = (plot_context_t*)user_data;
+        const pattern_revenue_t* history = (const pattern_revenue_t*)c->user_data;
+        const pattern_revenue_t& ed = history[idx];
+
+        const double x = (double)ed.date;
+        const double y = ed.actual;
+
+        return ImPlotPoint(x, y);
+    }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+
+    ImPlot::SetNextMarkerStyle(ImPlotMarker_Circle, 4.0f, ImVec4(0, 1, 0, 1), 2);
+    ImPlot::PlotLineG(tr("Profit"), [](int idx, void* user_data)->ImPlotPoint
+    {
+        plot_context_t* c = (plot_context_t*)user_data;
+        const pattern_revenue_t* history = (const pattern_revenue_t*)c->user_data;
+        const pattern_revenue_t& ed = history[idx];
+
+        const double x = (double)ed.date;
+        const double y = ed.profit;
+
+        return ImPlotPoint(x, y);
+    }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+
+    ImPlot::PlotLineG(tr("Revenues"), [](int idx, void* user_data)->ImPlotPoint
+    {
+        plot_context_t* c = (plot_context_t*)user_data;
+        const pattern_revenue_t* history = (const pattern_revenue_t*)c->user_data;
+        const pattern_revenue_t& ed = history[idx];
+
+        const double x = (double)ed.date;
+        const double y = ed.actual_sma;
+
+        return ImPlotPoint(x, y);
+    }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+
+    ImPlot::PlotLineG(tr("Profit"), [](int idx, void* user_data)->ImPlotPoint
+        {
+        plot_context_t* c = (plot_context_t*)user_data;
+        const pattern_revenue_t* history = (const pattern_revenue_t*)c->user_data;
+        const pattern_revenue_t& ed = history[idx];
+
+        const double x = (double)ed.date;
+        const double y = ed.profit_sma;
+
+        return ImPlotPoint(x, y);
+    }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+
+    ImPlot::EndPlot();
+}
+
 FOUNDATION_STATIC void pattern_render_graph_earnings(pattern_t* pattern, pattern_graph_data_t& graph)
 {
     if (pattern->earnings == nullptr)
@@ -2281,7 +2465,8 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
     if (shortcut_executed('5')) pattern->type = PATTERN_GRAPH_YOY;
     if (shortcut_executed('6')) pattern->type = PATTERN_GRAPH_INTRADAY;
     if (shortcut_executed('7')) pattern->type = PATTERN_GRAPH_EARNINGS;
-    if (shortcut_executed('8')) pattern->type = PATTERN_ACTIVITY;
+    if (shortcut_executed('8')) pattern->type = PATTERN_GRAPH_REVENUES;
+    if (shortcut_executed('9')) pattern->type = PATTERN_ACTIVITY;
 
     ImGui::SetNextItemWidth(IM_SCALEF(120));
     string_const_t graph_type_label_preview = string_to_const(GRAPH_TYPES[min(pattern->type, (int)ARRAY_COUNT(GRAPH_TYPES)-1)]);
@@ -2310,7 +2495,7 @@ FOUNDATION_STATIC void pattern_render_graph_toolbar(pattern_t* pattern, pattern_
         pattern->autofit = false;
     }
 
-    if (pattern->type != PATTERN_GRAPH_INTRADAY && pattern->type != PATTERN_GRAPH_EARNINGS)
+    if (pattern->type != PATTERN_GRAPH_INTRADAY && pattern->type != PATTERN_GRAPH_EARNINGS && pattern->type != PATTERN_GRAPH_REVENUES)
     {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
@@ -2773,6 +2958,10 @@ FOUNDATION_STATIC void pattern_render_graphs(pattern_t* pattern)
 
         case PATTERN_GRAPH_EARNINGS:
             pattern_render_graph_earnings(pattern, graph_data);
+            break;
+
+        case PATTERN_GRAPH_REVENUES:
+            pattern_render_graph_revenues(pattern, graph_data);
             break;
 
         case PATTERN_ACTIVITY:
@@ -3631,6 +3820,7 @@ FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
         pattern->analysis_summary = nullptr;
     }
 
+    array_deallocate(pattern->revenues);
     array_deallocate(pattern->earnings);
     array_deallocate(pattern->intradays);
     config_deallocate(pattern->fundamentals);

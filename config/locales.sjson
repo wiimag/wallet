@@ -4155,5 +4155,15 @@
 			en = "{0} - Financials"
 			fr = "@TODO"
 		}
+		{
+			hash = "8c1aec60fb3d86ec"
+			en = "Revenues"
+			fr = "@TODO"
+		}
+		{
+			hash = "5e66cf29fa9defab"
+			en = "SMA"
+			fr = "@TODO"
+		}
 	]
 }

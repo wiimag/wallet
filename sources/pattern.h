@@ -21,6 +21,7 @@
 struct bulk_t;
 struct watch_context_t;
 struct pattern_earnings_result_t;
+struct pattern_revenue_t;
 
 /*! Pattern handle. */
 typedef int pattern_handle_t;
@@ -122,6 +123,7 @@ struct pattern_t
     double_option_t earnings_growth{ DNAN };
     double_option_t earnings_surprise_avg{ DNAN };
     pattern_earnings_result_t* earnings{ nullptr };
+    pattern_revenue_t* revenues{ nullptr };
 
     // Watch points
     watch_context_t* watch_context{ nullptr };

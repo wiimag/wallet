@@ -5,6 +5,8 @@
 
 #include "plot.h"
 
+#include <framework/math.h>
+
 #include <imgui/implot_internal.h>
 
 //
@@ -206,4 +208,58 @@ void plot_render_line_with_trend(plot_context_t& context, PlotGetter getter)
         ImPlot::HideNextItem(true, ImPlotCond_Once);
         plot_render_trend(context.title, context);
     }
+}
+
+ImPlotPoint* plot_smooth_curves(ImPlotGetter getter, unsigned count, unsigned degree, void* user_data)
+{
+    ImPlotPoint* points = nullptr;
+    array_reserve(points, count);
+
+    ImPlotPoint p;
+
+    for (unsigned i = 0; i < count; ++i)
+    {
+        p = getter((int)i, user_data);
+        if (p.y == 0)
+            break;
+        array_push(points, p);
+    }
+
+    // Compute the polynomial curve
+    if (array_size(points) > 2)
+    {
+        double* x = nullptr;
+        double* y = nullptr;
+        array_reserve(x, array_size(points));
+        array_reserve(y, array_size(points));
+
+        for (unsigned i = 0; i < array_size(points); ++i)
+        {
+            array_push(x, points[i].x);
+            array_push(y, points[i].y);
+        }
+
+        double* coeffs = nullptr;
+        math_polynomial_fit(x, y, array_size(points), degree, coeffs);
+
+        ImPlotPoint* curve = nullptr;
+        array_reserve(curve, array_size(points));
+        for (unsigned i = 0; i < array_size(points); ++i)
+        {
+            p.x = points[i].x;
+            p.y = coeffs[0];
+            for (unsigned j = 1; j < degree + 1; ++j)
+                p.y += coeffs[j] * math_pow(p.x, j);
+            array_push(curve, p);
+        }
+
+        array_deallocate(x);
+        array_deallocate(y);
+        array_deallocate(coeffs);
+
+        array_deallocate(points);
+        points = curve;
+    }
+
+    return points;
 }

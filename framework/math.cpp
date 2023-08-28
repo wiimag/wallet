@@ -116,3 +116,85 @@ double math_array_max(const double* values, size_t count)
 
     return max;
 }
+
+void math_solve_linear_system(double* A, double* b, unsigned n, double*& coeffs)
+{
+    double sum;
+    unsigned i, j, k;
+
+    array_resize(coeffs, n);
+    for (i = 0; i < n; ++i)
+        coeffs[i] = 0;
+
+    // Compute system C + ax + bx^2 + cx^3 + ... = y
+    // Where C is coeffs[0], a is coeffs[1], b is coeffs[2], etc.
+
+    // Forward elimination
+    for (i = 0; i < n; ++i)
+    {
+        for (j = i + 1; j < n; ++j)
+        {
+            sum = A[j * n + i] / A[i * n + i];
+            for (k = i; k < n; ++k)
+                A[j * n + k] -= sum * A[i * n + k];
+            b[j] -= sum * b[i];
+        }
+    }
+
+    // Backward substitution
+    for (i = n - 1; i < n; --i)
+    {
+        sum = 0;
+        for (j = i; j < n; ++j)
+            sum += A[i * n + j] * coeffs[j];
+        coeffs[i] = (b[i] - sum) / A[i * n + i];
+    }
+}
+
+void math_polynomial_fit(const double* x, const double* y, unsigned count, unsigned degree, double*& coeffs)
+{
+    FOUNDATION_ASSERT(x);
+    FOUNDATION_ASSERT(y);
+    FOUNDATION_ASSERT(count > 0);
+    FOUNDATION_ASSERT(degree > 0);
+
+    unsigned i, j, k;
+    double sum;
+
+    // Allocate matrix
+    double* A = nullptr;
+    array_resize(A, (degree+1) * (degree+1));
+
+    // Allocate right-hand side
+    double* b = nullptr;
+    array_resize(b, degree+1);
+
+    // Compute matrix
+    for (i = 0; i < degree + 1; ++i)
+    {
+        for (j = 0; j < degree + 1; ++j)
+        {
+            sum = 0;
+            for (k = 0; k < count; ++k)
+                sum += math_pow(x[k], i + j);
+            A[i * (degree + 1) + j] = sum;
+        }
+    }
+
+    // Compute right-hand side
+    for (i = 0; i < degree + 1; ++i)
+    {
+        sum = 0;
+        for (k = 0; k < count; ++k)
+            sum += y[k] * math_pow(x[k], i);
+        b[i] = sum;
+    }
+
+    // Solve system
+    math_solve_linear_system(A, b, degree + 1, coeffs);
+
+    // Clean up
+    array_deallocate(A);
+    array_deallocate(b);
+    
+}

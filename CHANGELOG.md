@@ -1,6 +1,7 @@
 # Changelog
 
 ## [0.32.0] - 2023-08-28
+- Add polynomial regression to pattern Revenue view.
 - Improve stock financials charting.
 
 ## [0.31.6] - 2023-08-25
