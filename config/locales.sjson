@@ -4110,5 +4110,50 @@
 			en = "Stop Sell Limit: %.2lf $"
 			fr = "Prix de vente limite: %.2lf $"
 		}
+		{
+			hash = "ba7ebbbacd74935"
+			en = "Additional Paid In Capital"
+			fr = "@TODO"
+		}
+		{
+			hash = "23305e30658e620b"
+			en = "Deferred Long Term Asset Charges"
+			fr = "@TODO"
+		}
+		{
+			hash = "b11aaeb9f024bbfc"
+			en = "Noncontrolling Interest In Consolidated Entity"
+			fr = "@TODO"
+		}
+		{
+			hash = "41d6305ef36ec67f"
+			en = "Preferred Stock Total Equity"
+			fr = "@TODO"
+		}
+		{
+			hash = "50f010538a669a86"
+			en = "Temporary Equity Redeemable Noncontrolling Interests"
+			fr = "@TODO"
+		}
+		{
+			hash = "6079ad0e34295013"
+			en = "Total Permanent Equity"
+			fr = "@TODO"
+		}
+		{
+			hash = "fc61f69fe77cccbb"
+			en = "Treasury Stock"
+			fr = "@TODO"
+		}
+		{
+			hash = "75d93e15fb86552f"
+			en = "Exchange Rate Changes"
+			fr = "@TODO"
+		}
+		{
+			hash = "c740da39cb30da08"
+			en = "{0} - Financials"
+			fr = "@TODO"
+		}
 	]
 }

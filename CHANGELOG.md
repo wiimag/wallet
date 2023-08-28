@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.32.0] - 2023-08-28
+- Improve stock financials charting.
+
 ## [0.31.6] - 2023-08-25
 - Reduce the stock fundamentals cache expiring to 1 day in most cases.
 - Add support to plot trend lines using `PLOT($title, $xset, $yset, ..., trend, ...)` expression.

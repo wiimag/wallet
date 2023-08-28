@@ -6,6 +6,7 @@
 #include "financials.h"
 
 #include "eod.h"
+#include "stock.h"
 
 #include <framework/app.h>
 #include <framework/imgui.h>
@@ -185,7 +186,7 @@ struct {
 } BALANCE_FIELDS[] = {
 
     { FinancialBalance::totalAssets, CTEXT("Total Assets"), FIELD_PLOT(totalAssets), true },
-    { FinancialBalance::cash, CTEXT("Cash"), FIELD_PLOT(cash), true },
+    { FinancialBalance::cash, CTEXT("Cash"), FIELD_PLOT(cash), false },
     { FinancialBalance::accountsPayable, CTEXT("Accounts Payable"), FIELD_PLOT(accountsPayable) },
     { FinancialBalance::accumulatedAmortization, CTEXT("Accumulated Amortization"), FIELD_PLOT(accumulatedAmortization) },
     { FinancialBalance::accumulatedDepreciation, CTEXT("Accumulated Depreciation"), FIELD_PLOT(accumulatedDepreciation) },
@@ -234,7 +235,7 @@ struct {
     { FinancialBalance::retainedEarnings, CTEXT("Retained Earnings"), FIELD_PLOT(retainedEarnings) },
     { FinancialBalance::retainedEarningsTotalEquity, CTEXT("Retained Earnings Total Equity"), FIELD_PLOT(retainedEarningsTotalEquity) },
     { FinancialBalance::shortLongTermDebt, CTEXT("Short Long Term Debt"), FIELD_PLOT(shortLongTermDebt) },
-    { FinancialBalance::shortLongTermDebtTotal, CTEXT("Short Long Term Debt Total"), FIELD_PLOT(shortLongTermDebtTotal), true },
+    { FinancialBalance::shortLongTermDebtTotal, CTEXT("Short Long Term Debt Total"), FIELD_PLOT(shortLongTermDebtTotal), false },
     { FinancialBalance::shortTermDebt, CTEXT("Short Term Debt"), FIELD_PLOT(shortTermDebt) },
     { FinancialBalance::shortTermInvestments, CTEXT("Short Term Investments"), FIELD_PLOT(shortTermInvestments) },
     { FinancialBalance::temporaryEquityRedeemableNoncontrollingInterests, CTEXT("Temporary Equity Redeemable Noncontrolling Interests"), FIELD_PLOT(temporaryEquityRedeemableNoncontrollingInterests) },
@@ -354,14 +355,14 @@ struct {
     { FinancialCashFlow::changeToLiabilities, CTEXT("Change To Liabilities"), FIELD_PLOT(changeToLiabilities) },
     { FinancialCashFlow::changeToNetincome, CTEXT("Change To Netincome"), FIELD_PLOT(changeToNetincome) },
     { FinancialCashFlow::changeToOperatingActivities, CTEXT("Change To Operating Activities"), FIELD_PLOT(changeToOperatingActivities) },
-    { FinancialCashFlow::depreciation, CTEXT("Depreciation"), FIELD_PLOT(depreciation) },
-    { FinancialCashFlow::dividendsPaid, CTEXT("Dividends Paid"), FIELD_PLOT(dividendsPaid) },
+    { FinancialCashFlow::depreciation, CTEXT("Depreciation"), FIELD_PLOT(depreciation), true },
+    { FinancialCashFlow::dividendsPaid, CTEXT("Dividends Paid"), FIELD_PLOT(dividendsPaid), true },
     { FinancialCashFlow::endPeriodCashFlow, CTEXT("End Period Cash Flow"), FIELD_PLOT(endPeriodCashFlow) },
     { FinancialCashFlow::exchangeRateChanges, CTEXT("Exchange Rate Changes"), FIELD_PLOT(exchangeRateChanges) },
-    { FinancialCashFlow::freeCashFlow, CTEXT("Free Cash Flow"), FIELD_PLOT(freeCashFlow), true },
+    { FinancialCashFlow::freeCashFlow, CTEXT("Free Cash Flow"), FIELD_PLOT(freeCashFlow), false },
     { FinancialCashFlow::issuanceOfCapitalStock, CTEXT("Issuance Of Capital Stock"), FIELD_PLOT(issuanceOfCapitalStock) },
     { FinancialCashFlow::netBorrowings, CTEXT("Net Borrowings"), FIELD_PLOT(netBorrowings) },
-    { FinancialCashFlow::netIncome, CTEXT("Net Income"), FIELD_PLOT(netIncome) },
+    { FinancialCashFlow::netIncome, CTEXT("Net Income"), FIELD_PLOT(netIncome), true },
     { FinancialCashFlow::otherCashflowsFromFinancingActivities, CTEXT("Other Cashflows From Financing Activities"), FIELD_PLOT(otherCashflowsFromFinancingActivities) },
     { FinancialCashFlow::otherNonCashItems, CTEXT("Other Non Cash Items"), FIELD_PLOT(otherNonCashItems) },
     { FinancialCashFlow::salePurchaseOfStock, CTEXT("Sale Purchase Of Stock"), FIELD_PLOT(salePurchaseOfStock) },
@@ -469,7 +470,7 @@ struct {
 
 } INCOME_FIELDS[] = {
 
-    { FinancialIncome::netIncome, CTEXT("Net Income"), FIELD_PLOT(netIncome), true },
+    { FinancialIncome::netIncome, CTEXT("Net Income"), FIELD_PLOT(netIncome), false },
     { FinancialIncome::grossProfit, CTEXT("Gross Profit"), FIELD_PLOT(grossProfit), true },
     { FinancialIncome::totalRevenue, CTEXT("Total Revenue"), FIELD_PLOT(totalRevenue), true },
     { FinancialIncome::totalOperatingExpenses, CTEXT("Total Operating Expenses"), FIELD_PLOT(totalOperatingExpenses) },
@@ -477,7 +478,7 @@ struct {
     { FinancialIncome::depreciationAndAmortization, CTEXT("Depreciation And Amortization"), FIELD_PLOT(depreciationAndAmortization) },
     { FinancialIncome::discontinuedOperations, CTEXT("Discontinued Operations"), FIELD_PLOT(discontinuedOperations) },
     { FinancialIncome::ebit, CTEXT("EBIT"), FIELD_PLOT(ebit) },
-    { FinancialIncome::ebitda, CTEXT("EBITDA"), FIELD_PLOT(ebitda) },
+    { FinancialIncome::ebitda, CTEXT("EBITDA"), FIELD_PLOT(ebitda), true },
     { FinancialIncome::effectOfAccountingCharges, CTEXT("Effect Of Accounting Charges"), FIELD_PLOT(effectOfAccountingCharges) },
     { FinancialIncome::extraordinaryItems, CTEXT("Extraordinary Items"), FIELD_PLOT(extraordinaryItems) },
     { FinancialIncome::incomeBeforeTax, CTEXT("Income Before Tax"), FIELD_PLOT(incomeBeforeTax) },
@@ -741,7 +742,9 @@ FOUNDATION_STATIC financials_window_t* financials_window_allocate(const char* sy
     financials_window_t* window = MEM_NEW(HASH_FINANCIALS, financials_window_t);
 
     string_copy(STRING_BUFFER(window->symbol), symbol, symbol_length);
-    string_format(STRING_BUFFER(window->title), STRING_CONST("Financials %.*s"), (int)symbol_length, symbol);
+
+    string_const_t stock_name = stock_get_name(symbol, symbol_length);
+    tr_format(STRING_BUFFER(window->title), "{0} - Financials", stock_name);
     
     if (!eod_fetch_async("fundamentals", symbol, FORMAT_JSON_CACHE, L1(financials_fetch_data(window, _1))))
     {
@@ -779,6 +782,23 @@ FOUNDATION_STATIC bool financials_sheet_has_data_for_field(T* sheets, size_t fie
     return false;
 }
 
+template<typename T>
+FOUNDATION_STATIC bool financials_field_selected(const T& c)
+{
+    char keyname_buffer[64];
+    string_t keyname = string_format(keyname_buffer, sizeof(keyname_buffer), STRING_CONST("financial##%.*s"), STRING_FORMAT(c.name));
+    return session_get_bool(keyname.str, c.selected);
+}
+
+template<typename T>
+FOUNDATION_STATIC void financials_field_set_selected(T& c, bool selected)
+{
+    char keyname_buffer[64];
+    string_t keyname = string_format(keyname_buffer, sizeof(keyname_buffer), STRING_CONST("financial##%.*s"), STRING_FORMAT(c.name));
+    c.selected = selected;
+    session_set_bool(keyname.str, c.selected);
+}
+
 template<typename S, typename T, size_t N>
 FOUNDATION_STATIC bool financials_render_sheet_selector(const char* label, const S* sheets, T (&indicators)[N])
 {
@@ -790,7 +810,7 @@ FOUNDATION_STATIC bool financials_render_sheet_selector(const char* label, const
     for (size_t i = 0, added = 0; i < N; ++i)
     {
         const auto& c = indicators[i];
-        if (!c.selected)
+        if (!financials_field_selected(c))
             continue;
 
         string_const_t nametr = tr(STRING_ARGS(c.name), false);
@@ -826,12 +846,16 @@ FOUNDATION_STATIC bool financials_render_sheet_selector(const char* label, const
             // Check if we have any data for that indicator
             if (!financials_sheet_has_data_for_field(sheets, c.field_offset))
                 continue;
-                
-            string_const_t ex_id = tr(STRING_ARGS(c.name), false);
-            if (ImGui::Checkbox(ex_id.str, &c.selected))
-                updated = true;
 
-            if (!focused && c.selected)
+            bool selected = financials_field_selected(c);
+            string_const_t ex_id = tr(STRING_ARGS(c.name), false);
+            if (ImGui::Checkbox(ex_id.str, &selected))
+            {
+                updated = true;
+                financials_field_set_selected(c, selected);
+            }
+
+            if (!focused && selected)
             {
                 ImGui::SetItemDefaultFocus();
                 focused = true;
@@ -875,7 +899,8 @@ FOUNDATION_STATIC void financials_window_render(window_handle_t win)
         window->auto_fit = false;
     }
 
-    if (!ImPlot::BeginPlot("Financials", ImVec2(-1, -1), ImPlotFlags_NoChild | ImPlotFlags_NoFrame | ImPlotFlags_NoTitle))
+    
+    if (!ImPlot::BeginPlot(window->title, ImVec2(-1, -1), ImPlotFlags_NoChild | ImPlotFlags_NoFrame))
         return;
 
     ImPlot::SetupAxis(ImAxis_X1, "##Date", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight);
@@ -952,7 +977,7 @@ FOUNDATION_STATIC void financials_window_render(window_handle_t win)
         for (int i = 0; i < ARRAY_COUNT(CASH_FLOW_FIELDS); ++i)
         {
             const auto& c = CASH_FLOW_FIELDS[i];
-            if (!c.selected || c.plot_fn == nullptr)
+            if (!financials_field_selected(c) || c.plot_fn == nullptr)
                 continue;
 
             const auto record_count = array_size(window->cash_flows);
@@ -966,7 +991,7 @@ FOUNDATION_STATIC void financials_window_render(window_handle_t win)
         for (int i = 0; i < ARRAY_COUNT(INCOME_FIELDS); ++i)
         {
             const auto& c = INCOME_FIELDS[i];
-            if (!c.selected || c.plot_fn == nullptr)
+            if (!financials_field_selected(c) || c.plot_fn == nullptr)
                 continue;
 
             const auto record_count = array_size(window->incomes);
@@ -980,7 +1005,7 @@ FOUNDATION_STATIC void financials_window_render(window_handle_t win)
         for (int i = 0; i < ARRAY_COUNT(BALANCE_FIELDS); ++i)
         {
             const auto& c = BALANCE_FIELDS[i];
-            if (!c.selected || c.plot_fn == nullptr)
+            if (!financials_field_selected(c) || c.plot_fn == nullptr)
                 continue;
 
             const auto record_count = array_size(window->balances);
