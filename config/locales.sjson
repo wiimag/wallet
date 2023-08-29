@@ -4113,57 +4113,67 @@
 		{
 			hash = "ba7ebbbacd74935"
 			en = "Additional Paid In Capital"
-			fr = "@TODO"
+			fr = "Capital vers\xc3\xa9 en sus"
 		}
 		{
 			hash = "23305e30658e620b"
 			en = "Deferred Long Term Asset Charges"
-			fr = "@TODO"
+			fr = "Charges d'actifs \xc3\xa0 long terme diff\xc3\xa9r\xc3\xa9es"
 		}
 		{
 			hash = "b11aaeb9f024bbfc"
 			en = "Noncontrolling Interest In Consolidated Entity"
-			fr = "@TODO"
+			fr = "Int\xc3\xa9r\xc3\xaats ne donnant pas le contr\xc3\xb4le sur une entit\xc3\xa9 consolid\xc3\xa9e"
 		}
 		{
 			hash = "41d6305ef36ec67f"
 			en = "Preferred Stock Total Equity"
-			fr = "@TODO"
+			fr = "Total des capitaux propres des actions privil\xc3\xa9gi\xc3\xa9es"
 		}
 		{
 			hash = "50f010538a669a86"
 			en = "Temporary Equity Redeemable Noncontrolling Interests"
-			fr = "@TODO"
+			fr = "Capitaux propres temporaires int\xc3\xa9r\xc3\xaats ne donnant pas le contr\xc3\xb4le sur une entit\xc3\xa9 consolid\xc3\xa9e"
 		}
 		{
 			hash = "6079ad0e34295013"
 			en = "Total Permanent Equity"
-			fr = "@TODO"
+			fr = "Total des capitaux propres permanents"
 		}
 		{
 			hash = "fc61f69fe77cccbb"
 			en = "Treasury Stock"
-			fr = "@TODO"
+			fr = "Actions propres"
 		}
 		{
 			hash = "75d93e15fb86552f"
 			en = "Exchange Rate Changes"
-			fr = "@TODO"
+			fr = "Changements de taux de change"
 		}
 		{
 			hash = "c740da39cb30da08"
 			en = "{0} - Financials"
-			fr = "@TODO"
+			fr = "{0} - Donn\xc3\xa9es financi\xc3\xa8res"
 		}
 		{
 			hash = "8c1aec60fb3d86ec"
 			en = "Revenues"
-			fr = "@TODO"
+			fr = "Revenus"
 		}
 		{
 			hash = "5e66cf29fa9defab"
 			en = "SMA"
-			fr = "@TODO"
+			fr = "SMA"
+		}
+		{
+			hash = "41e274e1e1b74514"
+			en = "Column Expression Editor"
+			fr = "Editeur d'expression de colonne"
+		}
+		{
+			hash = "713dd6694018ebef"
+			en = "Edit in Editor"
+			fr = "Modifier dans l'\xc3\xa9diteur"
 		}
 	]
 }

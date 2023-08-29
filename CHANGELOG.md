@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.32.0] - 2023-08-28
+## [0.32.1] - 2023-08-29
+- [Add report column expression text editor](https://github.com/wiimag/wallet/pull/36)
 - Add polynomial regression to pattern Revenue view.
 - Improve stock financials charting.
 
