@@ -19,7 +19,7 @@
 struct report_expression_column_t
 {
     char name[64];
-    char expression[256];
+    char expression[2048];
     column_format_t format{ COLUMN_FORMAT_TEXT };
 };
 
@@ -209,6 +209,7 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
         }
         
         // Expression field
+        bool open_expression_editor = false;
         if (ImGui::TableNextColumn())
         {
             ImGui::ExpandNextItem();
@@ -217,9 +218,31 @@ FOUNDATION_STATIC bool report_render_expression_columns_dialog(void* user_data)
             {
                 if (ImGui::TrMenuItem("Edit in Console"))
                     console_set_expression(c->expression, string_length(c->expression));
+                if (ImGui::TrMenuItem(tr("Edit in Editor")))
+                    open_expression_editor = true;
                 ImGui::EndPopup();
             }
         }
+
+        if (open_expression_editor)
+            ImGui::OpenPopup(tr("Column Expression Editor"));
+
+        ImGui::SetNextWindowSize(IM_SCALEV(350, 200), ImGuiCond_FirstUseEver);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
+        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
+        if (ImGui::BeginPopupModal(tr("Column Expression Editor"), nullptr,  ImGuiWindowFlags_AlwaysUseWindowPadding))
+        {
+            ImGui::ExpandNextItem();
+            ImGui::InputTextMultiline("##Expression", c->expression, sizeof(c->expression), 
+                ImVec2(0, IM_SCALEF(-40)), ImGuiInputTextFlags_AllowTabInput);
+            if (ImGui::ButtonRightAligned(tr("Close")))
+            {
+                update_table = true;
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+        ImGui::PopStyleVar(2);
 
         // Format selector
         if (ImGui::TableNextColumn())
