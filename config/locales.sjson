@@ -4175,5 +4175,29 @@
 			en = "Edit in Editor"
 			fr = "Modifier dans l'\xc3\xa9diteur"
 		}
+		{
+			hash = "140e045d7f3acc14"
+			en = "Library Function?"
+		}
+		{
+			hash = "e603045ee332fce"
+			en = "function_name"
+		}
+		{
+			hash = "a4326feed67ae086"
+			en = "\xee\xa4\xab Delete"
+		}
+		{
+			hash = "6943a21ade9350b1"
+			en = "Function libraries"
+		}
+		{
+			hash = "552c1bdef344bb49"
+			en = "Library functions"
+		}
+		{
+			hash = "1dd0dafbb3034f2a"
+			en = "If checked, the script will be registered as a global function and not executed as a script.\nUse this to create functions that can be called from other scripts.\n\nUse a snake case name for the function, e.g. 'my_function'"
+		}
 	]
 }

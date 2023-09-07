@@ -31,9 +31,9 @@ FOUNDATION_STATIC string_const_t scripts_config_path()
     return session_get_user_file_path(STRING_CONST("scripts.json"));
 }
 
-FOUNDATION_STATIC bool script_evaluate(script_t* script)
+FOUNDATION_STATIC expr_result_t script_evaluate(script_t* script)
 {
-    if (!script->load_on_startup && script->show_console)
+    if (script->show_console)
         console_show();
 
     string_const_t name = string_const(script->name, string_length(script->name));
@@ -48,7 +48,6 @@ FOUNDATION_STATIC bool script_evaluate(script_t* script)
     expr_set_global_var(STRING_CONST("$SCRIPT_NAME_FULL"), STRING_ARGS(formatted_name));
 
     // TODO: Guard against system exceptions.
-
     auto result = eval(STRING_LENGTH(script->text));
     if (EXPR_ERROR_CODE != EXPR_ERROR_NONE)
     {
@@ -58,12 +57,60 @@ FOUNDATION_STATIC bool script_evaluate(script_t* script)
             STRING_FORMAT(formatted_name), EXPR_ERROR_MSG);
         console_show();
     }
-    if (!script->load_on_startup)
+
+    if (!script->function_library)
     {
         script->last_executed = time_now();
         array_sort(_->scripts, ARRAY_COMPARE_EXPRESSION(b.last_executed - a.last_executed));
     }
-    return result.as_boolean();
+
+    return result;
+}
+
+FOUNDATION_STATIC script_t* script_find_by_name(const char* name, size_t length)
+{
+    for (size_t i = 0, count = array_size(_->scripts); i < count; ++i)
+    {
+        script_t* script = _->scripts + i;
+        if (string_equal_nocase(STRING_LENGTH(script->name), name, length))
+            return script;
+    }
+
+    return nullptr;
+}
+
+FOUNDATION_STATIC expr_result_t script_evaluate_function(const expr_func_t* f, vec_expr_t* args, void* context)
+{
+    // Find script by name
+    script_t* script = script_find_by_name(STRING_ARGS(f->name));
+    if (!script)
+        throw ExprError(EXPR_ERROR_INVALID_FUNCTION_NAME, "Script not found");
+
+    // Expand arguments to @1, @2, @3, etc
+    for (unsigned i = 0; i < (unsigned)args->len; ++i)
+    {
+        char arg_name_buffer[16];
+        string_t arg_name = string_format(arg_name_buffer, sizeof(arg_name_buffer), STRING_CONST("@%u"), i + 1);
+        
+        expr_result_t arg_value = expr_eval(args->get(i));
+        expr_set_global_var(STRING_ARGS(arg_name), arg_value);
+    }
+
+    // Evaluate script
+    return script_evaluate(script);
+}
+
+FOUNDATION_STATIC void script_register_function(script_t& script)
+{
+    if (string_length(script.name) == 0)
+        return;
+
+    hash_t funciton_name_hash = string_hash(script.name, string_length(script.name));
+    if (script.function_registered == funciton_name_hash)
+        return;
+
+    expr_register_function(script.name, script_evaluate_function, nullptr, 0);
+    script.function_registered = funciton_name_hash;
 }
 
 FOUNDATION_STATIC script_t* scripts_load()
@@ -93,10 +140,11 @@ FOUNDATION_STATIC script_t* scripts_load()
         script.last_modified = e["last_modified"].as_time();
 
         script.show_console = e["show_console"].as_boolean(false);
-        script.load_on_startup = e["load_on_startup"].as_boolean(false);
+        script.function_library = e["function_library"].as_boolean(false);
 
-        if (script.load_on_startup)
-            script_evaluate(&script);
+        // Register script as a global function
+        if (script.function_library)
+            script_register_function(script);
 
         array_push_memcpy(scripts, &script);
     }
@@ -123,7 +171,7 @@ FOUNDATION_STATIC void scripts_save(script_t* scripts)
         config_set(cv, "last_modified", (double)script->last_modified);
 
         config_set(cv, "show_console", script->show_console);
-        config_set(cv, "load_on_startup", script->load_on_startup);
+        config_set(cv, "function_library", script->function_library);
     }
 
     string_const_t scripts_config_file_path = scripts_config_path();
@@ -136,23 +184,33 @@ FOUNDATION_STATIC void script_render_window(window_handle_t win)
     script_t* script = (script_t*)window_get_user_data(win);
     FOUNDATION_ASSERT(script != nullptr);
 
+    bool register_function = false;
+    if (ImGui::Checkbox(tr("Library Function?"), &script->function_library))
+    {
+        register_function = script->function_library;
+        script->last_modified = time_now();
+    }
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::SetTooltip(tr("If checked, the script will be registered as a global function and not executed as a script.\n"
+            "Use this to create functions that can be called from other scripts.\n\n"
+            "Use a snake case name for the function, e.g. 'my_function'"));
+    }
+
+    ImGui::SameLine(0.0f, IM_SCALEF(15));
     ImGui::AlignTextToFramePadding();
     ImGui::TrTextUnformatted("Name");
 
-    ImGui::SameLine();
+    ImGui::SameLine(0.0f, IM_SCALEF(5));
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.3f);
     if (ImGui::InputText("##Name", STRING_BUFFER(script->name)))
     {
+        if (script->function_library)
+            register_function = true;
         script->last_modified = time_now();
     }
 
-    ImGui::SameLine();
-    if (ImGui::Checkbox("Run on startup", &script->load_on_startup))
-    {
-        script->last_modified = time_now();
-    }
-
-    if (!script->load_on_startup)
+    if (!script->function_library)
     {
         ImGui::SameLine();
         if (ImGui::Checkbox("Show console", &script->show_console))
@@ -174,17 +232,19 @@ FOUNDATION_STATIC void script_render_window(window_handle_t win)
         }
     }
 
-    ImGui::SameLine();
-    if (ImGui::Button(tr("Evaluate")))
+    if (!script->function_library)
     {
-        script_evaluate(script);
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Evaluate")))
+        {
+            script_evaluate(script);
+        }
     }
     ImGui::EndDisabled();
 
     if (!script->is_new)
     {
-        ImGui::SameLine();
-        if (ImGui::Button(tr("Delete")))
+        if (ImGui::ButtonRightAligned(tr(ICON_MD_DELETE_FOREVER " Delete"), true))
         {
             ImGui::OpenPopup(tr("Delete script?"));
         }
@@ -217,6 +277,11 @@ FOUNDATION_STATIC void script_render_window(window_handle_t win)
     {
         script->last_modified = time_now();
     }
+
+    if (register_function)
+    {
+        script_register_function(*script);
+    }
 }
 
 FOUNDATION_STATIC void script_close_new(window_handle_t win)
@@ -240,6 +305,73 @@ FOUNDATION_STATIC void scripts_create_new()
     window_open(HASH_SCRIPTS, STRING_ARGS(title), script_render_window, script_close_new, new_script);
 }
 
+FOUNDATION_STATIC void script_render_menu_item(script_t* script, unsigned i, float max_label_width)
+{
+    char menu_name_buffer[256];
+    string_t menu_name = string_utf8_unescape(STRING_BUFFER(menu_name_buffer), STRING_LENGTH(script->name));
+
+    if (script->function_library)
+        menu_name = string_prepend(STRING_ARGS(menu_name), sizeof(menu_name_buffer), STRING_CONST(ICON_MD_LIBRARY_BOOKS " "));
+
+    ImGui::PushID(script);
+    ImGui::BeginGroup();
+    ImGui::BeginDisabled(script->function_library);
+    if (ImGui::Selectable(menu_name.str, false, ImGuiSelectableFlags_AllowItemOverlap, {max_label_width, 0.0f}))
+    {
+        script_evaluate(script);
+    }
+    else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+    {
+        ImGui::SetTooltip("%s", script->text);
+    }
+    ImGui::EndDisabled();
+
+    ImGui::SameLine(max_label_width + IM_SCALEF(12));
+        
+    if (ImGui::SmallButton(ICON_MD_EDIT))
+    {
+        string_const_t name = string_const(script->name, string_length(script->name));
+        if (name.length >= 6 && name.str[0] == '\\' && name.str[1] == 'u')
+            name = string_const(name.str + 6, name.length - 6);
+
+        string_t title = tr_format(SHARED_BUFFER(256), "{0} [Script]", name);
+        window_open(HASH_SCRIPTS, STRING_ARGS(title), script_render_window, nullptr, script);
+        ImGui::CloseCurrentPopup();
+    }
+
+    ImGui::SameLine();
+    if (ImGui::SmallButton(ICON_MD_DELETE_FOREVER))
+    {
+        ImGui::OpenPopup(tr("Delete script?"));
+    }
+
+    if (ImGui::BeginPopupModal(tr("Delete script?"), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+    {
+        char formatted_name_buffer[256];
+        string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
+        ImGui::TrText("Delete script %.*s?", STRING_FORMAT(formatted_name));
+        ImGui::Separator();
+
+        if (ImGui::Button(tr("Delete"), { ImGui::GetContentRegionAvailWidth() * 0.5f, 0.0f }))
+        {
+            array_erase_ordered_safe(_->scripts, i);
+            i--;
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Cancel"), { ImGui::GetContentRegionAvailWidth(), 0.0f }))
+        {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+
+    ImGui::EndGroup();
+    ImGui::PopID();
+}
+
 FOUNDATION_STATIC void scripts_menu()
 {
     script_t* scripts = _->scripts;
@@ -253,82 +385,48 @@ FOUNDATION_STATIC void scripts_menu()
     if (ImGui::TrMenuItem("Create..."))
         scripts_create_new();
 
-    const unsigned scrit_count = array_size(scripts);
-
-    if (scrit_count)
-        ImGui::Separator();
+    bool has_function_library = false;
+    const unsigned script_count = array_size(scripts);
 
     float max_label_width = 100.0f;
-    for (unsigned i = 0, count = scrit_count; i < count; ++i)
+    for (unsigned i = 0, count = script_count; i < count; ++i)
     {
         script_t* script = scripts + i;
         max_label_width = math_max(max_label_width, ImGui::CalcTextSize(script->name).x);
+
+        if (script->function_library)
+            has_function_library = true;
     }
+
+    if (has_function_library)
+    {
+        if (ImGui::TrBeginMenu("Library functions"))
+        {
+            for (unsigned i = 0, count = script_count; i < count; ++i)
+            {
+                script_t* script = scripts + i;
+
+                if (!script->function_library)
+                    continue;
+
+                script_render_menu_item(script, i, max_label_width);
+            }
+
+            ImGui::EndMenu();
+        }
+    }
+
+    if (script_count)
+        ImGui::Separator();
     
-    for (unsigned i = 0, count = scrit_count; i < count; ++i)
+    for (unsigned i = 0, count = script_count; i < count; ++i)
     {
         script_t* script = scripts + i;
 
-        char menu_name_buffer[256];
-        string_t menu_name = string_utf8_unescape(STRING_BUFFER(menu_name_buffer), STRING_LENGTH(script->name));
+        if (script->function_library)
+            continue;
 
-        ImGui::PushID(script);
-        ImGui::BeginGroup();
-        ImGui::BeginDisabled(script->load_on_startup);
-        if (ImGui::Selectable(menu_name.str, false, ImGuiSelectableFlags_AllowItemOverlap, {max_label_width, 0.0f}))
-        {
-            script_evaluate(script);
-        }
-        else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
-        {
-            ImGui::SetTooltip("%s", script->text);
-        }
-        ImGui::EndDisabled();
-
-        ImGui::SameLine(max_label_width + IM_SCALEF(12));
-        
-        if (ImGui::SmallButton(ICON_MD_EDIT))
-        {
-            string_const_t name = string_const(script->name, string_length(script->name));
-            if (name.length >= 6 && name.str[0] == '\\' && name.str[1] == 'u')
-                name = string_const(name.str + 6, name.length - 6);
-
-            string_t title = tr_format(SHARED_BUFFER(256), "{0} [Script]", name);
-            window_open(HASH_SCRIPTS, STRING_ARGS(title), script_render_window, nullptr, script);
-            ImGui::CloseCurrentPopup();
-        }
-
-        ImGui::SameLine();
-        if (ImGui::SmallButton(ICON_MD_DELETE_FOREVER))
-        {
-            ImGui::OpenPopup(tr("Delete script?"));
-        }
-
-        if (ImGui::BeginPopupModal(tr("Delete script?"), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-        {
-            char formatted_name_buffer[256];
-            string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
-            ImGui::TrText("Delete script %.*s?", STRING_FORMAT(formatted_name));
-            ImGui::Separator();
-
-            if (ImGui::Button(tr("Delete"), { ImGui::GetContentRegionAvailWidth() * 0.5f, 0.0f }))
-            {
-                array_erase_ordered_safe(_->scripts, i);
-                i--;
-                ImGui::CloseCurrentPopup();
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button(tr("Cancel"), { ImGui::GetContentRegionAvailWidth(), 0.0f }))
-            {
-                ImGui::CloseCurrentPopup();
-            }
-
-            ImGui::EndPopup();
-        }
-
-        ImGui::EndGroup();
-        ImGui::PopID();
+        script_render_menu_item(script, i, max_label_width);
     }
 
     ImGui::EndMenu();

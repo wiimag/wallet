@@ -24,7 +24,8 @@ struct script_t
     time_t last_modified{ 0 };
     time_t last_executed{ 0 };
     bool show_console{ false };
-    bool load_on_startup{ false };
+    bool function_library{ false };
+    hash_t function_registered{ 0 };
 
     bool is_new{ false };
 };

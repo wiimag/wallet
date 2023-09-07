@@ -1,0 +1,44 @@
+$TITLE=ARKQ.US
+
+# For each hold stock, get next earning report
+$(next_earnings_report_date,
+	$t=$1
+
+	# Get earning history
+	$e=MAP(F($t, "Earnings.History"), [INDEX($2, 'reportDate'), INDEX($2, 'epsActual'), INDEX($2, 'epsEstimate')])
+
+	# Filter entries with no espEstimate
+	$e=FILTER($e, $3)
+
+	# Filter entries with an actual EPS
+	$e=FILTER($e, IF($2, false, true))
+
+	# Only keep the last entry
+	$e=INDEX($e, -1)
+
+	# Return the date
+	$e=INDEX($e, 0)
+)
+
+$(next_etf_holding_report_date, 
+
+	$t=$1
+
+	# Get ETF holdings
+	$h=F($t, "ETF_Data.Top_10_Holdings")
+	$h=MAP($h, $1)
+
+	# Get the next earning report date for each stock
+	$d=MAP($h, [$1, $z=next_earnings_report_date($1), DATE($z)))
+
+	# Sort by date
+	$d=SORT($d, 1, 2)
+
+	# Remap to get the stock name
+	$d=MAP($d, [$1, $2])
+
+	# Return first element date
+	INDEX($d, 0, 1)	
+)
+
+next_etf_holding_report_date('ARKQ.US')
