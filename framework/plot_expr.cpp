@@ -52,7 +52,11 @@ FOUNDATION_STATIC void plot_expr_render_window(window_handle_t win)
     const size_t graph_count = array_size(plot->graphs);
     ImPlotFlags flags = ImPlotFlags_NoChild | ImPlotFlags_NoFrame;
     if (graph_count <= 1)
-        flags |= ImPlotFlags_NoTitle | ImPlotFlags_NoLegend;
+        flags |= ImPlotFlags_NoLegend;
+
+    const bool wants_title = plot_expr_has_option(plot, "title");
+    if (!wants_title)
+        flags |= ImPlotFlags_NoTitle;
 
     if (!ImPlot::BeginPlot(plot->id.str, ImGui::GetContentRegionAvail(), flags))
         return;

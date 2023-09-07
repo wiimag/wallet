@@ -236,6 +236,13 @@ string_const_t expr_result_t::as_string(const char* fmt /*= nullptr*/) const
     return string_null();
 }
 
+FOUNDATION_STATIC const expr_result_t* expr_eval_empty_list()
+{
+    expr_result_t* empty_list = nullptr;
+    array_reserve(empty_list, 1);
+    return expr_eval_list(empty_list);
+}
+
 const expr_result_t* expr_eval_list(const expr_result_t* list)
 {
     if (list)
@@ -1047,9 +1054,17 @@ FOUNDATION_STATIC expr_result_t expr_eval_if(const expr_func_t* f, vec_expr_t* a
         }
     }
 
-    expr_result_t condition = expr_eval(condarg);
-    if (condition)
-        return expr_eval(args->get(1));
+    try
+    {
+        expr_result_t condition = expr_eval(condarg);
+        if (condition)
+            return expr_eval(args->get(1));
+    }
+    catch (ExprError& e)
+    {
+        if (e.code >= EXPR_ERROR_FATAL_ERROR)
+            throw;
+    }
 
     if (args->len == 2)
         return NIL;
@@ -1097,6 +1112,30 @@ FOUNDATION_STATIC bool expr_sort_results_comparer(const expr_result_t& a, const 
     return n1 >= n2;
 }
 
+FOUNDATION_STATIC expr_result_t expr_eval_print(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Print all arguments using log_info
+    char arg_string_buffer[4096] = "";
+    string_t arg_string = string_copy(arg_string_buffer, sizeof(arg_string_buffer), STRING_CONST(""));
+
+    for (unsigned i = 0; i < (unsigned)args->len; ++i)
+    {
+        expr_result_t arg_value = expr_eval(args->get(i));
+        string_const_t arg_value_string = arg_value.as_string();
+        arg_string = string_append(STRING_ARGS(arg_string), sizeof(arg_string_buffer), STRING_ARGS(arg_value_string));
+        
+        // Add space between arguments
+        if (i < (unsigned)args->len - 1)
+        {
+            arg_string = string_append(STRING_ARGS(arg_string), sizeof(arg_string_buffer), STRING_CONST(" "));
+        }
+    }
+
+    log_info(HASH_EXPR, STRING_ARGS(arg_string));
+
+    return NIL;
+}
+
 FOUNDATION_STATIC expr_result_t expr_eval_sort(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Examples: SORT([2, 1, 3]) => [1, 2, 3]
@@ -1109,6 +1148,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_sort(const expr_func_t* f, vec_expr_t*
 
     // Get first argument elements
     expr_result_t elements = expr_eval(args->get(0));
+
+    if (elements.is_null())
+        return expr_eval_empty_list();
+
     if (!elements.is_set())
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a set");
 
@@ -1289,6 +1332,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
 
     expr_result_t elements = expr_eval(&args->buf[0]);
+
+    if (elements.is_null())
+        return expr_eval_empty_list();
+
     if (!elements.is_set())
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a result set");
 
@@ -1342,6 +1389,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
 
     expr_result_t elements = expr_eval(&args->buf[0]);
+
+    if (elements.is_null())
+        return expr_eval_empty_list();
+
     if (!elements.is_set())
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "First argument must be a result set");
 
@@ -1368,19 +1419,28 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
             }
         }
 
-        expr_result_t r = expr_eval(&args->buf[1]);
-        if (r.is_set() && r.index == NO_INDEX)
-            r.index = r.element_count() - 1;
-        array_push_memcpy(results, &r);
-
-        // Restore global variables
-        for (unsigned i = 0, end = array_size(var_stack); i < end; ++i)
+        try
         {
-            char varname[4];
-            string_t macro = string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), i+1);
-            expr_set_or_create_global_var(STRING_ARGS(macro), var_stack[i]);
+            expr_result_t r = expr_eval(&args->buf[1]);
+            if (r.is_set() && r.index == NO_INDEX)
+                r.index = r.element_count() - 1;
+            array_push_memcpy(results, &r);
+
+            // Restore global variables
+            for (unsigned i = 0, end = array_size(var_stack); i < end; ++i)
+            {
+                char varname[4];
+                string_t macro = string_format(STRING_BUFFER(varname), STRING_CONST("$%d"), i+1);
+                expr_set_or_create_global_var(STRING_ARGS(macro), var_stack[i]);
+            }
+
+            array_deallocate(var_stack);
         }
-        array_deallocate(var_stack);
+        catch (ExprError& e)
+        {
+            array_deallocate(var_stack);
+            throw e;
+        }
     }
 
     return expr_eval_list(results);
@@ -1395,6 +1455,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_array_index(const expr_func_t* f, vec_
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
 
     expr_result_t arr = expr_eval(&args->buf[0]);
+
+    if (arr.is_null())
+        return NIL;
+
     if (!arr.is_set())
         throw ExprError(EXPR_ERROR_EMPTY_SET, "Nothing to index (%d)", arr.type);
 
@@ -2517,6 +2581,13 @@ bool expr_set_global_var(const char* name, double value)
     return expr_set_global_var(name, string_length(name), value);
 }
 
+bool expr_set_global_var(const char* name, size_t name_length, const expr_result_t& value)
+{
+    expr_var_t* v = expr_get_or_create_global_var(name, name_length);
+    v->value = value;
+    return true;
+}
+
 bool expr_set_global_var(const char* name, size_t name_length, const char* str, size_t str_length)
 {
     expr_var_t* v = expr_get_or_create_global_var(name, name_length);
@@ -2641,6 +2712,7 @@ FOUNDATION_STATIC void expr_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REPEAT"), expr_eval_repeat, NULL, 0 })); // REPEAT(RANDOM($i, $count), 5)
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REDUCE"), expr_eval_reduce, NULL, 0 })); // REDUCE([1, 2, 3], ADD(), 5) == 11
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SORT"), expr_eval_sort, NULL, 0 })); // SORT(R('300K', ps), DESC, 1)
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("PRINT"), expr_eval_print, NULL, 0 })); // PRINT(1, 2, 3)
 
     // Math functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ROUND"), expr_eval_round, NULL, 0 })); // ROUND(1.5) == 2

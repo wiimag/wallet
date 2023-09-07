@@ -496,10 +496,14 @@ FOUNDATION_STATIC void report_column_contextual_menu(report_handle_t report_hand
     ImGui::MoveCursor(8.0f, 4.0f);
     ImGui::BeginGroup();
     {
-        ImGui::BeginDisabled(true);
-        ImGui::MenuItem(stock_get_name(title->stock).str);
-        ImGui::Separator();
-        ImGui::EndDisabled();
+        string_const_t stock_name = stock_get_name(title->stock);
+        if (stock_name.length)
+        {
+            ImGui::BeginDisabled(true);
+            ImGui::MenuItem(stock_name.str);
+            ImGui::Separator();
+            ImGui::EndDisabled();
+        }
 
         if (ImGui::MenuItem(tr(ICON_MD_SHOPPING_CART " Buy")))
             report_open_buy_lot_dialog(report_get(report_handle), title);

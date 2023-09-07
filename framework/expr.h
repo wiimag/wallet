@@ -40,6 +40,8 @@ typedef enum ExprErrorCode : int {
     EXPR_ERROR_EMPTY_SET,
     EXPR_ERROR_EVAL_FUNCTION,
 
+    EXPR_ERROR_FATAL_ERROR = 8000,
+
     // Parsing errors
     EXPR_ERROR_ALLOCATION_FAILED = -1,
     EXPR_ERROR_UNEXPECTED_NUMBER = -2,			// unexpected number
@@ -504,7 +506,7 @@ struct expr_result_t
      */
     FOUNDATION_FORCEINLINE bool is_set() const
     {
-        if (type == EXPR_RESULT_ARRAY && array_size(list) > 0)
+        if (type == EXPR_RESULT_ARRAY)
             return true;
         if (type == EXPR_RESULT_POINTER)
             return true;
@@ -1272,6 +1274,14 @@ bool expr_set_global_var(const char* name, void* ptr, size_t size = 0);
  *  @param str_length Length of the string, or -1 if null terminated.
  */
 bool expr_set_global_var(const char* name, size_t name_length, const char* str, size_t str_length);
+
+/*! Set the global variable to an expression result value.
+ * 
+ *  @param name Name of the variable.
+ *  @param value Expression result value to set.
+ *  @return true if the variable was set, false if the variable was not found.
+ */
+bool expr_set_global_var(const char* name, size_t name_length, const expr_result_t& value);
 
 /*! Set the global variable to a given number value. 
  * 

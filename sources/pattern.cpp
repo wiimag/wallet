@@ -16,6 +16,7 @@
 #include "logo.h"
 #include "watches.h"
 #include "backend.h"
+#include "scripts.h"
 
 #include <framework/app.h>
 #include <framework/jobs.h>
@@ -3232,6 +3233,19 @@ FOUNDATION_STATIC void pattern_render_graph_panel(pattern_t* pattern, const ImRe
     pattern_render_graphs(pattern);
 }
 
+FOUNDATION_STATIC void pattern_update_expression_context(const char* symbol, size_t length)
+{
+    string_const_t code = string_const(symbol, length);
+    expr_set_global_var(STRING_CONST("$TITLE"), STRING_ARGS(code));
+    expr_set_global_var(STRING_CONST("$PATTERN"), STRING_ARGS(code));
+}
+
+FOUNDATION_STATIC void pattern_update_expression_context(pattern_t* pattern)
+{
+    string_const_t code = string_table_decode_const(pattern->code);
+    pattern_update_expression_context(STRING_ARGS(code));
+}
+
 FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_flags_t render_flags = PatternRenderFlags::None)
 {
     pattern_t* pattern = (pattern_t*)pattern_get(handle);
@@ -3260,10 +3274,7 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
     }
 
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
-    {
-        expr_set_global_var(STRING_CONST("$TITLE"), STRING_ARGS(code));
-        expr_set_global_var(STRING_CONST("$PATTERN"), STRING_ARGS(code));
-    }
+        pattern_update_expression_context(pattern);
 }
 
 FOUNDATION_STATIC bool pattern_render_summarized_news_dialog(void* context)
@@ -3755,6 +3766,9 @@ bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show
         pattern_open_watch_window(symbol, symbol_length);
     
     ImGui::Separator();
+
+    pattern_update_expression_context(symbol, symbol_length);
+    scripts_render_pattern_menu_items();
 
     if (ImGui::TrBeginMenu(ICON_MD_ADD_PHOTO_ALTERNATE " Update Logo"))
     {
