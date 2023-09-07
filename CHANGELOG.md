@@ -1,7 +1,8 @@
 # Changelog
 
 ## [0.32.2] - 2023-09-07
-- [Add support to register new expression functions from scripts]()
+- [Add support to register new expression functions from scripts](https://github.com/wiimag/wallet/pull/37)
+- Add support to execute pattern scripts from the pattern view or from the title contextual menu.
 - [Add report column expression text editor](https://github.com/wiimag/wallet/pull/36)
 - Add polynomial regression to pattern Revenue view.
 - Improve stock financials charting.
