@@ -29,3 +29,6 @@ struct script_t
 
     bool is_new{ false };
 };
+
+/*! Render the IMGUI menu items for the scripts module that can be executed for a pattern */
+void scripts_render_pattern_menu_items();

@@ -4199,5 +4199,9 @@
 			hash = "1dd0dafbb3034f2a"
 			en = "If checked, the script will be registered as a global function and not executed as a script.\nUse this to create functions that can be called from other scripts.\n\nUse a snake case name for the function, e.g. 'my_function'"
 		}
+		{
+			hash = "907b511a03d9a05c"
+			en = "\xee\x80\xaf Scripts"
+		}
 	]
 }

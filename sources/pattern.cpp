@@ -16,6 +16,7 @@
 #include "logo.h"
 #include "watches.h"
 #include "backend.h"
+#include "scripts.h"
 
 #include <framework/app.h>
 #include <framework/jobs.h>
@@ -3771,6 +3772,8 @@ bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show
         pattern_add_to_report_menu(symbol, symbol_length);
         ImGui::EndMenu();
     }
+
+    scripts_render_pattern_menu_items();
 
     ImGui::EndGroup();
     return item_executed;

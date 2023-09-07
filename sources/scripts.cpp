@@ -433,6 +433,44 @@ FOUNDATION_STATIC void scripts_menu()
     ImGui::EndMenuBar();
 }
 
+void scripts_render_pattern_menu_items()
+{
+    script_t* scripts = _->scripts;
+    const unsigned script_count = array_size(scripts);
+
+    if (script_count == 0)
+        return;
+
+    if (!ImGui::TrBeginMenu(ICON_MD_LIBRARY_BOOKS " Scripts"))
+        return;
+
+    float max_label_width = 100.0f;
+    for (unsigned i = 0, count = script_count; i < count; ++i)
+    {
+        script_t* script = scripts + i;
+        max_label_width = math_max(max_label_width, ImGui::CalcTextSize(script->name).x);
+    }
+    
+    for (unsigned i = 0, count = script_count; i < count; ++i)
+    {
+        script_t* script = scripts + i;
+
+        if (script->function_library)
+            continue;
+
+        // Check if the script text contains either $TITLE or $PATTERN
+        const size_t text_length = string_length(script->text);
+        if (string_find_string(script->text, text_length, STRING_CONST("$TITLE"), 0) == STRING_NPOS &&
+            string_find_string(script->text, text_length, STRING_CONST("$PATTERN"), 0) == STRING_NPOS)
+            continue;
+
+        ImGui::AlignTextToFramePadding();
+        script_render_menu_item(script, i, max_label_width);
+    }
+
+    ImGui::EndMenu();
+}
+
 //
 // SYSTEM
 //
