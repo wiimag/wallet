@@ -305,7 +305,7 @@ FOUNDATION_STATIC void scripts_create_new()
     window_open(HASH_SCRIPTS, STRING_ARGS(title), script_render_window, script_close_new, new_script);
 }
 
-FOUNDATION_STATIC void script_render_menu_item(script_t* script, unsigned i, float max_label_width)
+FOUNDATION_STATIC void script_render_menu_item(script_t* script, unsigned i, float max_label_width, bool editable = true)
 {
     char menu_name_buffer[256];
     string_t menu_name = string_utf8_unescape(STRING_BUFFER(menu_name_buffer), STRING_LENGTH(script->name));
@@ -326,46 +326,49 @@ FOUNDATION_STATIC void script_render_menu_item(script_t* script, unsigned i, flo
     }
     ImGui::EndDisabled();
 
-    ImGui::SameLine(max_label_width + IM_SCALEF(12));
-        
-    if (ImGui::SmallButton(ICON_MD_EDIT))
+    if (editable)
     {
-        string_const_t name = string_const(script->name, string_length(script->name));
-        if (name.length >= 6 && name.str[0] == '\\' && name.str[1] == 'u')
-            name = string_const(name.str + 6, name.length - 6);
+        ImGui::SameLine(max_label_width + IM_SCALEF(12));
 
-        string_t title = tr_format(SHARED_BUFFER(256), "{0} [Script]", name);
-        window_open(HASH_SCRIPTS, STRING_ARGS(title), script_render_window, nullptr, script);
-        ImGui::CloseCurrentPopup();
-    }
-
-    ImGui::SameLine();
-    if (ImGui::SmallButton(ICON_MD_DELETE_FOREVER))
-    {
-        ImGui::OpenPopup(tr("Delete script?"));
-    }
-
-    if (ImGui::BeginPopupModal(tr("Delete script?"), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
-    {
-        char formatted_name_buffer[256];
-        string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
-        ImGui::TrText("Delete script %.*s?", STRING_FORMAT(formatted_name));
-        ImGui::Separator();
-
-        if (ImGui::Button(tr("Delete"), { ImGui::GetContentRegionAvailWidth() * 0.5f, 0.0f }))
+        if (ImGui::SmallButton(ICON_MD_EDIT))
         {
-            array_erase_ordered_safe(_->scripts, i);
-            i--;
+            string_const_t name = string_const(script->name, string_length(script->name));
+            if (name.length >= 6 && name.str[0] == '\\' && name.str[1] == 'u')
+                name = string_const(name.str + 6, name.length - 6);
+
+            string_t title = tr_format(SHARED_BUFFER(256), "{0} [Script]", name);
+            window_open(HASH_SCRIPTS, STRING_ARGS(title), script_render_window, nullptr, script);
             ImGui::CloseCurrentPopup();
         }
 
         ImGui::SameLine();
-        if (ImGui::Button(tr("Cancel"), { ImGui::GetContentRegionAvailWidth(), 0.0f }))
+        if (ImGui::SmallButton(ICON_MD_DELETE_FOREVER))
         {
-            ImGui::CloseCurrentPopup();
+            ImGui::OpenPopup(tr("Delete script?"));
         }
 
-        ImGui::EndPopup();
+        if (ImGui::BeginPopupModal(tr("Delete script?"), nullptr, ImGuiWindowFlags_AlwaysAutoResize))
+        {
+            char formatted_name_buffer[256];
+            string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
+            ImGui::TrText("Delete script %.*s?", STRING_FORMAT(formatted_name));
+            ImGui::Separator();
+
+            if (ImGui::Button(tr("Delete"), { ImGui::GetContentRegionAvailWidth() * 0.5f, 0.0f }))
+            {
+                array_erase_ordered_safe(_->scripts, i);
+                i--;
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::SameLine();
+            if (ImGui::Button(tr("Cancel"), { ImGui::GetContentRegionAvailWidth(), 0.0f }))
+            {
+                ImGui::CloseCurrentPopup();
+            }
+
+            ImGui::EndPopup();
+        }
     }
 
     ImGui::EndGroup();
@@ -465,7 +468,7 @@ void scripts_render_pattern_menu_items()
             continue;
 
         ImGui::AlignTextToFramePadding();
-        script_render_menu_item(script, i, max_label_width);
+        script_render_menu_item(script, i, max_label_width, false);
     }
 
     ImGui::EndMenu();

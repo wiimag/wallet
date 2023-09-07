@@ -4178,6 +4178,7 @@
 		{
 			hash = "140e045d7f3acc14"
 			en = "Library Function?"
+			fr = "Fonction de biblioth\xc3\xa8que?"
 		}
 		{
 			hash = "e603045ee332fce"
@@ -4186,6 +4187,7 @@
 		{
 			hash = "a4326feed67ae086"
 			en = "\xee\xa4\xab Delete"
+			fr = "\xee\xa4\xab Supprimer"
 		}
 		{
 			hash = "6943a21ade9350b1"
@@ -4194,14 +4196,17 @@
 		{
 			hash = "552c1bdef344bb49"
 			en = "Library functions"
+			fr = "Fonctions de biblioth\xc3\xa8que"
 		}
 		{
 			hash = "1dd0dafbb3034f2a"
 			en = "If checked, the script will be registered as a global function and not executed as a script.\nUse this to create functions that can be called from other scripts.\n\nUse a snake case name for the function, e.g. 'my_function'"
+			fr = "Si coch\xc3\xa9, le script sera enregistr\xc3\xa9 en tant que fonction globale et non ex\xc3\xa9cut\xc3\xa9 en tant que script.\nUtilisez ceci pour cr\xc3\xa9er des fonctions qui peuvent \xc3\xaatre appel\xc3\xa9es \xc3\xa0 partir d'autres scripts.\n\nUtilisez un nom de cas de serpent pour la fonction, par exemple 'ma_fonction'"
 		}
 		{
 			hash = "907b511a03d9a05c"
 			en = "\xee\x80\xaf Scripts"
+			fr = "\xee\x80\xaf Scripts"
 		}
 	]
 }

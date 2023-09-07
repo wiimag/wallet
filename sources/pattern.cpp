@@ -3757,6 +3757,8 @@ bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show
     
     ImGui::Separator();
 
+    scripts_render_pattern_menu_items();
+
     if (ImGui::TrBeginMenu(ICON_MD_ADD_PHOTO_ALTERNATE " Update Logo"))
     {
         if (ImGui::TrMenuItem(" Icon (32x32)"))
@@ -3772,8 +3774,6 @@ bool pattern_contextual_menu(const char* symbol, size_t symbol_length, bool show
         pattern_add_to_report_menu(symbol, symbol_length);
         ImGui::EndMenu();
     }
-
-    scripts_render_pattern_menu_items();
 
     ImGui::EndGroup();
     return item_executed;
