@@ -3,6 +3,10 @@
  * License: https://wiimag.com/LICENSE
  * 
  * This module uses code from https://github.com/zserge/expr
+ *
+ * $0 usually represents the last evaluated expression result.
+ * $1, $2, ... represent the last evaluated expression result in the corresponding thread.
+ * _ usually represents the current element in the set being iterated over.
  */
 
 #include "expr.h"
@@ -397,6 +401,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_create_date(const expr_func_t* f, vec_
     if (args->len == 1)
     {
         expr_result_t value = expr_eval(args->get(0));
+
+        if (value.type == EXPR_RESULT_NULL)
+            return DNAN;
+
         if (value.type == EXPR_RESULT_SYMBOL)
         {
             string_const_t datestr = value.as_string();
@@ -409,7 +417,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_create_date(const expr_func_t* f, vec_
 
     // Try to parse a date with individual arguments DATE(YYYY, MM, DD)
     if (args->len != 3)
-        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid argument count for DATE");
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid argument count for DATE(YYYY, MM, DD)");
 
     const int year = (int)expr_eval(args->get(0)).as_number(0);
     if (year < 1970)
@@ -1325,7 +1333,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_inline(const expr_func_t* f, vec_expr_
             }
 
             string_t ftxt = fs_read_text(STRING_ARGS(expression_text));
-            expr_result_t result = eval(STRING_ARGS(ftxt));
+            expr_result_t result = eval_inline(STRING_ARGS(ftxt));
             string_deallocate(ftxt);
 
             return result;
@@ -1365,7 +1373,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_filter(const expr_func_t* f, vec_expr_
     expr_result_t* results = nullptr;
     for (auto e : elements)
     {
-         expr_result_t* var_stack = nullptr;
+        // Set _ to the current element
+        expr_set_or_create_global_var(STRING_CONST("_"), e);
+
+        expr_result_t* var_stack = nullptr;
         if (!e.is_set())
         {
             array_push(var_stack, expr_get_global_var_value("$1"));
@@ -1423,6 +1434,9 @@ FOUNDATION_STATIC expr_result_t expr_eval_map(const expr_func_t* f, vec_expr_t* 
 
     for (auto e : elements)
     {
+        // Set _ to the current element
+        expr_set_or_create_global_var(STRING_CONST("_"), e);
+
         expr_result_t* var_stack = nullptr;
         if (!e.is_set())
         {
@@ -1482,8 +1496,9 @@ FOUNDATION_STATIC expr_result_t expr_eval_array_index(const expr_func_t* f, vec_
     if (arr.is_null())
         return NIL;
 
+    // If the array is not set, return the value itself
     if (!arr.is_set())
-        throw ExprError(EXPR_ERROR_EMPTY_SET, "Nothing to index (%d)", arr.type);
+        return arr;
 
     for (int i = 1; i < args->len; ++i)
     {
@@ -2449,6 +2464,31 @@ expr_result_t eval(const char* expression, size_t expression_length /*= -1*/)
     return eval(string_const(expression, expression_length != -1 ? expression_length : string_length(expression)));
 }
 
+expr_result_t eval_inline(const char* expression, size_t expression_length)
+{
+    expr_t* e = expr_create(expression, expression_length, &_global_vars, _expr_user_funcs);
+    if (e == NULL)
+        return NIL;
+
+    expr_set_or_create_global_var(STRING_CONST("$0"), nullptr);
+
+    expr_result_t result;
+    try
+    {
+        EXPR_ERROR_CODE = EXPR_ERROR_NONE;
+        result = expr_eval(e);
+    }
+    catch (ExprError err)
+    {
+        expr_error(err.code, string_const(expression, expression_length), nullptr,
+            "%.*s", err.message_length, err.message);
+    }
+
+    expr_destroy(e, nullptr);
+
+    return result;
+}
+
 expr_result_t eval(string_const_t expression)
 {
     memory_context_push(HASH_EXPR);
@@ -2471,29 +2511,10 @@ expr_result_t eval(string_const_t expression)
         }
     }
 
-    expr_t* e = expr_create(STRING_ARGS(expression), &_global_vars, _expr_user_funcs);
-    if (e == NULL)
-    {
-        memory_context_pop();
-        return NIL;
-    }
-
-    expr_set_or_create_global_var(STRING_CONST("$0"), nullptr);
-
-    expr_result_t result;
-    try
-    {
-        EXPR_ERROR_CODE = EXPR_ERROR_NONE;
-        result = expr_eval(e);
-    }
-    catch (ExprError err)
-    {
-        expr_error(err.code, expression, nullptr,
-            "%.*s", err.message_length, err.message);
-    }
-
-    expr_destroy(e, nullptr);
+    expr_result_t result = eval_inline(STRING_ARGS(expression));
+    
     memory_context_pop();
+
     return result;
 }
 

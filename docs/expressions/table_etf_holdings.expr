@@ -1,0 +1,19 @@
+#
+# The following example list in a table an ETF's holdings.
+#
+
+# Get ETF name
+etf_name = F($PATTERN, "General.Name")
+
+# Get ETFs holdings and filter out holdings with no close price (or delisted or suspended)
+holdings = MAP(FILTER(F($PATTERN, "ETF_Data.Holdings"), INDEX($2, Code) != nil && S($1, close) > 0), $1)
+
+# Display ETFs holdings in a table
+TABLE(etf_name + ' (' + COUNT(holdings) + ' holdings)', holdings, 
+    ['Symbol', $1, 'symbol'],                # Symbol of the stock
+    ['Name', S($1, name), 'string'],         # Name of the stock
+    ['Sector', S($1, sector), 'string'],         # Name of the stock
+    ['\ueb58', S($1, change_p), 'percentage'],    # Day change %
+    ['1Y', S($1, change_1y), 'percentage'],  # Performance over the last 1 year
+    ['MAX', S($1, change_max), 'percentage'] # Performance since inception
+)

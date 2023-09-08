@@ -1249,6 +1249,17 @@ expr_result_t eval(string_const_t expression);
 
 /*! Evaluate an expression.
  *
+ * @remark This version of the function does not clean the evaluation context, allowing for
+ *         multiple expressions to be evaluated in sequence.
+ * 
+ *  @param expression Expression to evaluate.
+ * 
+ *  @return Result of the expression evaluation.
+ */
+expr_result_t eval_inline(const char* expression, size_t expression_length);
+
+/*! Evaluate an expression.
+ *
  *  @param expression Expression to evaluate.
  *  @param expression_length Length of the expression string, or -1 if null terminated.
  *

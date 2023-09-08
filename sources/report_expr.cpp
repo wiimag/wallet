@@ -126,6 +126,8 @@ static struct {
 
     { "name",           SC2(string_table_decode(_2->name)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
     { "description",    SC2(string_table_decode(_2->description.fetch())), nullptr, FetchLevel::FUNDAMENTALS },
+    { "sector",         SC2(string_table_decode(_2->sector)), nullptr, FetchLevel::FUNDAMENTALS },
+    { "industry",       SC2(string_table_decode(_2->industry)), nullptr, FetchLevel::FUNDAMENTALS },
     { "country",        SC2(string_table_decode(_2->country)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
     { "type",           SC2(string_table_decode(_2->type)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },
     { "currency",       SC2(string_table_decode(_2->currency)), SL1(_1.index == 0), FetchLevel::FUNDAMENTALS },

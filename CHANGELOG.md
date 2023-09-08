@@ -1,6 +1,8 @@
 # Changelog
 
-## [0.32.3] - 2023-09-08
+## [0.32.4] - 2023-09-08
+- Add support for the token `_` when iterating over an array using `MAP(...), FILTER(...), etc...` to access the current item.
+- Add support for single item indexing with `INDEX('MSFT.TO', 0)`.
 - Add support to evaluate local expression files using `EVAL('C:/expression.txt', 'CTC-A.TO', @2, @3, ...)`.
 - [Add support to register new expression functions from scripts](https://github.com/wiimag/wallet/pull/37)
 - Add support to execute pattern scripts from the pattern view or from the title contextual menu.

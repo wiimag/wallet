@@ -1,0 +1,61 @@
+#
+# Fetch ETFs with a beta score between 0.5 and 2.0 and at least 1 valid holding.
+#
+# The data is fetched from the exchange symbol list and the ETF's holdings.
+# The beta score is calculated from the ETF's 1 year performance.
+# The ETF's holdings are filtered to only include active stocks.
+# 
+# Then ETFs are displayed in a table with the following columns:
+#   Symbol: The ETF's ticker symbol.
+#   Name: The ETF's name.
+#   Holding count: The number of holdings.
+#   Beta: The ETF's beta score.
+#   1st: The ETF's first holding.
+#   1Y: The ETF's 1 year performance.
+#   Updated: The date the ETF was last updated.
+#
+
+# Parse inputs
+market = IF(@1, @1, "TO")
+
+#PRINT("Fetching ETFs from " + market + "...")
+
+# Get market symbols
+symbols = FETCH("exchange-symbol-list", market)
+
+# Filter by type
+etfs = FILTER(symbols, INDEX(_, Type) == "ETF")
+
+# Build list of ETFs with minimal info
+etfs = MAP(etfs, [INDEX(_, Code) + '.' + market, INDEX(_, Name)]) # [$ticker, $name]
+
+# Print how many ETFs we have
+#PRINT("Found " + COUNT(etfs) + " ETFs")
+
+# Add ETF's holdings and make sure the stock being hold is still active
+etfs = MAP(etfs, [$1, $2, MAP(FILTER(F($1, "ETF_Data.Holdings"), INDEX($2, Code) != nil && S($1, close) > 0), $1)])   # [$ticker, $name, $holdings]
+etfs = MAP(etfs, [$1, $2, COUNT($3), $3])                         # [$ticker, $name, $num_holdings, $holdings]
+
+# Filter out ETFs with no holdings
+etfs = FILTER(etfs, $3 > 0)
+#PRINT("Found " + COUNT(etfs) + " ETFs with holdings")
+
+# Add ETF's beta score
+etfs = MAP(etfs, [$1, $2, $3, F($1, "Technicals.Beta"), F($1, "ETF_Data.Inception_Date"), $4]) # [$ticker, $name, $num_holdings, $beta, $date, $holdings]
+#PRINT(etfs)
+
+# Filter out ETFs with no beta score
+etfs = FILTER(etfs, $4 > 0.5 && $4 < 2.1)
+PRINT("Listing " + COUNT(etfs) + " ETFs")
+
+# Return ETFs
+TABLE('ETFs ' + market + ' (' + COUNT(etfs) + ')', etfs, 
+    ['Symbol', $1, 'symbol'],
+    ['Name', $2, 'string'],
+    ['\ueac7', $3, 'number'],
+    ['Beta', $4, 'number'],
+    ['1st', INDEX($6, 0), 'symbol'],
+    ['1Y', S($1, change_1y), 'percentage'], #TODO: Add deferred calculation for this type of column.
+    ['MAX', S($1, change_max), 'percentage'], #TODO: Add deferred calculation for this type of column.
+    ['Updated', $5, 'date']
+)

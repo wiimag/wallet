@@ -4208,5 +4208,10 @@
 			en = "\xee\x80\xaf Scripts"
 			fr = "\xee\x80\xaf Scripts"
 		}
+		{
+			hash = "c591fe959ca76ec4"
+			en = "Copyright (C) 2022-2023 - https://wiimag.com - All rights reserved"
+			fr = "@TODO"
+		}
 	]
 }
