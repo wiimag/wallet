@@ -1304,10 +1304,33 @@ FOUNDATION_STATIC expr_result_t expr_eval_round(const expr_func_t* f, vec_expr_t
 FOUNDATION_STATIC expr_result_t expr_eval_inline(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Examples: EVAL(1+1, 2+2, 3+3) == [2, 4, 6]
-    //       
+    //           EVAL("C:/expression.txt", "CTC-A.TO") == [...]
 
     if (args == nullptr || args->len < 1)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    if (args->len >= 1)
+    {
+        string_const_t expression_text = expr_eval(&args->buf[0]).as_string();
+        if (fs_is_file(STRING_ARGS(expression_text)))
+        {
+            // Expand arguments to @1, @2, @3, etc
+            for (unsigned i = 1; i < (unsigned)args->len; ++i)
+            {
+                char arg_name_buffer[16];
+                string_t arg_name = string_format(STRING_BUFFER(arg_name_buffer), STRING_CONST("@%u"), i);
+        
+                expr_result_t arg_value = expr_eval(args->get(i));
+                expr_set_global_var(STRING_ARGS(arg_name), arg_value);
+            }
+
+            string_t ftxt = fs_read_text(STRING_ARGS(expression_text));
+            expr_result_t result = eval(STRING_ARGS(ftxt));
+            string_deallocate(ftxt);
+
+            return result;
+        }
+    }
 
     if (args->len == 1)
         return expr_eval(&args->buf[0]);

@@ -462,7 +462,7 @@ FOUNDATION_STATIC expr_result_t report_expr_eval_stock_fundamental(const json_ob
         expr_result_t* results = nullptr;
         for (auto e : json)
         {
-            expr_result_t* kvp = nullptr;    
+            expr_result_t* kvp = nullptr;
 
             string_const_t id = e.id();
             expr_result_t r = report_expr_eval_stock_fundamental(e);

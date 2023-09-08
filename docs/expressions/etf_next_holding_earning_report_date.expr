@@ -1,44 +1,61 @@
-$TITLE=ARKQ.US
+#
+# Define function to get next report data for a given title
+#
+# @1: Stock ticker/title
+#
+
+# Replace NEO with US
+$TITLE = IF(ENDS_WITH(@1, NEO), F(@1, General.Code) + '.US', @1)
+
+# Check if we have earnings history data, otherwise get it from the primary ticker (if any)
+$history = IF(F($TITLE, "Earnings.History"), $0, nil)
+$TITLE=IF($history, $TITLE, primary_ticker($TITLE))
 
 # For each hold stock, get next earning report
 $(next_earnings_report_date,
-	$t=$1
+  $t=$1
 
-	# Get earning history
-	$e=MAP(F($t, "Earnings.History"), [INDEX($2, 'reportDate'), INDEX($2, 'epsActual'), INDEX($2, 'epsEstimate')])
+  # Get earning history
+  $h=IF($2, $2, IF(F($t, "Earnings.History"), $0, []))
+  $e=MAP($h, [INDEX($2, 'reportDate'), INDEX($2, 'epsActual'), INDEX($2, 'epsEstimate')])
 
-	# Filter entries with no espEstimate
-	$e=FILTER($e, $3)
+  # Filter entries with no espEstimate
+  $e=FILTER($e, ($3 != nil || ($2 == nil && $3 == nil)) && DATE($1) >= NOW())
 
-	# Filter entries with an actual EPS
-	$e=FILTER($e, IF($2, false, true))
+  # Filter entries with an actual EPS
+  $e=FILTER($e, $2 == nil || $2 == 0)
+  #PRINT($t, $e)
 
-	# Only keep the last entry
-	$e=INDEX($e, -1)
+  # Only keep the last entry
+  $e=IF($e, INDEX($e, -1), [nil, nil, nil])
 
-	# Return the date
-	$e=INDEX($e, 0)
+  # Return the date
+  $e=INDEX($e, 0)
 )
 
 $(next_etf_holding_report_date, 
 
-	$t=$1
+  $t=$1
 
-	# Get ETF holdings
-	$h=F($t, "ETF_Data.Top_10_Holdings")
-	$h=MAP($h, $1)
+  # Get ETF holdings
+  $h=F($t, "ETF_Data.Top_10_Holdings")
+  $h=IF($h, MAP($h, $1), [])
 
-	# Get the next earning report date for each stock
-	$d=MAP($h, [$1, $z=next_earnings_report_date($1), DATE($z)))
+  # Get the next earning report date for each stock
+  $d=MAP($h, [$1, next_earnings_report_date($1)])
+  $d=FILTER($d, $2 != nil)
+  $d=MAP($d, [$1, $2, DATE($2)])
+  $d=FILTER($d, $3 > NOW())
 
-	# Sort by date
-	$d=SORT($d, 1, 2)
+  # Sort by date
+  $d=SORT($d, 1, 2)
 
-	# Remap to get the stock name
-	$d=MAP($d, [$1, $2])
+  # Remap to get the stock name
+  $d=MAP($d, [$1, $2])
 
-	# Return first element date
-	INDEX($d, 0, 1)	
+  # Return first element date
+  $d=INDEX($d, 0, 1)
 )
 
-next_etf_holding_report_date('ARKQ.US')
+IF($history, next_earnings_report_date($TITLE, $history), next_etf_holding_report_date($TITLE))
+
