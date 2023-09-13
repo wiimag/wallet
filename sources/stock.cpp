@@ -244,13 +244,6 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
     d.open = json_read_number(json, STRING_CONST("open"));
     d.close = d.adjusted_close = json_read_number(json, STRING_CONST("close"));
     d.previous_close = json_read_number(json, STRING_CONST("previousClose"));
-    if (d.previous_close < 0.05)
-    {
-        SHARED_READ_LOCK(_db_lock);
-        stock_t* entry = &_db_stocks[index];
-        if (entry->history_count > 0)
-            d.previous_close = entry->history[0].close;
-    }
     d.low = json_read_number(json, STRING_CONST("low"));
     d.high = json_read_number(json, STRING_CONST("high"));
     d.change = json_read_number(json, STRING_CONST("change"));
@@ -278,7 +271,14 @@ bool stock_read_real_time_results(stock_index_t index, const json_object_t& json
             entry->current.change_p = d.change_p;
             entry->current.change_p_high = d.change_p_high;
             entry->current.volume = d.volume;
-            entry->current.previous_close = d.previous_close;
+
+            // Get real yesterday close price
+            time_t yesterday_date = time_add_days(d.date, -1);
+            const day_result_t* yesterday = stock_get_EOD(entry, yesterday_date, false);
+            if (yesterday)
+                entry->current.previous_close = yesterday->close;
+            else
+                entry->current.previous_close = d.previous_close;
 
             log_debugf(HASH_STOCK, STRING_CONST("Stock '%.*s' has new real time data (%.2lf)"), STRING_FORMAT(code), d.price);
         }
@@ -671,7 +671,8 @@ FOUNDATION_STATIC void stock_read_eod_results(const json_object_t& json, stock_i
         if (math_real_is_nan(entry.current.price_factor) && !math_real_is_nan(first_price_factor))
             entry.current.price_factor = first_price_factor;
 
-        if (entry.history_count > 0) {
+        if (entry.history_count > 0 && math_real_is_nan(entry.current.previous_close)) 
+        {
             entry.current.previous_close = entry.history[0].adjusted_close;
         }
 

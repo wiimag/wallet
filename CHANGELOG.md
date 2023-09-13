@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.32.4] - 2023-09-08
+## [0.32.5] - 2023-09-13
+- Fix yesterday price change computation when the stock is after hours.
 - Add support for the token `_` when iterating over an array using `MAP(...), FILTER(...), etc...` to access the current item.
 - Add support for single item indexing with `INDEX('MSFT.TO', 0)`.
 - Add support to evaluate local expression files using `EVAL('C:/expression.txt', 'CTC-A.TO', @2, @3, ...)`.
