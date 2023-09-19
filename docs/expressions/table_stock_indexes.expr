@@ -1,0 +1,27 @@
+#
+# List stock from main indexes (Canada & US)
+#
+
+# Get all indexes
+$indexes = FETCH("exchange-symbol-list", "INDX")
+
+# Filter in US and Canada indexes
+$indexes = FILTER($indexes, INDEX(_, Country) == 'Canada')
+
+# Map the index codes
+$indexes = MAP($indexes, INDEX(_, Code) + '.INDX')
+
+# Merge all indexes components into a stock list
+$stocks = MAP($indexes, MAP(MAP(F($1, Components), $2), INDEX(_, Code) + '.TO'))
+
+# Merge all stocks into a single list
+$stocks = REDUCE($stocks, DISTINCT(CONCAT($0, $1)), [])
+
+TABLE('Canadian Indexed Stocks (' + COUNT($stocks) + ')', $stocks,
+    ["Symbol", $1, "symbol"],
+    ["Name", S($1, name), "string"],
+    ["3M", S($1, change_3m), "percent"],
+    ["1Y", S($1, change_1y), "percent"],
+    ["Growth", F($1, Highlights.QuarterlyRevenueGrowthYOY), "percent"],
+    ["EBITDA", F($1, 'Financials.Income_Statement.quarterly.0.ebitda'), "currency"]
+)

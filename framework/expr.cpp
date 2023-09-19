@@ -33,6 +33,7 @@ static thread_local expr_var_list_t _global_vars = { 0 };
 static thread_local const expr_result_t** _expr_lists = nullptr;
 static expr_func_t* _expr_user_funcs = nullptr;
 static string_t* _expr_user_funcs_names = nullptr;
+static thread_local expr_result_t* _empty_list = nullptr;
 
 typedef struct {
     string_argument_type_t type; 
@@ -242,15 +243,17 @@ string_const_t expr_result_t::as_string(const char* fmt /*= nullptr*/) const
 
 FOUNDATION_STATIC const expr_result_t* expr_eval_empty_list()
 {
-    expr_result_t* empty_list = nullptr;
-    array_reserve(empty_list, 1);
-    return expr_eval_list(empty_list);
+    if (_empty_list == nullptr)
+        array_reserve(_empty_list, 1);
+    return _empty_list;
 }
 
 const expr_result_t* expr_eval_list(const expr_result_t* list)
 {
-    if (list)
-        array_push(_expr_lists, list);
+    if (list == nullptr)
+        return expr_eval_empty_list();
+
+    array_push(_expr_lists, list);
     return list;
 }
 
@@ -1114,6 +1117,30 @@ FOUNDATION_STATIC bool expr_sort_results_comparer(const expr_result_t& a, const 
     return n1 >= n2;
 }
 
+FOUNDATION_STATIC expr_result_t expr_eval_distinct(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    expr_result_t* uniqs = nullptr;
+
+    expr_result_t elements = expr_eval(args->get(0));
+    for (auto e : elements)
+    {
+        bool found = false;
+        for (unsigned i = 0, s = array_size(uniqs); i < s; ++i)
+        {
+            const expr_result_t& u = uniqs[i];
+            if (e == u)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            array_push(uniqs, e);
+    }
+
+    return expr_eval_list(uniqs);
+}
+
 FOUNDATION_STATIC expr_result_t expr_eval_concat(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Make sure we have at least one argument
@@ -1132,7 +1159,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_concat(const expr_func_t* f, vec_expr_
             for (unsigned j = 0, end = arg.element_count(); j < end; ++j)
                 array_push(elements, arg.element_at(j));
         }
-        else
+        else if (arg.type != EXPR_RESULT_NULL)
         {
             array_push(elements, arg);
         }
@@ -1239,44 +1266,10 @@ FOUNDATION_STATIC expr_result_t expr_eval_reduce(const expr_func_t* f, vec_expr_
     // Loop on all elements and invoke function
     for (auto e : elements)
     {
-        expr_var_t* vr = expr_get_or_create_global_var(STRING_CONST("$0"));
-        vr->value = result;
+        expr_set_global_var(STRING_CONST("$0"), result);
+        expr_set_global_var(STRING_CONST("$1"), e);
 
-        expr_var_t* ve = expr_get_or_create_global_var(STRING_CONST("$1"));
-        ve->value = e;
-
-        if (args->buf[1].type == OP_FUNC)
-        {
-            vec_expr_t fargs;
-            for (int i = 0; i < args->buf[1].args.len; ++i)
-            {
-                auto& p = args->buf[1].args.buf[i];
-                expr_t vexpr = expr_init(OP_CONST, STRING_ARGS(p.token));
-                vexpr.param.result.value = expr_eval(&p);
-                vec_push(&fargs, vexpr);
-            }
-
-            {
-                expr_t vexpr = expr_init(OP_CONST, STRING_CONST("RESULT"));
-                vexpr.param.result.value = result;
-                vec_push(&fargs, vexpr);
-            }
-
-            {
-                expr_t vexpr = expr_init(OP_CONST, STRING_CONST("ELEMENT"));
-                vexpr.param.result.value = e;
-                vec_push(&fargs, vexpr);
-            }
-
-            auto fn = args->buf[1].param.func;
-            result = fn.f->handler(fn.f, &fargs, fn.context ? fn.context : c);
-
-            vec_free(&fargs);
-        }
-        else
-        {
-            result = expr_eval(args->get(1));
-        }
+        result = expr_eval(args->get(1));
     }
 
     return result;
@@ -2785,6 +2778,7 @@ FOUNDATION_STATIC void expr_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SORT"), expr_eval_sort, NULL, 0 })); // SORT(R('300K', ps), DESC, 1)
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("PRINT"), expr_eval_print, NULL, 0 })); // PRINT(1, 2, 3)
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("CONCAT"), expr_eval_concat, NULL, 0 })); // CONCAT([1,3], [2,4], 5, [6,7]) == [1, 3, 2, 4, 5, 6, 7]
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DISTINCT"), expr_eval_distinct, NULL, 0 })); // DISTINCT([1, 2, 3, 1, 2, 3]) == [1, 2, 3]
 
     // Math functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ROUND"), expr_eval_round, NULL, 0 })); // ROUND(1.5) == 2
@@ -2887,6 +2881,7 @@ FOUNDATION_STATIC void expr_shutdown()
     for (size_t i = 0; i < array_size(_expr_lists); ++i)
         array_deallocate(_expr_lists[i]);
     array_deallocate(_expr_lists);
+    array_deallocate(_empty_list);
 
     array_deallocate(_expr_user_funcs);
     string_array_deallocate(_expr_user_funcs_names);

@@ -298,6 +298,54 @@ FOUNDATION_STATIC table_expr_type_drawer_t* table_expr_find_drawer(const char* t
     return nullptr;
 }
 
+FOUNDATION_STATIC void table_expr_eval_column_format(const vec_expr_t& args, int format_argument_index, table_expr_column_t& col)
+{
+    string_const_t format_string = expr_eval((expr_t*)args.get(format_argument_index)).as_string();
+    if (string_is_null(format_string))
+    {
+        col.format = COLUMN_FORMAT_TEXT;
+    }
+    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("currency")))
+    {
+        col.format = COLUMN_FORMAT_CURRENCY;
+    }    
+    else if (string_equal_nocase(format_string.str, math_min(format_string.length, SIZE_C(7)), STRING_CONST("percent")))
+    {
+        col.format = COLUMN_FORMAT_PERCENTAGE;
+    }
+    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("date")))
+    {
+        col.format = COLUMN_FORMAT_DATE;
+    }
+    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("number")))
+    {
+        col.format = COLUMN_FORMAT_NUMBER;
+    }
+    else if (string_equal_nocase(format_string.str, min(format_string.length, SIZE_C(4)), STRING_CONST("bool")))
+    {
+        col.format = COLUMN_FORMAT_BOOLEAN;
+    }
+    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("expression")))
+    {
+        // Check if we have another arguments for the expression custom drawer
+        if (args.len > format_argument_index + 1)
+            table_expr_eval_column_format(args, format_argument_index + 1, col);
+        col.is_expression = true;
+    }
+    else
+    {
+        col.drawer = table_expr_find_drawer(STRING_ARGS(format_string));
+        if (col.drawer && args.len > format_argument_index + 1)
+        {
+            table_expr_eval_column_format(args, format_argument_index + 1, col);
+        }
+        else
+        {
+            col.format = COLUMN_FORMAT_TEXT;
+        }
+    }
+}
+
 FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     if (args->len < 3)
@@ -321,51 +369,14 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
         {
             // Get the column name
             string_const_t col_name = expr_eval((expr_t*)col.ee->args.get(0)).as_string(string_format_static_const("col %d", i - 2));
+            
+            col.name = string_utf8_unescape(STRING_ARGS(col_name));
+            col.value_index = col_index;
 
             if (col.ee->args.len >= 3)
-            {
-                string_const_t format_string = expr_eval((expr_t*)col.ee->args.get(2)).as_string();
-                if (!string_is_null(format_string))
-                {
-                    if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("currency")))
-                        col.format = COLUMN_FORMAT_CURRENCY;
-                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("percentage")))
-                        col.format = COLUMN_FORMAT_PERCENTAGE;
-                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("date")))
-                        col.format = COLUMN_FORMAT_DATE;
-                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("number")))
-                        col.format = COLUMN_FORMAT_NUMBER;
-                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("expression")))
-                    {
-                        col.is_expression = true;
-                        col.format = COLUMN_FORMAT_UNDEFINED;
+                table_expr_eval_column_format(col.ee->args, 2, col);
 
-                        // Check if we have another arguments for the expression custom drawer
-                        if (col.ee->args.len >= 4)
-                        {
-                            string_const_t custom_drawer_type = expr_eval(col.ee->args.get(3)).as_string();
-                            if (!string_is_null(custom_drawer_type))
-                            {
-                                col.drawer = table_expr_find_drawer(STRING_ARGS(custom_drawer_type));
-                                if (!col.drawer)
-                                    throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Unknown custom drawer type");
-                            }
-                        }
-                    }
-                    else if (string_equal_nocase(format_string.str, min(format_string.length, SIZE_C(4)), STRING_CONST("bool")))
-                    {
-                        col.format = COLUMN_FORMAT_BOOLEAN;
-                    }
-                    else
-                    {
-                        col.drawer = table_expr_find_drawer(STRING_ARGS(format_string));
-                    }
-                }
-            }
-            
             col.ee = col.ee->args.get(1);
-            col.name = string_utf8_unescape(STRING_ARGS(col_name));            
-            col.value_index = col_index;
 
             array_push_memcpy(columns, &col);
         }
@@ -475,7 +486,7 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
     report->search_filter[0] = 0;
 
     app_open_dialog(table_name.str, 
-        L1(table_expr_render_dialog((table_expr_t*)_1)), 800, 600, true,
+        L1(table_expr_render_dialog((table_expr_t*)_1)), IM_SCALEF(800), IM_SCALEF(600), true,
         report, L1(table_expr_deallocate((table_expr_t*)_1)));
 
     return NIL;
