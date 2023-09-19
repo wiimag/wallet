@@ -25,6 +25,8 @@
  *           TABLE('Retained Earnings', R('300K', [name, F($TITLE, "Financials.Balance_Sheet.quarterly.0.retainedEarnings")]), ['Name', $2], ['Value', $3, currency])
  */
 
+#include "table_expr.h"
+
 #include <framework/app.h>
 #include <framework/expr.h>
 #include <framework/table.h>
@@ -36,7 +38,7 @@
 struct table_expr_type_drawer_t
 {
     string_t type{};
-    function<void(const table_cell_t& cell)> handler{};
+    table_expr_drawer_t handler{};
 };
 
 static table_expr_type_drawer_t* _table_expr_type_drawers{ nullptr };
@@ -46,16 +48,17 @@ typedef enum TableExprValueType {
     DYNAMIC_TABLE_VALUE_TRUE = 1,
     DYNAMIC_TABLE_VALUE_FALSE = 2,
     DYNAMIC_TABLE_VALUE_NUMBER = 3,
-    DYNAMIC_TABLE_VALUE_TEXT = 4
+    DYNAMIC_TABLE_VALUE_TEXT = 4,
+    DYNAMIC_TABLE_VALUE_EXPRESSION = 5,
 } table_expr_record_value_type_t;
 
 struct table_expr_column_t
 {
     string_t name;
-    string_t expression;
     expr_t* ee;
     int value_index;
     column_format_t format{ COLUMN_FORMAT_TEXT };
+    bool is_expression{ false };
     table_expr_type_drawer_t* drawer{ nullptr };
 };
 
@@ -66,6 +69,8 @@ struct table_expr_record_value_t
         string_t text;
         double number;
     };
+
+    table_expr_column_t* column;
 };
 
 struct table_expr_record_t
@@ -101,7 +106,6 @@ FOUNDATION_STATIC void table_expr_cleanup_columns(table_expr_column_t* columns)
     foreach(c, columns)
     {
         string_deallocate(c->name.str);
-        string_deallocate(c->expression.str);
     }
     array_deallocate(columns);
 }
@@ -114,7 +118,7 @@ FOUNDATION_STATIC void table_expr_deallocate(table_expr_t* report)
     {
         foreach(vr, r->resolved)
         {
-            if (vr->type == DYNAMIC_TABLE_VALUE_TEXT)
+            if (vr->type == DYNAMIC_TABLE_VALUE_TEXT || vr->type == DYNAMIC_TABLE_VALUE_EXPRESSION)
                 string_deallocate(vr->text.str);
         }
         array_deallocate(r->resolved);
@@ -125,11 +129,76 @@ FOUNDATION_STATIC void table_expr_deallocate(table_expr_t* report)
     memory_deallocate(report);
 }
 
-FOUNDATION_STATIC table_cell_t table_expr_cell_value(const table_expr_record_value_t* v, column_format_t format)
+FOUNDATION_STATIC table_cell_t table_expr_cell_value(table_expr_record_t* record, table_expr_record_value_t* v, column_format_t format)
 {
+    if (v->type == DYNAMIC_TABLE_VALUE_EXPRESSION)
+    {
+        static tick_t _table_expression_last_eval_ts = 0;
+
+        if (time_elapsed(_table_expression_last_eval_ts) < 0.025)
+            return RTEXT("Loading...");
+
+        foreach(arg, record->resolved)
+        {
+            string_const_t arg_macro = string_format_static(STRING_CONST("$%u"), i + 1);
+            if (arg->type == DYNAMIC_TABLE_VALUE_TRUE)
+                expr_set_global_var(STRING_ARGS(arg_macro), expr_result_t(true));
+            else if (arg->type == DYNAMIC_TABLE_VALUE_FALSE)
+                expr_set_global_var(STRING_ARGS(arg_macro), expr_result_t(false));
+            else if (arg->type == DYNAMIC_TABLE_VALUE_NUMBER)
+                expr_set_global_var(STRING_ARGS(arg_macro), expr_result_t(arg->number));
+            else if (arg->type == DYNAMIC_TABLE_VALUE_TEXT)
+                expr_set_global_var(STRING_ARGS(arg_macro), expr_result_t(string_to_const(arg->text)));
+        }
+
+        string_t used_expression = v->text;
+        expr_result_t cv = eval(STRING_ARGS(used_expression));
+        if (cv.type == EXPR_RESULT_TRUE)
+        {
+            v->type = DYNAMIC_TABLE_VALUE_TRUE;
+        }
+        else if (cv.type == EXPR_RESULT_FALSE)
+        {
+            v->type = DYNAMIC_TABLE_VALUE_FALSE;
+        }
+        else if (cv.type == EXPR_RESULT_NUMBER)
+        {
+            v->type = DYNAMIC_TABLE_VALUE_NUMBER;
+            v->number = cv.as_number();
+        }
+        else if (cv.type == EXPR_RESULT_SYMBOL)
+        {
+            string_const_t e_text = cv.as_string();
+            v->type = DYNAMIC_TABLE_VALUE_TEXT;
+            v->text = string_clone(STRING_ARGS(e_text));
+
+            if (v->column->format == COLUMN_FORMAT_CURRENCY || v->column->format == COLUMN_FORMAT_PERCENTAGE || v->column->format == COLUMN_FORMAT_NUMBER)
+            {
+                string_t text = v->text;
+                if (string_try_convert_number(text.str, text.length, v->number))
+                {
+                    v->type = DYNAMIC_TABLE_VALUE_NUMBER;
+                    string_deallocate(text);
+                }
+            }
+        }
+        else if (cv.is_set())
+        {
+            v->type = DYNAMIC_TABLE_VALUE_NUMBER;
+            v->number = cv.as_number(DNAN, 0);
+        }
+        else
+        {
+            v->type = DYNAMIC_TABLE_VALUE_NULL;
+        }
+
+        string_deallocate(used_expression.str);
+        _table_expression_last_eval_ts = time_current();
+    }
+
     if (v->type == DYNAMIC_TABLE_VALUE_NULL)
         return table_cell_t(nullptr);
-                
+
     if (v->type == DYNAMIC_TABLE_VALUE_TRUE)
         return table_cell_t(true);
 
@@ -161,20 +230,26 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
         report->table = table_allocate(report->name.str, TABLE_SUMMARY | TABLE_HIGHLIGHT_HOVERED_ROW);
         foreach(c, report->columns)
         {
-            column_flags_t column_flags = COLUMN_SORTABLE;
+            column_flags_t column_flags = COLUMN_OPTIONS_NONE;
             if (c->format == COLUMN_FORMAT_TEXT)
                 column_flags |= COLUMN_SEARCHABLE;
             if (c->drawer)
                 column_flags |= COLUMN_CUSTOM_DRAWING;
+
+            if (c->is_expression)
+                column_flags |= COLUMN_EXPRESSION | COLUMN_NO_SUMMARY | COLUMN_SEARCHABLE;
+            else 
+                column_flags |= COLUMN_SORTABLE;
+
             table_add_column(report->table, STRING_ARGS(c->name), [c](table_element_ptr_t element, const table_column_t* column) 
             {
                 table_expr_record_t* record = (table_expr_record_t*)element;
-                const table_expr_record_value_t* v = &record->resolved[c->value_index];
+                table_expr_record_value_t* v = &record->resolved[c->value_index];
 
-                const table_cell_t cell = table_expr_cell_value(v, column->format);
+                const table_cell_t cell = table_expr_cell_value(record, v, column->format);
 
                 if ((column->flags & COLUMN_RENDER_ELEMENT) && c->drawer)
-                    c->drawer->handler.invoke(cell);
+                    c->drawer->handler.invoke(element, cell, column, c->value_index);
 
                 return cell;
             }, c->format, column_flags);
@@ -211,6 +286,18 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
     return true;
 }
 
+FOUNDATION_STATIC table_expr_type_drawer_t* table_expr_find_drawer(const char* type, size_t length)
+{
+    for (unsigned int j = 0; j < array_size(_table_expr_type_drawers); ++j)
+    {
+        auto* drawer = _table_expr_type_drawers + j;
+        if (string_equal_nocase(type, length, STRING_ARGS(drawer->type)))
+            return drawer;
+    }
+
+    return nullptr;
+}
+
 FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     if (args->len < 3)
@@ -229,6 +316,7 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
         col.ee = args->get(i);
         col.format = COLUMN_FORMAT_TEXT;
         col.drawer = nullptr;
+        col.is_expression = false;
         if (col.ee->type == OP_SET && col.ee->args.len >= 2)
         {
             // Get the column name
@@ -247,30 +335,36 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
                         col.format = COLUMN_FORMAT_DATE;
                     else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("number")))
                         col.format = COLUMN_FORMAT_NUMBER;
-                    else if (string_equal_nocase(format_string.str, min(format_string.length, SIZE_C(4)), STRING_CONST("bool")))
-                        col.format = COLUMN_FORMAT_BOOLEAN;
-                    else
+                    else if (string_equal_nocase(STRING_ARGS(format_string), STRING_CONST("expression")))
                     {
-                        // Check if we have a registered drawer for the format string
-                        for (unsigned int j = 0; j < array_size(_table_expr_type_drawers); ++j)
+                        col.is_expression = true;
+                        col.format = COLUMN_FORMAT_UNDEFINED;
+
+                        // Check if we have another arguments for the expression custom drawer
+                        if (col.ee->args.len >= 4)
                         {
-                            auto* drawer = _table_expr_type_drawers + j;
-                            if (string_equal_nocase(STRING_ARGS(format_string), STRING_ARGS(drawer->type)))
+                            string_const_t custom_drawer_type = expr_eval(col.ee->args.get(3)).as_string();
+                            if (!string_is_null(custom_drawer_type))
                             {
-                                col.drawer = drawer;
-                                break;
+                                col.drawer = table_expr_find_drawer(STRING_ARGS(custom_drawer_type));
+                                if (!col.drawer)
+                                    throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Unknown custom drawer type");
                             }
                         }
+                    }
+                    else if (string_equal_nocase(format_string.str, min(format_string.length, SIZE_C(4)), STRING_CONST("bool")))
+                    {
+                        col.format = COLUMN_FORMAT_BOOLEAN;
+                    }
+                    else
+                    {
+                        col.drawer = table_expr_find_drawer(STRING_ARGS(format_string));
                     }
                 }
             }
             
             col.ee = col.ee->args.get(1);
-            string_const_t col_expression = col.ee->token;
-
-            col.name = string_utf8_unescape(STRING_ARGS(col_name));
-            col.expression = string_clone(STRING_ARGS(col_expression));
-            
+            col.name = string_utf8_unescape(STRING_ARGS(col_name));            
             col.value_index = col_index;
 
             array_push_memcpy(columns, &col);
@@ -294,6 +388,8 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
         for(unsigned ic = 0, endc = array_size(columns); ic < endc; ++ic)
         {
             table_expr_column_t* c = &columns[ic];
+
+            expr_set_or_create_global_var(STRING_CONST("_"), e);
             
             foreach(v, record.values)
             {
@@ -302,18 +398,31 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
             }
 
             expr_result_t cv = expr_eval(c->ee);
-            if (cv.type == EXPR_RESULT_TRUE)
+            if (c->is_expression)
             {
-                array_push(record.resolved, table_expr_record_value_t{ DYNAMIC_TABLE_VALUE_TRUE });
+                table_expr_record_value_t v{ DYNAMIC_TABLE_VALUE_EXPRESSION };
+                string_const_t e_text = cv.as_string();
+                v.text = string_clone(STRING_ARGS(e_text));
+                v.column = c;
+                array_push(record.resolved, v);
+            }
+            else if (cv.type == EXPR_RESULT_TRUE)
+            {
+                table_expr_record_value_t v{ DYNAMIC_TABLE_VALUE_TRUE };
+                v.column = c;
+                array_push(record.resolved, v);
             }
             else if (cv.type == EXPR_RESULT_FALSE)
             {
-                array_push(record.resolved, table_expr_record_value_t{ DYNAMIC_TABLE_VALUE_FALSE });
+                table_expr_record_value_t v{ DYNAMIC_TABLE_VALUE_FALSE };
+                v.column = c;
+                array_push(record.resolved, v);
             }
             else if (cv.type == EXPR_RESULT_NUMBER)
             {
                 table_expr_record_value_t v{ DYNAMIC_TABLE_VALUE_NUMBER };
                 v.number = cv.as_number();
+                v.column = c;
                 array_push(record.resolved, v);
             }
             else if (cv.type == EXPR_RESULT_SYMBOL)
@@ -321,6 +430,7 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
                 table_expr_record_value_t v{ DYNAMIC_TABLE_VALUE_TEXT };
                 string_const_t e_text = cv.as_string();
                 v.text = string_clone(STRING_ARGS(e_text));
+                v.column = c;
 
                 if (c->format == COLUMN_FORMAT_CURRENCY || c->format == COLUMN_FORMAT_PERCENTAGE || c->format == COLUMN_FORMAT_NUMBER)
                 {
@@ -338,11 +448,14 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
             {
                 table_expr_record_value_t v{ DYNAMIC_TABLE_VALUE_NUMBER };
                 v.number = cv.as_number(DNAN, 0);
+                v.column = c;
                 array_push(record.resolved, v);
             }
             else
             {
-                array_push(record.resolved, table_expr_record_value_t{ DYNAMIC_TABLE_VALUE_NULL });
+                table_expr_record_value_t v{ DYNAMIC_TABLE_VALUE_NULL };
+                v.column = c;
+                array_push(record.resolved, v);
             }
         }
 
@@ -351,7 +464,7 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
     }
 
     // Get the table name from the first argument.
-    string_const_t table_name = expr_eval(args->get(0)).as_string("none");
+    string_const_t table_name = expr_eval(args->get(0)).as_string("Table");
 
     // Create the dynamic report
     table_expr_t* report = (table_expr_t*)memory_allocate(HASH_TABLE_EXPRESSION, sizeof(table_expr_t), 0, MEMORY_PERSISTENT);
@@ -364,14 +477,15 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
     app_open_dialog(table_name.str, 
         L1(table_expr_render_dialog((table_expr_t*)_1)), 800, 600, true,
         report, L1(table_expr_deallocate((table_expr_t*)_1)));
-    return elements;
+
+    return NIL;
 }
 
 //
 // # PUBLIC
 //
 
-void table_expr_add_type_drawer(const char* type, size_t length, const function<void(const table_cell_t& value)>& handler)
+void table_expr_add_type_drawer(const char* type, size_t length, const table_expr_drawer_t& handler)
 {
     table_expr_type_drawer_t drawer{};
     drawer.type = string_clone(type, length);

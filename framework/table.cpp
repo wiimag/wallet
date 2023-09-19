@@ -607,7 +607,7 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
                 continue;
 
             column_index++;
-            if (!column.fetch_value)
+            if (!column.fetch_value || (column.flags & COLUMN_NO_SUMMARY))
                 continue;
 
             const ImGuiTableColumnFlags table_column_flags = ImGui::TableGetColumnFlags(i);
@@ -835,6 +835,9 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
         ImGui::BeginGroup();
         table_cell_t cell = column.fetch_value ? column.fetch_value(element, &column) : table_cell_t{};
         string_const_t str_value = cell_value_to_string(cell, column);
+
+        if (column.format == COLUMN_FORMAT_UNDEFINED)
+            column.format = cell.format;
 
         column_flags_t alignment_flags = column.flags & COLUMN_ALIGNMENT_MASK;
         if (alignment_flags == 0 && format_is_numeric(column.format))

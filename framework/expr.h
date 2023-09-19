@@ -751,6 +751,17 @@ struct expr_result_t
             return r;
         }
 
+        // If both value are arrays, merge them into a new array.
+        if (is_set() && rhs.is_set())
+        {
+            expr_result_t* elements = nullptr;
+            for (unsigned i = 0, end = element_count(); i < end; ++i)
+                array_push(elements, element_at(i));
+            for (unsigned i = 0, end = rhs.element_count(); i < end; ++i)
+                array_push(elements, rhs.element_at(i));
+            return expr_eval_list(elements);
+        }
+
         FOUNDATION_ASSERT_FAIL("Unsupported");
         return *this;
     }

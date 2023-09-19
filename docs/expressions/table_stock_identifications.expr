@@ -1,0 +1,41 @@
+#
+# Display in a table stock identification numbers, i.e.
+#  - OpenFigi
+#  - ISIN
+#  - PrimaryTicker
+#  - LEI, CUSIP, CIK
+#
+
+$(get_market, 
+   IF($1 == 'TO', 'TO', 'US')
+)
+
+# Get stock from different markets
+$stocks = CONCAT(
+   FETCH("exchange-symbol-list", "TO"),
+   FETCH("exchange-symbol-list", "US")
+)
+
+# Filter in common stock only
+$stocks = FILTER($stocks, INDEX(_, 'Type') == "Common Stock")
+
+#
+# Render the stock identification table
+#
+# Note that the "expression" column type is used to defer the evaluation of the
+# expression until the table is rendered. This is necessary because the
+# expression depends on subsequent stock fundamentals that can take a while to
+# load. Therefore this is providing an asynchronous evaluation of the expression, making
+# the table rendering faster and more responsive.
+#
+TABLE(FORMAT("Stock Identifications ({0})", COUNT($stocks)), $stocks,
+   ["Symbol", INDEX(_, 'Code') + '.' + get_market(INDEX(_, 'Exchange')), "symbol"],
+   ["Primary", "primary_ticker($1)", "expression", "symbol"],
+   ["Name", INDEX(_, 'Name'), "string"],
+   ["Country", "F(primary_ticker($1), General.CountryName)", "expression"],
+   ["ISIN", INDEX(_, 'Isin'), "string"],
+   ["OpenFigi", "F($1, General.OpenFigi)", "expression"],
+   ["LEI", "F($1, General.LEI)", "expression"],
+   ["CUSIP", "FORMAT('{0}', F($1, General.CUSIP))", "expression"],
+   ["CIK", "FORMAT('{0}', F($1, General.CIK))", "expression"]
+)

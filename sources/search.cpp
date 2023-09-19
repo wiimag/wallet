@@ -2103,7 +2103,7 @@ bool search_render_settings()
     return updated;
 }
 
-FOUNDATION_STATIC void search_table_expr_symbol_drawer(const table_cell_t& value)
+FOUNDATION_STATIC void search_table_expr_symbol_drawer(table_element_ptr_t element, const table_cell_t& value, const table_column_t* column, int value_index)
 {
     string_const_t code{};
     if (value.format == COLUMN_FORMAT_SYMBOL)

@@ -683,13 +683,7 @@ FOUNDATION_STATIC expr_result_t expr_eval_math_count(const expr_result_t* list)
     for (size_t i = 0; i < array_size(list); ++i)
     {
         expr_result_t e = list[i];
-
-        if (e.is_set() && e.index == NO_INDEX)
-            element_count += expr_eval_math_count(e.list);
-        else if (e.is_raw_array())
-            element_count += (expr_result_t)(double)e.element_count();
-        else
-            element_count.value++;
+        element_count.value += (double)e.element_count();
     }
 
     return element_count;
@@ -1120,6 +1114,33 @@ FOUNDATION_STATIC bool expr_sort_results_comparer(const expr_result_t& a, const 
     return n1 >= n2;
 }
 
+FOUNDATION_STATIC expr_result_t expr_eval_concat(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Make sure we have at least one argument
+    if (args->len == 0)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
+
+    // Concatenate all arguments into a new set. If any argument is an array, concatenate the elements of the array
+    // into the new set. If any argument is a symbol, concatenate the value of the symbol into the new set.
+    expr_result_t* elements = nullptr;
+
+    for (int i = 0; i < args->len; ++i)
+    {
+        expr_result_t arg = expr_eval(args->get(i));
+        if (arg.is_set())
+        {
+            for (unsigned j = 0, end = arg.element_count(); j < end; ++j)
+                array_push(elements, arg.element_at(j));
+        }
+        else
+        {
+            array_push(elements, arg);
+        }
+    }
+
+    return expr_eval_list(elements);
+}
+
 FOUNDATION_STATIC expr_result_t expr_eval_print(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     // Print all arguments using log_info
@@ -1322,6 +1343,8 @@ FOUNDATION_STATIC expr_result_t expr_eval_inline(const expr_func_t* f, vec_expr_
         string_const_t expression_text = expr_eval(&args->buf[0]).as_string();
         if (fs_is_file(STRING_ARGS(expression_text)))
         {
+            expr_result_t* elements = nullptr;
+
             // Expand arguments to @1, @2, @3, etc
             for (unsigned i = 1; i < (unsigned)args->len; ++i)
             {
@@ -1330,7 +1353,11 @@ FOUNDATION_STATIC expr_result_t expr_eval_inline(const expr_func_t* f, vec_expr_
         
                 expr_result_t arg_value = expr_eval(args->get(i));
                 expr_set_global_var(STRING_ARGS(arg_name), arg_value);
+
+                array_push_memcpy(elements, &arg_value);
             }
+
+            expr_set_global_var(STRING_CONST("@ARGS"), expr_eval_list(elements));
 
             string_t ftxt = fs_read_text(STRING_ARGS(expression_text));
             expr_result_t result = eval_inline(STRING_ARGS(ftxt));
@@ -2757,6 +2784,7 @@ FOUNDATION_STATIC void expr_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REDUCE"), expr_eval_reduce, NULL, 0 })); // REDUCE([1, 2, 3], ADD(), 5) == 11
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SORT"), expr_eval_sort, NULL, 0 })); // SORT(R('300K', ps), DESC, 1)
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("PRINT"), expr_eval_print, NULL, 0 })); // PRINT(1, 2, 3)
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("CONCAT"), expr_eval_concat, NULL, 0 })); // CONCAT([1,3], [2,4], 5, [6,7]) == [1, 3, 2, 4, 5, 6, 7]
 
     // Math functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ROUND"), expr_eval_round, NULL, 0 })); // ROUND(1.5) == 2

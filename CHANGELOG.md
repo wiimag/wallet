@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.33.0] - 2023-09-19
+- Add support for table column deferred expression evaluation.
+- Add `CONCAT(set1, set2, ..., setN)` expression to concatenate multiple sets together.
+- Optimize logo icon thread loading (scrolling is now much smoother).
+
 ## [0.32.5] - 2023-09-13
 - Fix yesterday price change computation when the stock is after hours.
 - Add support for the token `_` when iterating over an array using `MAP(...), FILTER(...), etc...` to access the current item.

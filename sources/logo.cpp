@@ -372,23 +372,9 @@ FOUNDATION_STATIC bool logo_download_image(logo_t* logo, logo_image_t* image)
             return (image->status = STATUS_ERROR_NOT_AVAILABLE);
         }
 
-        #if 0
-        string_const_t url = string_table_decode_const(s->logo);
-        if (url.length == 0)
-        {
-            log_debugf(HASH_LOGO, STRING_CONST("Failed to decode image URL for %s"), SYMBOL_CSTR(logo->symbol));
-
-            // Try to build guess logo URL
-            string_const_t basename = logo_symbol_base_name(image);
-            url = string_format_static(STRING_CONST("/img/logos/US/%.*s.png"), STRING_FORMAT(basename));
-        }
-
-        // Initiate the logo download
-        const char* image_url = eod_build_image_url(STRING_ARGS(url));
-        #else
         string_const_t symbol = string_table_decode_const(logo->symbol);
         const char* image_url = string_format_static_const("https://wallet.wiimag.com/img/logo/%.*s?d=0", STRING_FORMAT(symbol));
-        #endif
+
         log_debugf(HASH_LOGO, STRING_CONST("Downloading logo %s"), image_url);
         download_stream = query_execute_download_file(image_url);
 
@@ -449,17 +435,23 @@ FOUNDATION_STATIC bool logo_download_image(logo_t* logo, logo_image_t* image)
 FOUNDATION_STATIC int logo_download_thread(void* payload)
 {
     MEMORY_TRACKER(HASH_LOGO);
-    SHARED_READ_LOCK(_logos_mutex);
 
     logo_image_t* image = (logo_image_t*)payload;
     if (image == nullptr)
         return STATUS_ERROR_INVALID_HANDLE;
+
+    logo_t* logo = nullptr;
     
-    string_const_t logo_symbol = string_table_decode_const(image->symbol);
-    hash_t logo_key = string_hash(STRING_ARGS(logo_symbol));
-    logo_t* logo = logo_find(logo_key);
-    if (logo == nullptr)
-        return STATUS_ERROR_INVALID_HANDLE;
+    {
+        SHARED_READ_LOCK(_logos_mutex);
+        string_const_t logo_symbol = string_table_decode_const(image->symbol);
+        hash_t logo_key = string_hash(STRING_ARGS(logo_symbol));
+        logo = logo_find(logo_key);
+        if (logo == nullptr)
+            return STATUS_ERROR_INVALID_HANDLE;
+
+        // THREAD: From here we assume the logo is valid and will not be deallocated
+    }
 
     if (!logo_download_image(logo, image))
     {

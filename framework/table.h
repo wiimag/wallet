@@ -113,6 +113,12 @@ typedef enum : unsigned int {
     /*! Column cells are vertically aligned to the top. */
     COLUMN_VALIGN_TOP = 1 << 20,
 
+    /*! Column do not generate summary row. */
+    COLUMN_NO_SUMMARY = 1 << 21,
+
+    /*! Column is an expression. */
+    COLUMN_EXPRESSION = 1 << 22,
+
     /*! This flags is dynamically set when calling #fetch_value to indicate that we are computing the summary row.
      *  This can be used to return a different value when computing the row summary.
      */

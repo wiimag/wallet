@@ -87,6 +87,7 @@ FOUNDATION_STATIC expr_result_t script_evaluate_function(const expr_func_t* f, v
         throw ExprError(EXPR_ERROR_INVALID_FUNCTION_NAME, "Script not found");
 
     // Expand arguments to @1, @2, @3, etc
+    expr_result_t* elements = nullptr;
     for (unsigned i = 0; i < (unsigned)args->len; ++i)
     {
         char arg_name_buffer[16];
@@ -94,7 +95,12 @@ FOUNDATION_STATIC expr_result_t script_evaluate_function(const expr_func_t* f, v
         
         expr_result_t arg_value = expr_eval(args->get(i));
         expr_set_global_var(STRING_ARGS(arg_name), arg_value);
+
+        array_push_memcpy(elements, &arg_value);
     }
+
+    // Set @ARGS to array of arguments
+    expr_set_global_var(STRING_CONST("@ARGS"), expr_eval_list(elements));
 
     // Evaluate script
     return script_evaluate(script);
