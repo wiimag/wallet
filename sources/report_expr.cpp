@@ -673,6 +673,13 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
             expr_result_t title_result_list = expr_eval_list(title_results);
             array_push(results, title_result_list);
         }
+
+        if (array_size(results) == 1)
+        {
+            expr_result_t single_value = results[0];
+            array_deallocate(results);
+            return single_value.list[1];
+        }
     }
     else
     {
@@ -723,14 +730,14 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
 
             if (results == nullptr)
                 throw ExprError(EXPR_ERROR_EVALUATION_NOT_IMPLEMENTED, "Field %.*s not supported", STRING_FORMAT(field_name));
-        }
-    }
 
-    if (array_size(results) == 1)
-    {
-        expr_result_t single_value = results[0];
-        array_deallocate(results);
-        return single_value.list[1];
+            if (array_size(results) == 1)
+            {
+                expr_result_t single_value = results[0];
+                array_deallocate(results);
+                return single_value.list[1];
+            }
+        }
     }
 
     return expr_eval_list(results);

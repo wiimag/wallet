@@ -1,0 +1,17 @@
+$r=$REPORT
+
+$(adjusted_price, 
+  $title=$1
+  $transactions=$2
+  $total_qty=SUM(MAP($transactions, $4))
+  $buyt=FILTER($transactions, $3 == buy)
+  $sellt=FILTER($transactions, $3 == sell)
+  $buydiff=SUM(MAP($buyt, (1 - S($title, price_factor, $2)) * $4 * $5))
+)
+
+$t=FILTER(R($r, active), $2)
+
+TABLE($r + ' Adjusted Gain', $t,
+  ["Symbol", $1, 'symbol'],
+  ["Adjusted", adjusted_price($1, R($r, $1, transactions)), currency]
+)

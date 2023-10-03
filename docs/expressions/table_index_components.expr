@@ -2,7 +2,7 @@
 # Layout in a table the components of a given *.INDX
 #
 #---
-$index = "IXIC.INDX" # Work with the following index
+$index = IF($PATTERN, $PATTERN, "IXIC.INDX") # Work with the following index
 #---
 
 # Get index name
@@ -13,14 +13,19 @@ $components = F($index, "Components")
 
 # Map components to [code, name, sector, industry]
 $components = MAP($components,
-	[INDEX($2, 0, 1) + '.' + INDEX($2, 1, 1), 
-	 INDEX($2, 2, 1),
+[INDEX($2, 0, 1) + '.' + INDEX($2, 1, 1), 
+ INDEX($2, 2, 1),
      INDEX($2, 3, 1),
      INDEX($2, 4, 1)])
      
 # Load index components table
-TABLE($name, $components,
-	['Symbol', $1, 'symbol'],
-	['Name', $2],
-	['Sector', $3],
-	['Industry', $4])
+TABLE(FORMAT("{0} ({1})", $name, COUNT($components)), $components,
+['Symbol', $1, 'symbol'],
+['Name', $2],
+['Sector', $3],
+['Industry', $4],
+    ['3M', S($1, change_3m), percent],
+    ['1Y', S($1, change_1y), percent],
+    ['MAX', S($1, change_max), percent],
+    ['Yield', S($1, dividends) * 100, percent]
+)

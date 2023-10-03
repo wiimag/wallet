@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.33.1] - 2023-09-19
+## [0.33.2] - 2023-10-03
+- Fix `R(report, title, transactions)` when title only contains one transaction.
 - Add support for `DISTINCT(...)` expression to remove duplicates from a set.
 - Add support for table column deferred expression evaluation.
 - Add `CONCAT(set1, set2, ..., setN)` expression to concatenate multiple sets together.
