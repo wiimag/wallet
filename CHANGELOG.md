@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.33.2] - 2023-10-03
+## [0.33.3] - 2023-10-03
+- Fix day change percentage for stock indexes.
 - Fix `R(report, title, transactions)` when title only contains one transaction.
 - Add support for `DISTINCT(...)` expression to remove duplicates from a set.
 - Add support for table column deferred expression evaluation.

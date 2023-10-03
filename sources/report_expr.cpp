@@ -165,6 +165,7 @@ static struct {
     { CTEXT("gmtoffset"),      SC2((double)_2->gmtoffset), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("open"),           SC2(_2->open), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("close"),          SC2(_2->adjusted_close), FetchLevel::REALTIME | FetchLevel::EOD },
+    { CTEXT("price"),          SC2(_2->close), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("previous_close"), SC2(_2->previous_close), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("price_factor"),   SC2(_2->price_factor), FetchLevel::REALTIME | FetchLevel::EOD },
     { CTEXT("low"),            SC2(_2->low), FetchLevel::REALTIME | FetchLevel::EOD },
