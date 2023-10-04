@@ -1460,7 +1460,11 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     ImGui::PopStyleColor(1);
 
     const double total_funds = wallet_total_funds(report->wallet);
-    const double cash_balance = total_funds + report->wallet->sell_total_gain - report->total_investment + report->wallet->total_dividends;
+    double cash_balance = total_funds + report->wallet->sell_total_gain - report->total_investment;
+
+    if (!report->wallet->dividends_reinvested)
+        cash_balance += report->wallet->total_dividends;
+
     if (report->wallet->total_title_sell_count > 0)
     {
         ImGui::Separator();
@@ -1483,11 +1487,12 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
 
     ImGui::Separator();
 
+    if (report->wallet->total_dividends > 0)
+        report_render_summary_line(report, tr("Dividends"), report->wallet->total_dividends, currency_fmt);
+
     if (total_funds > 0)
         report_render_summary_line(report, tr("Cash Balance"), cash_balance, currency_fmt, true);
 
-    if (report->wallet->total_dividends > 0)
-        report_render_summary_line(report, tr("Dividends"), report->wallet->total_dividends, currency_fmt);
     report_render_summary_line(report, tr("Investments"), report->total_investment, currency_fmt);
     report_render_summary_line(report, tr("Total Value"), report->total_value, currency_fmt);
 

@@ -4213,5 +4213,10 @@
 			en = "Copyright (C) 2022-2023 - https://wiimag.com - All rights reserved"
 			fr = "Copyright (C) 2022-2023 - https://wiimag.com - Tous droits r\xc3\xa9serv\xc3\xa9s"
 		}
+		{
+			hash = "bce25d3d4523fc2a"
+			en = "Dividends Reinvested?"
+			fr = "Dividendes r\xc3\xa9investis?"
+		}
 	]
 }

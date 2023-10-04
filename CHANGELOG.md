@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.33.3] - 2023-10-03
+## [0.33.4] - 2023-10-04
+- Add support to indicate that dividends are automatically reinvested or not in the wallet view.
 - Fix day change percentage for stock indexes.
 - Fix `R(report, title, transactions)` when title only contains one transaction.
 - Add support for `DISTINCT(...)` expression to remove duplicates from a set.

@@ -35,7 +35,7 @@ FOUNDATION_STATIC void wallet_history_update_entry(report_t* report, wallet_t* w
     entry->investments = report->total_investment;
     entry->total_value = report->total_value;
     entry->gain = report->wallet->sell_total_projected_gain + report->wallet->total_dividends;
-            
+
     report->dirty = true;
 }
 
@@ -700,6 +700,7 @@ wallet_t* wallet_allocate(config_handle_t wallet_data)
     wallet->show_extra_charts = wallet_data["show_extra_charts"].as_boolean();
     wallet->preferred_currency = string_clone_string(wallet_data["currency"].as_string(STRING_ARGS(string_const(SETTINGS.preferred_currency))));
     wallet->track_history = wallet_data["track_history"].as_boolean();
+    wallet->dividends_reinvested = wallet_data["dividends_reinvested"].as_boolean();
 
     // Read funds and support old format where fund was only a number.
     config_handle_t funds_cv = wallet_data["funds"];
@@ -749,6 +750,7 @@ void wallet_save(wallet_t* wallet, config_handle_t wallet_data)
     config_set(wallet_data, "show_extra_charts", wallet->show_extra_charts);
     config_set(wallet_data, "currency", string_to_const(wallet->preferred_currency));	
     config_set(wallet_data, "track_history", wallet->track_history);
+    config_set(wallet_data, "dividends_reinvested", wallet->dividends_reinvested);
 
     // Save funds
     auto funds_cv = config_set_array(wallet_data, STRING_CONST("funds"));
@@ -872,6 +874,13 @@ bool wallet_draw(wallet_t* wallet, float available_space)
         if (ImGui::TreeNode(tr("Funds")))
         {
             wallet_render_funds_text(available_space, control_padding, fundsstr);
+
+            // Add checkbox to indicate that dividends are included in the funds
+            ImGui::PushID("Dividends");
+            if (ImGui::Checkbox(tr("Dividends Reinvested?"), &wallet->dividends_reinvested))
+                updated |= true;
+            ImGui::PopID();
+
             ImGui::SetWindowFontScale(0.9f);
 
             ImGui::Columns(2, "funds", true);
@@ -908,6 +917,17 @@ bool wallet_draw(wallet_t* wallet, float available_space)
                     updated |= true;
 
                 ImGui::PopID();
+            }
+            
+            if (!wallet->dividends_reinvested)
+            {
+                // Render disabled dividends fields
+                ImGui::NextColumn();
+                ImGui::ExpandNextItem();
+                ImGui::TrTextUnformatted("Dividends");
+                ImGui::NextColumn();
+                ImGui::ExpandNextItem();
+                ImGui::Text("%.2lf $ %.*s", wallet->total_dividends, STRING_FORMAT(wallet->preferred_currency));
             }
 
             static bool add_new = false;
@@ -967,6 +987,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
             ImGui::Columns(1, "##closefunds", false);
 
             ImGui::SetWindowFontScale(1.0f);
+
             ImGui::TreePop();
         }
         else

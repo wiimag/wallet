@@ -56,6 +56,9 @@ struct wallet_t
     double enhanced_earnings{ NAN };
     double total_dividends{ 0 };
 
+    /*! Indicates if dividends are reinvested and therefore automatically included in the total funds. */
+    bool dividends_reinvested{ false };
+
     bool show_extra_charts{ false };
     bool show_add_historical_data_ui{ false };
 
