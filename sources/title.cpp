@@ -98,6 +98,12 @@ FOUNDATION_STATIC bool title_fetch_ps(const title_t* t, double& value)
     if (s == nullptr || !s->has_resolve(FetchLevel::REALTIME | FetchLevel::FUNDAMENTALS))
         return false;
 
+    if (title_is_index(t))
+    {
+        value = (s->current.sar - s->current.price) / s->current.price * 100.0;
+        return s->has_resolve(FetchLevel::TECHNICAL_SAR);
+    }
+
     // Handle cases where the stock has been dismissed from the market.
     if (math_real_is_nan(s->current.adjusted_close))
     {

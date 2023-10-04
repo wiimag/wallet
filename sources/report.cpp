@@ -387,9 +387,6 @@ FOUNDATION_STATIC table_cell_t report_column_get_value(table_element_ptr_t eleme
 {
     title_t* t = *(title_t**)element;
 
-    if ((column->flags & COLUMN_COMPUTE_SUMMARY) && title_is_index(t))
-        return nullptr;
-
     if (t == nullptr)
         return nullptr;
 
@@ -401,6 +398,9 @@ FOUNDATION_STATIC table_cell_t report_column_get_value(table_element_ptr_t eleme
     case REPORT_FORMULA_EXCHANGE_RATE:
         return t->average_exchange_rate;
     }
+
+    if ((column->flags & COLUMN_COMPUTE_SUMMARY) && title_is_index(t))
+        return nullptr;
 
     // Stock accessors
     const stock_t* stock_data = t->stock;
@@ -2281,7 +2281,7 @@ void report_render(report_t* report)
 
     expr_set_or_create_global_var(STRING_CONST("$REPORT"), expr_result_t(SYMBOL_CSTR(report->name)));
     
-    imgui_draw_splitter("Report", [report](const ImRect& rect)
+    imgui_draw_splitter(SYMBOL_CSTR(report->name), [report](const ImRect& rect)
     {
         if (report->active_titles > 0)
         {

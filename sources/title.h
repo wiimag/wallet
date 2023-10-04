@@ -24,7 +24,8 @@ const fetch_level_t TITLE_MINIMUM_FETCH_LEVEL =
 
 const fetch_level_t INDEX_MINIMUM_FETCH_LEVEL =
     FetchLevel::REALTIME |
-    FetchLevel::EOD;
+    FetchLevel::EOD | 
+    FetchLevel::TECHNICAL_SAR;
 
 /*! The title structure is used to store information about a given title. 
  *  A title is owned by a report and tracks all the transaction made for a given title.

@@ -876,10 +876,13 @@ bool wallet_draw(wallet_t* wallet, float available_space)
             wallet_render_funds_text(available_space, control_padding, fundsstr);
 
             // Add checkbox to indicate that dividends are included in the funds
-            ImGui::PushID("Dividends");
-            if (ImGui::Checkbox(tr("Dividends Reinvested?"), &wallet->dividends_reinvested))
-                updated |= true;
-            ImGui::PopID();
+            if (wallet->total_dividends > 0)
+            {
+                ImGui::PushID("Dividends");
+                if (ImGui::Checkbox(tr("Dividends Reinvested?"), &wallet->dividends_reinvested))
+                    updated |= true;
+                ImGui::PopID();
+            }
 
             ImGui::SetWindowFontScale(0.9f);
 
@@ -919,7 +922,7 @@ bool wallet_draw(wallet_t* wallet, float available_space)
                 ImGui::PopID();
             }
             
-            if (!wallet->dividends_reinvested)
+            if (wallet->total_dividends > 0 && !wallet->dividends_reinvested)
             {
                 // Render disabled dividends fields
                 ImGui::NextColumn();

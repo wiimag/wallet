@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.33.4] - 2023-10-04
+## [0.33.5] - 2023-10-04
+- Add prediction sensor value for index stocks.
 - Add support to indicate that dividends are automatically reinvested or not in the wallet view.
 - Fix day change percentage for stock indexes.
 - Fix `R(report, title, transactions)` when title only contains one transaction.
@@ -178,15 +179,3 @@
 - Fix OpenAI analysis generation when using proxy backend.
 - Fix OpenAI analysis generation when using proxy backend.
 - Improve wallet history edit dialog.
-
-# TODO
-- [ ] 2023-05-07: Notify about split factor changes for a given report (use an alert?)
-- [ ] 2023-05-07: Visualize report data in pattern view when owned.
-- [ ] 2023-05-06: Improve title statistics when the stock just split.
-- [ ] 2023-05-04: Add list of invalid symbols to quickly discard them from the search index
-- [ ] 2023-04-27: Check alerts in a job
-- [ ] 2023-04-20: Use the new search window to add a new title
-- [ ] 2023-04-20: Check if we can download a first search index database from the backend
-- [ ] 2023-04-19: Add user guide
-- [ ] 2023-04-19: Add user authentication when using the proxy backend
-- [ ] 2023-04-19: Add augmented logo cache from the backend
