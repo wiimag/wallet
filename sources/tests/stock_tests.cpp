@@ -11,7 +11,9 @@
 
 #include <stock.h>
 #include <events.h>
+#include <scripts.h>
 
+#include <framework/expr.h>
 #include <framework/dispatcher.h>
 
 #include <foundation/system.h>
@@ -23,23 +25,23 @@ static const char* stock500[] = {
     "U.US", "ACN.US", "ATVI.US", "ADBE.US", "AMD.US", "AAP.US", "AES.US",
     "AFL.US", "A.US", "APD.US", "AKAM.US", "ALK.US", "ALB.US", "ARE.US", "ALGN.US", "ALLE.US",
     "LNT.US", "ALL.US", "GOOGL.US", "GOOG.US", "MO.US", "AMCR.US", "AEE.US", "AAL.US", "AEP.US",
-    "AXP.US", "AIG.US", "AMT.US", "AWK.US", "AMP.US", "ABC.US", "AME.US", "AMGN.US", "APH.US", "ADI.US",
-    "ANSS.US", /*"ANTM.US",*/ "AON.US", "AOS.US", "APA.US", "AIV.US", "AAPL.US", "AMAT.US", "APTV.US", "ADM.US",
-    "ARNC.US", "ANET.US", "AJG.US", "AIZ.US", "ATO.US", "T.US", "ADSK.US", "ADP.US", "AZO.US", "AVB.US",
+    "AXP.US", "AIG.US", "AMT.US", "AWK.US", "AMP.US", "AME.US", "AMGN.US", "APH.US", "ADI.US",
+    "ANSS.US", "AON.US", "AOS.US", "APA.US", "AIV.US", "AAPL.US", "AMAT.US", "APTV.US", "ADM.US",
+    "ANET.US", "AJG.US", "AIZ.US", "ATO.US", "T.US", "ADSK.US", "ADP.US", "AZO.US", "AVB.US",
     "AVY.US", "BKR.US", "BK.US", "BAX.US", "BDX.US", "BRK-B.US", "BBY.US", "BIIB.US",
     "BLK.US", "BA.US", "BKNG.US", "BWA.US", "BXP.US", "BSX.US", "BMY.US", "BR.US", "BF-B.US",
-    "CHRW.US", /*"COG.US",*/ "CDNS.US", "CPB.US", "COF.US", "CAH.US", "KMX.US", "CCL.US", "CARR.US", "CTLT.US",
-    "CAT.US", "CBOE.US", "CBRE.US", "CDW.US", "CE.US", "CNC.US", "CNP.US", /*"CERN.US",*/ "CF.US", "SCHW.US",
+    "CHRW.US", "CDNS.US", "CPB.US", "COF.US", "CAH.US", "KMX.US", "CCL.US", "CARR.US", "CTLT.US",
+    "CAT.US", "CBOE.US", "CBRE.US", "CDW.US", "CE.US", "CNC.US", "CNP.US", "CF.US", "SCHW.US",
     "CHTR.US", "CVX.US", "CMG.US", "CB.US", "CHD.US", "CI.US", "CINF.US", "CTAS.US", 
-    "CFG.US", /*"CTXS.US",*/ "CLX.US", "CME.US", "CMS.US", "CTSH.US", "CL.US", "CMCSA.US", "CMA.US",
-    "CAG.US", /*"CXO.US",*/ "COP.US", "ED.US", "STZ.US", "COO.US", "CPRT.US", "GLW.US", "CTVA.US", "COST.US",
+    "CFG.US", "CLX.US", "CME.US", "CMS.US", "CTSH.US", "CL.US", "CMCSA.US", "CMA.US",
+    "CAG.US", "COP.US", "ED.US", "STZ.US", "COO.US", "CPRT.US", "GLW.US", "CTVA.US", "COST.US",
     "COTY.US", "CCI.US", "CSX.US", "CMI.US", "CVS.US", "DHI.US", "DHR.US", "DRI.US", "DVA.US", "DE.US",
-    "DAL.US", "XRAY.US", "DVN.US", "DXCM.US", "FANG.US", "DLR.US", "DFS.US", /*"DISCA.US", "DISCK.US",*/ "DISH.US",
+    "DAL.US", "XRAY.US", "DVN.US", "DXCM.US", "FANG.US", "DLR.US", "DFS.US", "DISH.US",
     "DG.US", "DLTR.US", "D.US", "DOV.US", "DOW.US", "DTE.US", "DUK.US", "DD.US", "DXC.US",
     "EMN.US", "ETN.US", "EBAY.US", "ECL.US", "EIX.US", "EW.US", "EA.US", "EMR.US", "ETR.US",
-    "EOG.US", "EFX.US", "EQIX.US", "EQR.US", "ESS.US", "EL.US", "EVRG.US", "ES.US", "RE.US", "EXC.US",
+    "EOG.US", "EFX.US", "EQIX.US", "EQR.US", "ESS.US", "EL.US", "EVRG.US", "ES.US", "EXC.US",
     "EXPE.US", "EXPD.US", "EXR.US", "XOM.US", "FFIV.US", "META.US", "FAST.US", "FRT.US", "FDX.US", "FIS.US",
-    "FITB.US", "FE.US", "FRC.US", "FISV.US", "FLT.US", "FLS.US", "FMC.US", "F.US", "FTNT.US",
+    "FITB.US", "FE.US", "FLT.US", "FLS.US", "FMC.US", "F.US", "FTNT.US",
     "FTV.US", "FOXA.US", "FOX.US", "BEN.US", "FCX.US", "GPS.US", "GRMN.US", "IT.US", "GD.US",
     "GE.US", "GIS.US", "GM.US", "GPC.US", "GILD.US", "GL.US", "GPN.US", "GS.US", "GWW.US", "HAL.US",
     "HBI.US", "HIG.US", "HAS.US", "HCA.US", "PEAK.US", "HSIC.US", "HSY.US", "HES.US", "HPE.US", "HLT.US",
@@ -56,13 +58,13 @@ static const char* stock500[] = {
     "NKTR.US", "NTAP.US", "NWL.US", "NEM.US", "NWSA.US", "NWS.US", "NEE.US", 
     "NI.US", "JWN.US", "NSC.US", "NTRS.US", "NOC.US", "NCLH.US", "NRG.US", "NUE.US",
     "NVDA.US", "NVR.US", "ORLY.US", "OXY.US", "ODFL.US", "OMC.US", "OKE.US", "ORCL.US", "PCAR.US", "PKG.US",
-    "PH.US", "PAYX.US", "PAYC.US", "PYPL.US", "PNR.US", "PEP.US", "PKI.US", "PRGO.US", "PFE.US",
+    "PH.US", "PAYX.US", "PAYC.US", "PYPL.US", "PNR.US", "PEP.US", "PRGO.US", "PFE.US",
     "PM.US", "PSX.US", "PNW.US", "PXD.US", "PNC.US", "POOL.US", "PPG.US", "PPL.US", "PFG.US", "PG.US",
     "PGR.US", "PLD.US", "PRU.US", "PTC.US", "PEG.US", "PSA.US", "PHM.US", "PVH.US", "QRVO.US", "PWR.US",
     "QCOM.US", "DGX.US", "RL.US", "RJF.US", "RTX.US", "O.US", "REG.US", "REGN.US", "RF.US", "RSG.US",
     "RMD.US", "RHI.US", "ROK.US", "ROL.US", "ROP.US", "ROST.US", "RCL.US", "SPGI.US", "SBAC.US",
     "SLB.US", "STX.US", "SEE.US", "SRE.US", "NOW.US", "SHW.US", "SPG.US", "SWKS.US", "SLG.US", "SNA.US",
-    "SO.US", "LUV.US", "SWK.US", "SBUX.US", "STT.US", "STE.US", "SYK.US", "SIVB.US", "SYF.US", "SNPS.US",
+    "SO.US", "LUV.US", "SWK.US", "SBUX.US", "STT.US", "STE.US", "SYK.US", "SYF.US", "SNPS.US",
     "SYY.US", "TMUS.US", "TROW.US", "TTWO.US", "TPR.US", "TGT.US", "TEL.US", "TDY.US", "TFX.US", "TER.US",
     "TXN.US", "TXT.US", "TMO.US", "TJX.US", "TSCO.US", "TT.US", "TDG.US", "TRV.US", "TRMB.US",
     "TFC.US", "TYL.US", "TSN.US", "UDR.US", "ULTA.US", "USB.US", "UAA.US", "UA.US", "UNP.US",
@@ -652,7 +654,7 @@ TEST_SUITE("Stocks")
         REQUIRE_NE(s, nullptr);
         
         CHECK_EQ(SYMBOL_CONST(s->sector), CTEXT("Industrials"));
-        CHECK_EQ(SYMBOL_CONST(s->industry), CTEXT("Airlines"));
+        CHECK_EQ(SYMBOL_CONST(s->industry), CTEXT("Passenger Airlines"));
     }
 
     TEST_CASE("stock_resolve")
@@ -665,6 +667,32 @@ TEST_SUITE("Stocks")
         // Resolve non-existing stock
         stock = stock_resolve(STRING_CONST("NONEXISTING.STOCK"), FetchLevel::FUNDAMENTALS);
         REQUIRE_FALSE(stock);
+    }
+
+    TEST_CASE("Inline primary ticker expression")
+    {
+        string_const_t primary_ticker_expression_code = CTEXT(R"(
+            $t = @1
+            $t = IF(ENDS_WITH($t, "NEO"), F($t, "General.Code") + ".US", $t)
+            $primary_ticker = F($t, "General.PrimaryTicker")
+            IF($primary_ticker, $primary_ticker, $t)
+        )");
+
+        // Create library function primary_ticker
+        REQUIRE(scripts_register_function(STRING_CONST("primary_ticker"), STRING_ARGS(primary_ticker_expression_code)));
+
+        // Evaluate expression
+        string_const_t expression_code = CTEXT(R"(
+            MAP(["CSH-UN.TO", "TSLA.NEO", "CTC-A.TO"], primary_ticker($1))
+        )");
+        expr_result_t result = eval(STRING_ARGS(expression_code));
+        CHECK_EQ(result.type, EXPR_RESULT_ARRAY);
+        CHECK_EQ(result.element_at(0).as_string(), CTEXT("CSH-UN.TO"));
+        CHECK_EQ(result.element_at(1).as_string(), CTEXT("TSLA.US"));
+        CHECK_EQ(result.element_at(2).as_string(), CTEXT("CTC.TO"));
+
+        // Resolve existing stock
+        REQUIRE(scripts_unregister_function(STRING_CONST("primary_ticker")));
     }
 }
 

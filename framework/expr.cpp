@@ -310,8 +310,9 @@ expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& valu
     expr_result_t* kvp = nullptr;
     array_push(kvp, key);
     array_push(kvp, value);
-    if (kvp)
+    if (kvp) {
         array_push(_expr_lists, kvp);
+    }
     return expr_result_t(kvp, 1ULL);
 }
 
@@ -2513,7 +2514,7 @@ expr_result_t eval(string_const_t expression)
 {
     memory_context_push(HASH_EXPR);
 
-    for (size_t i = 0; i < array_size(_expr_lists); ++i)
+    for (unsigned i = 0, end = array_size(_expr_lists); i < end; ++i)
         array_deallocate(_expr_lists[i]);
     array_clear(_expr_lists);
 

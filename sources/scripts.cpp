@@ -31,7 +31,7 @@ FOUNDATION_STATIC string_const_t scripts_config_path()
     return session_get_user_file_path(STRING_CONST("scripts.json"));
 }
 
-FOUNDATION_STATIC expr_result_t script_evaluate(script_t* script)
+FOUNDATION_STATIC expr_result_t script_evaluate(script_t* script, bool execute_inline)
 {
     if (script->show_console)
         console_show();
@@ -48,14 +48,23 @@ FOUNDATION_STATIC expr_result_t script_evaluate(script_t* script)
     expr_set_global_var(STRING_CONST("$SCRIPT_NAME_FULL"), STRING_ARGS(formatted_name));
 
     // TODO: Guard against system exceptions.
-    auto result = eval(STRING_LENGTH(script->text));
+    auto result = execute_inline ? 
+        eval_inline(STRING_LENGTH(script->text)) :
+        eval(STRING_LENGTH(script->text));
     if (EXPR_ERROR_CODE != EXPR_ERROR_NONE)
     {
-        char formatted_name_buffer[256];
-        string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
-        log_errorf(HASH_SCRIPTS, ERROR_SCRIPT, STRING_CONST("Failed to evaluate script '%.*s': %s"),
-            STRING_FORMAT(formatted_name), EXPR_ERROR_MSG);
-        console_show();
+        if (execute_inline)
+        {
+            throw ExprError(EXPR_ERROR_EVAL_FUNCTION, EXPR_ERROR_CODE, EXPR_ERROR_MSG);
+        }
+        else
+        {
+            char formatted_name_buffer[256];
+            string_t formatted_name = string_utf8_unescape(STRING_BUFFER(formatted_name_buffer), STRING_LENGTH(script->name));
+            log_errorf(HASH_SCRIPTS, ERROR_SCRIPT, STRING_CONST("Failed to evaluate script '%.*s': %s"),
+                STRING_FORMAT(formatted_name), EXPR_ERROR_MSG);
+            console_show();
+        }
     }
 
     if (!script->function_library)
@@ -65,6 +74,11 @@ FOUNDATION_STATIC expr_result_t script_evaluate(script_t* script)
     }
 
     return result;
+}
+
+FOUNDATION_FORCEINLINE expr_result_t script_evaluate_inline(script_t* script)
+{
+    return script_evaluate(script, true);
 }
 
 FOUNDATION_STATIC script_t* script_find_by_name(const char* name, size_t length)
@@ -103,20 +117,26 @@ FOUNDATION_STATIC expr_result_t script_evaluate_function(const expr_func_t* f, v
     expr_set_global_var(STRING_CONST("@ARGS"), expr_eval_list(elements));
 
     // Evaluate script
-    return script_evaluate(script);
+    return script_evaluate_inline(script);
 }
 
-FOUNDATION_STATIC void script_register_function(script_t& script)
+FOUNDATION_STATIC bool script_unregister_function(script_t& script)
+{
+    return expr_unregister_function(script.name);
+}
+
+FOUNDATION_STATIC bool script_register_function(script_t& script)
 {
     if (string_length(script.name) == 0)
-        return;
+        return false;
 
     hash_t funciton_name_hash = string_hash(script.name, string_length(script.name));
     if (script.function_registered == funciton_name_hash)
-        return;
+        return false;
 
     expr_register_function(script.name, script_evaluate_function, nullptr, 0);
     script.function_registered = funciton_name_hash;
+    return true;
 }
 
 FOUNDATION_STATIC script_t* scripts_load()
@@ -162,6 +182,10 @@ FOUNDATION_STATIC script_t* scripts_load()
 
 FOUNDATION_STATIC void scripts_save(script_t* scripts)
 {
+    // Do not save scripts when running tests as we do not want to alter the user session
+    if (main_is_running_tests())
+        return;
+
     config_handle_t data = config_allocate(CONFIG_VALUE_ARRAY);
 
     for (unsigned i = 0, count = array_size(scripts); i< count; ++i)
@@ -243,7 +267,7 @@ FOUNDATION_STATIC void script_render_window(window_handle_t win)
         ImGui::SameLine();
         if (ImGui::Button(tr("Evaluate")))
         {
-            script_evaluate(script);
+            script_evaluate(script, false);
         }
     }
     ImGui::EndDisabled();
@@ -324,7 +348,7 @@ FOUNDATION_STATIC void script_render_menu_item(script_t* script, unsigned i, flo
     ImGui::BeginDisabled(script->function_library);
     if (ImGui::Selectable(menu_name.str, false, ImGuiSelectableFlags_AllowItemOverlap, {max_label_width, 0.0f}))
     {
-        script_evaluate(script);
+        script_evaluate(script, false);
     }
     else if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
     {
@@ -478,6 +502,72 @@ void scripts_render_pattern_menu_items()
     }
 
     ImGui::EndMenu();
+}
+
+bool scripts_register_function(const char* name, size_t name_length, const char* expression_code, size_t expression_code_length)
+{
+    if (!name || !name_length || !expression_code || !expression_code_length)
+        return false;
+
+    script_t* scripts = _->scripts;
+    const unsigned script_count = array_size(scripts);
+
+    // Check if the function is already registered
+    for (unsigned i = 0, count = script_count; i < count; ++i)
+    {
+        script_t* script = scripts + i;
+
+        if (!script->function_library)
+            continue;
+
+        if (string_equal_nocase(STRING_LENGTH(script->name), name, name_length))
+        {
+            log_warnf(HASH_SCRIPTS, WARNING_SUSPICIOUS,
+                STRING_CONST("Script function '%.*s' already registered"), (int)name_length, name);
+            return false;
+        }
+    }
+
+    script_t script = { 0 };
+    string_copy(STRING_BUFFER(script.name), name, name_length);
+    string_copy(STRING_BUFFER(script.text), expression_code, expression_code_length);
+    script.last_modified = time_current();
+    script.function_library = true;
+    script.show_console = false;
+    script.is_new = true;
+
+    if (!script_register_function(script))
+        return false;
+
+    array_push_memcpy(_->scripts, &script);
+    return true;
+}
+
+bool scripts_unregister_function(const char* name, size_t name_length)
+{
+    if (!name || !name_length)
+        return false;
+
+    script_t* scripts = _->scripts;
+    const unsigned script_count = array_size(scripts);
+
+    // Check if the function is already registered
+    for (unsigned i = 0, count = script_count; i < count; ++i)
+    {
+        script_t* script = scripts + i;
+
+        if (!script->function_library)
+            continue;
+
+        if (string_equal_nocase(STRING_LENGTH(script->name), name, name_length))
+        {
+            script_unregister_function(*script);
+            array_erase_ordered(scripts, i);
+            return true;
+        }
+    }
+
+    return false;
 }
 
 //
