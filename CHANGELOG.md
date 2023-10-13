@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.33.6] - 2023-10-13
+## [0.33.7] - 2023-10-13
+- Add support to open table expression in a new floating window.
 - Fix inline evaluation of script functions losing track of evaluated list expressions.
 - Add prediction sensor value for index stocks.
 - Add support to indicate that dividends are automatically reinvested or not in the wallet view.

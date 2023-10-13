@@ -32,6 +32,7 @@
 #include <framework/table.h>
 #include <framework/array.h>
 #include <framework/system.h>
+#include <framework/window.h>
 
 #define HASH_TABLE_EXPRESSION static_hash_string("table_expr", 10, 0x20a95260d96304aULL)
 
@@ -227,7 +228,7 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
 {
     if (report->table == nullptr)
     {
-        report->table = table_allocate(report->name.str, ImGuiTableFlags_SizingFixedSame | TABLE_SUMMARY | TABLE_HIGHLIGHT_HOVERED_ROW);
+        report->table = table_allocate(report->name.str, ImGuiTableFlags_ScrollX | ImGuiTableFlags_SizingFixedFit | TABLE_SUMMARY | TABLE_HIGHLIGHT_HOVERED_ROW);
         foreach(c, report->columns)
         {
             column_flags_t column_flags = COLUMN_OPTIONS_NONE;
@@ -284,6 +285,22 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
 
     table_render(report->table, report->records, array_size(report->records), sizeof(table_expr_record_t), 0.0f, 0.0f);
     return true;
+}
+
+FOUNDATION_STATIC void table_expr_deallocate_window(window_handle_t win)
+{
+    table_expr_t* report = (table_expr_t*)window_get_user_data(win);
+    if (report == nullptr)
+        return;
+    table_expr_deallocate(report);
+}
+
+FOUNDATION_STATIC void table_expr_render_window(window_handle_t win)
+{
+    table_expr_t* report = (table_expr_t*)window_get_user_data(win);
+    if (report == nullptr)
+        return;
+    table_expr_render_dialog(report);
 }
 
 FOUNDATION_STATIC table_expr_type_drawer_t* table_expr_find_drawer(const char* type, size_t length)
@@ -485,9 +502,13 @@ FOUNDATION_STATIC expr_result_t table_expr_eval(const expr_func_t* f, vec_expr_t
     report->table = nullptr;
     report->search_filter[0] = 0;
 
-    app_open_dialog(table_name.str, 
+    window_open(table_name.str, STRING_ARGS(table_name), 
+        table_expr_render_window, table_expr_deallocate_window,
+        report, WindowFlags::None);
+
+    /*app_open_dialog(table_name.str, 
         L1(table_expr_render_dialog((table_expr_t*)_1)), IM_SCALEF(800), IM_SCALEF(600), true,
-        report, L1(table_expr_deallocate((table_expr_t*)_1)));
+        report, L1(table_expr_deallocate((table_expr_t*)_1)));*/
 
     return NIL;
 }
