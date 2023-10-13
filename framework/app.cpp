@@ -314,7 +314,7 @@ void app_dialogs_render()
         {
             const ImVec2 window_size = ImGui::GetWindowSize();
             ImGui::SetNextWindowPos(ImVec2((window_size.x - dlg->width) / 2.0f, (window_size.y - dlg->height) / 2.0f), ImGuiCond_FirstUseEver);
-            ImGui::SetNextWindowSizeConstraints(ImVec2(dlg->width, dlg->height), ImVec2(INFINITY, INFINITY));
+            ImGui::SetNextWindowSize(ImVec2(dlg->width, dlg->height), ImGuiCond_FirstUseEver);
             ImGui::SetNextWindowFocus();
             dlg->window_opened_once = true;
         }

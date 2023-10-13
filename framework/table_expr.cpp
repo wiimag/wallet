@@ -227,7 +227,7 @@ FOUNDATION_STATIC bool table_expr_render_dialog(table_expr_t* report)
 {
     if (report->table == nullptr)
     {
-        report->table = table_allocate(report->name.str, TABLE_SUMMARY | TABLE_HIGHLIGHT_HOVERED_ROW);
+        report->table = table_allocate(report->name.str, ImGuiTableFlags_SizingFixedSame | TABLE_SUMMARY | TABLE_HIGHLIGHT_HOVERED_ROW);
         foreach(c, report->columns)
         {
             column_flags_t column_flags = COLUMN_OPTIONS_NONE;
