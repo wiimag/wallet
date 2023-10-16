@@ -477,7 +477,6 @@ struct table_t
 
     int column_freeze{ 0 };
     bool needs_sorting { false };
-    float max_row_height { 0 };
     tick_t last_sort_time{ 0 }; // Used to throttle sorting at startup
     string_const_t search_filter{ nullptr, 0 };
 
@@ -652,7 +651,7 @@ const ImRect& table_current_cell_rect();
 /*! Returns the global default table row height. 
  *  @return The global default table row height
  */
-float table_default_row_height();
+float table_default_row_height(table_t* table = nullptr);
 
 /*! Sets the table search filter and updates the table. 
  *  @param table            The table
@@ -677,3 +676,5 @@ bool table_export_csv(table_t* table, const char* path, size_t length);
  *  @return true if the table was sorted
  */
 bool table_default_sorter(table_t* table, table_column_t* sorting_column, int sort_direction);
+
+

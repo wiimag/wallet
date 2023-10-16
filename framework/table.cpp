@@ -543,7 +543,7 @@ FOUNDATION_STATIC void table_render_sort_rows(table_t* table)
             return;
 
         foreach(r, table->rows)
-            r->height = table_default_row_height();
+            r->height = table_default_row_height(table);
 
         const ImGuiTableColumnSortSpecs* column_sort_specs = table_specs->Specs;
         table_column_t* sorted_column = table_column_at(table, column_sort_specs->ColumnIndex);
@@ -586,10 +586,11 @@ FOUNDATION_STATIC void table_render_update_ordered_elements(table_t* table, tabl
     }
 }
 
-FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count)
+FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count, const ImVec2& spos, const ImVec2& avs, const float row_height)
 {
     if ((table->flags & TABLE_SUMMARY) == 0 || table->rows_visible_count <= 1)
         return;
+
     table_cell_t summary_cells[ARRAY_COUNT(table->columns)];
     memset(summary_cells, 0, sizeof(summary_cells));
 
@@ -648,23 +649,27 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
         }
     }
 
-    //ImGui::TableNextRow();
-    ImGui::TableNextRow();
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    ImGui::TrTextUnformatted("Summary");
-    for (size_t i = 1; i < ARRAY_COUNT(summary_cells); i++)
-    {	
-        const table_column_t& column = table->columns[i];
-        if (i == column_count)
-            break;
-        else if (!column.used)
-            continue;
+    // Render overlay summary row at the bottom of the table
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    const ImVec2 top_left = { spos.x, spos.y + avs.y - row_height };
+    const ImVec2 bottom_right = { spos.x + avs.x, spos.y + avs.y };
 
-        if (!ImGui::TableSetColumnIndex((int)i))
+    ImGui::TableNextRow(0, table_default_row_height(table));
+    draw_list->AddRectFilled(top_left, bottom_right, IM_COL32(255, 0, 0, 255));
+    ImGuiTable* imtable = ImGui::GetCurrentTable();
+    for (int c = 0; c < column_count; ++c)
+    {
+        if ((ImGui::TableGetColumnFlags(c) & ImGuiTableColumnFlags_IsVisible) == 0)
             continue;
+        ImGui::TableSetColumnIndex(c);
+        const ImRect cell_rect = ImGui::TableGetCellBgRect(imtable, c);
 
-        table_cell_t& sc = summary_cells[i];
+        ImVec2 text_pos = cell_rect.Min;
+        table_column_t& column = table->columns[c];
+
+        //ImGui::SetCursorScreenPos({top_left.x + text_pos.x, top_left.y});
+
+        table_cell_t& sc = summary_cells[c];
         if (format_is_numeric(column.format))
         {
             if ((column.flags & COLUMN_SUMMARY_AVERAGE) || column.format == COLUMN_FORMAT_PERCENTAGE)
@@ -679,8 +684,8 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
             sc.time /= table->rows_visible_count;
         }
 
-        string_const_t str_value = cell_value_to_string(sc, column);
-        if (str_value.length)
+        string_const_t str_value = c == 0 ? RTEXT("Summary") : cell_value_to_string(sc, column);
+        /*if (str_value.length)
         {
             column_flags_t alignment_flags = column.flags & COLUMN_ALIGNMENT_MASK;
             if (alignment_flags == 0 && format_is_numeric(column.format))
@@ -693,13 +698,15 @@ FOUNDATION_STATIC void table_render_summary_row(table_t* table, int column_count
                 cell_label(str_value);
         }
         else
-            ImGui::Dummy(ImVec2());
+            ImGui::Dummy(ImVec2());*/
+
+       draw_list->AddText({top_left.x + text_pos.x, top_left.y}, IM_COL32(255, 255, 255, 255), STRING_RANGE(str_value));
     }
 
-    ImGui::PushStyleColor(ImGuiCol_TableRowBg, (ImVec4)ImColor::HSV(275 / 360.0f, 0.04f, 0.37f));
-    ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, (ImVec4)ImColor::HSV(275 / 360.0f, 0.04f, 0.37f));
-    ImGui::TableNextRow();
-    ImGui::PopStyleColor(2);
+   // ImGui::PushStyleColor(ImGuiCol_TableRowBg, (ImVec4)ImColor::HSV(275 / 360.0f, 0.04f, 0.37f));
+    //ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, (ImVec4)ImColor::HSV(275 / 360.0f, 0.04f, 0.37f));
+    //ImGui::TableNextRow();
+    //ImGui::PopStyleColor(2);
 }
 
 FOUNDATION_FORCEINLINE bool table_column_is_number_value_trimmed(const table_column_t& column, const table_cell_t& cell)
@@ -721,14 +728,14 @@ FOUNDATION_FORCEINLINE bool table_column_is_number_value_trimmed(const table_col
 
 FOUNDATION_STATIC bool table_render_add_new_row_element(table_t* table, int column_count)
 {
-    const auto font_height = table_default_row_height();
+    const auto font_height = table_default_row_height(table);
 
     if (table->new_row_data == nullptr && table->element_size > 0)
         table->new_row_data = memory_allocate(0, table->element_size, 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
 
     table_element_ptr_t element = table->new_row_data;
 
-    ImGui::TableNextRow(0, table->row_fixed_height);
+    ImGui::TableNextRow(0, table_default_row_height(table));
 
     ImGuiTable* ct = ImGui::GetCurrentTable();
     const size_t max_column_count = sizeof(table->columns) / sizeof(table->columns[0]);
@@ -784,7 +791,7 @@ FOUNDATION_STATIC bool table_render_add_new_row_element(table_t* table, int colu
 
 FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_index, int column_count)
 {
-    const auto font_height = table_default_row_height();
+    const auto font_height = table_default_row_height(table);
     
     table_row_t& row = table->rows[element_index];
     table_element_ptr_t element = row.element;
@@ -1035,8 +1042,13 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
             return;
     }
 
+    const bool draw_summary = (table->flags & TABLE_SUMMARY) && (table->rows_visible_count > 0);
+    int clipper_element_count = table->rows_visible_count;
+    if (draw_summary)
+        clipper_element_count += 1;
+
     ImGuiListClipper clipper;
-    clipper.Begin(table->rows_visible_count, table->row_fixed_height);
+    clipper.Begin(clipper_element_count, table->row_fixed_height);
     while (clipper.Step())
     {
         if (clipper.DisplayStart >= clipper.DisplayEnd)
@@ -1048,15 +1060,17 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
         {
             table_render_row_element(table, element_index, column_count);
         }
-    }
 
-    // Draw table summary row
-    table_render_summary_row(table, column_count);
+        if (draw_summary && clipper.DisplayEnd == table->rows_visible_count + 1)
+        {
+            ImGui::TableNextRow(0, table_default_row_height(table));
+        }
+    }
 
     // Handle default context menu on empty space
     if (table->context_menu)
     {
-        ImGui::TableNextRow(0, table->row_fixed_height);
+        ImGui::TableNextRow(0, -1);
         int hovered_column = -1;
         for (int column = 0; column < column_count + 1; column++)
         {
@@ -1088,6 +1102,13 @@ FOUNDATION_STATIC void table_render_elements(table_t* table, int column_count)
     }
 }
 
+struct table_summary_cell_t
+{
+    bool used{ false };
+    ImRect rect;
+    table_cell_t cell;
+};
+
 void table_render(table_t* table, table_element_ptr_const_t elements, const int element_count, size_t element_size, float outer_size_x, float outer_size_y)
 {	
     int column_count = (int)table_column_count(table);
@@ -1097,6 +1118,7 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
         return;
     }
 
+    const float row_height = table_default_row_height(table);
     const ImVec2 outer_size = ImVec2(outer_size_x, outer_size_y);
 
     const ImGuiTableFlags flags = (int)table->flags |
@@ -1107,6 +1129,9 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
         ImGuiTableFlags_Sortable |
         ImGuiTableFlags_Reorderable |
         ImGuiTableFlags_Hideable;
+
+    const ImVec2 spos = ImGui::GetCursorScreenPos();
+    const ImVec2 avs = ImGui::GetContentRegionAvail();
 
     if (!ImGui::BeginTable(table->name.str, column_count, flags, outer_size))
         return;
@@ -1126,11 +1151,152 @@ void table_render(table_t* table, table_element_ptr_const_t elements, const int 
 
     table_render_elements(table, column_count);
 
+    table_summary_cell_t summary_cells[ARRAY_COUNT(table->columns)];
+    memset(summary_cells, 0, sizeof(summary_cells));
+    const bool draw_summary = (table->flags & TABLE_SUMMARY) && (table->rows_visible_count > 0);
+    if (draw_summary)
+    {
+        ImGuiTable* imtable = ImGui::GetCurrentTable();
+
+        for (int i = 0, column_index = 0; i < ARRAY_COUNT(table->columns); ++i)
+        {
+            table_column_t& column = table->columns[i];
+            if (column_index == column_count)
+                break;
+            else if (!column.used)
+                continue;
+
+            if ((ImGui::TableGetColumnFlags(i) & ImGuiTableColumnFlags_IsVisible) == 0)
+                continue;
+
+            ImGui::TableSetColumnIndex(i);
+            const ImRect cell_rect = ImGui::TableGetCellBgRect(imtable, i);
+            summary_cells[i].rect = ImRect(cell_rect.Min, cell_rect.Max);
+            summary_cells[i].rect.Max.y = summary_cells[i].rect.Min.y + row_height;
+        }
+
+        summary_cells[0].used = true;
+
+        for (int element_index = 0; element_index < table->rows_visible_count; ++element_index)
+        {
+            table_row_t& row = table->rows[element_index];
+            table_element_ptr_t element = row.element;
+
+            for (int i = 1, column_index = 0; i < ARRAY_COUNT(table->columns); ++i)
+            {
+                table_column_t& column = table->columns[i];
+                if (column_index == column_count)
+                    break;
+                else if (!column.used)
+                    continue;
+
+                column_index++;
+                if (!column.fetch_value || (column.flags & COLUMN_NO_SUMMARY))
+                    continue;
+
+                const ImGuiTableColumnFlags table_column_flags = ImGui::TableGetColumnFlags(i);
+                if ((table_column_flags & ImGuiTableColumnFlags_IsEnabled) == 0)
+                    continue;
+                if ((table_column_flags & ImGuiTableColumnFlags_IsVisible) == 0)
+                    continue;
+
+                if ((column.flags & COLUMN_DYNAMIC_VALUE) && !row.fetched && table->update)
+                    row.fetched = table->update(element);
+
+                column.flags |= COLUMN_COMPUTE_SUMMARY;
+                const table_cell_t& cell = column.fetch_value(element, &column);
+                column.flags &= ~COLUMN_COMPUTE_SUMMARY;
+
+                // Build summary cells
+                summary_cells[i].used = true;
+                table_cell_t& sc = summary_cells[i].cell;
+                sc.format = column.format;
+                switch (sc.format)
+                {
+                case COLUMN_FORMAT_CURRENCY:
+                case COLUMN_FORMAT_PERCENTAGE:
+                case COLUMN_FORMAT_NUMBER:
+                case COLUMN_FORMAT_BOOLEAN:
+                    if (!math_real_is_nan(cell.number))
+                    {
+                        sc.number += cell.number;
+                        sc.length++;
+                    }
+                    break;
+                case COLUMN_FORMAT_DATE:
+                    sc.time += cell.time;
+                    break;
+
+                default:
+                    break;
+                }
+            }
+        }
+    }
+
     table_handle_horizontal_scrolling(table);
 
     io.HoverDelayNormal = old_hovered_delay;
 
     ImGui::EndTable();
+
+    if (draw_summary)
+    {
+        // Render overlay summary row at the bottom of the table
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+        const ImVec2 top_left = { spos.x, spos.y + avs.y - row_height };
+        const ImVec2 bottom_right = { spos.x + avs.x, spos.y + avs.y };
+        draw_list->AddRectFilled(top_left, bottom_right, IM_COL32(255, 0, 0, 255));
+        
+        for (int c = 0; c < column_count; ++c)
+        {
+            if (!summary_cells[c].used)
+                continue;
+
+            ImVec2 text_pos = summary_cells[c].rect.Min;
+            table_column_t& column = table->columns[c];
+
+            //ImGui::SetCursorScreenPos({top_left.x + text_pos.x, top_left.y});
+
+            table_cell_t& sc = summary_cells[c].cell;
+            if (format_is_numeric(column.format))
+            {
+                if ((column.flags & COLUMN_SUMMARY_AVERAGE) || column.format == COLUMN_FORMAT_PERCENTAGE)
+                {
+                    sc.number /= (double)sc.length;
+                    if (column.format == COLUMN_FORMAT_PERCENTAGE && math_abs(sc.number) > 9.5)
+                        sc.number = (double)math_round(sc.number);
+                }
+            }
+            else if (column.format == COLUMN_FORMAT_DATE)
+            {
+                sc.time /= table->rows_visible_count;
+            }
+
+            string_const_t str_value = c == 0 ? RTEXT("Summary") : cell_value_to_string(sc, column);
+            /*if (str_value.length)
+            {
+                column_flags_t alignment_flags = column.flags & COLUMN_ALIGNMENT_MASK;
+                if (alignment_flags == 0 && format_is_numeric(column.format))
+                    alignment_flags |= COLUMN_RIGHT_ALIGN;
+                if (alignment_flags & COLUMN_RIGHT_ALIGN)
+                    table_cell_right_aligned_label(STRING_ARGS(str_value));
+                else if (alignment_flags & COLUMN_CENTER_ALIGN)
+                    table_cell_middle_aligned_label(STRING_ARGS(str_value));
+                else
+                    cell_label(str_value);
+            }
+            else
+                ImGui::Dummy(ImVec2());*/
+
+           draw_list->AddText({top_left.x + text_pos.x, top_left.y}, IM_COL32(255, 255, 255, 255), STRING_RANGE(str_value));
+        }
+
+       // ImGui::PushStyleColor(ImGuiCol_TableRowBg, (ImVec4)ImColor::HSV(275 / 360.0f, 0.04f, 0.37f));
+        //ImGui::PushStyleColor(ImGuiCol_TableRowBgAlt, (ImVec4)ImColor::HSV(275 / 360.0f, 0.04f, 0.37f));
+        //ImGui::TableNextRow();
+        //ImGui::PopStyleColor(2);
+    }
 }
 
 void table_clear_columns(table_t* table)
@@ -1183,8 +1349,11 @@ const ImRect& table_current_cell_rect()
     return _table_last_cell_rect;
 }
 
-float table_default_row_height()
+float table_default_row_height(table_t* table /*= nullptr*/)
 {
+    if (table && table->row_fixed_height > 0.0f)
+        return table->row_fixed_height;
+
     const auto font_height = IM_SCALEF(18.0f);
     return font_height;
 }
