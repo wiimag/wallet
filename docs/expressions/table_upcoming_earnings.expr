@@ -1,0 +1,24 @@
+# \ue2ba Canadian Upcoming Earnings
+$data = FETCH("calendar", "earnings")
+
+# Get the earnings range
+$from = INDEX($data, 'from')
+$to = INDEX($data, 'to')
+
+# Filter out earnings that are not in the next 7 days
+$e = INDEX($data, 'earnings')
+
+# Structure the data as [$ticker, $currency_symbol, $report_date, $actual, $estimate]
+$e = MAP($e, [INDEX(_, code), INDEX(_, currency), INDEX(_, report_date), INDEX(_, actual), INDEX(_, estimate)])
+
+# Filter out non-canadian/us stocks and stocks without actual or estimate earnings
+$e = FILTER($e, ($2 == "CAD") && ($4 != nil || $5 != nil))
+
+# Display the data in a table
+TABLE("Canadian Upcoming Earnings", $e, 
+  [$from, $1, symbol],
+  [$to, DATE($3), date],
+  ['Estimate', $5, currency],
+  ['Current', "S($1, price)", expression, currency],
+  ['Change', S($1, change_3m), percent],
+  ['Growth', $5 / S($1, price) * 100.0, percent])

@@ -1,0 +1,23 @@
+# \ue1d3 IPOs
+$data = FETCH("calendar", "ipos")
+
+# Get request description
+$description = INDEX($data, 'description')
+$from = INDEX($data, 'from')
+$to = INDEX($data, 'to')
+
+# Get IPO data
+$e = INDEX($data, 'ipos')
+
+# Structure the data as [$1.ticker, $2.currency_symbol, $3.name, $4.start_date, $5.exchange]
+$e = MAP($e, [INDEX(_, code), INDEX(_, currency), INDEX(_, name), INDEX(_, start_date), INDEX(_, exchange)])
+
+# Filter out non-canadian/us stocks
+$e = FILTER($e, ($2 == "CAD" || $2 == "USD"))
+
+# Display the data in a table
+TABLE($description, $e, 
+  ['Symbol', $1, symbol],
+  ['Name', $3, text],
+  ['Start', DATE($4), date],
+  ['Exchange', $5, text])
