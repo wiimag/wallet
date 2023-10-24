@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.34.0] - 2023-10-24
+- Add support for `PLOT(title, ..., ycurrency)` to plot the y-axis on a currency scale.
+- Add support for `SMA(set, distance)` expression to compute the simple moving average of a set of values.
+- Clean up the report summary view (removed some unuseful information).
+
 ## [0.33.7] - 2023-10-13
 - Add support to open table expression in a new floating window.
 - Fix inline evaluation of script functions losing track of evaluated list expressions.

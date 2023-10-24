@@ -1398,8 +1398,6 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
 
     const ImVec2 space = ImGui::GetContentRegionAvail();
 
-    // TODO: Draw closing X button
-
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(IM_SCALEF(4.0f), IM_SCALEF(4.0f)));
     if (!ImGui::BeginChild("##Summary", {-1, -1}, false, ImGuiWindowFlags_AlwaysUseWindowPadding))
@@ -1422,9 +1420,11 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     constexpr const char* pourcentage_fmt = "-9999.99 %";
     constexpr const char* integer_fmt = "-9 999 999  ";
 
+    #if 0
     report_render_summary_line(report, tr("Target"), report->wallet->target_ask * 100.0, pourcentage_fmt, true);
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::TrTooltip("Adjusted target based on the report current performance.");
+    #endif
     report_render_summary_line(report, tr("Profit"), report->wallet->profit_ask * 100.0, pourcentage_fmt, true);
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
         ImGui::TrTooltip("Adjusted target based on the report overall performance and timelapse.");
@@ -1440,6 +1440,9 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
         for (unsigned i = 0, end = title_count; i != end; ++i)
         {
             const title_t* t = report->titles[i];
+            if (!title_active(t))
+                continue;
+
             if (string_equal(SYMBOL_CONST(t->stock->currency), string_const("USD")))
             {
                 average_count++;
@@ -1453,7 +1456,7 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     }
 
     report_render_summary_line(report, tr("Avg. Days"), report->wallet->average_days, integer_fmt);
-    report_render_summary_line(report, tr("Daily average"), report->total_daily_average_p, pourcentage_fmt, true);
+    //report_render_summary_line(report, tr("Daily average"), report->total_daily_average_p, pourcentage_fmt, true);
 
     ImGui::PushStyleColor(ImGuiCol_Text, report->total_day_gain > 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);
     report_render_summary_line(report, tr("Day Gain"), report->total_day_gain, currency_fmt, true);
@@ -1469,13 +1472,14 @@ FOUNDATION_STATIC void report_render_summary(report_t* report)
     {
         ImGui::Separator();
 
-        report_render_summary_line(report, tr("Sell Count"), report->wallet->total_title_sell_count, integer_fmt);
-        report_render_summary_line(report, tr("Sell Total"), report->wallet->sell_total_projected_gain, currency_fmt, true);
         report_render_summary_line(report, tr("Sell Average"), report->wallet->sell_gain_average, currency_fmt, true);
+        report_render_summary_line(report, tr_format("Sell Total ({0, round})", report->wallet->total_title_sell_count), report->wallet->sell_total_projected_gain, currency_fmt, true);
 
+        #if 0
         report_render_summary_line(report, tr("Enhanced earnings"), report->wallet->enhanced_earnings, currency_fmt);
         if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
             ImGui::SetTooltip(tr("Minimal amount (%.2lf) to sell titles if you want to increase your gain considerably."), report->wallet->enhanced_earnings);
+        #endif
 
         const double sell_greediness = report->wallet->total_sell_gain_if_kept;
         ImGui::PushStyleColor(ImGuiCol_Text, sell_greediness <= 0 ? TEXT_GOOD_COLOR : TEXT_WARN_COLOR);

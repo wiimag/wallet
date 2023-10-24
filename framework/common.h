@@ -602,9 +602,21 @@ FOUNDATION_FORCEINLINE uint32_t to_uint(int32_t v)
     return (uint32_t)v;
 }
 
+FOUNDATION_FORCEINLINE size_t to_size(int32_t v)
+{
+    FOUNDATION_ASSERT_MSGFORMAT(v >= 0, "%d<0", v);
+    return (size_t)v;
+}
+
 FOUNDATION_FORCEINLINE size_t to_size(int64_t v)
 {
     FOUNDATION_ASSERT_MSGFORMAT(v >= 0, "%lld<0", v);
+    return (size_t)v;
+}
+
+FOUNDATION_FORCEINLINE size_t to_size(double v)
+{
+    FOUNDATION_ASSERT_MSGFORMAT(v >= 0, "%lg<0", v);
     return (size_t)v;
 }
 

@@ -1,0 +1,10 @@
+# Get stock income statement data
+$incomes = F($TITLE, "Financials.Income_Statement.quarterly")
+
+# Map the net income as a series of [$1.date, $2.netIncome]
+$quarters = MAP($incomes, [INDEX(_, 0), INDEX(_, 1, netIncome)])
+
+# Plot the net income as a line chart, the net income point are smoothed with a 4 quarters moving average
+PLOT(FORMAT("{0} Net Incomes", S($TITLE, name)), 
+    MAP($quarters, DATE($1)), SMA(MAP($quarters, $2), 4), 
+    title, xtime, trend, ycurrency)

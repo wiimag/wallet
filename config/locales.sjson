@@ -633,17 +633,17 @@
 		{
 			hash = "794f094c2e7fdbd"
 			en = "Investments"
-			fr = "Investissements"
+			fr = "Actifs"
 		}
 		{
 			hash = "d202a1ca79af04a7"
 			en = "Total Value"
-			fr = "Valeur totale"
+			fr = "Total"
 		}
 		{
 			hash = "b9144d477bbe8a4a"
 			en = "Total Gain"
-			fr = "Gain total"
+			fr = "Gain"
 		}
 		{
 			hash = "23de0f6c0f415f2b"
@@ -4217,6 +4217,11 @@
 			hash = "bce25d3d4523fc2a"
 			en = "Dividends Reinvested?"
 			fr = "Dividendes r\xc3\xa9investis?"
+		}
+		{
+			hash = "9fbc93fe74b3add2"
+			en = "Sell Total ({0, round})"
+			fr = "Total des ventes ({0, round})"
 		}
 	]
 }

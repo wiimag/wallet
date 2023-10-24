@@ -78,6 +78,15 @@ FOUNDATION_STATIC void plot_expr_render_window(window_handle_t win)
         //ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_Opposite);
         ImPlot::SetupAxisFormat(ImAxis_Y1, "%.3lg %%");
     }
+    else
+    {
+        const bool ycurrency = plot_expr_has_option(plot, "ycurrency");
+        if (ycurrency)
+        {
+            ImPlot::SetupAxis(ImAxis_Y1, nullptr, ImPlotAxisFlags_Opposite);
+            ImPlot::SetupAxisFormat(ImAxis_Y1, plot_value_format_currency_short, nullptr);
+        }
+    }
 
     const bool trend = plot_expr_has_option(plot, "trend");
 

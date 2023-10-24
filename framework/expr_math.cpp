@@ -248,6 +248,47 @@ FOUNDATION_STATIC expr_result_t expr_eval_vecmat_rad_to_deg(const expr_func_t* f
     return expr_eval_vecmat_push_result(context, r);
 }
 
+FOUNDATION_STATIC expr_result_t expr_eval_simple_moving_average(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    if (args->len < 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Missing arguments: SMA(set, distance)");
+
+    expr_result_t set = expr_eval(args->get(0));
+    if (set.element_count() <= 0)
+        return set;
+
+    expr_result_t* sma = nullptr;
+    expr_result_t edistance = expr_eval(args->get(1));
+    const int distance = to_int(edistance.as_number(2.0));
+    for (int i = 0, end = to_int(set.element_count()); i < end; ++i)
+    {
+        const int rs = max(INT32_C(0), i - distance);
+        const int re = min(to_int(set.element_count()), i + distance + 1);
+        
+        int count = re - rs;
+        double sum = 0.0;
+        for (int j = rs; j < re; ++j)
+        {
+            double v = set.as_number(DNAN, (size_t)j);
+            if (math_real_is_nan(v))
+                --count;
+            else
+                sum += v;
+        }
+
+        if (count <= 1)
+        {
+            array_push(sma, set.element_at(i));
+        }
+        else
+        {
+            array_push(sma, expr_result_t(sum / count));
+        }
+    }
+
+    return expr_eval_list(sma);
+}
+
 FOUNDATION_STATIC expr_result_t expr_eval_vecmat_deg_to_rad(const expr_func_t* f, vec_expr_t* args, void* c)
 {
     vecmat_context_t* context = (vecmat_context_t*)c;
@@ -748,6 +789,8 @@ void expr_register_vec_mat_functions(expr_func_t*& funcs)
 
     array_push(funcs, (expr_func_t{ STRING_CONST("RAD2DEG"), expr_eval_vecmat_rad_to_deg, NULL, VECMAT_CONTEXT_SIZE }));
     array_push(funcs, (expr_func_t{ STRING_CONST("DEG2RAD"), expr_eval_vecmat_deg_to_rad, NULL, VECMAT_CONTEXT_SIZE }));
+
+    array_push(funcs, (expr_func_t{ STRING_CONST("SMA"), expr_eval_simple_moving_average, NULL, VECMAT_CONTEXT_SIZE }));
 
     /*
      * SOLVE_INT(2,
