@@ -4223,5 +4223,15 @@
 			en = "Sell Total ({0, round})"
 			fr = "Total des ventes ({0, round})"
 		}
+		{
+			hash = "b6b6cb8d98cfc8a"
+			en = "Linear Trend"
+			fr = "Tendance lin\xc3\xa9aire"
+		}
+		{
+			hash = "8fe16641715f7a93"
+			en = "Modifier dans l'\xc3\xa9diteur"
+			fr = "@TODO"
+		}
 	]
 }

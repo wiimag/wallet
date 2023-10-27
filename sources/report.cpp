@@ -2269,6 +2269,13 @@ void report_render(report_t* report)
     FOUNDATION_ASSERT(report);
     const float space_left = ImGui::GetContentRegionAvail().x;
 
+    #if 0
+    if (ImGui::IsWindowAppearing())
+    {
+        report_expression_column_clear(report);
+    }
+    #endif
+
     if (shortcut_executed(ImGuiKey_F5))
     {
         tr_warn(HASH_REPORT, WARNING_PERFORMANCE, "Refreshing report {0,st}", report->name);
@@ -2284,7 +2291,9 @@ void report_render(report_t* report)
         summary_frame = [report](const ImRect& rect)
         {
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(2.0F, 0));
+            ImGui::SetWindowFontScale(0.9f);
             report_render_summary(report);
+            ImGui::SetWindowFontScale(1.0f);
             ImGui::PopStyleVar();
         };   
     }

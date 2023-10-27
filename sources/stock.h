@@ -599,3 +599,11 @@ bool stock_is_index(stock_handle_t stock);
  *  @return True if the stock represents an index.
  */
 bool stock_is_index(const stock_t* stock);
+
+/*! Checks if the stock represents a common stock.
+ * 
+ *  @param stock Initialized stock handle.
+ * 
+ *  @return True if the stock represents a common stock.
+ */
+bool stock_is_common(stock_handle_t stock);

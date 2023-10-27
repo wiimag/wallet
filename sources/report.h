@@ -288,6 +288,14 @@ void report_load_expression_columns(report_t* report);
  */
 void report_expression_column_reset(report_t* report);
 
+/*! Clear the expression columns of a report. 
+ *
+ *  @remark This is usually done when deleting the report.
+ * 
+ *  @param report    The report to clear the expression columns for.
+ */
+void report_expression_column_clear(report_t* report);
+
 /*! Save the expression columns of a report. 
  *
  *  @param report    The report to save the expression columns for.

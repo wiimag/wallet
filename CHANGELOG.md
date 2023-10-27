@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.34.1] - 2023-10-27
+## [0.34.2] - 2023-10-27
+- Improve the pattern left side panel.
 - Add stock name to symbol tooltip in the report view.
 - Add support for `PLOT(title, ..., ycurrency)` to plot the y-axis on a currency scale.
 - Add support for `SMA(set, distance)` expression to compute the simple moving average of a set of values.

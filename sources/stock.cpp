@@ -1332,6 +1332,18 @@ bool stock_is_index(const char* symbol, size_t length)
     return false;
 }
 
+bool stock_is_common(stock_handle_t handle)
+{
+    const stock_t* stock = handle.resolve();
+    if (!stock)
+        return false;
+
+    if (stock_is_index(stock))
+        return false;
+
+    return string_table_symbol_equal(stock->type, STRING_CONST("Common Stock"));
+}
+
 bool stock_is_index(stock_handle_t handle)
 {
     const stock_t* stock = handle.resolve();

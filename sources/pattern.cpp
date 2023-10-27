@@ -966,30 +966,6 @@ FOUNDATION_STATIC float pattern_render_stats(pattern_t* pattern)
     return y_offset;
 }
 
-template<size_t L, size_t D>
-FOUNDATION_STATIC bool pattern_render_decision_mark(const pattern_t* pattern, unsigned rank, const char (&label)[L], const char (&description)[D])
-{
-    pattern_check_t* checks = ((pattern_t*)pattern)->checks;
-    bool clicked = pattern_render_decision_line(rank, &checks[rank-1].checked, tr(label));
-
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal) && ImGui::BeginTooltip())
-    {
-        ImGui::Dummy(ImVec2(IM_SCALEF(405), IM_SCALEF(4)));
-        ImGui::MoveCursor(IM_SCALEF(5), IM_SCALEF(0));
-        ImGui::PushTextWrapPos(IM_SCALEF(400));
-        ImGui::AlignTextToFramePadding();
-        ImGui::TrTextUnformatted(description);
-        ImGui::PopTextWrapPos();
-        ImGui::Dummy(ImVec2(IM_SCALEF(405), IM_SCALEF(8)));
-        ImGui::EndTooltip();
-    }
-
-    return clicked;
-}
-
 FOUNDATION_STATIC pattern_graph_data_t const pattern_render_build_graph_data(pattern_t* pattern)
 {
     pattern_graph_data_t graph_data{ pattern };
@@ -1100,7 +1076,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
         ImPlot::PopStyleVar(1);
     }
 
-    if (s->has_resolve(FetchLevel::TECHNICAL_SLOPE | FetchLevel::TECHNICAL_CCI))
+    if (s->has_resolve(FetchLevel::TECHNICAL_SLOPE | FetchLevel::TECHNICAL_CCI | FetchLevel::FUNDAMENTALS))
     {
         ImPlot::SetAxis(ImAxis_Y1);
         plot_context_t c{ trend_date, min(s->history_count, iteration_count), 1, s->history };
@@ -1163,139 +1139,6 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
             trend_date = mktime(&tm_date);
     }
     pattern_render_graph_end(pattern, s, graph);
-}
-
-FOUNDATION_STATIC float pattern_render_decisions(pattern_t* pattern)
-{
-    ImGuiTableFlags flags =
-        ImGuiTableFlags_NoSavedSettings |
-        ImGuiTableFlags_ScrollY |
-        ImGuiTableFlags_NoHostExtendY |
-        ImGuiTableFlags_PreciseWidths |
-        ImGuiTableFlags_NoBordersInBody |
-        //ImGuiTableFlags_NoClip | 
-        ImGuiTableFlags_NoPadOuterX | ImGuiTableFlags_NoPadInnerX;
-
-    if (!ImGui::BeginTable("Decisions", 3, flags))
-        return 0;
-
-    string_const_t code = SYMBOL_CONST(pattern->code);
-
-    ImGui::TableSetupColumn("Check", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(25));
-    ImGui::TableSetupColumn("#", ImGuiTableColumnFlags_WidthFixed, IM_SCALEF(20));
-    ImGui::TableSetupColumn("Text", ImGuiTableColumnFlags_WidthStretch);
-    //ImGui::TableHeadersRow();
-
-    if (pattern_render_decision_mark(pattern, 1, 
-        "Price trends are positive.", 
-        "It's important to examine the price trend of the company to determine if it's growing or declining. "
-        "\n\nPrice trends such as 50-day moving average, 200-day moving average, and 52-week high can help evaluate a company's financial performance."
-        "\n\nMarket trends can impact the stock price. Investors should monitor market trends to determine if the company is likely to outperform or "
-        "under perform the market as a whole."
-        "\n " ICON_MD_CHECK_BOX " Check the Trend graphic"
-        "\n " ICON_MD_CHECK_BOX " Check the Market Trend (EMA, SMA, WMA, etc.)"
-        "\n"))
-    {
-        pattern->type = (int)PATTERN_GRAPH_TRENDS;
-    }
-
-    if (pattern->type != PATTERN_GRAPH_TRENDS)
-    {
-        pattern_graph_data_t gd = pattern_render_build_graph_data(pattern);
-        gd.compact = true;
-        gd.show_equation = true;
-        ImGui::SetWindowFontScale(0.7f);
-        pattern_render_graph_trends(pattern, gd, { -ImGui::GetStyle().CellPadding.x, IM_SCALEF(100) });
-        ImGui::SetWindowFontScale(1.0f);
-    }
-
-    if (pattern_render_decision_mark(pattern, 2, 
-        "Company fundamentals and diversification are considered",
-        "It's important to understand the company's fundamentals, including its business model, competition, and future prospects. "
-        "If the company has a competitive advantage and positive future prospects, it can be a good sign for investors."
-        "\n\nInvestors should be aware of the importance of diversifying their investment portfolio. "
-        "It's recommended not to invest all funds in one stock but to diversify the portfolio by investing in different companies and industries."
-        "\n " ICON_MD_CHECK_BOX " Check the company website"
-        "\n " ICON_MD_CHECK_BOX " Check the company's annual report"
-        "\n"))
-    {
-        pattern->notes_opened = true;
-        pattern->fundamentals_dialog_opened = true;
-    }
-
-    if (pattern_render_decision_mark(pattern, 3,
-       "Recent events are positive.",
-       "It's important to monitor recent events related to the company, such as financial results announcements, "
-       "management changes, and product developments. These events can impact the stock price."
-       "\n " ICON_MD_CHECK_BOX " Check the company's news"
-       "\n " ICON_MD_CHECK_BOX " Check the company's social media"
-       "\n " ICON_MD_CHECK_BOX " Check the Activity graphic"
-       "\n"))
-    {
-        news_open_window(STRING_ARGS(code));
-    }
-
-    if (pattern_render_decision_mark(pattern, 4,
-        "Financial performance",
-        "It's important to examine the financial performance of the company over the last few quarters to determine if it's growing or declining. "
-        "Financial ratios such as price-to-earnings ratio, price-to-book ratio, and dividend yield ratio can help evaluate a company's financial performance."
-        "\n " ICON_MD_CHECK_BOX " Check the Financials charts"
-        "\n " ICON_MD_CHECK_BOX " Check the company's financial ratios"
-        "\n " ICON_MD_CHECK_BOX " Check the company's financial statements"
-        "\n"))
-    {
-        financials_open_window(STRING_ARGS(code));
-    }
-
-    if (pattern_render_decision_mark(pattern, 5,
-        "Stock liquidity",
-        "It's important to choose a stock that is sufficiently liquid so that the investor can buy and sell quickly and easily without "
-        "suffering significant losses due to lack of liquidity."
-        "\n " ICON_MD_CHECK_BOX " Check the daily transaction volume."
-        "\n " ICON_MD_CHECK_BOX " Check the company capitalization."
-        "\n " ICON_MD_CHECK_BOX " Check the company's market share"
-        "\n"))
-    {
-        pattern->type = (int)PATTERN_GRAPH_YOY;
-    }
-
-    if (pattern_render_decision_mark(pattern, 6,
-        "Stock volatility",
-        "Investors should be aware of the stock's volatility, or the extent to which the stock price fluctuates. "
-        "More volatile stocks may offer higher potential gains but also carry higher risk."
-        "\n " ICON_MD_CHECK_BOX " Beta is higher or equal to 90%."
-        "\n " ICON_MD_CHECK_BOX " Flex difference is higher than 6%."
-        "\n " ICON_MD_CHECK_BOX " Sell limit is higher or equal to 3%."
-        "\n"))
-    {
-        pattern->type = (int)PATTERN_GRAPH_FLEX;
-    }
-
-    if (pattern_render_decision_mark(pattern, 7,
-        "Target limits are interesting",
-        "Analyst opinions can provide an indication of the stock's future direction. "
-        "Investors may consider analyst opinions to get an idea of the company's prospects."
-        "\n " ICON_MD_CHECK_BOX " Check the Wall Street target"
-        "\n " ICON_MD_CHECK_BOX " Check the year low and year high"
-        "\n"))
-    {
-        pattern->type = (int)PATTERN_GRAPH_DEFAULT;
-    }
-
-    if (pattern_render_decision_mark(pattern, 8,
-        "Company perspectives are positive. (MAX >= 25%)",
-        "It's important to compare the company with its peers to determine if it's growing or declining. Also take a close look to the company's "
-        "financial performance and future prospects year after year."
-        "\n" ICON_MD_CHECK_BOX " Look for green value!"
-        "\n" ICON_MD_CHECK_BOX " Is company dividend yield high?"
-        "\n"))
-    {
-        pattern->type = (int)PATTERN_GRAPH_ANALYSIS;
-    }
-
-    float y_offset = ImGui::GetCursorPosY();
-    ImGui::EndTable();
-    return y_offset;
 }
 
 FOUNDATION_STATIC void pattern_render_graph_change_high(pattern_t* pattern, const stock_t* s)
@@ -3217,11 +3060,17 @@ FOUNDATION_STATIC void pattern_render_stats_panel(pattern_t* pattern, const ImRe
         ImGui::SetCursorPos(ImVec2(15, y_pos + 10.0f));
         y_pos = pattern_render_stats(pattern);
 
-        if (!stock_is_index(pattern->stock))
+        if (stock_is_common(pattern->stock) && pattern->type != PATTERN_GRAPH_TRENDS)
         {
-            ImGui::SetWindowFontScale(0.8f);
+            ImGui::SetWindowFontScale(0.7f);
             ImGui::SetCursorPos(ImVec2(0.0f, y_pos + 10.0f));
-            y_pos = pattern_render_decisions(pattern);
+            
+            ImGui::Indent(IM_SCALEF(12));
+            ImGui::TrTextUnformatted("Linear Trend");
+            pattern_graph_data_t gd = pattern_render_build_graph_data(pattern);
+            gd.compact = true;
+            gd.show_equation = true;
+            pattern_render_graph_trends(pattern, gd, { -ImGui::GetStyle().CellPadding.x, IM_SCALEF(100) });
         }
 
         ImGui::SetWindowFontScale(1.0f);
@@ -3491,10 +3340,6 @@ FOUNDATION_STATIC string_const_t pattern_get_user_file_path()
 
 FOUNDATION_STATIC void pattern_load(const config_handle_t& pattern_data, pattern_t& pattern)
 {
-    int check_index = 0;
-    for (auto c : pattern_data["checks"])
-        pattern.checks[check_index++] = pattern_check_t{ c["checked"].as_boolean() };
-
     pattern.opened = pattern_data["opened"].as_boolean();
     pattern.extra_charts = pattern_data["extra_charts"].as_boolean();
     pattern.show_limits = pattern_data["show_limits"].as_boolean();
@@ -3569,13 +3414,6 @@ FOUNDATION_STATIC void pattern_save(config_handle_t pattern_data, const pattern_
     
     if (pattern.analysis_summary && pattern.analysis_summary->length)
         config_set(cv_ai, STRING_CONST("summary"), STRING_ARGS(*pattern.analysis_summary));
-
-    config_handle_t checks_data = config_set_array(pattern_data, STRING_CONST("checks"));
-    for (size_t i = 0; i < ARRAY_COUNT(pattern.checks); ++i)
-    {
-        auto cv_check = config_array_push(checks_data, CONFIG_VALUE_OBJECT);
-        config_set(cv_check, STRING_CONST("checked"), pattern.checks[i].checked);
-    }
 
     if (pattern.watch_context && array_size(pattern.watch_context->points))
     {

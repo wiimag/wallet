@@ -668,10 +668,6 @@ FOUNDATION_STATIC bool symbols_fetch_market_symbols(const char* market, size_t m
             if (string_equal(STRING_ARGS(type), STRING_CONST("FUND")) || string_equal(STRING_ARGS(type), STRING_CONST("Currency")))
                 continue;
 
-            // Skip ETFs
-            if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("ETF")))
-                continue;
-
             // Skip Preferred Stock
             if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("Preferred Stock")))
                 continue;

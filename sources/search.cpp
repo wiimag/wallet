@@ -701,10 +701,6 @@ FOUNDATION_STATIC void search_index_exchange_symbols(const json_object_t& data, 
         if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("FUND")))
             continue;
 
-        // Skip ETFs
-        if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("ETF")))
-            continue;
-
         // Skip Preferred Stock
         if (string_equal_nocase(STRING_ARGS(type), STRING_CONST("Preferred Stock")))
             continue;

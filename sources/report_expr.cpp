@@ -586,10 +586,13 @@ FOUNDATION_STATIC expr_result_t report_eval_report_field(const expr_func_t* f, v
     }
 
     int field_name_index = 1;
+
+    char title_filter_buffer[128];
     string_const_t title_filter{};
     if (args->len >= 3)
     {
         title_filter = expr_eval_get_string_arg(args, 1, "Invalid title name");
+        title_filter = string_to_const(string_copy(STRING_BUFFER(title_filter_buffer), STRING_ARGS(title_filter)));
         field_name_index = 2;
     }
 

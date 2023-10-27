@@ -93,7 +93,6 @@ struct pattern_t
     int type{ 0 };
     int range { 90 };
     bool opened{ true };
-    pattern_check_t checks[8] {};
     bool show_limits{ true };
     bool extra_charts{ false };
     bool show_trend_equation{ false };

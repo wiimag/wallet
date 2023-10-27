@@ -76,12 +76,14 @@ FOUNDATION_STATIC table_cell_t report_column_evaluate_expression(table_element_p
     string_const_t report_name = SYMBOL_CONST(report->name);
     string_const_t title_code = string_const(title->code, title->code_length);
     string_const_t expression_string = string_const(ec->expression, string_length(ec->expression));
-    hash_t key = hash_combine(
-        string_hash(STRING_ARGS(report_name)), 
-        string_hash(STRING_ARGS(title_code)), 
-        string_hash(STRING_ARGS(expression_string)));
+
+    char hash_string[1024];
+    string_const_t report_column_name = column->get_name();
+    string_t hash_string_str = string_format(hash_string, sizeof(hash_string), 
+        STRING_CONST("%.*s%.*s%.*s"), STRING_FORMAT(report_name), STRING_FORMAT(title_code), STRING_FORMAT(report_column_name));
 
     report_expression_cache_value_t cvalue{};
+    hash_t key = string_hash(STRING_ARGS(hash_string_str));
     if (_report_expression_cache->select(key, cvalue) && time_elapsed(cvalue.time) < 5 * 60.0)
     {
         if (cvalue.format == ec->format)
@@ -405,7 +407,11 @@ void report_expression_column_reset(report_t* report)
     {
         e->time = 0;
     }
-    //_report_expression_cache->clear();
+}
+
+void report_expression_column_clear(report_t* report)
+{
+    _report_expression_cache->clear();
 }
 
 void report_expression_columns_save(report_t* report)
