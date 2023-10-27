@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.34.0] - 2023-10-24
+## [0.34.1] - 2023-10-27
+- Add stock name to symbol tooltip in the report view.
 - Add support for `PLOT(title, ..., ycurrency)` to plot the y-axis on a currency scale.
 - Add support for `SMA(set, distance)` expression to compute the simple moving average of a set of values.
 - Clean up the report summary view (removed some unuseful information).

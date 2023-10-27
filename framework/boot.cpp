@@ -555,7 +555,6 @@ extern void main_finalize()
         #endif
 
         app_shutdown();
-        dispatcher_shutdown();
 
         #if BUILD_APPLICATION
         if (main_is_graphical_mode())

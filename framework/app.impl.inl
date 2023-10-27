@@ -86,6 +86,7 @@ extern void app_shutdown()
     module_shutdown();
     progress_finalize();
     session_shutdown();
+    dispatcher_shutdown();
     string_table_shutdown();
 }
 

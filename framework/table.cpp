@@ -860,6 +860,7 @@ FOUNDATION_STATIC void table_render_row_element(table_t* table, int element_inde
             cell.style.rect.y + cell.style.rect.height);
         _table_last_cell_rect.Min = cell_min;
         _table_last_cell_rect.Max = cell_max;
+        
         //if (i >= table->column_freeze) // Because of clipping reasons it seems we can't set the cell background color here
         {
             if ((table->flags & TABLE_HIGHLIGHT_HOVERED_ROW) && row.hovered)

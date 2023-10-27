@@ -581,6 +581,17 @@ FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_
         ImGui::SetTooltip(tr("Add title"));
 }
 
+FOUNDATION_STATIC void report_column_title_tooltip(table_element_ptr_const_t element, const table_column_t* column, const table_cell_t* cell)
+{
+    title_t* title = *(title_t**)element;
+
+    string_const_t stock_name = stock_get_name(title->stock);
+    if (string_is_null(stock_name))
+        ImGui::Text("%.*s", (int)title->code_length, title->code);
+    else
+        ImGui::Text("%.*s (%.*s)", STRING_FORMAT(stock_name), (int)title->code_length, title->code);
+}
+
 FOUNDATION_STATIC table_cell_t report_column_draw_title(table_element_ptr_t element, const table_column_t* column)
 {
     title_t* title = *(title_t**)element;
@@ -590,16 +601,19 @@ FOUNDATION_STATIC table_cell_t report_column_draw_title(table_element_ptr_t elem
     {
         const char* formatted_code = title->code;
 
-        bool can_show_banner = SETTINGS.show_logo_banners && !ImGui::IsKeyDown(ImGuiKey_B);
-        if (title_has_increased(title, nullptr, 30.0 * 60.0))
+        bool can_show_banner = (SETTINGS.show_logo_banners && !ImGui::IsKeyDown(ImGuiKey_B));
+        if (!title_is_index(title))
         {
-            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_UP);
-            can_show_banner = false;
-        }
-        else if (title_has_decreased(title, nullptr, 30.0 * 60.0))
-        {
-            formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_DOWN);
-            can_show_banner = false;
+            if (title_has_increased(title, nullptr, 30.0 * 60.0))
+            {
+                formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_UP);
+                can_show_banner = false;
+            }
+            else if (title_has_decreased(title, nullptr, 30.0 * 60.0))
+            {
+                formatted_code = string_format_static_const("%s %s", title->code, ICON_MD_TRENDING_DOWN);
+                can_show_banner = false;
+            }
         }
 
         const ImGuiStyle& style = ImGui::GetStyle();
@@ -656,17 +670,8 @@ FOUNDATION_STATIC table_cell_t report_column_draw_title(table_element_ptr_t elem
                 ImGui::Dummy(ImVec2(logo_banner_width * max_scale, logo_banner_height * max_scale));
             }
 
-            if (ImGui::IsItemHovered())
-            {
-                if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-                    pattern_open(title->code, title->code_length);
-                else
-                {
-                    ImGui::PushStyleColor(ImGuiCol_Text, 0xFFEEEEEE);
-                    ImGui::SetTooltip("%.*s", (int)title->code_length, title->code);
-                    ImGui::PopStyleColor();
-                }
-            }
+            if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                pattern_open(title->code, title->code_length);
             
             const float space_left = ImGui::GetContentRegionAvail().x - (logo_banner_width * max_scale) - (style.FramePadding.x * 2.0f);
             if (button_width < space_left + IM_SCALEF(10))
@@ -1193,6 +1198,7 @@ FOUNDATION_STATIC void report_table_add_default_columns(report_handle_t report_h
 {
     table_add_column(table, STRING_CONST("Title"),
         report_column_draw_title, COLUMN_FORMAT_SYMBOL, COLUMN_SORTABLE | COLUMN_FREEZE | COLUMN_CUSTOM_DRAWING)
+        .set_tooltip_callback(report_column_title_tooltip)
         .set_header_render_callback(L3(report_column_title_header_render(report_handle, _1, _2, _3)))
         .set_context_menu_callback(L3(report_column_contextual_menu(report_handle, _1, _2, _3)));
 
