@@ -456,7 +456,7 @@ FOUNDATION_STATIC void stock_fetch_technical_results(
         if (entry->has_resolve(FetchLevel::EOD))
         {
             if (eod_fetch_async("technical", ticker, FORMAT_JSON_WITH_ERROR, "order", "d", "function", fn_name,
-                LC1(stock_read_technical_results(_1, index, access_level, desc)), 12ULL * 3600ULL))
+                LC1(stock_read_technical_results(_1, index, access_level, desc)), 8ULL * 3600ULL))
             {
                 entry->mark_fetched(access_level);
                 status = STATUS_RESOLVING;

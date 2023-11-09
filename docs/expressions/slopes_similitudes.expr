@@ -1,0 +1,49 @@
+#
+# Find matching slope patterns (Déja vu!)
+#
+# @1: Stock ticker/title
+# @2: Number of elements to use, default is 90
+#
+
+# Define the ticker to work on
+$ticker = IF(@1, @1, IF($PATTERN, $PATTERN, IF($TITLE, $TITLE, "U.US")))
+
+# Define the number of elements to use
+$nth = IF(@2, @2, 90)
+$proj = IF(@3, @3, 90)
+
+# Get the slope data for a given stock
+$slopes = FILTER(REVERSE(S($ticker, slope, ALL)), $2)
+$slope_count = COUNT($slopes)
+#PRINT("slope_count", $slope_count)
+
+# Get the last N elements
+$current = LAST($slopes, $nth)
+
+# Compute similitudes since the beginning of the data
+$scores = REPEAT([INDEX($slopes, $i, 0), SIMILITUDE(MAP(RANGE($slopes, $i, $i + $nth - 1), $2), MAP($current, $2)), $i], $slope_count - $nth)
+
+# Filter out element with a similitude of less than 0.8
+$scores = FILTER($scores, $2 > 0.85)
+$scores_count = COUNT($scores)
+
+# Filter out previous day that is only one day away
+#$scores = REPEAT([INDEX($scores, $i, 0), INDEX($scores, $i, 1), IF($i == $scores_count - 1, true, INDEX($scores, $i + 1, 0) > INDEX($scores, $i, 0) + 3 * 24 * 60 * 60)], $scores_count)
+$scores = REPEAT([INDEX($scores, $i, 0), INDEX($scores, $i, 1), IF($i == 0 || $i == $scores_count - 1, true, INDEX($scores, $i - 1, 1) < INDEX($scores, $i, 1) && INDEX($scores, $i, 1) > INDEX($scores, $i + 1, 1)), INDEX($scores, $i, 2)], $scores_count)
+
+# Keep only peaks
+$scores = FILTER($scores, $3)
+
+# Map stock prices before and after the pattern
+$scores = MAP($scores, [$4, DATESTR($1), $2, 
+    S($ticker, close, INDEX($slopes, $4 - $nth, 0)),
+    S($ticker, close, $1),
+    S($ticker, close, INDEX($slopes, $4 + $nth, 0)),
+    S($ticker, close, INDEX($slopes, $4 + $nth, 0) + $proj * 24 * 60 * 60)])
+
+# Compute the percentage change
+$scores = MAP($scores, [$2, $3, $4, $5, $6, $7, ($5 - $4) / $4 * 100, ($7 - $6) / $6 * 100])
+
+# Compute the average change
+[$ticker, S($ticker, change_3m), AVG(MAP(RANGE($scores, 1, COUNT($scores) - 2), $8)), S($ticker, price), S($ticker, price) * (1 + AVG(MAP(RANGE($scores, 1, COUNT($scores) - 2), $8)) / 100.0), $scores]
+    

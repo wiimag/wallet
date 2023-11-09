@@ -167,6 +167,9 @@ extern void app_shutdown()
     // before exiting shutting down other services.
     jobs_shutdown();
     query_shutdown();
+
+    dispatcher_update();
+    dispatcher_poll(nullptr);
     
     // App systems
     module_shutdown();
@@ -176,6 +179,7 @@ extern void app_shutdown()
     tabs_shutdown();
     progress_finalize();
     session_shutdown();
+    dispatcher_shutdown();
     string_table_shutdown();
 }
 

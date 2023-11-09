@@ -189,7 +189,7 @@ static struct {
 // # PRIVATE
 //
 
-FOUNDATION_STATIC bool report_eval_report_field_resolve_level(stock_handle_t& stock_handle, FetchLevel request_level, const double timeout_expired = 30.0)
+FOUNDATION_STATIC bool report_eval_report_field_resolve_level(stock_handle_t& stock_handle, FetchLevel request_level, const double timeout_expired = 60.0)
 {
     const stock_t* s = stock_handle;
     if (s == nullptr)
@@ -201,7 +201,10 @@ FOUNDATION_STATIC bool report_eval_report_field_resolve_level(stock_handle_t& st
         {
             const tick_t timeout = time_current();
             while (!s->has_resolve(request_level) && time_elapsed(timeout) < timeout_expired)
+            {
+                dispatcher_update();
                 dispatcher_wait_for_wakeup_main_thread();
+            }
 
             if (time_elapsed(timeout) >= timeout_expired)
             {

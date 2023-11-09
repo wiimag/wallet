@@ -1,6 +1,12 @@
 # Changelog
 
-## [0.34.2] - 2023-10-27
+## [0.34.3] - 2023-11-08
+- Add support to compute slopes similitudes of stock patterns.
+- Add support for expression `RANGE(set, start, end)` to get a range of items from a set.
+- Add support for expression `REVERSE(set)` to reverse a set of values.
+- Add support for expression `FIRST(set[, count])` to get the first items of a set.
+- Add support for expression `LAST(set[, count])` to get the last items of a set.
+- Add support for expression `COSINE_SIMILITUDE(set1, set2)` to compute the cosine similitude between two sets of values.
 - Improve the pattern left side panel.
 - Add stock name to symbol tooltip in the report view.
 - Add support for `PLOT(title, ..., ycurrency)` to plot the y-axis on a currency scale.

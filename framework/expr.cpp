@@ -676,23 +676,6 @@ FOUNDATION_STATIC expr_result_t expr_eval_math_avg(const expr_result_t* list)
     return sum / (expr_result_t)(double)element_count;
 }
 
-FOUNDATION_STATIC expr_result_t expr_eval_math_count(const expr_result_t* list)
-{
-    FOUNDATION_ASSERT(list);
-
-    if (array_size(list) == 1 && list[0].is_null())
-        return 0.0;
-
-    expr_result_t element_count(0.0);
-    for (size_t i = 0; i < array_size(list); ++i)
-    {
-        expr_result_t e = list[i];
-        element_count.value += (double)e.element_count();
-    }
-
-    return element_count;
-}
-
 FOUNDATION_STATIC const expr_result_t* expr_eval_expand_args(vec_expr_t* args)
 {
     FOUNDATION_ASSERT(args);
@@ -753,7 +736,17 @@ FOUNDATION_STATIC expr_result_t expr_eval_math_count(const expr_func_t* f, vec_e
     if (args == nullptr || args->len == 0)
         return NIL;
 
-    return expr_eval_math_count(expr_eval_expand_args(args));
+    if (args->len == 1)
+        return (double)expr_eval(args->get(0)).element_count();
+
+    expr_result_t* counts = nullptr;
+    for (int arg_index = 0; arg_index < args->len; ++arg_index)
+    {
+        const expr_result_t& e = expr_eval(args->get(arg_index));
+        array_push(counts, (double)e.element_count());
+    }
+
+    return expr_eval_list(counts);
 }
 
 FOUNDATION_STATIC expr_result_t expr_eval_ceil(const expr_func_t* f, vec_expr_t* args, void* c)
@@ -774,6 +767,146 @@ FOUNDATION_STATIC expr_result_t expr_eval_floor(const expr_func_t* f, vec_expr_t
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments");
 
     return (double)math_floor(expr_eval(&args->buf[0]).as_number());
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_last(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: LAST([1, 2, 3]) == 3
+    //           LAST([1, 2, 3], 2) == [2, 3]
+    //           LAST(1) == 1
+    //           LAST(1, 0) == nil
+
+    if (args == nullptr || args->len < 1 || args->len > 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments: LAST(set[, count])");
+
+    // Evaluate count
+    const uint32_t count = args->len == 2 ? (uint32_t)expr_eval(args->get(1)).as_number(1.0) : 1;
+    if (count <= 0.0)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid count: %f (must be > 0)", count);
+
+    // Evaluate set
+    expr_result_t set = expr_eval(args->get(0));
+    const uint32_t element_count = set.element_count();
+    if (element_count <= 1 || element_count <= count)
+        return set;
+
+    expr_result_t* results = nullptr;
+    for (uint32_t i = element_count - (uint32_t)count; i < element_count; ++i)
+    {
+        if (count == 1)
+            return set.element_at(i);
+        array_push(results, set.element_at(i));
+    }
+
+    return expr_eval_list(results);
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_reverse(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: REVERSE([1, 2, 3]) == [3, 2, 1]
+    //           REVERSE(1) == 1
+
+    if (args == nullptr || args->len != 1)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments: REVERSE(set)");
+
+    // Evaluate set
+    expr_result_t set = expr_eval(args->get(0));
+
+    // Reverse set
+    const uint32_t element_count = set.element_count();
+    if (element_count <= 1)
+        return set;
+
+    expr_result_t* results = nullptr;
+    for (uint32_t i = element_count; i > 0; --i)
+        array_push(results, set.element_at(i - 1));
+
+    return expr_eval_list(results);
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_cosine_similitude(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: COSINE_SIMILITUDE([1, 2, 3], [1, 2, 3]) == 1.0
+
+    if (args == nullptr || args->len != 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments: COSINE_SIMILITUDE(set1, set2)");
+
+    expr_result_t em1 = expr_eval(args->get(0));
+    expr_result_t em2 = expr_eval(args->get(1));
+
+    double dot = 0.0f;
+    double mag1 = 0.0f;
+    double mag2 = 0.0f;
+    const uint32_t count = min(em1.element_count(), em2.element_count());
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        const double v1 = em1.element_at(i).as_number();
+        const double v2 = em2.element_at(i).as_number();
+        dot += v1 * v2;
+        mag1 += v1 * v1;
+        mag2 += v2 * v2;
+    }
+
+    return dot / (math_sqrt(mag1) * math_sqrt(mag2));
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_range(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: RANGE([1, 2, 3, 4], 1, 2) == [2, 3]
+
+    if (args == nullptr || args->len != 3)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments: RANGE(set, start, end)");
+
+    // Evaluate set
+    expr_result_t set = expr_eval(args->get(0));
+
+    // Evaluate start
+    const uint32_t start = (uint32_t)expr_eval(args->get(1)).as_number(0.0);
+
+    // Evaluate end
+    const uint32_t end = min((uint32_t)expr_eval(args->get(2)).as_number(set.element_count() - 1), set.element_count() - 1);
+
+    // Range set
+    if (start >= end)
+        return NIL;
+
+    expr_result_t* results = nullptr;
+    for (uint32_t i = start; i <= end; ++i)
+        array_push(results, set.element_at(i));
+
+    return expr_eval_list(results);
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_first(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    // Examples: FIRST([1, 2, 3]) == 1
+    //           FIRST([1, 2, 3], 2) == [1, 2]
+    //           FIRST(1) == 1
+    //           FIRST(1, 0) == nil
+
+    if (args == nullptr || args->len < 1 || args->len > 2)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid arguments: LAST(set[, count])");
+
+    // Evaluate count
+    const uint32_t count = args->len == 2 ? (uint32_t)expr_eval(args->get(1)).as_number(1.0) : 1;
+    if (count <= 0.0)
+        throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Invalid count: %f (must be > 0)", count);
+
+    // Evaluate set
+    expr_result_t set = expr_eval(args->get(0));
+    const uint32_t element_count = set.element_count();
+    if (element_count <= 1 || element_count <= count)
+        return set;
+
+    expr_result_t* results = nullptr;
+    for (uint32_t i = 0; i < count; ++i)
+    {
+        if (count == 1)
+            return set.element_at(i);
+        array_push(results, set.element_at(i));
+    }
+
+    return expr_eval_list(results);
 }
 
 FOUNDATION_STATIC expr_result_t expr_eval_random(const expr_func_t* f, vec_expr_t* args, void* c)
@@ -2780,6 +2913,12 @@ FOUNDATION_STATIC void expr_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("PRINT"), expr_eval_print, NULL, 0 })); // PRINT(1, 2, 3)
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("CONCAT"), expr_eval_concat, NULL, 0 })); // CONCAT([1,3], [2,4], 5, [6,7]) == [1, 3, 2, 4, 5, 6, 7]
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("DISTINCT"), expr_eval_distinct, NULL, 0 })); // DISTINCT([1, 2, 3, 1, 2, 3]) == [1, 2, 3]
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("REVERSE"), expr_eval_reverse, NULL, 0 })); // REVERSE([1, 2, 3]) == [3, 2, 1]
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("LAST"), expr_eval_last, NULL, 0 })); // LAST([1, 2, 3]) == 3, LAST([1, 2, 3], 2) == [2, 3]]
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("FIRST"), expr_eval_first, NULL, 0 })); // FIRST([1, 2, 3]) == 1, FIRST([1, 2, 3], 2) == [1, 2]
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("RANGE"), expr_eval_range, NULL, 0 })); // RANGE(set, start, end) == set[start:end]
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SIMILITUDE"), expr_eval_cosine_similitude, NULL, 0 })); // SIMILITUDE([1, 2, 3], [1, 2, 3]) == 1
+    
 
     // Math functions
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("ROUND"), expr_eval_round, NULL, 0 })); // ROUND(1.5) == 2
