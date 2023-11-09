@@ -2697,9 +2697,9 @@ void SetupFinish() {
                     if (tk.Level > 0 || inverted ? (start.x < text_end_pos_limit) : (start.x > text_end_pos_limit))
                     {
                         const char* label_text = tkr.GetText(j);
-                        const float label_text_width = ImGui::CalcTextSize(label_text).x + gp.Style.LabelPadding.x * 2;
+                        const float label_text_width = ImGui::CalcTextSize(label_text).x + gp.Style.LabelPadding.x * 3;
                         DrawList.AddText(start, ax.ColorTxt, label_text);
-                        text_end_pos_limit = start.x + label_text_width;
+                        text_end_pos_limit = start.x + label_text_width * (inverted ? -1.0f : 1.0f);
                     }
                     // END PATH 2023-01-24
                 }

@@ -339,7 +339,10 @@ string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, cons
     if (idx >= args->len)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Missing arguments: %s", message);
 
-    return expr_eval(&args->buf[idx]).as_string();
+    const auto& value = expr_eval(&args->buf[idx]);
+    if (value.is_null())
+        return string_null();
+    return value.as_string();
 }
 
 FOUNDATION_STATIC string_const_t expr_eval_get_string_copy_arg(const vec_expr_t* args, size_t idx, const char* message)
@@ -729,6 +732,42 @@ FOUNDATION_STATIC expr_result_t expr_eval_math_avg(const expr_func_t* f, vec_exp
         return NIL;
 
     return expr_eval_math_avg(expr_eval_expand_args(args));
+}
+
+FOUNDATION_STATIC expr_result_t expr_eval_math_median(const expr_func_t* f, vec_expr_t* args, void* c)
+{
+    if (args == nullptr || args->len != 1)
+        return NIL;
+
+    // Declare median variables
+    double* values = nullptr;
+    
+    expr_result_t set = expr_eval(args->get(0));
+    for (auto e : set)
+    {
+        if (e.is_null())
+            continue;
+
+        array_push(values, e.as_number(0));
+    }
+
+    // Sort values
+    array_sort(values);
+
+    // Calculate median
+    const unsigned value_count = array_size(values);
+    if (value_count == 0)
+        return NIL;
+
+    double median = DNAN;
+    if (value_count % 2 == 0)
+        median = (values[value_count / 2 - 1] + values[value_count / 2]) / 2.0;
+    else
+        median = values[value_count / 2];
+
+    array_deallocate(values);
+
+    return median;
 }
 
 FOUNDATION_STATIC expr_result_t expr_eval_math_count(const expr_func_t* f, vec_expr_t* args, void* c)
@@ -2902,6 +2941,7 @@ FOUNDATION_STATIC void expr_initialize()
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("MAX"), expr_eval_math_max, NULL, 0 })); // MAX([1, 2, 3]) + MAX(4, 5, 6) = 9
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("SUM"), expr_eval_math_sum, NULL, 0 })); // SUM(0, 0, 1, 3) == 4
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("AVG"), expr_eval_math_avg, NULL, 0 })); // (AVG(1, [1, 1]) + AVG([1], [2], [3])) == 3
+    array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("MEDIAN"), expr_eval_math_median, NULL, 0 })); // MEDIAN([1, 2, 3]) == 2
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("COUNT"), expr_eval_math_count, NULL, 0 })); // COUNT(SAMPLES())
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("INDEX"), expr_eval_array_index, NULL, 0 })); // INDEX([1, 2, 3], 2) == 2
     array_push(_expr_user_funcs, (expr_func_t{ STRING_CONST("MAP"), expr_eval_map, NULL, 0 })); // MAP([[a, 1], [b, 2], [c, 3]], INDEX($1, 1)) == [1, 2, 3]

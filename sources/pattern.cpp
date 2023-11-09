@@ -227,6 +227,14 @@ FOUNDATION_STATIC int pattern_format_date_label(double value, char* buff, int si
     return (int)string_format(buff, size, STRING_CONST("%.*s (%d)"), STRING_FORMAT(date_str), math_round(value)).length;
 }
 
+FOUNDATION_STATIC int pattern_format_date_label_short(double value, char* buff, int size, void* user_data)
+{
+    pattern_graph_data_t& graph = *(pattern_graph_data_t*)user_data;
+    time_t then = graph.pattern->date - (time_t)value * time_one_day();
+    string_const_t date_str = string_from_date(then);
+    return (int)string_copy(buff, size, STRING_ARGS(date_str)).length;
+}
+
 FOUNDATION_STATIC void pattern_render_planning_line(string_const_t v1, string_const_t v1_url, string_const_t v2, string_const_t v3, string_const_t v4, bool translate = false)
 {
     ImGui::TableNextRow();
@@ -1247,6 +1255,7 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
     c.cursor_xy2 = { DNAN, DNAN };
     c.mouse_pos = ImPlot::GetPlotMousePos();
     c.x_axis_inverted = true;
+    c.bounds = *(const ImPlotRect*)&pattern->price_limits;
 
     ImPlot::SetAxis(y_axis);
     ImPlot::PlotLineG(tr("Price"), [](int idx, void* context)->ImPlotPoint
@@ -1264,6 +1273,44 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
         if (days_diff <= c->acc)
             plot_build_trend(*c, x, y);
 
+        if (c->x_axis_inverted)
+        {
+            if (x >= c->bounds.X.Min && math_real_is_nan(c->last.x))
+                c->last = ImPlotPoint(x, y);
+            if (x >= c->bounds.X.Max && math_real_is_nan(c->first.x))
+                c->first = ImPlotPoint(x, y);
+        }
+        else
+        {
+            if (x < c->bounds.X.Min && math_real_is_nan(c->last.x))
+                c->last = ImPlotPoint(x, y);
+            if (x < c->bounds.X.Max && math_real_is_nan(c->first.x))
+                c->first = ImPlotPoint(x, y);
+        }
+
+        if (x > c->bounds.X.Min && x < c->bounds.X.Max && y > c->bounds.Y.Min && y < c->bounds.Y.Max)
+        {
+            if (math_real_is_nan(c->pmin.y))
+            {
+                c->pmin = ImPlotPoint(x, y);
+            }
+            else
+            {
+                if (c->pmin.y > y)
+                    c->pmin = ImPlotPoint(x, y);
+            }
+            
+            if (math_real_is_nan(c->pmax.y))
+            {
+                c->pmax = ImPlotPoint(x, y);
+            }
+            else
+            {
+                if (c->pmax.y < y)
+                    c->pmax = ImPlotPoint(x, y);
+            }
+        }
+
         if (math_real_is_finite(c->mouse_pos.x))
         {
             const double diffx = math_abs(c->mouse_pos.x - x);
@@ -1280,6 +1327,28 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, const stoc
 
         return ImPlotPoint(x, y);
     }, &c, (int)c.range, ImPlotLineFlags_SkipNaN);
+
+    if (pattern->show_limits && pattern->price_limits.xmax - pattern->price_limits.xmin < 790)
+    {
+        if (!math_real_is_nan(c.first.y) && !math_real_is_nan(c.last.y))
+        {
+            double change_p = (c.last.y - c.first.y) / c.first.y * 100.0;
+            ImPlot::Annotation(c.last.x, c.last.y, ImColor::HSV(139 / 360.0f, 0.63f, 1.0f), 
+                ImVec2(IM_SCALEF(8), -IM_SCALEF(12)), true, tr_format("Change: {0, short} %%", change_p));
+        }
+
+        if (!math_real_is_nan(c.pmin.y))
+        {
+            const ImColor color = ImColor::HSV(39 / 360.0f, 0.63f, 1.0f);
+            ImPlot::TagY(c.pmin.y, color, tr("Min %.2lf $"), c.pmin.y);
+        }
+
+        if (!math_real_is_nan(c.pmax.y))
+        {
+            const ImColor color = ImColor::HSV(239 / 360.0f, 0.63f, 1.0f);
+            ImPlot::TagY(c.pmax.y, color, tr("Max %.2lf $"), c.pmax.y);
+        }
+    }
 
     if (c.n > 0 && pattern->show_limits)
     {
@@ -2150,10 +2219,19 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
 
     // The price graph is always shown inverted by default.
     ImPlot::SetupAxis(ImAxis_X1, "##Days", ImPlotAxisFlags_PanStretch | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_Invert);
-    ImPlot::SetupAxisFormat(ImAxis_X1, plot_value_format_elapsed_time_short, nullptr);
-    ImPlot::SetupAxisTicks(ImAxis_X1, graph.x_data, pattern_label_max_range(graph), nullptr/*DAY_LABELS*/, false);
-    ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_date_label, &graph);
-    ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+
+    if (pattern->price_limits.xmax - pattern->price_limits.xmin > 1180)
+    {
+        ImPlot::SetupAxisFormat(ImAxis_X1, plot_value_format_elapsed_time_short, nullptr);
+        ImPlot::SetupAxisTicks(ImAxis_X1, graph.x_data, pattern_label_max_range(graph), nullptr/*DAY_LABELS*/, false);
+        ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_date_label, &graph);
+        ImPlot::SetupAxisScale(ImAxis_X1, ImPlotScale_Log10);
+    }
+    else
+    {
+        ImPlot::SetupAxisFormat(ImAxis_X1, pattern_format_date_label_short, &graph);
+    }
+
     ImPlot::SetupAxisLimitsConstraints(ImAxis_X1, max(graph.min_d, 1.0), graph.max_d);
 
     ImPlotAxisFlags price_axis_flags = ImPlotAxisFlags_RangeFit | ImPlotAxisFlags_NoHighlight | ImPlotAxisFlags_NoGridLines | ImPlotAxisFlags_NoSideSwitch | ImPlotAxisFlags_Opposite;
@@ -2186,6 +2264,9 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
         pattern_render_graph_day_value("SAR", pattern, s, ImAxis_Y1, offsetof(day_result_t, sar));
     }
 
+    const ImPlotRect limits = ImPlot::GetPlotLimits();
+    pattern->price_limits = *(const pattern_limits_t*)&limits;
+
     ImPlot::PushStyleVar(ImPlotStyleVar_LineWeight, 2.0f);
     pattern_render_graph_price(pattern, s, ImAxis_Y1);
 
@@ -2204,9 +2285,6 @@ FOUNDATION_STATIC void pattern_render_graph_price(pattern_t* pattern, pattern_gr
     }
 
     ImPlot::TagY(s->current.adjusted_close, ImColor::HSV(239 / 360.0f, 0.63f, 1.0f), "Current");
-
-    const ImPlotRect limits = ImPlot::GetPlotLimits();
-    pattern->price_limits = *(const pattern_limits_t*)&limits;
 
     // Render limits
     if (pattern->show_limits)

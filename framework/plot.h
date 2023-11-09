@@ -31,7 +31,7 @@ struct plot_context_t
     
     // Contextual data fields
     double acc{ 0 };
-    double lx{ 0.0 }, ly{ 0 }, lz{ 0 };
+    double lx{ DNAN }, ly{ DNAN }, lz{ DNAN };
 
     double x_min{ DBL_MAX }, x_max{ -DBL_MAX }, n{ 0 };
     double a{ 0 }, b{ 0 }, c{ 0 }, d{ 0 }, e{ 0 }, f{ 0 };
@@ -48,6 +48,10 @@ struct plot_context_t
     ImPlotPoint mouse_pos{};
     ImPlotPoint cursor_xy1{};
     ImPlotPoint cursor_xy2{};
+
+    ImPlotRect bounds;
+    ImPlotPoint first{DNAN, DNAN}, last{DNAN, DNAN};
+    ImPlotPoint pmin{DNAN, DNAN}, pmax{DNAN, DNAN};
 
     union {
         // Custom plotting

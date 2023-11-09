@@ -11,6 +11,7 @@ $ticker = IF(@1, @1, IF($PATTERN, $PATTERN, IF($TITLE, $TITLE, "U.US")))
 # Define the number of elements to use
 $nth = IF(@2, @2, 90)
 $proj = IF(@3, @3, 90)
+$check = IF(@4, @4, 0.85)
 
 # Get the slope data for a given stock
 $slopes = FILTER(REVERSE(S($ticker, slope, ALL)), $2)
@@ -23,8 +24,8 @@ $current = LAST($slopes, $nth)
 # Compute similitudes since the beginning of the data
 $scores = REPEAT([INDEX($slopes, $i, 0), SIMILITUDE(MAP(RANGE($slopes, $i, $i + $nth - 1), $2), MAP($current, $2)), $i], $slope_count - $nth)
 
-# Filter out element with a similitude of less than 0.8
-$scores = FILTER($scores, $2 > 0.85)
+# Filter out element with a similitude of less than $check (i.e. 0.85)
+$scores = FILTER($scores, $2 > $check)
 $scores_count = COUNT($scores)
 
 # Filter out previous day that is only one day away

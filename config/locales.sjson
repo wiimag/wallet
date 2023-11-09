@@ -4233,5 +4233,50 @@
 			en = "Modifier dans l'\xc3\xa9diteur"
 			fr = "@TODO"
 		}
+		{
+			hash = "710bc2ba51994885"
+			en = "Min"
+			fr = "@TODO"
+		}
+		{
+			hash = "33c3ec50db3fb613"
+			en = "Max"
+			fr = "@TODO"
+		}
+		{
+			hash = "1e53d36773c2a9f7"
+			en = "Last"
+			fr = "@TODO"
+		}
+		{
+			hash = "a9d9b99cae3cabb5"
+			en = "Min %.2lf $"
+			fr = "@TODO"
+		}
+		{
+			hash = "bb4805d69eeee74c"
+			en = "Max %.2lf $"
+			fr = "@TODO"
+		}
+		{
+			hash = "a4edba5216e536ec"
+			en = "First"
+			fr = "@TODO"
+		}
+		{
+			hash = "92264e6da32d8bbe"
+			en = "First %lf"
+			fr = "@TODO"
+		}
+		{
+			hash = "234154a880576fe2"
+			en = "Change: %.2lg %%"
+			fr = "@TODO"
+		}
+		{
+			hash = "bcd0bcbd057101ce"
+			en = "Change: {0, short} %%"
+			fr = "@TODO"
+		}
 	]
 }
