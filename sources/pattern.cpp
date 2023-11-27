@@ -3507,7 +3507,7 @@ FOUNDATION_STATIC void pattern_render_tabs()
     // Load all active patterns
     tab_set_color(TAB_COLOR_PATTERN);
     size_t pattern_count = ::pattern_count();
-    for (size_t handle = 0; handle < pattern_count; ++handle)
+    for (int handle = 0; handle < pattern_count; ++handle)
     {
         pattern_t* pattern = pattern_get(handle);
         if (pattern->opened)
@@ -3547,7 +3547,7 @@ pattern_handle_t pattern_find(const char* code, size_t code_length)
 {
     string_table_symbol_t code_symbol = string_table_encode(code, code_length);
     const size_t pattern_count = array_size(_patterns);
-    for (size_t i = 0; i < pattern_count; ++i)
+    for (int i = 0; i < pattern_count; ++i)
     {
         pattern_t& pattern = _patterns[i];
         if (pattern.code == code_symbol)

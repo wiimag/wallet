@@ -43,7 +43,7 @@ if (MSVC)
     string(REPLACE "/fp:fast" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
 
     # If 32 bits define ASTCENC_AVX to 0
-    if (NOT BUILD_64BIT)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
         add_definitions(-DASTCENC_AVX=0)
     endif()
 

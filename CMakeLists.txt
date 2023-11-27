@@ -173,15 +173,6 @@ else()
     add_compile_options(-DBUILD_TESTS=0)
 endif()
 
-# Define 32 bit or 64 bit builds
-if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-    add_compile_options(-DBUILD_64BIT=1)
-    add_compile_options(-DBUILD_32BIT=0)
-else()
-    add_compile_options(-DBUILD_64BIT=0)
-    add_compile_options(-DBUILD_32BIT=1)
-endif()
-
 #
 # Define custom application build target
 #

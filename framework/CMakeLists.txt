@@ -192,14 +192,14 @@ endif()
 if (WIN32)
     
     # On Windows we use a #pragma comment(lib, "glfw3.lib") in the source code
-    if (BUILD_64BIT)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         target_link_directories(framework PUBLIC ${ROOT_DIR}/external/glfw/lib-vc2022-64)
     else()
         target_link_directories(framework PUBLIC ${ROOT_DIR}/external/glfw/lib-vc2022-32)
     endif()
 
     if (BUILD_SERVICE_EXE)
-        if (BUILD_64BIT)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/glfw/lib-vc2022-64)
         else()
             target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/glfw/lib-vc2022-32)
@@ -230,14 +230,14 @@ endif()
 if (MSVC)
 
     # On Windows we use a #pragma comment(lib, "libcurl_a*.lib") in the source code
-    if (BUILD_64BIT)
+    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
         target_link_directories(framework PUBLIC ${ROOT_DIR}/external/libcurl/lib/win64)
     else()
         target_link_directories(framework PUBLIC ${ROOT_DIR}/external/libcurl/lib/win32)
     endif()
 
     if (BUILD_SERVICE_EXE)
-        if (BUILD_64BIT)
+        if(CMAKE_SIZEOF_VOID_P EQUAL 8)
             target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/libcurl/lib/win64)
         else()
             target_link_directories(service-framework PUBLIC ${ROOT_DIR}/external/libcurl/lib/win32)

@@ -1855,7 +1855,7 @@ FOUNDATION_STATIC void report_render_tabs()
 
     tab_set_color(TAB_COLOR_REPORT);
     size_t report_count = ::report_count();
-    for (size_t handle = 0; handle < report_count; ++handle)
+    for (int handle = 0; handle < report_count; ++handle)
     {
         report_t* report = report_get_at(handle);
         if (report->opened)

@@ -22,9 +22,6 @@ SHORT_NAME=$(build_setting "PROJECT_ID")
 SOLUTION_DIR=projects/.build
 PROGRAM_NAME=$(basename $0)
 
-# Precompute some paths
-FULL_SOLUTION_DIR=$(convert_path_to_platform $(pwd)/$SOLUTION_DIR)
-
 #
 # Parse common command line arguments
 #
@@ -37,6 +34,7 @@ TESTS=()
 OPEN=0
 OPEN_WORKSPACE=0
 GENERATE=()
+GENERATE_WIN32=0
 PACKAGE=()
 START=()
 DIFF=()
@@ -115,6 +113,14 @@ while [[ $# -gt 0 ]]; do
       GENERATE=($YES)
       COMMAND_NAME_ARGS="GENERATE"
       shift # past argument
+
+      # Check if the solution should be generated for 32 bits
+      if [ $# -ne 0 ] && [ $1 = "win32" ]; then
+        GENERATE_WIN32=1
+        SOLUTION_DIR=projects/.build-win32
+        shift
+      fi
+
       ;;  
     p|package)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
@@ -187,6 +193,9 @@ while [[ $# -gt 0 ]]; do
       ;;
   esac
 done
+
+# Precompute some paths
+FULL_SOLUTION_DIR=$(convert_path_to_platform $(pwd)/$SOLUTION_DIR)
 
 # If there is no arguments to ./run, then lets force start to be the default command
 if [ $COMMAND_COUNTER -eq 0 ]; then
@@ -304,6 +313,16 @@ if [ $VERBOSE -ge 1 ]; then
 fi
 
 #
+# Setup cmake variables
+#
+# Determine the architecture to generate the solution for
+if [ $GENERATE_WIN32 -eq 1 ]; then
+  CMAKE_ARCH="-A Win32"
+else
+  CMAKE_ARCH="-A x64"
+fi
+
+#
 # Generate the CMAKE solution
 #
 if [ ${#GENERATE[@]} -ge 1 ] && [ ${GENERATE[0]} -ge 1 ]; then
@@ -350,7 +369,7 @@ if [ ${#GENERATE[@]} -ge 1 ] && [ ${GENERATE[0]} -ge 1 ]; then
   fi
 
   if [ $machine == "MinGw" ]; then
-    cmake -G "Visual Studio 17 2022" -A x64 ../.. ${CMAKE_ARGS[@]}
+    cmake -G "Visual Studio 17 2022" ${CMAKE_ARCH} ../.. ${CMAKE_ARGS[@]}
   elif [ ${machine} == "Mac" ]; then
     cmake -G "Xcode" ../.. ${CMAKE_ARGS[@]}
   fi
