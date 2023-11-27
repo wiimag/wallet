@@ -26,7 +26,7 @@ struct config_value_t;
 
 typedef char* config_sjson_t;
 typedef const char* config_sjson_const_t;
-typedef unsigned int config_index_t;
+typedef uint32_t config_index_t;
 
 /*! Config value primitive types. */
 typedef enum : uint8_t {

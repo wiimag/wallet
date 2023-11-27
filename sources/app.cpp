@@ -151,9 +151,9 @@ extern int app_initialize(GLFWwindow* window)
     settings_initialize();
     module_initialize();
     
-    #if FOUNDATION_PLATFORM_MACOS
+    //#if FOUNDATION_PLATFORM_MACOS
     about_initialize();
-    #endif
+    //#endif
 
     return 0;
 }

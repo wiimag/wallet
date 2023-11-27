@@ -19,7 +19,7 @@ constexpr const char EVENT_ABOUT_OPEN_WEBSITE[] = "ABOUT_OPEN_WEBSITE";
  *
  *  We use #FOUNDATION_LINKER_INCLUDE in order to force the linker to include the #about module.
  */
-FOUNDATION_EXTERN void FOUNDATION_LINKER_INCLUDE(about_initialize)();
+//FOUNDATION_EXTERN void FOUNDATION_LINKER_INCLUDE(about_initialize)();
 
 /* Explicitly initialize the about module. */
 void about_initialize();

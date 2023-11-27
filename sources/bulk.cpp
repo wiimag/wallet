@@ -796,7 +796,7 @@ FOUNDATION_STATIC void bulk_shutdown()
         config_write_file(selected_exchanges_file_path, [](config_handle_t selected_exchange_data)
         {
             const size_t selected_exchange_count = array_size(_bulk_module->exchanges);
-            for (int i = 0; i < selected_exchange_count; ++i)
+            for (size_t i = 0; i < selected_exchange_count; ++i)
             {
                 const string_t& ex = _bulk_module->exchanges[i];
                 config_array_push(selected_exchange_data, STRING_ARGS(ex));

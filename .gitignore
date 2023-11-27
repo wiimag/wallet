@@ -18,7 +18,7 @@ artifacts/
 _ReSharper.Caches/
 DerivedData/
 enc_temp_folder/
-projects/.build
+projects/.build*
 
 # Installer
 releases/

@@ -243,7 +243,7 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
     const size_t report_count = ::report_count();
     if (ImGui::BeginCombo("##Report", !selected_report ? tr("None") : string_table_decode(selected_report->name), ImGuiComboFlags_None))
     {
-        for (int i = 0; i < report_count; ++i)
+        for (unsigned int i = 0; i < (unsigned int)report_count; ++i)
         {
             report_t* report = report_get_at(i);
             if (report->wallet->track_history)
@@ -293,7 +293,7 @@ FOUNDATION_STATIC report_handle_t wallet_history_select_initial_report()
     static report_handle_t selected_report_id = uuid_null();
     if (uuid_is_null(selected_report_id))
     {
-        for (int i = 0; i < report_count(); ++i)
+        for (unsigned int i = 0; i < report_count(); ++i)
         {
             report_t* report = report_get_at(i);
             if (report->wallet->track_history && array_size(report->wallet->history))

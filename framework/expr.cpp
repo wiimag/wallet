@@ -318,7 +318,7 @@ expr_result_t expr_eval_pair(const expr_result_t& key, const expr_result_t& valu
 
 expr_result_t expr_eval_get_set_arg(const vec_expr_t* args, size_t idx, const char* message)
 {
-    if (idx >= args->len)
+    if (to_int(idx) >= args->len)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Missing arguments: %s", message);
 
     expr_result_t value = expr_eval(&args->buf[idx]);
@@ -336,7 +336,7 @@ expr_result_t expr_eval_get_set_arg(const vec_expr_t* args, size_t idx, const ch
 
 string_const_t expr_eval_get_string_arg(const vec_expr_t* args, size_t idx, const char* message)
 {
-    if (idx >= args->len)
+    if (to_int(idx) >= args->len)
         throw ExprError(EXPR_ERROR_INVALID_ARGUMENT, "Missing arguments: %s", message);
 
     const auto& value = expr_eval(&args->buf[idx]);

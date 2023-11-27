@@ -16,7 +16,11 @@
 
 #define HASH_EXPR static_hash_string("expr", 4, 0xe44cd53772fb5e1eLL)
 
-#define NO_INDEX (UINT64_MAX)
+#if FOUNDATION_ARCH_X86_64
+    #define NO_INDEX (UINT64_MAX)
+#else
+    #define NO_INDEX (UINT32_MAX)
+#endif
 #define EXPR_ZERO (expr_result_t(EXPR_RESULT_NULL)), (nullptr), (0)
 
 struct expr_t;
@@ -168,6 +172,7 @@ typedef struct ExprError
 } expr_error_t;
 
 /*! Flags used to represent an expression result storing a pointer value. */
+#if FOUNDATION_ARCH_X86_64
 enum EXPR_POINTER_CONTENT : uint64_t
 {
     EXPR_POINTER_NONE = 0,
@@ -184,6 +189,24 @@ enum EXPR_POINTER_CONTENT : uint64_t
     EXPR_POINTER_ELEMENT_SIZE_SHIFT = 36ULL,
     EXPR_POINTER_ELEMENT_COUNT_SHIFT = 0ULL,
 };
+#else
+enum EXPR_POINTER_CONTENT : uint32_t
+{
+    EXPR_POINTER_NONE = 0,
+    EXPR_POINTER_UNSAFE = (1U << 31U),
+    EXPR_POINTER_ARRAY = (1U << 30U),
+    EXPR_POINTER_ARRAY_FLOAT = (1U << 29U), // floats and double (when element size == 8)
+    EXPR_POINTER_ARRAY_INTEGER = (1U << 28U),
+    EXPR_POINTER_ARRAY_UNSIGNED = (EXPR_POINTER_ARRAY_INTEGER | (1U << 27U)),
+
+    EXPR_POINTER_TYPE_MASK = 0xFF000000U,
+    EXPR_POINTER_ELEMENT_SIZE_MASK = 0x00FFFF00U,
+    EXPR_POINTER_ELEMENT_COUNT_MASK = 0x000000FFU,
+
+    EXPR_POINTER_ELEMENT_SIZE_SHIFT = 8U,
+    EXPR_POINTER_ELEMENT_COUNT_SHIFT = 0U,
+};
+#endif
 
 /*
  * Expression data types

@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.35.0] - 2023-11-27
+- Add 32 bits support for Windows.
+
 ## [0.34.4] - 2023-11-09
 - Add pattern zoomed view price change annotation.
 - Add support for `MEDIAN(set)` expression to compute the median of a set of values.

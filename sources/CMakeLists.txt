@@ -195,7 +195,12 @@ endif()
 if (MSVC)
 
     # Define PRODUCT_WINDOWS_FILENAME
-    add_compile_options(-DPRODUCT_WINDOWS_FILENAME="${AppId}.exe")
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        set(PRODUCT_WINDOWS_FILENAME "${AppId}32")
+    else()
+        set(PRODUCT_WINDOWS_FILENAME "${AppId}")
+    endif()
+    add_compile_options(-DPRODUCT_WINDOWS_FILENAME="${PRODUCT_WINDOWS_FILENAME}.exe")
 
     # Create executable
     add_executable(${AppId} WIN32
@@ -205,6 +210,8 @@ if (MSVC)
         ${TEST_SOURCES}
         ${EXTERNAL_SOURCES}
     )
+
+    set_target_properties(${AppId} PROPERTIES OUTPUT_NAME "${PRODUCT_WINDOWS_FILENAME}")
 
     # Copy the config/*.sjson files to the build directory
     #file(COPY ${CONFIG_FILES} DESTINATION ${ROOT_DIR}/build)

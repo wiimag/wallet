@@ -185,6 +185,9 @@ endif()
 # Set compiler specific flags
 if(MSVC)
 
+    # Define _WIN32_WINNT to > Windows 7
+    add_compile_options(-D_WIN32_WINNT=0x0601)
+
     # Enable multi-processor compilation
     add_compile_options(/MP)
 

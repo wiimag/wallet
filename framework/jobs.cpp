@@ -104,11 +104,6 @@ void job_deallocate(job_t*& job)
         job->flags |= JOB_DEALLOCATE_AFTER_EXECUTION;
 }
 
-job_t* job_execute(const job_handler_t& handler, void* payload /*= nullptr*/, job_flags_t flags /*= JOB_FLAGS_NONE*/)
-{
-    return job_execute(handler, payload, 0, flags);
-}
-
 job_t* job_execute(const job_handler_t& handler, void* payload, size_t payload_size, job_flags_t flags /*= JOB_FLAGS_NONE*/)
 {
     job_t* new_job = job_allocate();

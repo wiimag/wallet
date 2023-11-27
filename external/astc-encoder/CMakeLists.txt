@@ -37,6 +37,18 @@ set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 # Use linker flags from parent project
 set(CMAKE_MODULE_LINKER_FLAGS "${CMAKE_MODULE_LINKER_FLAGS}")
 
+if (MSVC)
+    # Remove float fast math flags
+    string(REPLACE "/fp:fast" "" CMAKE_C_FLAGS ${CMAKE_C_FLAGS})
+    string(REPLACE "/fp:fast" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+
+    # If 32 bits define ASTCENC_AVX to 0
+    if(CMAKE_SIZEOF_VOID_P EQUAL 4)
+        add_definitions(-DASTCENC_AVX=0)
+    endif()
+
+endif()
+
 # Create the bx library
 add_library(astc-encoder STATIC ${ASTC_SOURCES})
 

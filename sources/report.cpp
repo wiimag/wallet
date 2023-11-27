@@ -553,7 +553,7 @@ FOUNDATION_STATIC void report_open_add_title_dialog(report_t* report)
         if (ImGui::IsWindowAppearing())
             ImGui::SetKeyboardFocusHere();
         return !symbols_render_search(L1(report_render_add_title_from_ui(report, _1)));
-    }, IM_SCALEF(800), IM_SCALEF(500), true, report, nullptr);
+    }, IM_SCALEF(700), IM_SCALEF(400), true, report, nullptr);
 }
 
 FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_handle, table_t* table, const table_column_t* column, int column_index)

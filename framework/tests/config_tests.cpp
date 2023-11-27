@@ -1064,7 +1064,7 @@ TEST_SUITE("Configuration")
         CHECK_EQ(cv["b"].as_boolean(), true);
         CHECK_EQ(cv["c"]["n"].as_number(), 42.0);
         CHECK_EQ(cv["c"]["s"].as_string(), CTEXT("a string"));
-        CHECK_EQ(cv["c"]["a"][3]["a"].as_number(), 10.0);
+        CHECK_EQ(cv["c"]["a"][3UL]["a"].as_number(), 10.0);
 
         string_const_t s1 = cv["shader"].as_string();
         string_const_t s2 = CTEXT("int main()\n{\n    // Return red color\n    gl_Color.xyz = vec3(1.0, 0.0, 0.0);\n}\n");
@@ -1084,7 +1084,7 @@ TEST_SUITE("Configuration")
         CHECK_EQ(cv["b"].as_boolean(), true);
         CHECK_EQ(cv["c"]["n"].as_number(), 42.0);
         CHECK_EQ(cv["c"]["s"].as_string(), CTEXT("a string"));
-        CHECK_EQ(cv["c"]["a"][3]["a"].as_number(), 10.0);
+        CHECK_EQ(cv["c"]["a"][3UL]["a"].as_number(), 10.0);
 
         config_deallocate(cv);
     }
