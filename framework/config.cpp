@@ -932,7 +932,7 @@ void config_array_sort(const config_handle_t& array_handle, const function<bool(
 
         config_value_t* values = config->values;
         config_value_t* p = &values[indexes[0]];
-        for (int i = 1; i < element_count; ++i)
+        for (size_t i = 1; i < element_count; ++i)
         {
             config_index_t next = indexes[i];
             p->sibling = next;
@@ -1020,7 +1020,7 @@ bool config_is_undefined(const config_handle_t& h, const char* key /*= nullptr*/
 FOUNDATION_STATIC FOUNDATION_FORCEINLINE void config_sjson_add_string(config_sjson_t& sjson, const char* str, size_t length)
 {
     const char* s = str;
-    for (int i = 0; i < length && *s; ++i, ++s)
+    for (size_t i = 0; i < length && *s; ++i, ++s)
         sjson = array_push(sjson, *s);
 }
 
@@ -1064,7 +1064,7 @@ FOUNDATION_STATIC void config_sjson_write_string(config_sjson_t& sjson, string_c
 
     config_sjson_add_char(sjson, '"');
     const char* s = value.str;
-    for (int i = 0; i < value.length && *s; ++i, ++s)
+    for (size_t i = 0; i < value.length && *s; ++i, ++s)
     {
         char c = *s;
         if (c == '"' || c == '\\')
@@ -1152,7 +1152,7 @@ FOUNDATION_STATIC void config_sjson_write(const config_handle_t& value_handle, c
 FOUNDATION_STATIC bool config_sjson_is_simple_identifier(string_const_t value)
 {
     const char* s = value.str;
-    for (int i = 0; i < value.length && *s; ++i, ++s)
+    for (size_t i = 0; i < value.length && *s; ++i, ++s)
     {
         char c = *s;
         if (c >= '0' && c <= '9')
@@ -1210,7 +1210,7 @@ FOUNDATION_STATIC size_t config_sjson_write_object_fields(const config_handle_t&
         }
     }
 
-    int element_index = 0;
+    size_t element_index = 0;
     const size_t element_count = config_size(obj_handle);
     for (auto e : obj_handle)
     {
@@ -1294,7 +1294,7 @@ FOUNDATION_STATIC void config_sjson_write_array(const config_handle_t& array_han
         const bool simple_json = (array_handle.config->options & CONFIG_OPTION_WRITE_JSON) == 0;
         auto options = array_handle.config->options;
 
-        int element_index = 0;
+        size_t element_index = 0;
         const size_t element_count = config_size(array_handle);
         const config_value_t* values = array_handle.config->values;
         const config_value_t* item = &values[arr->child];
@@ -1364,7 +1364,7 @@ void config_sjson_deallocate(config_sjson_const_t sjson)
 
 bool config_parse_at_end(string_const_t json, int index)
 {
-    return index >= json.length;
+    return index >= (int)json.length;
 }
 
 void config_parse_skip_BOM(string_const_t json, int& index)
@@ -1451,7 +1451,7 @@ FOUNDATION_STATIC bool config_parse_consume(string_const_t json, int& index, con
     int end = index;
     config_parse_skip_whitespace(json, end);
     const char* t = consume;
-    for (int i = 0; i < consume_length && *t; ++i, ++t)
+    for (size_t i = 0; i < consume_length && *t; ++i, ++t)
     {
         if (config_parse_next(json, end) != *t)
         {
@@ -1520,7 +1520,7 @@ string_t config_parse_string(string_const_t json, int& index, config_option_flag
                         throw config_parse_exception(json, index, "Invalid Unicode character or sequence");
 
                     const char* utf8c = utf8.value.str;
-                    for (int i = 0; i < utf8.value.length && *utf8c; ++i, ++utf8c)
+                    for (size_t i = 0; i < utf8.value.length && *utf8c; ++i, ++utf8c)
                         s = array_push(s, *utf8c);
                     index += 4;
                 }
@@ -1606,7 +1606,7 @@ FOUNDATION_STATIC string_t config_parse_identifier(string_const_t json, int& ind
     char* s = nullptr;
     array_reserve(s, 32);
 
-    while (index < json.length)
+    while (index < (int)json.length)
     {
         char c = config_parse_next(json, index);
         if (c == ' ' || c == '\t' || c == '\n' || c == '=' || c == ':')
@@ -1932,10 +1932,10 @@ FOUNDATION_STATIC config_handle_t config_parse_yaml_object(stream_t* stream, con
 
         // Check level
         const size_t field_level = stream_skip_whitespace(stream);
-        if (field_level > level)
+        if ((int)field_level > level)
             return obj;
 
-        FOUNDATION_ASSERT(field_level <= level);
+        FOUNDATION_ASSERT((int)field_level <= level);
 
         if (field_level > 0 && stream_peek(stream) == '-')
         {
@@ -1943,7 +1943,7 @@ FOUNDATION_STATIC config_handle_t config_parse_yaml_object(stream_t* stream, con
             return obj; // New array element at same level}
         }
 
-        if (field_level > 0 && field_level < level)
+        if (field_level > 0 && (int)field_level < level)
         {
             // End of object, set stream position back to start of line
             stream_seek(stream, pos, STREAM_SEEK_BEGIN);

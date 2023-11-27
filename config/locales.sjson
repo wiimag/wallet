@@ -4229,54 +4229,49 @@
 			fr = "Tendance lin\xc3\xa9aire"
 		}
 		{
-			hash = "8fe16641715f7a93"
-			en = "Modifier dans l'\xc3\xa9diteur"
-			fr = "@TODO"
-		}
-		{
 			hash = "710bc2ba51994885"
 			en = "Min"
-			fr = "@TODO"
+			fr = "Min"
 		}
 		{
 			hash = "33c3ec50db3fb613"
 			en = "Max"
-			fr = "@TODO"
+			fr = "Max"
 		}
 		{
 			hash = "1e53d36773c2a9f7"
 			en = "Last"
-			fr = "@TODO"
+			fr = "Dernier"
 		}
 		{
 			hash = "a9d9b99cae3cabb5"
 			en = "Min %.2lf $"
-			fr = "@TODO"
+			fr = "Min %.2lf $"
 		}
 		{
 			hash = "bb4805d69eeee74c"
 			en = "Max %.2lf $"
-			fr = "@TODO"
+			fr = "Max %.2lf $"
 		}
 		{
 			hash = "a4edba5216e536ec"
 			en = "First"
-			fr = "@TODO"
+			fr = "Premier"
 		}
 		{
 			hash = "92264e6da32d8bbe"
 			en = "First %lf"
-			fr = "@TODO"
+			fr = "Premier %lf"
 		}
 		{
 			hash = "234154a880576fe2"
 			en = "Change: %.2lg %%"
-			fr = "@TODO"
+			fr = "Changement: %.2lg %%"
 		}
 		{
 			hash = "bcd0bcbd057101ce"
 			en = "Change: {0, short} %%"
-			fr = "@TODO"
+			fr = "Changement: {0, short} %%"
 		}
 	]
 }

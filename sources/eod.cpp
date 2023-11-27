@@ -493,7 +493,7 @@ FOUNDATION_STATIC void eod_show_login_dialog()
         ImGui::EndDisabled();
 
         return true;
-    }, IM_SCALEF(330), IM_SCALEF(290), true, nullptr, nullptr);
+    }, IM_SCALEF(740), IM_SCALEF(540), true, nullptr, nullptr);
 }
 
 FOUNDATION_STATIC void eod_update_status(const json_object_t& json)

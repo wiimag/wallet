@@ -173,6 +173,15 @@ else()
     add_compile_options(-DBUILD_TESTS=0)
 endif()
 
+# Define 32 bit or 64 bit builds
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+    add_compile_options(-DBUILD_64BIT=1)
+    add_compile_options(-DBUILD_32BIT=0)
+else()
+    add_compile_options(-DBUILD_64BIT=0)
+    add_compile_options(-DBUILD_32BIT=1)
+endif()
+
 #
 # Define custom application build target
 #
@@ -184,6 +193,9 @@ endif()
 
 # Set compiler specific flags
 if(MSVC)
+
+    # Define _WIN32_WINNT to > Windows 7
+    add_compile_options(-D_WIN32_WINNT=0x0601)
 
     # Enable multi-processor compilation
     add_compile_options(/MP)

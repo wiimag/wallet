@@ -153,7 +153,7 @@ static pattern_activity_t* _activities{ nullptr };
 FOUNDATION_STATIC pattern_t* pattern_get(pattern_handle_t handle)
 {
     const size_t pattern_count = array_size(_patterns);
-    if (handle < 0 || handle >= pattern_count)
+    if (handle < 0 || (size_t)handle >= pattern_count)
         return nullptr;
     return &_patterns[handle];
 }
@@ -984,7 +984,7 @@ FOUNDATION_STATIC pattern_graph_data_t const pattern_render_build_graph_data(pat
     }
 
     const size_t x_count = graph_data.x_count;
-    for (int i = 0; i < x_count; ++i)
+    for (size_t i = 0; i < x_count; ++i)
     {
         const bool is_valid = !math_real_is_nan(graph_data.y_data[i]);
         double xdd = !is_valid ? FIXED_MARKS[i] : graph_data.x_data[i];
@@ -1110,7 +1110,7 @@ FOUNDATION_STATIC void pattern_render_graph_trends(pattern_t* pattern, pattern_g
 
             size_t send = array_size(history);
             int yedi = idx + math_round(c->acc);
-            if (yedi >= send)
+            if (yedi >= (int)send)
                 return ImPlotPoint(DNAN, DNAN);
 
             if (c->lx == 0)
@@ -3507,7 +3507,7 @@ FOUNDATION_STATIC void pattern_render_tabs()
     // Load all active patterns
     tab_set_color(TAB_COLOR_PATTERN);
     size_t pattern_count = ::pattern_count();
-    for (int handle = 0; handle < pattern_count; ++handle)
+    for (size_t handle = 0; handle < pattern_count; ++handle)
     {
         pattern_t* pattern = pattern_get(handle);
         if (pattern->opened)
@@ -3547,7 +3547,7 @@ pattern_handle_t pattern_find(const char* code, size_t code_length)
 {
     string_table_symbol_t code_symbol = string_table_encode(code, code_length);
     const size_t pattern_count = array_size(_patterns);
-    for (int i = 0; i < pattern_count; ++i)
+    for (size_t i = 0; i < pattern_count; ++i)
     {
         pattern_t& pattern = _patterns[i];
         if (pattern.code == code_symbol)
@@ -3766,7 +3766,7 @@ FOUNDATION_STATIC void pattern_shutdown()
         config_write_file(pattern_get_user_file_path(), [](config_handle_t patterns)
         {
             const size_t pattern_count = ::pattern_count();
-            for (int i = 0; i < pattern_count; ++i)
+            for (size_t i = 0; i < pattern_count; ++i)
             {
                 pattern_t& pattern = _patterns[i];
 

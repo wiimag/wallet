@@ -94,6 +94,46 @@ Note that currently the `./run` scripts only supports the `Visual Studio 2022` g
 cmake --no-warn-unused-cli -DBUILD_MAX_JOB_THREADS=4 -DBUILD_MAX_QUERY_THREADS=8 -S./ -B./projects/.build -G "Visual Studio 16 2019" -A x64
 ```
 
+#### Visual Studio 2022 x86 (32-bit)
+
+##### Build the glfw library for 32-bit using cmake
+
+```bash
+cmake --no-warn-unused-cli -S./ -B.build32 -G "Visual Studio 17 2022" -A Win32 -DUSE_MSVC_RUNTIME_LIBRARY_DLL=OFF
+```
+
+##### Build the libcurl library for 32-bit using cmake
+
+First open the **x86 Native Tools Command Prompt for VS 2022** and then run the following commands:
+
+```bash
+git clone git@github.com:wiimag/curl.git
+cd curl
+set RTLIBCFG=static
+buildconf.bat
+cd winbuild
+
+REM Build the debug version
+nmake /f MakeFile.vc mode=static DEBUG=no
+REM copy builds/libcurl-vc-x86-debug-static-ipv6-sspi-schannel/lib/libcurl_a_debug.lib libcurl_a_debug.lib
+
+REM Build the release version
+nmake /f MakeFile.vc mode=static DEBUG=yes
+REM copy builds/libcurl-vc-x86-release-static-ipv6-sspi-schannel/lib/libcurl_a.lib libcurl_a.lib
+```
+
+##### Generate the solution (note that it was generated in the `projects/.build32` folder):
+
+```bash
+cmake --no-warn-unused-cli -DBUILD_ENABLE_BACKEND=ON -DBUILD_MAX_JOB_THREADS=4 -DBUILD_MAX_QUERY_THREADS=8 -S./ -B./projects/.build32 -G "Visual Studio 17 2022" -A Win32
+```
+
+##### Open the solution:
+
+```bash	
+start ./projects/.build32/wallet.sln
+```
+
 #### Xcode
 
 ```bash

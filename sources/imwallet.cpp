@@ -42,7 +42,7 @@ FOUNDATION_STATIC void imwallet_fetch_exchange_list(const json_object_t& json)
     imwallet_exchange_t* exchanges = nullptr;
     array_reserve(exchanges, min(SIZE_C(1), exchange_count));
 
-    for (int i = 0; i < exchange_count; ++i)
+    for (size_t i = 0; i < exchange_count; ++i)
     {
         imwallet_exchange_t ex{};
         json_object_t ex_data = json[i];

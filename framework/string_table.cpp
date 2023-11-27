@@ -195,7 +195,7 @@ FOUNDATION_STATIC FOUNDATION_FORCEINLINE string_table_hash_length_t string_table
 
     uint32_t h = 0;
     const char* s = start;
-    for (int i = 0; i < length && *s; ++i, ++s)
+    for (size_t i = 0; i < length && *s; ++i, ++s)
         h = h ^ ((h << 5) + (h >> 2) + (unsigned char)*s);
 
     return string_table_hash_length_t { start, h, (int)(s - start) };
@@ -237,7 +237,7 @@ FOUNDATION_STATIC void string_table_rebuild_hash_table(string_table_t* st)
 
 void string_table_grow(string_table_t* st, int bytes)
 {
-    FOUNDATION_ASSERT(bytes >= st->allocated_bytes);
+    FOUNDATION_ASSERT((size_t)bytes >= st->allocated_bytes);
 
     const char* const old_strings = st->strings();
     st->allocated_bytes = bytes;
@@ -265,7 +265,7 @@ string_table_t* string_table_grow(string_table_t** out_st, int bytes /*= 0*/)
 
     string_table_t* st = *out_st;
     bytes = max<int>(st->allocated_bytes * HASH_FACTOR, bytes);
-    FOUNDATION_ASSERT(bytes >= st->allocated_bytes);
+    FOUNDATION_ASSERT(bytes >= (int)st->allocated_bytes);
 
     size_t old_string_bytes = st->string_bytes;
     st->string_bytes = 0;
@@ -320,7 +320,7 @@ FOUNDATION_STATIC int string_table_find_slot_index(const string_table_t* st, T* 
     {
         const char* str = strs + ht[i];
         const size_t strs_remaining_length = st->string_bytes - (str - strs);
-        if (key.length < strs_remaining_length && str[key.length] == '\0' && strncmp(key.s, str, key.length) == 0)
+        if ((size_t)key.length < strs_remaining_length && str[key.length] == '\0' && strncmp(key.s, str, key.length) == 0)
             return i;
         i = (i + 1) % st->num_hash_slots;
     }
@@ -410,7 +410,7 @@ string_table_symbol_t string_table_to_symbol(string_table_t* st, const char* s, 
 
     const string_table_symbol_t symbol = string_table_available_slot(st, length);
 
-    if ((size_t)symbol + length + 1 > string_table_available_string_bytes(st))
+    if ((size_t)symbol + length + 1 > (size_t)string_table_available_string_bytes(st))
         return STRING_TABLE_FULL;
 
     if (st->uses_16_bit_hash_slots) 
@@ -449,7 +449,7 @@ string_table_symbol_t string_table_find_symbol(const string_table_t* st, const c
 
 const char* string_table_to_string(string_table_t* st, string_table_symbol_t symbol)
 {
-    if (symbol > 0 && symbol <= st->string_bytes)
+    if (symbol > 0 && (size_t)symbol <= st->string_bytes)
         return st->strings(symbol);
     return nullptr;
 }

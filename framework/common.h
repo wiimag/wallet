@@ -636,7 +636,7 @@ template<typename T>
 FOUNDATION_FORCEINLINE T to_opaque(void* ptr)
 {
     const auto v = (intptr_t)(ptr);
-    FOUNDATION_ASSERT(std::numeric_limits<T>::min() <= v && v <= std::numeric_limits<T>::max());
+    FOUNDATION_ASSERT(std::numeric_limits<T>::min() <= (T)v && (T)v <= std::numeric_limits<T>::max());
     return (T)v;
 }
 

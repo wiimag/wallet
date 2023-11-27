@@ -91,7 +91,7 @@ string_t string_utf8_unescape(char* buffer, size_t capacity, const char* s, size
 
             char utf_chars_buffer[4];
             string_t utf_chars = string_convert_utf16(utf_chars_buffer, sizeof(utf_chars_buffer), &uc, 1);
-            for (int j = 0; j < utf_chars.length; ++j)
+            for (size_t j = 0; j < utf_chars.length; ++j)
                 utf8.str[utf8.length++] = utf_chars_buffer[j];
             c += 5;
         }

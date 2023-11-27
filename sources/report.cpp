@@ -553,7 +553,7 @@ FOUNDATION_STATIC void report_open_add_title_dialog(report_t* report)
         if (ImGui::IsWindowAppearing())
             ImGui::SetKeyboardFocusHere();
         return !symbols_render_search(L1(report_render_add_title_from_ui(report, _1)));
-    }, IM_SCALEF(800), IM_SCALEF(500), true, report, nullptr);
+    }, IM_SCALEF(700), IM_SCALEF(400), true, report, nullptr);
 }
 
 FOUNDATION_STATIC void report_column_title_header_render(report_handle_t report_handle, table_t* table, const table_column_t* column, int column_index)
@@ -1855,7 +1855,7 @@ FOUNDATION_STATIC void report_render_tabs()
 
     tab_set_color(TAB_COLOR_REPORT);
     size_t report_count = ::report_count();
-    for (int handle = 0; handle < report_count; ++handle)
+    for (size_t handle = 0; handle < report_count; ++handle)
     {
         report_t* report = report_get_at(handle);
         if (report->opened)

@@ -99,7 +99,7 @@ FOUNDATION_STATIC void symbols_load(
         array_reserve(out_symbols, reserve_count);
     }
 
-    for (int i = 1; i < data.token_count; ++i)
+    for (size_t i = 1; i < data.token_count; ++i)
     {
         const json_token_t& t = data.tokens[i];
         if (t.type != JSON_OBJECT)

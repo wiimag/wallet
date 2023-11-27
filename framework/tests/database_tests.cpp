@@ -100,7 +100,7 @@ TEST_SUITE("Database")
             }
         }
 
-        for (int i = 0, r = 0; i < min(ARRAY_COUNT(random_numbers) - duplicates, start_capacity); ++i)
+        for (size_t i = 0, r = 0; i < min(ARRAY_COUNT(random_numbers) - duplicates, start_capacity); ++i)
         {
             if (random_numbers[r] != 0)
             {

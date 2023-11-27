@@ -18,7 +18,7 @@ struct table_t;
 struct table_column_t;
 
 /*! Table flags that can define how table are displayed and what behavior they have. */
-typedef enum : size_t {
+typedef enum : uint64_t {
     TABLE_DEFAULT_OPTIONS = 0,
 
     /*! If this flag is set, the table will display a summary row at the bottom. */
@@ -35,7 +35,7 @@ typedef enum : size_t {
      *  The #fetch_value cell callback will be called with the column flag #COLUMN_ADD_NEW_ELEMENT */
     TABLE_ADD_NEW_ROW = 1ULL << 35,
 } table_flag_t;
-typedef size_t table_flags_t;
+typedef uint64_t table_flags_t;
 
 /*! Column flags that can define how column are displayed and what behavior they have. */
 typedef enum : unsigned int {

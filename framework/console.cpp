@@ -195,7 +195,7 @@ FOUNDATION_STATIC void console_render_logs(const ImRect& rect)
         {
             const float window_width = ImGui::GetWindowWidth();
             const float item_available_width = ImGui::GetContentRegionAvail().x;
-            for (size_t i = clipper.DisplayStart; i < min(clipper.DisplayEnd, (int)array_size(_console_module->messages)); ++i)
+            for (int i = clipper.DisplayStart; i < min(clipper.DisplayEnd, (int)array_size(_console_module->messages)); ++i)
             {
                 log_message_t& log = _console_module->messages[i];
 
@@ -313,7 +313,7 @@ FOUNDATION_STATIC void console_render_toolbar()
         const size_t filter_length = string_length(_console_module->search_filter);
         if (filter_length > 0)
         {
-            size_t log_count = array_size(_console_module->messages);
+            int log_count = to_int(array_size(_console_module->messages));
             for (_console_module->filtered_message_count = 0; _console_module->filtered_message_count < log_count;)
             {
                 const log_message_t& log = _console_module->messages[_console_module->filtered_message_count];
