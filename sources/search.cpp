@@ -11,7 +11,6 @@
 #include "settings.h"
 #include "pattern.h"
 #include "logo.h"
-#include "news.h"
 #include "imwallet.h"
 #include "report.h"
 #include "backend.h"

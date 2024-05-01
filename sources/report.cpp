@@ -15,7 +15,6 @@
 #include "wallet.h"
 #include "pattern.h"
 #include "timeline.h"
-#include "news.h"
 #include "financials.h"
 #include "alerts.h"
 #include "events.h"

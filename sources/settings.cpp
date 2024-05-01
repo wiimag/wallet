@@ -10,7 +10,6 @@
 #include "logo.h"
 #include "backend.h"
 #include "search.h"
-#include "news.h"
 
 #include <framework/imgui.h>
 #include <framework/string.h>
