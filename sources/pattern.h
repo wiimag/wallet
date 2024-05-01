@@ -14,7 +14,6 @@
 #pragma once
 
 #include "stock.h"
-#include "openai.h"
 
 #include <framework/config.h>
 
@@ -100,10 +99,6 @@ struct pattern_t
 
     // Y./Y. data
     struct yy_t { time_t beg, end; double change_p; } *yy{ nullptr };
-
-    // Open AI data
-    string_t*                   analysis_summary{};
-    openai_completion_options_t analysis_options{};
 
     // Notes data
     char notes[2048]{ '\0' };

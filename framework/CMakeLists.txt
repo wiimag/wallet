@@ -5,7 +5,7 @@
 # Application framework library project
 #
 
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.5)
 
 # Define library project
 project(framework)

@@ -5,7 +5,7 @@
 # Defines a set of cmake options used for the application framework.
 #
 
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.5)
 
 # Set the build info option to OFF by default.
 option(BUILD_INFO "Build info" OFF)

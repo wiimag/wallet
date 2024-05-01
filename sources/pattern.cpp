@@ -9,9 +9,7 @@
 #include "bulk.h"
 #include "settings.h"
 #include "report.h"
-#include "news.h"
 #include "alerts.h"
-#include "openai.h"
 #include "financials.h"
 #include "logo.h"
 #include "watches.h"
@@ -2487,58 +2485,6 @@ FOUNDATION_STATIC void pattern_activity_min_max_date(pattern_activity_t* activit
     }
 }
 
-FOUNDATION_STATIC bool pattern_render_fundamental_field_tooltip(pattern_t* pattern, string_const_t field_name, string_const_t value_string)
-{
-    if (!ImGui::IsItemHovered() || !openai_available())
-        return false;
-
-    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-
-    if (!ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-        return false;
-
-    char value_copy_buffer[128];
-    string_t value_copy = string_copy(STRING_BUFFER(value_copy_buffer), STRING_ARGS(value_string));
-
-    char buffer[2048];
-    string_const_t company_name = stock_get_name(pattern->stock);
-    string_t p1 = tr_format(STRING_BUFFER(buffer),
-        "Can you explain what the value {0} for {1} means given that this is associated to the public company {2}. "
-        "Also please explain briefly what {1} means for an investor and if it is good or not regarding {2}. "
-        "Please reword any \"CamelCase\" words to something understandable and convert numerical values into the appropriate unit, i.e. $, %, etc.---\n",
-        value_copy, field_name, company_name);
-
-    auto field_info = shared_ptr<pattern_fundamentals_field_info_t>::create(HASH_PATTERN);
-    field_info->response = {};
-
-    openai_completion_options_t options{};
-    options.max_tokens = 250;
-    options.temperature = 0.4f;
-    options.frequency_penalty = -0.4f;
-    if (openai_complete_prompt(STRING_ARGS(p1), options, [field_info](string_t response) {
-        log_info(HASH_PATTERN, STRING_ARGS(response));
-        field_info->response = response;
-    })) 
-    {
-        static int occ = 0;    
-        app_open_dialog(tr_format("Field Description - {0}##{1}", field_name, ++occ), [field_info](void* context)
-        {
-            if (field_info->response.length != 0)
-                ImGui::TextWrapped("%.*s", STRING_FORMAT(field_info->response));
-            else
-                ImGui::TextWrapped(tr("Fetching field information..."));
-            return true;
-        }, IM_SCALEF(400), IM_SCALEF(300), true, nullptr, [field_info](void* context)
-        {
-            string_deallocate(field_info->response.str);
-        });
-
-        return true;
-    }
-
-    return false;
-}
-
 FOUNDATION_STATIC void pattern_render_fundamentals_object(pattern_t* pattern, config_handle_t obj, int level = 0)
 {
     // Check if the current object has a currency_symbol field?
@@ -2609,7 +2555,6 @@ FOUNDATION_STATIC void pattern_render_fundamentals_object(pattern_t* pattern, co
         string_const_t cv_value = e.as_string();
 
         ImGui::TextUnformatted(STRING_RANGE(cv_id));
-        pattern_render_fundamental_field_tooltip(pattern, cv_id, cv_value);
         ImGui::NextColumn();
 
         // Check if we can convert to number
@@ -2972,114 +2917,13 @@ FOUNDATION_STATIC void pattern_update(pattern_t* pattern)
 
 FOUNDATION_STATIC void pattern_render_notes_and_analysis(pattern_t* pattern, bool& focus_notes)
 {
-    openai_completion_options_t& options = pattern->analysis_options;
-
     const size_t notes_size = string_length(pattern->notes);
-    bool used_tree_node = false;
 
     ImGui::Spacing();
 
     ImGui::AlignTextToFramePadding();
-    ImGui::SetNextItemOpen(notes_size > 0, ImGuiCond_Appearing);
-    if (pattern->analysis_summary == nullptr || ImGui::TreeNode(tr("Notes")))
-    {
-        used_tree_node = pattern->analysis_summary != nullptr;
 
-        if (used_tree_node)
-            ImGui::Unindent();
-        ImVec2 notes_widget_size = ImVec2(-1, IM_SCALEF(70));
-        if (pattern->analysis_summary == nullptr && openai_available())
-        {
-            string_const_t code = string_table_decode_const(pattern->code);
-            pattern->analysis_summary = openai_generate_summary_sentiment(STRING_ARGS(code), pattern->notes, notes_size, options);
-            FOUNDATION_ASSERT(pattern->analysis_summary);
-        }
-        else if (pattern->analysis_summary == nullptr)
-        {
-            notes_widget_size = ImGui::GetContentRegionAvail();
-        }
-
-        if (focus_notes)
-        {
-            ImGui::SetKeyboardFocusHere();
-            focus_notes = false;
-        }
-
-        ImGui::InputTextMultiline("##Notes", STRING_BUFFER(pattern->notes), notes_widget_size, ImGuiInputTextFlags_None);
-
-        if (used_tree_node)
-        {
-            ImGui::Indent();
-            ImGui::TreePop();
-        }
-    }
-
-    if (pattern->analysis_summary)
-    {
-        if (!used_tree_node)
-            ImGui::SameLine();
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() * 0.6f);
-        if (ImGui::BeginCombo("##Options", tr("Analysis (AI)")/*, ImGuiComboFlags_NoPreview*/))
-        {
-            float top_p_100 = options.top_p * 100.0f;
-            float temperature_100 = options.temperature * 100.0f;
-            float presence_penalty_100 = options.presence_penalty * 50.0f;
-            float frequency_penalty_100 = options.frequency_penalty * 50.0f;
-            if (ImGui::SliderFloat(tr("Diversity"), &top_p_100, 0.0f, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
-                options.top_p = top_p_100 / 100.0f;
-            if (ImGui::SliderFloat(tr("Opportunity"), &temperature_100, 0.0f, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
-                options.temperature = temperature_100 / 100.0f;
-            if (ImGui::SliderFloat(tr("Openness"), &presence_penalty_100, 0.0f, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
-                options.presence_penalty = presence_penalty_100 / 50.0f;
-            if (ImGui::SliderFloat(tr("Variety"), &frequency_penalty_100, 0.0f, 100.0f, "%.3g %%", ImGuiSliderFlags_AlwaysClamp))
-                options.frequency_penalty = frequency_penalty_100 / 50.0f;
-            ImGui::SliderInt(tr("Verbosity"), &options.max_tokens, 1, 4096, "%d tokens", ImGuiSliderFlags_AlwaysClamp);
-            ImGui::SliderInt(tr("Possibilities"), &options.best_of, 1, 10, "%d", ImGuiSliderFlags_AlwaysClamp);
-            if (ImGui::IsItemHovered())
-            {
-                ImGui::SetTooltip(tr(" Number of different completions to try. \n"
-                    " The more you produce, the more it cost in term generated tokens, so watch out! "));
-            }
-            ImGui::EndCombo();
-        }
-
-        ImGui::SameLine();
-        if (ImGui::Button(tr("Generate"), { IM_SCALEF(-60), 0}))
-        {
-            if (pattern->analysis_summary)
-            {
-                string_deallocate(pattern->analysis_summary->str);
-                memory_deallocate(pattern->analysis_summary);
-                pattern->analysis_summary = nullptr;
-            }
-
-            string_const_t code = string_table_decode_const(pattern->code);
-            pattern->analysis_summary = openai_generate_summary_sentiment(STRING_ARGS(code), STRING_LENGTH(pattern->notes), options);
-        }
-
-        if (pattern->analysis_summary && pattern->analysis_summary->length)
-        {
-            ImGui::SameLine();
-            if (ImGui::Button(tr("Copy"), { IM_SCALEF(-5), 0}))
-            {
-                ImGui::SetClipboardText(pattern->analysis_summary->str);
-            }
-        }
-
-        ImGui::Separator();
-        if (ImGui::BeginChild("##Summary", ImGui::GetContentRegionAvail()))
-        {
-            ImGui::AlignTextToFramePadding();
-            if (pattern->analysis_summary && pattern->analysis_summary->length)
-            {
-                ImGui::SetWindowFontScale(0.8f);
-                ImGui::TextWrapped("%.*s", STRING_FORMAT(*pattern->analysis_summary));
-                ImGui::SetWindowFontScale(1.0f);
-            }
-            else
-                ImGui::TextWrapped(tr("No analysis available"));
-        } ImGui::EndChild();
-    }
+    ImGui::InputTextMultiline("##Notes", STRING_BUFFER(pattern->notes), ImGui::GetContentRegionAvail(), ImGuiInputTextFlags_None);
 }
 
 FOUNDATION_STATIC void pattern_render_dialogs(pattern_t* pattern)
@@ -3202,16 +3046,6 @@ FOUNDATION_STATIC void pattern_render(pattern_handle_t handle, pattern_render_fl
 
     if (ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows))
         pattern_update_expression_context(pattern);
-}
-
-FOUNDATION_STATIC bool pattern_render_summarized_news_dialog(void* context)
-{
-    const openai_response_t* response = (const openai_response_t*)context;
-    if (response->output.length)
-        ImGui::TextWrapped("%.*s", STRING_FORMAT(response->output));
-    else
-        ImGui::TrTextWrapped("Please wait, reading the news for you...");
-    return true;
 }
 
 FOUNDATION_STATIC void pattern_main_menu(pattern_handle_t handle)
@@ -3431,28 +3265,6 @@ FOUNDATION_STATIC void pattern_load(const config_handle_t& pattern_data, pattern
     pattern.price_limits.ymin = cv_price_limits["ymin"].as_number();
     pattern.price_limits.ymax = cv_price_limits["ymax"].as_number();
 
-    // Load AI analysis options
-    auto cv_ai = pattern_data["analysis"];
-    pattern.analysis_options.best_of = cv_ai["best_of"].as_integer(3);
-    pattern.analysis_options.max_tokens = cv_ai["max_tokens"].as_integer(1700);
-    pattern.analysis_options.temperature = cv_ai["temperature"].as_number(0.7f);
-    pattern.analysis_options.top_p = cv_ai["top_p"].as_number(0.9f);
-    pattern.analysis_options.presence_penalty = cv_ai["presence_penalty"].as_number(1.50);
-    pattern.analysis_options.frequency_penalty = cv_ai["frequency_penalty"].as_number(0.4);
-
-    string_const_t saved_analysis = cv_ai["summary"].as_string();
-    if (saved_analysis.length)
-    {
-        if (pattern.analysis_summary)
-        {
-            string_deallocate(pattern.analysis_summary->str);
-            memory_deallocate(pattern.analysis_summary);
-        }
-
-        pattern.analysis_summary = (string_t*)memory_allocate(HASH_PATTERN, sizeof(string_t), 0, MEMORY_PERSISTENT | MEMORY_ZERO_INITIALIZED);
-        *pattern.analysis_summary = string_clone(STRING_ARGS(saved_analysis));
-    }
-
     pattern.watch_context = nullptr;
     config_handle_t cv_pattern_watches = pattern_data["watches"];
     if (cv_pattern_watches)
@@ -3480,18 +3292,6 @@ FOUNDATION_STATIC void pattern_save(config_handle_t pattern_data, const pattern_
     config_set(cv_price_limits, STRING_CONST("xmax"), pattern.price_limits.xmax);
     config_set(cv_price_limits, STRING_CONST("ymin"), pattern.price_limits.ymin);
     config_set(cv_price_limits, STRING_CONST("ymax"), pattern.price_limits.ymax);
-
-    // Save AI analysis options
-    auto cv_ai = config_set_object(pattern_data, STRING_CONST("analysis"));
-    config_set(cv_ai, STRING_CONST("best_of"), (double)pattern.analysis_options.best_of);
-    config_set(cv_ai, STRING_CONST("max_tokens"), (double)pattern.analysis_options.max_tokens);
-    config_set(cv_ai, STRING_CONST("temperature"), pattern.analysis_options.temperature);
-    config_set(cv_ai, STRING_CONST("top_p"), pattern.analysis_options.top_p);
-    config_set(cv_ai, STRING_CONST("presence_penalty"), pattern.analysis_options.presence_penalty);
-    config_set(cv_ai, STRING_CONST("frequency_penalty"), pattern.analysis_options.frequency_penalty);
-    
-    if (pattern.analysis_summary && pattern.analysis_summary->length)
-        config_set(cv_ai, STRING_CONST("summary"), STRING_ARGS(*pattern.analysis_summary));
 
     if (pattern.watch_context && array_size(pattern.watch_context->points))
     {
@@ -3742,13 +3542,6 @@ FOUNDATION_STATIC void pattern_deallocate(pattern_t* pattern)
 {
     array_deallocate(pattern->yy);
     array_deallocate(pattern->flex);
-
-    if (pattern->analysis_summary)
-    {
-        string_deallocate(pattern->analysis_summary->str);
-        memory_deallocate(pattern->analysis_summary);
-        pattern->analysis_summary = nullptr;
-    }
 
     array_deallocate(pattern->revenues);
     array_deallocate(pattern->earnings);

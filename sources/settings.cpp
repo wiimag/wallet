@@ -8,7 +8,6 @@
 #include "eod.h"
 #include "stock.h"
 #include "logo.h"
-#include "openai.h"
 #include "backend.h"
 #include "search.h"
 #include "news.h"

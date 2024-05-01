@@ -5,7 +5,7 @@
 # Module that share a set of utility functions
 #
 
-cmake_minimum_required (VERSION 3.0)
+cmake_minimum_required (VERSION 3.5)
 
 # Define build config path
 set(BUILD_CONFIG_PATH ${ROOT_DIR}/config/build.config CACHE INTERNAL "Build config path")
