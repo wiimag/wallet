@@ -115,7 +115,7 @@ while [[ $# -gt 0 ]]; do
       GENERATE=($YES)
       COMMAND_NAME_ARGS="GENERATE"
       shift # past argument
-      ;;  
+      ;;
     p|package)
       COMMAND_COUNTER=$((COMMAND_COUNTER+1))
       PACKAGE=($YES)
@@ -129,7 +129,7 @@ while [[ $# -gt 0 ]]; do
 
       # Check if we open the workspace or the cmake generated solution
       if [ $# -ne 0 ] && ([ $1 == "workspace" ] || [ $1 == "w" ]); then
-        
+
         # Always generate the project if we are opening the workspace
         if [ ${#GENERATE[@]} -eq 0 ]; then
           GENERATE=($YES)
@@ -237,11 +237,12 @@ if [ $HELP -ge 1 ]; then
 
   echo "  Usage: $PROGRAM_NAME [${bold}b${normal}uild [debug|release|deploy]] "
   echo "             [${bold}g${normal}enerate] "
-  echo "             [${bold}t${normal}ests] " 
+  echo "             [${bold}t${normal}ests] "
   echo "             [${bold}o${normal}pen [${bold}w${normal}orkspace]] "
   echo "             [${bold}p${normal}rint [largefiles] "
   echo "             [${bold}d${normal}iff [main|release/1.0.0|...] "
   echo "             [${bold}s${normal}tart] [--option=<value>] ...additional arguments passed to last command"
+  echo "             [${bold}p${normal}ackage] "
   echo ""
   echo "  Commands:"
   echo "    ${bold}b${normal}uild [debug|release]  Build the solution in debug or release (release if used by default)"
@@ -251,6 +252,7 @@ if [ $HELP -ge 1 ]; then
   echo "    ${bold}p${normal}rint [largefiles|...] Print various solution information or stats"
   echo "    ${bold}d${normal}iff [...]             Diff the current branch with the specified remote branch (i.e. main, release/1.0.0, etc.)"
   echo "    ${bold}s${normal}tart                  Launch the application after running other commands "
+  echo "    ${bold}p${normal}ackage                Build the package"
   echo ""
   echo "    If no commands are specified, we start the application by default, i.e. './run')"
   echo ""
@@ -274,6 +276,7 @@ if [ $HELP -ge 1 ]; then
   echo "    ./run diff                          Diff the current branch with the main branch (default)"
   echo "    ./run diff release/1.0              Diff the current branch with the remote release 1.0 branch"
   echo "    ./run generate open cmake           Generate and open the generated cmake solution"
+  echo "    ./run package                       Build the package"
   echo ""
   exit 0
 
@@ -308,7 +311,7 @@ fi
 #
 if [ ${#GENERATE[@]} -ge 1 ] && [ ${GENERATE[0]} -ge 1 ]; then
 
-  echo 
+  echo
   echo -e "${green}Generating ${APP_NAME} solution...${normal}"
   echo
 
@@ -318,7 +321,7 @@ if [ ${#GENERATE[@]} -ge 1 ] && [ ${GENERATE[0]} -ge 1 ]; then
 
   # Copy second to last parameters to CMAKE_ARGS
   CMAKE_ARGS=("${GENERATE[@]:1}")
-  
+
   # Read build configs and add all the name=value pairs to the CMAKE_ARGS array as -Dname=value
   while IFS='=' read -r name value; do
     # Skip comments
@@ -381,7 +384,7 @@ fi
 if [ ${#BUILD[@]} -ge 1 ] && [ ${BUILD[0]} -ge 1 ]; then
 
   # Print building message in green
-  echo 
+  echo
   echo -e "${green}Building ${APP_NAME} solution...${normal}"
   echo
 
@@ -405,7 +408,7 @@ if [ ${#BUILD[@]} -ge 1 ] && [ ${BUILD[0]} -ge 1 ]; then
 
   # Copy second to last parameters to CMAKE_ARGS
   ADDITIONAL_ARGS=("${BUILD[@]:1}")
-  
+
   if [ $BUILD_DEBUG -eq 1 ]; then
     cmake --build . --parallel 7 --config Debug --target ${SHORT_NAME} ${ADDITIONAL_ARGS[@]} -- ${CMAKE_ARGS[@]}
   elif  [ $BUILD_DEPLOY -eq 1 ]; then
@@ -425,7 +428,7 @@ if [ ${#BUILD[@]} -ge 1 ] && [ ${BUILD[0]} -ge 1 ]; then
   BUILD_LOG_PATH=$(convert_path_to_platform $FULL_SOLUTION_DIR/cmake-build.log)
   echo
   echo -e "${dark_gray}Build log: ${normal}$(convert_path_to_file_link $BUILD_LOG_PATH)"
-  
+
   cd ../../
   RUN=0
 fi
@@ -436,7 +439,7 @@ fi
 if [ ${#PACKAGE[@]} -ge 1 ] && [ ${PACKAGE[0]} -ge 1 ]; then
 
   # Run script to build the package
-  echo 
+  echo
   echo -e "${green}Building ${APP_NAME} package...${normal}"
   echo
 
@@ -470,7 +473,7 @@ if [ ${#DIFF[@]} -ge 1 ] && [ ${DIFF[0]} -ge 1 ]; then
     # Insert main at position 0 and push other arguments
     ADDITIONAL_ARGS=("${ADDITIONAL_ARGS[@]:0:0}" "main" "${ADDITIONAL_ARGS[@]:0}")
   fi
-  
+
   # Diff the current branch with the specified remote branch
   git difftool -d "origin/${ADDITIONAL_ARGS[0]}" ${ADDITIONAL_ARGS[@]:1}
 
@@ -491,7 +494,7 @@ fi
 #
 if [ $OPEN -ge 1 ]; then
 
-  echo 
+  echo
   echo -e "${green}Opening ${SHORT_NAME} in IDE...${normal}"
   echo
 
@@ -553,13 +556,13 @@ if [ ${#TESTS[@]} -ge 1 ] && [ ${TESTS[0]} -ge 1 ]; then
 
   # Capture all additional arguments
   ADDITIONAL_ARGS=("${TESTS[@]:1}")
-  
+
   # If VERBOSE is defined, add it to the arguments
   if [ $VERBOSE -eq 1 ]; then
     ADDITIONAL_ARGS=("${ADDITIONAL_ARGS[@]:0:0}" "--verbose" "${ADDITIONAL_ARGS[@]:0}")
   fi
 
-  echo 
+  echo
   echo -e "${green}${italic}Running ${APP_NAME} tests with arguments: ${ADDITIONAL_ARGS[@]}${normal}"
   echo
 
@@ -582,10 +585,10 @@ if [ ${#TESTS[@]} -ge 1 ] && [ ${TESTS[0]} -ge 1 ]; then
   fi
 
   # Print building message in green
-  echo 
+  echo
   echo -e "${green}===TESTS SUCCESSED===${normal}"
   echo
-  
+
   # Print test results
   cat artifacts/tests.log
 
@@ -607,7 +610,7 @@ if [ $RUN -eq 1 ]; then
     ADDITIONAL_ARGS=("${ADDITIONAL_ARGS[@]:0:0}" "--verbose" "${ADDITIONAL_ARGS[@]:0}")
   fi
 
-  echo 
+  echo
   echo -e "${green}${italic}Running ${APP_NAME} with arguments: ${ADDITIONAL_ARGS[@]}${normal}"
   echo
 
