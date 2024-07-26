@@ -68,6 +68,42 @@ bool time_date_equal(time_t da, time_t db)
     return ta.tm_year == tb.tm_year && ta.tm_mon == tb.tm_mon && ta.tm_mday == tb.tm_mday;
 }
 
+bool time_date_before(time_t da, time_t db)
+{
+    if (da == db)
+        return false;
+    tm ta, tb;
+    time_to_local(da, &ta);
+    time_to_local(db, &tb);
+    if (ta.tm_year < tb.tm_year)
+        return true;
+    if (ta.tm_year > tb.tm_year)
+        return false;
+    if (ta.tm_mon < tb.tm_mon)
+        return true;
+    if (ta.tm_mon > tb.tm_mon)
+        return false;
+    return ta.tm_mday < tb.tm_mday;
+}
+
+bool time_date_before_or_equal(time_t da, time_t db)
+{
+    if (da == db)
+        return true;
+    tm ta, tb;
+    time_to_local(da, &ta);
+    time_to_local(db, &tb);
+    if (ta.tm_year < tb.tm_year)
+        return true;
+    if (ta.tm_year > tb.tm_year)
+        return false;
+    if (ta.tm_mon < tb.tm_mon)
+        return true;
+    if (ta.tm_mon > tb.tm_mon)
+        return false;
+    return ta.tm_mday <= tb.tm_mday;
+}
+
 double time_elapsed_days(time_t from, time_t to)
 {
     double diff = difftime(to, from);

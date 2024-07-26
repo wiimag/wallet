@@ -229,6 +229,86 @@ FOUNDATION_STATIC void wallet_history_add_new_entry(report_t* report, wallet_t* 
     }
 }
 
+FOUNDATION_STATIC double wallet_history_total_value_gain(const wallet_history_t* h)
+{
+    return (h->total_value - h->investments) + (h->gain + h->funds);
+}
+
+FOUNDATION_STATIC double wallet_history_total_gain_p(const wallet_history_t* h)
+{
+    if (h->investments == 0)
+        return NAN;
+
+    const double total_gain = wallet_history_total_value_gain(h);
+    const double cash_flow = math_ifzero(h->funds, h->investments);
+    const double diff = total_gain - cash_flow;
+    const double adjusted_total_gain = total_gain + h->gain;
+    return diff / cash_flow * 100.0;
+}
+
+FOUNDATION_STATIC double wallet_history_wealth(const wallet_history_t* h)
+{
+    return wallet_history_total_value_gain(h) + h->other_assets;
+}
+
+FOUNDATION_STATIC void wallet_history_draw_periodic_summary(wallet_t* wallet, time_t date, const char* label, size_t label_length, bool only_display_percentage)
+{
+    wallet_history_t* h_0 = &wallet->history[0];
+    if (time_date_before(h_0->date, date))
+        return;
+
+    for (size_t i = 0; i < array_size(wallet->history); ++i)
+    {
+        wallet_history_t* h = &wallet->history[i];
+        if (time_date_before_or_equal(h->date, date))
+        {
+            // Compare with 3 months ago
+            double total_gain_3 = wallet_history_total_value_gain(h_0) - wallet_history_total_value_gain(h);
+            double total_gain_p_3 = wallet_history_total_gain_p(h_0) - wallet_history_total_gain_p(h);
+            double wealth_3 = wallet_history_wealth(h_0) - wallet_history_wealth(h);
+
+            ImGui::SameLine(0, 50.0f);
+            if (only_display_percentage) {
+                ImGui::Text("%.*s: %.2lf %%", label_length, label, total_gain_p_3);
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+                    ImGui::SetTooltip(tr("Gain: %.2lf $\nWealth: %.2lf $"), total_gain_3, wealth_3);
+            }
+            else {
+                ImGui::Text("%.*s: %.2lf $ (%.2lf %%)", label_length, label, total_gain_3, total_gain_p_3);
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal))
+                    ImGui::SetTooltip(tr("Wealth: %.2lf $"), wealth_3);
+            }
+
+            break;
+        }
+    }
+}
+
+FOUNDATION_STATIC void wallet_history_draw_periodic_summary(report_t* report)
+{
+    wallet_t* wallet = report->wallet;
+    if (array_size(wallet->history) < 2)
+        return;
+
+    // Check if we should only display percentage change if the window is too small
+    bool only_display_percentage = false;
+    const float available_space = ImGui::GetContentRegionAvail().x;
+    if (available_space < IM_SCALEF(900))
+    {
+        only_display_percentage = true;
+    }
+
+    const time_t today = time_now();
+    wallet_history_draw_periodic_summary(wallet, time_add_days(today, -90), STRING_CONST("3M"), only_display_percentage);
+    wallet_history_draw_periodic_summary(wallet, time_add_days(today, -180), STRING_CONST("6M"), only_display_percentage);
+    wallet_history_draw_periodic_summary(wallet, time_add_days(today, -365), STRING_CONST("1Y"), only_display_percentage);
+    if (available_space > IM_SCALEF(1000))
+    {
+        wallet_history_draw_periodic_summary(wallet, time_add_days(today, -1095), STRING_CONST("3Y"), only_display_percentage);
+        wallet_history_draw_periodic_summary(wallet, time_add_days(today, -1825), STRING_CONST("5Y"), only_display_percentage);
+    }
+}
+
 FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_report_id)
 {
     report_t* selected_report = report_get(selected_report_id);
@@ -277,6 +357,9 @@ FOUNDATION_STATIC void wallet_history_draw_toolbar(report_handle_t& selected_rep
         ImGui::SameLine(0, 100.0f);
         if (ImGui::Checkbox(tr("Show Extra Charts"), &wallet->show_extra_charts))
             ImPlot::SetNextAxesToFit();
+
+        // Draw monthly and yearly summary
+        wallet_history_draw_periodic_summary(selected_report);
     }
     else if (report_count == 0)
     {
@@ -375,11 +458,6 @@ FOUNDATION_STATIC table_cell_t wallet_history_column_assets(table_element_ptr_t 
     return h->other_assets;
 }
 
-FOUNDATION_STATIC double wallet_history_total_value_gain(const wallet_history_t* h)
-{
-    return (h->total_value - h->investments) + (h->gain + h->funds);
-}
-
 FOUNDATION_STATIC const wallet_history_t* wallet_history_get_previous(const wallet_history_t* h)
 {
     if (!h->source)
@@ -407,27 +485,10 @@ FOUNDATION_STATIC const wallet_history_t* wallet_history_get_previous(const wall
     return p;
 }
 
-FOUNDATION_STATIC double wallet_history_total_gain_p(const wallet_history_t* h)
-{
-    if (h->investments == 0)
-        return NAN;
-
-    const double total_gain = wallet_history_total_value_gain(h);
-    const double cash_flow = math_ifzero(h->funds, h->investments);
-    const double diff = total_gain - cash_flow;
-    const double adjusted_total_gain = total_gain + h->gain;
-    return diff / cash_flow * 100.0;
-}
-
 FOUNDATION_STATIC table_cell_t wallet_history_column_total_gain_p(table_element_ptr_t element, const table_column_t* column)
 {
     wallet_history_t* h = (wallet_history_t*)element;
     return wallet_history_total_gain_p(h);
-}
-
-FOUNDATION_STATIC double wallet_history_wealth(const wallet_history_t* h)
-{
-    return wallet_history_total_value_gain(h) + h->other_assets;
 }
 
 FOUNDATION_STATIC table_cell_t wallet_history_column_wealth(table_element_ptr_t element, const table_column_t* column)

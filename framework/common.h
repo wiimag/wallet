@@ -330,6 +330,28 @@ time_t time_work_day(time_t date, double rel);
  */
 bool time_date_equal(time_t da, time_t db);
 
+/*! Checks if a date is before another date. 
+ * 
+ *  @remarks The hour, minutes, seconds, etc. parts of the date are ignored.
+ *
+ *  @param da First date
+ *  @param db Second date
+ *  
+ *  @returns True if da is before db
+ */
+bool time_date_before(time_t da, time_t db);
+
+/*! Checks if a date is before another date. 
+ * 
+ *  @remarks The hour, minutes, seconds, etc. parts of the date are ignored.
+ *
+ *  @param da First date
+ *  @param db Second date
+ *  
+ *  @returns True if da is before db
+ */
+bool time_date_before_or_equal(time_t da, time_t db);
+
 /*! Converts a time date to a local time date structure. 
  *
  *  @param t     Date to convert

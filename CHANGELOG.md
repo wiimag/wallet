@@ -1,5 +1,8 @@
 # Changelog
 
+## [0.35.2] - 2024-07-26
+- Display montly and yearly earning performance in the wallet history view.
+
 ## [0.34.4] - 2023-11-09
 - Add pattern zoomed view price change annotation.
 - Add support for `MEDIAN(set)` expression to compute the median of a set of values.
