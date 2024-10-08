@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.35.2] - 2024-07-26
+## [0.35.3] - 2024-10-08
+- Fix missing User-Agent header in the backend requests.
 - Display montly and yearly earning performance in the wallet history view.
 
 ## [0.34.4] - 2023-11-09

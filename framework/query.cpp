@@ -179,16 +179,24 @@ FOUNDATION_STATIC void query_start_job_to_cleanup_cache()
     });
 }
 
-FOUNDATION_STATIC curl_slist* query_create_user_agent_header_list()
+FOUNDATION_STATIC const char* query_build_user_agent(char* buffer, size_t buffer_length, const char* prefix_header = nullptr, size_t prefix_header_length = 0)
 {
-    char user_agent_header[256];
     const application_t* app = environment_application();
 
     // Get user name
     string_const_t user_name = environment_username();
 
-    string_format(STRING_BUFFER(user_agent_header), STRING_CONST("user-agent: %.*s/%hu.%hu.%u/%.*s (%s)"),
+    string_format(buffer, buffer_length, STRING_CONST("%.*s%.*s/%hu.%hu.%u/%.*s (%s)"),
+        prefix_header_length, prefix_header,
         STRING_FORMAT(app->short_name), app->version.sub.major, app->version.sub.minor, app->version.sub.revision, STRING_FORMAT(user_name), FOUNDATION_PLATFORM_DESCRIPTION);
+    return buffer;
+}
+
+FOUNDATION_STATIC curl_slist* query_create_user_agent_header_list()
+{
+    char user_agent_header[256];
+    query_build_user_agent(STRING_BUFFER(user_agent_header), STRING_CONST("User-Agent: "));
+
     curl_slist* header_chunk = curl_slist_append(nullptr, user_agent_header);
     return header_chunk;
 }
@@ -212,6 +220,9 @@ FOUNDATION_STATIC CURL* query_create_curl_request()
         curl_easy_setopt(req, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(req, CURLOPT_IPRESOLVE, CURL_IPRESOLVE_WHATEVER);
         curl_easy_setopt(req, CURLOPT_FOLLOWLOCATION, 1L);
+
+        char user_agent_buffer[256];
+        curl_easy_setopt(req, CURLOPT_USERAGENT, query_build_user_agent(user_agent_buffer, sizeof(user_agent_buffer)));
 
         if (environment_argument("verbose"))
             curl_easy_setopt(req, CURLOPT_VERBOSE, 1L);
