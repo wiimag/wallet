@@ -1,6 +1,7 @@
 # Changelog
 
-## [0.35.4] - 2024-10-08
+## [0.35.5] - 2025-01-08
+- Fix Cash Balance computation when a stock is sold and bought again.
 - Fix missing User-Agent header in the backend requests.
 - Display montly and yearly earning performance in the wallet history view.
 

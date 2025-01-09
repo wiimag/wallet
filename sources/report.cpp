@@ -1925,6 +1925,96 @@ FOUNDATION_STATIC bool report_handle_shortcuts(report_t* report)
 // # PUBLIC API
 //
 
+double report_compute_total_sell_gain(report_t* report)
+{
+    double total_sell_gain = 0;
+    const size_t title_count = array_size(report->titles);
+    for (size_t i = 0; i < title_count; ++i)
+    {
+        title_t* t = report->titles[i];
+        if (title_is_index(t))
+            continue;
+
+        const stock_t* s = t->stock;
+        string_const_t stock_currency = s ? string_table_decode_const(s->currency) : string_null();
+        string_t preferred_currency = t->wallet->preferred_currency;
+
+        report_transaction_t* title_transactions{ nullptr };
+        for (auto order : t->data["orders"])
+        {
+            string_const_t date = order["date"].as_string();
+            time_t order_date = string_to_date(STRING_ARGS(date));
+            report_transaction_t transaction{};
+            transaction.date = order_date;
+            transaction.title = t;
+            transaction.buy = order["buy"].as_boolean();
+
+            double order_exchange_rate = order["xcg"].as_number();
+            double order_split_factor = order["split"].as_number();
+            if (s)
+            {
+                if (math_real_is_nan(order_split_factor))
+                {
+                    order_split_factor = stock_get_split_factor(t->code, t->code_length, order_date);
+                }
+
+                if (math_real_is_nan(order_exchange_rate))
+                {
+                    order_exchange_rate = stock_exchange_rate(STRING_ARGS(stock_currency), STRING_ARGS(preferred_currency), order_date);
+                    order_exchange_rate = math_ifzero(order_exchange_rate, 1.0);
+                }
+            }
+            else
+            {
+                if (math_real_is_nan(order_split_factor))
+                    order_split_factor = 1.0;
+
+                if (math_real_is_nan(order_exchange_rate))
+                    order_exchange_rate = 1.0;
+            }
+
+            transaction.qty = order["qty"].as_number(0) * order_split_factor;
+            transaction.price = order["price"].as_number(0) * order_exchange_rate;
+
+            array_push(title_transactions, transaction);
+        }
+
+        // Sort transactions by date
+        array_sort(title_transactions, [](const auto& a, const auto& b)
+        {
+            if (a.date == b.date)
+                return (time_t)b.buy - (time_t)a.buy;
+            return a.date - b.date;
+        });
+
+        double current_buy_count = 0;
+        double current_buy_price = 0;
+        for (size_t j = 0, end = array_size(title_transactions); j < end; ++j)
+        {
+            report_transaction_t transaction = title_transactions[j];
+            if (transaction.buy)
+            {
+                current_buy_count += transaction.qty;
+                current_buy_price += transaction.price * transaction.qty;
+            }
+            else if (current_buy_count > 0)
+            {
+                const double sell_price = transaction.price * transaction.qty;
+                const double average_buy_price = current_buy_price / current_buy_count;
+                const double estimated_buy_price = average_buy_price * transaction.qty;
+                const double sell_gain = sell_price - estimated_buy_price;
+                total_sell_gain += sell_gain;
+                current_buy_count -= transaction.qty;
+                current_buy_price -= estimated_buy_price;
+            }
+        }
+
+        array_deallocate(title_transactions);
+    }
+
+    return total_sell_gain;
+}
+
 void report_summary_update(report_t* report)
 {
     // Update report average days
@@ -2045,9 +2135,11 @@ void report_summary_update(report_t* report)
     report->total_day_gain = total_day_gain;
     report->summary_last_update = time_current();
 
+    // Compute sell total gain by accounting all title with every sell transactions.
+    report->wallet->sell_total_gain = report_compute_total_sell_gain(report);
+
     // Update historical values
     report->wallet->sell_average = total_sell_rated / total_title_sell_count;
-    report->wallet->sell_total_gain = total_sell_gain_rated;
     report->wallet->sell_total_projected_gain = total_projected_sell_loses;
     report->wallet->sell_gain_average = total_sell_gain_rated / total_title_sell_count;
     report->wallet->total_sell_gain_if_kept_p = total_sell_gain_if_kept_p;
